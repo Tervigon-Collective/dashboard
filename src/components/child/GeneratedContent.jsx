@@ -86,11 +86,11 @@ const GeneratedContent = () => {
   }, [data, timeframe]);
 
   return (
-    <div className='col-xxl-12'>
+    <div className='col-xxl-9'>
       <div className='card' style={{ padding: 24 }}>
         <div className='card-body'>
           <div className='d-flex align-items-center flex-wrap gap-2 justify-content-between'>
-            <h6 className='mb-2 fw-bold text-lg mb-0'>Generated Content</h6>
+            <h6 className='mb-2 fw-bold text-lg mb-0'>Ad Spend & Revenue Overview</h6>
             <select
               className='form-select form-select-sm w-auto bg-base border text-secondary-light'
               value={timeframe}

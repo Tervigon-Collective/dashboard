@@ -24,7 +24,7 @@ const DashBoardLayerOne = () => {
         <UsersOverviewOne />
 
         {/* LatestRegisteredOne */}
-        <LatestRegisteredOne />
+        {/* <LatestRegisteredOne /> */}
 
         {/* TopPerformerOne */}
         <TopPerformerOne />
