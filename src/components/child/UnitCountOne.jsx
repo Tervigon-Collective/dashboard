@@ -98,7 +98,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Net Profit</p>
+                                <p className="fw-medium text-black mb-1">Net Profit</p>
                                 <h6
                                   className="mb-0 display-6 fw-bold"
                                   style={{
@@ -125,7 +125,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, minWidth: 90, color: item.color }}>Rs.{Number(item.value).toFixed(2)}</span>
                                 </div>
                             ))}
@@ -140,7 +140,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Total Sales</p>
+                                <p className="fw-medium text-black mb-1">Total Sales</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{`Rs.${Number(totalSales).toFixed(2)}`}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -160,7 +160,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>Rs.{Number(item.value).toFixed(2)}</span>
                                 </div>
                             ))}
@@ -175,7 +175,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Total Ad Spend</p>
+                                <p className="fw-medium text-black mb-1">Total Ad Spend</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{loading ? 'Loading...' : `Rs.${Number(adSpend).toFixed(2)}`}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -197,7 +197,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span  className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>Rs.{Number(item.value).toFixed(2)}</span>
                                 </div>
                             ))}
@@ -212,7 +212,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Total COGS</p>
+                                <p className="fw-medium text-black mb-1">Total COGS</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{`Rs.${Number(totalCogs).toFixed(2)}`}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -231,7 +231,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>Rs.{Number(item.value).toFixed(2)}</span>
                                 </div>
                             ))}
@@ -249,7 +249,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Total Orders</p>
+                                <p className="fw-medium text-black mb-1">Total Orders</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{totalQuantity}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -269,7 +269,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>{item.value}</span>
                                 </div>
                             ))}
@@ -284,7 +284,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Gross ROAS</p>
+                                <p className="fw-medium text-black mb-1">Gross ROAS</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{grossRoas.total.toFixed(2)}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -303,7 +303,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>{item.value.toFixed(2)}</span>
                                 </div>
                             ))}
@@ -318,7 +318,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">Net ROAS</p>
+                                <p className="fw-medium text-black mb-1">Net ROAS</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{netRoas.total.toFixed(2)}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -337,7 +337,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>{item.value.toFixed(2)}</span>
                                 </div>
                             ))}
@@ -352,7 +352,7 @@ const UnitCountOne = () => {
                     <div className="card-body p-20">
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div>
-                                <p className="fw-medium text-primary-light mb-1">BE ROAS</p>
+                                <p className="fw-medium text-black mb-1">BE ROAS</p>
                                 <h6 className="mb-0 display-6 fw-bold" style={{letterSpacing: '1px'}}>{beRoas.total.toFixed(2)}</h6>
                             </div>
                             <div className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
@@ -371,7 +371,7 @@ const UnitCountOne = () => {
                             ]).map((item, idx) => (
                                 <div className="d-flex align-items-center" style={{ gap: 6, minWidth: 50 }} key={item.label}>
                                     {item.icon}
-                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
+                                    <span className="fw-medium text-black mb-1" style={{ fontWeight: 600, fontSize: 14, color: '#222', minWidth: 78 }}>{item.label}</span>
                                     <span style={{ fontWeight: 600, fontSize: 15, color: '#1976d2', minWidth: 90 }}>{item.value.toFixed(2)}</span>
                                 </div>
                             ))}

@@ -2,6 +2,7 @@ import DashBoardLayerOne from "@/components/DashBoardLayerOne";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import { Breadcrumb } from "react-bootstrap";
 
+
 export const metadata = {
   title: "NEXT JS - Admin Dashboard Multipurpose",
   description:
@@ -9,10 +10,12 @@ export const metadata = {
 };
 
 const Page = () => {
+
   return (
     <>
       {/* MasterLayout */}
       <MasterLayout>
+       
         {/* Breadcrumb */}
         <Breadcrumb title='AI' />
 

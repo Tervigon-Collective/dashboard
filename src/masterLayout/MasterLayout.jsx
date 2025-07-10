@@ -4,12 +4,18 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../helper/ThemeToggleButton";
 import Link from "next/link";
+import { useUser } from "@/helper/UserContext";
+import { signOut } from "firebase/auth";
+import { auth } from "@/helper/firebase";
+import { useRouter } from "next/navigation";
 
 const MasterLayout = ({ children }) => {
   let pathname = usePathname();
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = usePathname(); // Hook to get the current route
+  const { user } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -90,6 +96,12 @@ const MasterLayout = ({ children }) => {
     setMobileMenu(!mobileMenu);
   };
 
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    await signOut(auth);
+    router.push("/sign-in");
+  };
+
   return (
     <section className={mobileMenu ? "overlay active" : "overlay "}>
       {/* sidebar */}
@@ -112,17 +124,17 @@ const MasterLayout = ({ children }) => {
         <div>
           <Link href="/" className="sidebar-logo">
             <img
-              src="assets/images/logo.png"
+              src="assets\images\make\dashborad-01.jpg"
               alt="site logo"
               className="light-logo"
             />
             <img
-              src="assets/images/logo-light.png"
+              src="assets\images\make\dashborad-01.png"
               alt="site logo"
               className="dark-logo"
             />
             <img
-              src="assets/images/logo-icon.png"
+              src="assets\images\make\dashborad-09.png"
               alt="site logo"
               className="logo-icon"
             />
@@ -1221,14 +1233,14 @@ const MasterLayout = ({ children }) => {
                 <ThemeToggleButton />
                 <div className="dropdown d-none d-sm-inline-block">
                   <button
-                    className="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
+                    className="has-indicator w-40-px h-26-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
                     type="button"
                     data-bs-toggle="dropdown"
                   >
                     <img
-                      src="assets/images/lang-flag.png"
+                      src="assets\images\make\dashborad-07.jpg"
                       alt=""
-                      className="w-24 h-24 object-fit-cover rounded-circle"
+                      className="w-20 h-20 object-fit-cover rounded-circle"
                     />
                   </button>
                   <div className="dropdown-menu to-top dropdown-menu-sm">
@@ -1247,7 +1259,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag1.png"
+                              src="assets\images\make\dashborad-07.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1263,7 +1275,7 @@ const MasterLayout = ({ children }) => {
                           id="english"
                         />
                       </div>
-                      <div className="form-check style-check d-flex align-items-center justify-content-between mb-16">
+                      {/* <div className="form-check style-check d-flex align-items-center justify-content-between mb-16">
                         <label
                           className="form-check-label line-height-1 fw-medium text-secondary-light"
                           htmlFor="japan"
@@ -1377,7 +1389,7 @@ const MasterLayout = ({ children }) => {
                           name="crypto"
                           id="bangladesh"
                         />
-                      </div>
+                      </div> */}
                       <div className="form-check style-check d-flex align-items-center justify-content-between mb-16">
                         <label
                           className="form-check-label line-height-1 fw-medium text-secondary-light"
@@ -1385,7 +1397,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag7.png"
+                              src="assets\images\make\dashborad-06.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1401,7 +1413,7 @@ const MasterLayout = ({ children }) => {
                           id="india"
                         />
                       </div>
-                      <div className="form-check style-check d-flex align-items-center justify-content-between">
+                      {/* <div className="form-check style-check d-flex align-items-center justify-content-between">
                         <label
                           className="form-check-label line-height-1 fw-medium text-secondary-light"
                           htmlFor="canada"
@@ -1423,12 +1435,12 @@ const MasterLayout = ({ children }) => {
                           name="crypto"
                           id="canada"
                         />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
                 {/* Language dropdown end */}
-                <div className="dropdown">
+                {/* <div className="dropdown">
                   <button
                     className="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
                     type="button"
@@ -1611,9 +1623,10 @@ const MasterLayout = ({ children }) => {
                       </Link>
                     </div>
                   </div>
-                </div>
+                </div> */}
                 {/* Message dropdown end */}
-                <div className="dropdown">
+                {/* Notification dropdown start */}
+                {/* <div className="dropdown">
                   <button
                     className="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
                     type="button"
@@ -1712,10 +1725,10 @@ const MasterLayout = ({ children }) => {
                       >
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-44-px h-44-px bg-success-subtle text-success-main rounded-circle d-flex justify-content-center align-items-center flex-shrink-0">
-                            {/* <img
+                            <img
                               src='assets/images/notification/profile-2.png'
                               alt=''
-                            /> */}
+                            />
                           </span>
                           <div>
                             <h6 className="text-md fw-semibold mb-4">
@@ -1761,7 +1774,7 @@ const MasterLayout = ({ children }) => {
                       </Link>
                     </div>
                   </div>
-                </div>
+                </div> */}
                 {/* Notification dropdown end */}
                 <div className="dropdown">
                   <button
@@ -1770,7 +1783,7 @@ const MasterLayout = ({ children }) => {
                     data-bs-toggle="dropdown"
                   >
                     <img
-                      src="assets/images/user.png"
+                      src={user && user.photoURL ? user.photoURL : "assets/images/make/dashborad-03.jpg"}
                       alt="image_user"
                       className="w-40-px h-40-px object-fit-cover rounded-circle"
                     />
@@ -1779,10 +1792,10 @@ const MasterLayout = ({ children }) => {
                     <div className="py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2">
                       <div>
                         <h6 className="text-lg text-primary-light fw-semibold mb-2">
-                          Shaidul Islam
+                          {user ? (user.displayName || user.email) : "Guest"}
                         </h6>
                         <span className="text-secondary-light fw-medium text-sm">
-                          Admin
+                          {user ? user.email : "Not signed in"}
                         </span>
                       </div>
                       <button type="button" className="hover-text-danger">
@@ -1805,7 +1818,7 @@ const MasterLayout = ({ children }) => {
                           My Profile
                         </Link>
                       </li>
-                      <li>
+                      {/* <li>
                         <Link
                           className="dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-primary d-flex align-items-center gap-3"
                           href="/email"
@@ -1816,8 +1829,8 @@ const MasterLayout = ({ children }) => {
                           />{" "}
                           Inbox
                         </Link>
-                      </li>
-                      <li>
+                      </li> */}
+                      {/* <li>
                         <Link
                           className="dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-primary d-flex align-items-center gap-3"
                           href="/company"
@@ -1828,11 +1841,12 @@ const MasterLayout = ({ children }) => {
                           />
                           Setting
                         </Link>
-                      </li>
+                      </li> */}
                       <li>
                         <Link
                           className="dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-danger d-flex align-items-center gap-3"
                           href="#"
+                          onClick={handleLogout}
                         >
                           <Icon icon="lucide:power" className="icon text-xl" />{" "}
                           Log Out

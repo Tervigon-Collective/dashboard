@@ -34,6 +34,7 @@
     "bootstrap": "^5.3.3",
     "datatables.net": "^2.3.1",
     "datatables.net-dt": "^2.3.1",
+    "firebase": "^11.10.0",
     "flatpickr": "^4.6.13",
     "highlight.js": "^11.10.0",
     "isotope-layout": "^3.0.6",
