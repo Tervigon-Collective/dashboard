@@ -3,20 +3,26 @@ import { useUser } from "@/helper/UserContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+/**
+ * AuthGuard protects routes from unauthenticated access.
+ * Redirects to /sign-in if user is not authenticated and not loading.
+ */
 export default function AuthGuard({ children }) {
-  const { user } = useUser();
+  const { user, loading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!user && pathname !== "/sign-in" && pathname !== "/sign-up") {
+    if (!loading && !user && pathname !== "/sign-in" && pathname !== "/sign-up") {
       router.replace("/sign-in");
     }
-  }, [user, pathname, router]);
+  }, [user, loading, pathname, router]);
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
   if (!user && pathname !== "/sign-in" && pathname !== "/sign-up") {
     return <div>Loading...</div>;
   }
-
   return children;
 } 
