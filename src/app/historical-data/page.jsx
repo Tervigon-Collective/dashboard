@@ -1,4 +1,4 @@
-import DashBoardLayerOne from "@/components/DashBoardLayerOne";
+import HistoricalDashBoardLayerOne from "@/components/HistoricalDashboardLayerOne";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import { Breadcrumb } from "react-bootstrap";
 
@@ -17,10 +17,10 @@ const Page = () => {
       <MasterLayout>
        
         {/* Breadcrumb */}
-        <Breadcrumb title='Report Analytics' />
+        <Breadcrumb title='Historical Data' />
 
         {/* DashBoardLayerOne */}
-        <DashBoardLayerOne />
+        <HistoricalDashBoardLayerOne />
       </MasterLayout>
     </>
   );

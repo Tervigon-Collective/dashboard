@@ -2,6 +2,7 @@
 import { useUser } from "@/helper/UserContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Loader } from "./child/GeneratedContent";
 
 /**
  * AuthGuard protects routes from unauthenticated access.
@@ -19,10 +20,10 @@ export default function AuthGuard({ children }) {
   }, [user, loading, pathname, router]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
   if (!user && pathname !== "/sign-in" && pathname !== "/sign-up") {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
   return children;
 } 

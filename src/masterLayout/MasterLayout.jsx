@@ -160,15 +160,15 @@ const MasterLayout = ({ children }) => {
                     Reports Analytic
                   </Link>
                 </li>
-                {/* <li>
+                <li>
                   <Link
-                    href="/index-2"
-                    className={pathname === "/index-2" ? "active-page" : ""}
+                    href="/historical-data"
+                    className={pathname === "/historical-data" ? "active-page" : ""}
                   >
                     <i className="ri-circle-fill circle-icon text-warning-main w-auto" />{" "}
-                    CRM
+                    Historical Analytics
                   </Link>
-                </li> */}
+                </li>
                 {/* <li>
                   <Link
                     href="/index-3"

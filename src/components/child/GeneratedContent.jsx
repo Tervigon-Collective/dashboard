@@ -8,7 +8,7 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 });
 
 
-const Loader = () => (
+export const Loader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250 }}>
     <div className="spinner-border text-primary" role="status">
       <span className="visually-hidden">Loading...</span>
