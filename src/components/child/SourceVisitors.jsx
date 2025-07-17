@@ -87,7 +87,7 @@ const SourceVisitors = () => {
     <div className='col-xxl-5'>
       <div className='card h-100'>
         <div className='card-header border-bottom-0 pb-0 d-flex align-items-center flex-wrap gap-2 justify-content-between'>
-          <h6 className='mb-2 fw-bold text-lg mb-0'>Source Visitors</h6>
+          <h6 className='mb-2 fw-bold text-lg mb-0'>Channel Conversion</h6>
           <select
             className='form-select form-select-sm w-auto bg-base border text-secondary-light'
             value={timeframe}
@@ -105,7 +105,7 @@ const SourceVisitors = () => {
                 {loading ? 'Loading...' : error ? '--' : total.toLocaleString()}
               </h6>
               <span className='text-secondary-light'>
-                Total Platform Visitors
+                Total Platform Conversion
               </span>
             </div>
             <div className='row g-3 h-100'>
