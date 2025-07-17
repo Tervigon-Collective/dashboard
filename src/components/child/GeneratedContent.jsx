@@ -86,7 +86,7 @@ const GeneratedContent = () => {
   }, [data, timeframe]);
 
   return (
-    <div className='col-xxl-9'>
+    <div className='col-xxl-7'>
       <div className='card' style={{ padding: 24 }}>
         <div className='card-body'>
           <div className='d-flex align-items-center flex-wrap gap-2 justify-content-between'>
