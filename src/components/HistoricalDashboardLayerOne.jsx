@@ -1,19 +1,29 @@
 "use client";
-
-import UnitCountOne from "./child/UnitCountOne";
 import React, { useState, useEffect } from "react";
 import { DateRangePicker, CustomProvider } from 'rsuite';
 import enUS from 'rsuite/locales/en_US';
 import 'rsuite/dist/rsuite.min.css';
+import UnitCountOne from "./child/UnitCountOne";
 
-// Helper to format date as yyyy-mm-dd
+// Helper to format date as yyyy-mm-dd HH
 function formatLocalISO(date) {
   if (!date) return null;
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const hour = String(date.getHours()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}`;
 }
+
+// Get today's date for default calendar value
+const getDefaultDateRange = () => {
+  const today = new Date();
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 0, 0, 0);
+  return [startOfDay, endOfDay];
+};
 
 const MAX_SECTIONS = 10;
 
@@ -40,19 +50,22 @@ const Section = ({ dateRange, setDateRange }) => {
         <DateRangePicker
           value={value}
           onChange={handleChange}
+          format="yyyy-MM-dd HH:00"
+          showMeridian={false}
+          ranges={[]}
+          defaultCalendarValue={getDefaultDateRange()}
           disabledDate={date => {
             const now = new Date();
-            // Remove time for comparison
-            now.setHours(0,0,0,0);
+            // Remove minutes and seconds for comparison
+            now.setMinutes(0, 0, 0);
             const d = new Date(date);
-            d.setHours(0,0,0,0);
-            // Disable today and any future date
-            return d >= now;
+            d.setMinutes(0, 0, 0);
+            // Disable future dates
+            return d > now;
           }}
-          format="yyyy-MM-dd"
-          placeholder="Select date range"
+          placeholder="Select date and hour range"
           style={{
-            width: 260,
+            width: 300,
             borderRadius: 8,
             border: "1px solid #ccc",
             fontSize: 16,
@@ -66,7 +79,6 @@ const Section = ({ dateRange, setDateRange }) => {
           }}
           placement="bottomEnd"
           oneTap={false}
-          ranges={[]}
         />
       </div>
       <UnitCountOne dateRange={isoRange} />

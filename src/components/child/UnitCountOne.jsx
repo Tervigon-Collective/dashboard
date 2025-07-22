@@ -13,6 +13,15 @@ const getToday = () => {
     return `${yyyy}-${mm}-${dd}`;
 };
 
+// Helper to check if a date range is today
+const isTodayRange = (start, end) => {
+    if (!start || !end) return true; // Default to today's API if no dates selected
+    const today = getToday();
+    const startDate = start.split(' ')[0]; // Extract just the date part
+    const endDate = end.split(' ')[0];
+    return startDate === today && endDate === today;
+};
+
 // Helper to sort breakdowns by value descending
 const sortBreakdown = (arr) => arr.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
@@ -60,8 +69,8 @@ const UnitCountOne = ({ dateRange }) => {
     const effectiveDateRange = useMemo(() => {
         const today = getToday();
         return {
-            startDate: dateRange?.startDate || today,
-            endDate: dateRange?.endDate || today
+            startDate: dateRange?.startDate || `${today} 00`,
+            endDate: dateRange?.endDate || `${today} 23`
         };
     }, [dateRange?.startDate, dateRange?.endDate]);
 
@@ -90,88 +99,172 @@ const UnitCountOne = ({ dateRange }) => {
         setBeRoas({ total: null, google: null, meta: null });
 
         const { startDate, endDate } = effectiveDateRange;
-        let query = '';
-        if (startDate && endDate) {
-            query = `?startDate=${startDate}&endDate=${endDate}`;
-        }
+        const isToday = isTodayRange(startDate, endDate);
 
-        Promise.allSettled([
-            axios.get(`${config.api.baseURL}/api/ad_spend${query}`),
-            axios.get(`${config.api.baseURL}/api/cogs${query}`),
-            axios.get(`${config.api.baseURL}/api/sales${query}`),
-            axios.get(`${config.api.baseURL}/api/net_profit${query}`),
-            axios.get(`${config.api.baseURL}/api/order_count${query}`),
-            axios.get(`${config.api.baseURL}/api/roas${query}`)
-        ]).then((results) => {
-            // ad_spend
-            if (results[0].status === 'fulfilled') {
-                setAdSpend(results[0].value.data.totalSpend ?? null);
-                setGoogleSpend(results[0].value.data.googleSpend ?? null);
-                setFacebookSpend(results[0].value.data.facebookSpend ?? null);
-            } else {
-                setError(e => ({ ...e, adSpend: 'Failed to load data' }));
-            }
-            // cogs
-            if (results[1].status === 'fulfilled') {
-                setTotalCogs(results[1].value.data.totalCogs ?? null);
-                setGoogleCogs(results[1].value.data.googleCogs ?? null);
-                setMetaCogs(results[1].value.data.metaCogs ?? null);
-            } else {
-                setError(e => ({ ...e, cogs: 'Failed to load data' }));
-            }
-            // sales
-            if (results[2].status === 'fulfilled') {
-                setTotalSales(results[2].value.data.totalSales ?? null);
-                setGoogleSales(results[2].value.data.googleSales ?? null);
-                setMetaSales(results[2].value.data.metaSales ?? null);
-                setOrganicSales(results[2].value.data.organicSales ?? null);
-            } else {
-                setError(e => ({ ...e, sales: 'Failed to load data' }));
-            }
-            // net_profit
-            if (results[3].status === 'fulfilled') {
-                // No longer set totalNetProfit from API, use formula below
-                setGoogleNetProfit(results[3].value.data.googleNetProfit ?? null);
-                setMetaNetProfit(results[3].value.data.metaNetProfit ?? null);
-            } else {
-                setError(e => ({ ...e, netProfit: 'Failed to load data' }));
-            }
-            // order_count
-            if (results[4].status === 'fulfilled') {
-                setTotalQuantity(results[4].value.data.totalQuantity ?? null);
-                setGoogleQuantity(results[4].value.data.googleQuantity ?? null);
-                setMetaQuantity(results[4].value.data.metaQuantity ?? null);
-                setOrganicQuantity(results[4].value.data.organicQuantity ?? null);
-            } else {
-                setError(e => ({ ...e, orderCount: 'Failed to load data' }));
-            }
-            // roas
-            if (results[5].status === 'fulfilled') {
-                setGrossRoas({
-                    total: results[5].value.data.total?.grossRoas ?? null,
-                    google: results[5].value.data.google?.grossRoas ?? null,
-                    meta: results[5].value.data.meta?.grossRoas ?? null
-                });
-                setNetRoas({
-                    total: results[5].value.data.total?.netRoas ?? null,
-                    google: results[5].value.data.google?.netRoas ?? null,
-                    meta: results[5].value.data.meta?.netRoas ?? null
-                });
-                setBeRoas({
-                    total: results[5].value.data.total?.beRoas ?? null,
-                    google: results[5].value.data.google?.beRoas ?? null,
-                    meta: results[5].value.data.meta?.beRoas ?? null
-                });
-            } else {
-                setError(e => ({ ...e, roas: 'Failed to load data' }));
-            }
-            // Use correct net profit formula: total net profit = total sales - total cogs - total ad spend
-            const totalSales = Number(results[2].status === 'fulfilled' ? results[2].value.data.totalSales ?? 0 : 0);
-            const totalCogs = Number(results[1].status === 'fulfilled' ? results[1].value.data.totalCogs ?? 0 : 0);
-            const totalAdSpend = Number(results[0].status === 'fulfilled' ? results[0].value.data.totalSpend ?? 0 : 0);
-            setTotalNetProfit(totalSales - totalCogs - totalAdSpend);
-            setLoading(false);
-        });
+        if (isToday) {
+            // Use existing endpoints for today's data
+            let query = `?startDate=${startDate.split(' ')[0]}&endDate=${endDate.split(' ')[0]}`;
+            
+            Promise.allSettled([
+                axios.get(`${config.api.baseURL}/api/ad_spend${query}`),
+                axios.get(`${config.api.baseURL}/api/cogs${query}`),
+                axios.get(`${config.api.baseURL}/api/sales${query}`),
+                axios.get(`${config.api.baseURL}/api/net_profit${query}`),
+                axios.get(`${config.api.baseURL}/api/order_count${query}`),
+                axios.get(`${config.api.baseURL}/api/roas${query}`)
+            ]).then((results) => {
+                // ad_spend
+                if (results[0].status === 'fulfilled') {
+                    setAdSpend(results[0].value.data.totalSpend ?? null);
+                    setGoogleSpend(results[0].value.data.googleSpend ?? null);
+                    setFacebookSpend(results[0].value.data.facebookSpend ?? null);
+                } else {
+                    setError(e => ({ ...e, adSpend: 'Failed to load data' }));
+                }
+                // cogs
+                if (results[1].status === 'fulfilled') {
+                    setTotalCogs(results[1].value.data.totalCogs ?? null);
+                    setGoogleCogs(results[1].value.data.googleCogs ?? null);
+                    setMetaCogs(results[1].value.data.metaCogs ?? null);
+                } else {
+                    setError(e => ({ ...e, cogs: 'Failed to load data' }));
+                }
+                // sales
+                if (results[2].status === 'fulfilled') {
+                    setTotalSales(results[2].value.data.totalSales ?? null);
+                    setGoogleSales(results[2].value.data.googleSales ?? null);
+                    setMetaSales(results[2].value.data.metaSales ?? null);
+                    setOrganicSales(results[2].value.data.organicSales ?? null);
+                } else {
+                    setError(e => ({ ...e, sales: 'Failed to load data' }));
+                }
+                // net_profit
+                if (results[3].status === 'fulfilled') {
+                    // No longer set totalNetProfit from API, use formula below
+                    setGoogleNetProfit(results[3].value.data.googleNetProfit ?? null);
+                    setMetaNetProfit(results[3].value.data.metaNetProfit ?? null);
+                } else {
+                    setError(e => ({ ...e, netProfit: 'Failed to load data' }));
+                }
+                // order_count
+                if (results[4].status === 'fulfilled') {
+                    setTotalQuantity(results[4].value.data.totalQuantity ?? null);
+                    setGoogleQuantity(results[4].value.data.googleQuantity ?? null);
+                    setMetaQuantity(results[4].value.data.metaQuantity ?? null);
+                    setOrganicQuantity(results[4].value.data.organicQuantity ?? null);
+                } else {
+                    setError(e => ({ ...e, orderCount: 'Failed to load data' }));
+                }
+                // roas
+                if (results[5].status === 'fulfilled') {
+                    setGrossRoas({
+                        total: results[5].value.data.total?.grossRoas ?? null,
+                        google: results[5].value.data.google?.grossRoas ?? null,
+                        meta: results[5].value.data.meta?.grossRoas ?? null
+                    });
+                    setNetRoas({
+                        total: results[5].value.data.total?.netRoas ?? null,
+                        google: results[5].value.data.google?.netRoas ?? null,
+                        meta: results[5].value.data.meta?.netRoas ?? null
+                    });
+                    setBeRoas({
+                        total: results[5].value.data.total?.beRoas ?? null,
+                        google: results[5].value.data.google?.beRoas ?? null,
+                        meta: results[5].value.data.meta?.beRoas ?? null
+                    });
+                } else {
+                    setError(e => ({ ...e, roas: 'Failed to load data' }));
+                }
+                // Use correct net profit formula: total net profit = total sales - total cogs - total ad spend
+                const totalSales = Number(results[2].status === 'fulfilled' ? results[2].value.data.totalSales ?? 0 : 0);
+                const totalCogs = Number(results[1].status === 'fulfilled' ? results[1].value.data.totalCogs ?? 0 : 0);
+                const totalAdSpend = Number(results[0].status === 'fulfilled' ? results[0].value.data.totalSpend ?? 0 : 0);
+                setTotalNetProfit(totalSales - totalCogs - totalAdSpend);
+                setLoading(false);
+            });
+        } else {
+            // Use new hourly endpoints for historical data
+            // Remove any minutes if present and just use hours
+            const startDateTime = startDate.split(':')[0];
+            const endDateTime = endDate.split(':')[0];
+            
+            Promise.allSettled([
+                axios.get(`${config.api.baseURL}/api/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`),
+                axios.get(`${config.api.baseURL}/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`)
+            ]).then((results) => {
+                // Handle ad spend data
+                if (results[0].status === 'fulfilled') {
+                    const adSpendData = results[0].value.data;
+                    setAdSpend(adSpendData.totals.facebookSpend + adSpendData.totals.googleSpend ?? null);
+                    setGoogleSpend(adSpendData.totals.googleSpend ?? null);
+                    setFacebookSpend(adSpendData.totals.facebookSpend ?? null);
+                } else {
+                    setError(e => ({ ...e, adSpend: 'Failed to load data' }));
+                }
+
+                // Handle sales and COGS data
+                if (results[1].status === 'fulfilled') {
+                    const salesData = results[1].value.data.hourlySales.sum;
+                    setTotalSales(salesData.total_sales ?? null);
+                    setGoogleSales(salesData.google_sales ?? null);
+                    setMetaSales(salesData.meta_sales ?? null);
+                    setOrganicSales(salesData.organic_sales ?? null);
+                    
+                    setTotalCogs(salesData.unit_cost ?? null);
+                    setGoogleCogs(salesData.unit_cost_google ?? null);
+                    setMetaCogs(salesData.unit_cost_meta ?? null);
+
+                    // Set order counts
+                    setTotalQuantity(salesData.order_count ?? null);
+                    setGoogleQuantity(salesData.google_order_count ?? null);
+                    setMetaQuantity(salesData.meta_order_count ?? null);
+                    setOrganicQuantity(salesData.organic_order_count ?? null);
+
+                    // Calculate net profits using totals from ad spend
+                    const adSpendTotals = results[0].value.data.totals;
+                    const totalAdSpend = adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
+                    const totalNetProfit = (salesData.total_sales ?? 0) - (salesData.unit_cost ?? 0) - totalAdSpend;
+                    const googleNetProfit = (salesData.google_sales ?? 0) - (salesData.unit_cost_google ?? 0) - adSpendTotals.googleSpend;
+                    const metaNetProfit = (salesData.meta_sales ?? 0) - (salesData.unit_cost_meta ?? 0) - adSpendTotals.facebookSpend;
+                    
+                    setTotalNetProfit(totalNetProfit);
+                    setGoogleNetProfit(googleNetProfit);
+                    setMetaNetProfit(metaNetProfit);
+
+                    // Calculate ROAS using totals
+                    if (totalAdSpend > 0) {
+                        setGrossRoas({
+                            total: salesData.total_sales / totalAdSpend,
+                            google: adSpendTotals.googleSpend > 0 ? salesData.google_sales / adSpendTotals.googleSpend : 0,
+                            meta: adSpendTotals.facebookSpend > 0 ? salesData.meta_sales / adSpendTotals.facebookSpend : 0
+                        });
+                        // Net ROAS = (Total Sales - COGS) / Total Ad Spend
+                        setNetRoas({
+                            total: (salesData.total_sales - salesData.unit_cost) / totalAdSpend,
+                            google: adSpendTotals.googleSpend > 0 ? 
+                                (salesData.google_sales - salesData.unit_cost_google) / adSpendTotals.googleSpend : 0,
+                            meta: adSpendTotals.facebookSpend > 0 ? 
+                                (salesData.meta_sales - salesData.unit_cost_meta) / adSpendTotals.facebookSpend : 0
+                        });
+                        // Calculate BE ROAS = (COGS + Ad Spend) / Ad Spend
+                        setBeRoas({
+                            total: (salesData.unit_cost + totalAdSpend) / totalAdSpend,
+                            google: adSpendTotals.googleSpend > 0 ? 
+                                (salesData.unit_cost_google + adSpendTotals.googleSpend) / adSpendTotals.googleSpend : 0,
+                            meta: adSpendTotals.facebookSpend > 0 ? 
+                                (salesData.unit_cost_meta + adSpendTotals.facebookSpend) / adSpendTotals.facebookSpend : 0
+                        });
+                    }
+                } else {
+                    setError(e => ({ ...e, sales: 'Failed to load data' }));
+                }
+                
+                setLoading(false);
+            }).catch((err) => {
+                setError(e => ({ ...e, general: 'Failed to load data' }));
+                setLoading(false);
+            });
+        }
     }, [effectiveDateRange.startDate, effectiveDateRange.endDate]);
 
     return (
