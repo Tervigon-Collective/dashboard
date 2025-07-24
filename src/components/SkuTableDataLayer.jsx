@@ -43,9 +43,10 @@ const SkuTableDataLayer = () => {
   const [newSku, setNewSku] = useState({
     product_name: "",
     sku_name: "",
+    variant_title: "NA",
     selling_price: "",
-    per_bottle_cost: "",
-    net_margin: "",
+    cogs: "",
+    margin: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,13 +146,13 @@ const SkuTableDataLayer = () => {
     setNewSku((prev) => {
       const updatedSku = { ...prev, [name]: value };
       
-      // Automatically calculate net margin when selling price or per bottle cost changes
-      if (name === 'selling_price' || name === 'per_bottle_cost') {
+      // Automatically calculate margin when selling price or cogs changes
+      if (name === 'selling_price' || name === 'cogs') {
         const sellingPrice = name === 'selling_price' ? Number(value) : Number(prev.selling_price);
-        const perBottleCost = name === 'per_bottle_cost' ? Number(value) : Number(prev.per_bottle_cost);
+        const cogs = name === 'cogs' ? Number(value) : Number(prev.cogs);
         
-        if (sellingPrice && perBottleCost) {
-          updatedSku.net_margin = (sellingPrice - perBottleCost).toFixed(2);
+        if (sellingPrice && cogs) {
+          updatedSku.margin = (sellingPrice - cogs).toFixed(2);
         }
       }
       
@@ -165,10 +166,10 @@ const SkuTableDataLayer = () => {
     setIsSubmitting(true);
     setErrorMsg("");
 
-    const { product_name, sku_name, selling_price, per_bottle_cost, net_margin } = newSku;
+    const { product_name, sku_name, variant_title, selling_price, cogs, margin } = newSku;
 
     // Basic validation
-    if (!product_name || !sku_name || !selling_price || !per_bottle_cost || !net_margin) {
+    if (!product_name || !sku_name || !selling_price || !cogs || !margin) {
       setErrorMsg("All fields are required.");
       setIsSubmitting(false);
       return;
@@ -221,9 +222,10 @@ const SkuTableDataLayer = () => {
     setNewSku({
       product_name: sku.product_name,
       sku_name: sku.sku_name,
+      variant_title: sku.variant_title,
       selling_price: sku.selling_price,
-      per_bottle_cost: sku.per_bottle_cost,
-      net_margin: sku.net_margin,
+      cogs: sku.cogs,
+      margin: sku.margin,
     });
     setModalIsOpen(true);
   };
@@ -254,9 +256,10 @@ const SkuTableDataLayer = () => {
     setNewSku({
       product_name: "",
       sku_name: "",
+      variant_title: "Default Title",
       selling_price: "",
-      per_bottle_cost: "",
-      net_margin: "",
+      cogs: "",
+      margin: "",
     });
     setEditSku(null);
     setModalIsOpen(true);
@@ -268,20 +271,22 @@ const SkuTableDataLayer = () => {
     setNewSku({
       product_name: "",
       sku_name: "",
+      variant_title: "Default Title",
       selling_price: "",
-      per_bottle_cost: "",
-      net_margin: "",
+      cogs: "",
+      margin: "",
     });
   };
 
   // Simple table row component
   const TableRow = ({ sku, onEdit, onDelete }) => (
-    <tr key={sku.sku_name}>
+    <tr key={`${sku.sku_name}-${sku.variant_title}`}>
       <td>{sku.sku_name}</td>
       <td>{sku.product_name}</td>
+      <td>{sku.variant_title}</td>
       <td>{sku.selling_price}</td>
-      <td>{sku.per_bottle_cost}</td>
-      <td>{sku.net_margin}</td>
+      <td>{sku.cogs}</td>
+      <td>{sku.margin}</td>
       <td>
         <button
           className="btn btn-sm btn-success me-2"
@@ -471,6 +476,20 @@ const SkuTableDataLayer = () => {
                 </th>
                 <th 
                   style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('variant_title')}
+                >
+                  Variant
+                  {sortConfig.key === 'variant_title' && (
+                    <Icon 
+                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
+                      width="14" 
+                      height="14" 
+                      className="ms-1"
+                    />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
                   onClick={() => handleSort('selling_price')}
                 >
                   Selling Price
@@ -485,10 +504,10 @@ const SkuTableDataLayer = () => {
                 </th>
                 <th 
                   style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('per_bottle_cost')}
+                  onClick={() => handleSort('cogs')}
                 >
                   COGS
-                  {sortConfig.key === 'per_bottle_cost' && (
+                  {sortConfig.key === 'cogs' && (
                     <Icon 
                       icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
                       width="14" 
@@ -499,10 +518,10 @@ const SkuTableDataLayer = () => {
                 </th>
                 <th 
                   style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('net_margin')}
+                  onClick={() => handleSort('margin')}
                 >
-                  Net Margin
-                  {sortConfig.key === 'net_margin' && (
+                  Margin
+                  {sortConfig.key === 'margin' && (
                     <Icon 
                       icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
                       width="14" 
@@ -517,20 +536,20 @@ const SkuTableDataLayer = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" className="text-center">
+                  <td colSpan="7" className="text-center">
                     Loading...
                   </td>
                 </tr>
               ) : currentData.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center">
+                  <td colSpan="7" className="text-center">
                     {searchTerm ? 'No matching records found' : 'No data available'}
                   </td>
                 </tr>
               ) : (
                 currentData.map((sku) => (
                   <TableRow
-                    key={sku.sku_name}
+                    key={`${sku.sku_name}-${sku.variant_title}`}
                     sku={sku}
                     onEdit={handleEdit}
                     onDelete={(skuName) => {
@@ -633,11 +652,25 @@ const SkuTableDataLayer = () => {
                 />
               </div>
               <div className="mb-3">
+                <label htmlFor="variant_title" className="form-label">
+                  Variant Title
+                </label>
+                <input
+                  type="text"
+                  id="variant_title"
+                  name="variant_title"
+                  className="form-control"
+                  value={newSku.variant_title}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="mb-3">
                 <label htmlFor="selling_price" className="form-label">
                   Selling Price
                 </label>
                 <input
                   type="number"
+                  step="0.01"
                   id="selling_price"
                   name="selling_price"
                   className="form-control"
@@ -646,28 +679,30 @@ const SkuTableDataLayer = () => {
                 />
               </div>
               <div className="mb-3">
-                <label htmlFor="per_bottle_cost" className="form-label">
-                  COGS (Per Bottle Cost)
+                <label htmlFor="cogs" className="form-label">
+                  COGS
                 </label>
                 <input
                   type="number"
-                  id="per_bottle_cost"
-                  name="per_bottle_cost"
+                  step="0.01"
+                  id="cogs"
+                  name="cogs"
                   className="form-control"
-                  value={newSku.per_bottle_cost}
+                  value={newSku.cogs}
                   onChange={handleInputChange}
                 />
               </div>
               <div className="mb-3">
-                <label htmlFor="net_margin" className="form-label">
-                  Net Margin
+                <label htmlFor="margin" className="form-label">
+                  Margin
                 </label>
                 <input
                   type="number"
-                  id="net_margin"
-                  name="net_margin"
+                  step="0.01"
+                  id="margin"
+                  name="margin"
                   className="form-control"
-                  value={newSku.net_margin}
+                  value={newSku.margin}
                   readOnly
                 />
               </div>
