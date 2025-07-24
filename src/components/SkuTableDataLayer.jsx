@@ -61,9 +61,30 @@ const SkuTableDataLayer = () => {
     direction: 'asc'
   });
 
-  // Fetch SKU data from backend
+  // Create a map to store counters for each SKU-variant combination
+  const [keyCounters, setKeyCounters] = useState({});
+
+  // Function to get a unique key
+  const getUniqueKey = (sku) => {
+    const baseKey = `${sku.sku_name}-${sku.variant_title}`;
+    if (!keyCounters[baseKey]) {
+      setKeyCounters(prev => ({ ...prev, [baseKey]: 1 }));
+      return `${baseKey}-1`;
+    }
+    const newCount = keyCounters[baseKey] + 1;
+    setKeyCounters(prev => ({ ...prev, [baseKey]: newCount }));
+    return `${baseKey}-${newCount}`;
+  };
+
+  // Optimistic update helper
+  const updateSkuDataOptimistically = (newData) => {
+    setSkuData(newData);
+  };
+
+  // Fetch SKU data from backend with error handling and loading state
   const fetchData = async () => {
     setIsLoading(true);
+    setErrorMsg(""); // Clear previous errors
     try {
       const response = await fetch(`${config.api.baseURL}/product_metrics`);
       if (!response.ok) throw new Error("Failed to fetch SKU data");
@@ -160,7 +181,7 @@ const SkuTableDataLayer = () => {
     });
   };
 
-  // Submit new SKU to backend
+  // Submit new/updated SKU to backend with optimistic update
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -175,15 +196,32 @@ const SkuTableDataLayer = () => {
       return;
     }
 
+    // Store previous data for rollback
+    const previousData = [...skuData];
+
     try {
+      // Optimistic update
+      if (editSku) {
+        // Update existing SKU
+        const updatedData = skuData.map(sku => 
+          sku.sku_name === editSku.sku_name ? { ...sku, ...newSku } : sku
+        );
+        updateSkuDataOptimistically(updatedData);
+      } else {
+        // Add new SKU
+        updateSkuDataOptimistically([newSku, ...skuData]);
+      }
+
+      // Close modal early for better UX
+      closeModal();
+
+      // Make API call
       const url = editSku 
         ? `${config.api.baseURL}/product_metrics/${editSku.sku_name}`
         : `${config.api.baseURL}/product_metrics`;
       
-      const method = editSku ? "PUT" : "POST";
-
       const response = await fetch(url, {
-        method,
+        method: editSku ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSku),
       });
@@ -194,93 +232,102 @@ const SkuTableDataLayer = () => {
       
       const savedSku = await response.json();
       
+      // Update with server data to ensure consistency
       if (editSku) {
-        // Update existing SKU in the list
         setSkuData(prevData => 
           prevData.map(sku => sku.sku_name === editSku.sku_name ? savedSku : sku)
         );
       } else {
-        // Add new SKU at the top of the list
-        setSkuData(prevData => [savedSku, ...prevData]);
-        setCurrentPage(1); // Go to first page to see the new SKU
+        setSkuData(prevData => [savedSku, ...prevData.filter(sku => sku.sku_name !== savedSku.sku_name)]);
       }
       
       handleSuccess(editSku ? "Update SKU" : "Create SKU");
-      closeModal();
+      setCurrentPage(1); // Go to first page to see the new/updated SKU
     } catch (err) {
       console.error(`Error ${editSku ? 'updating' : 'creating'} product metric:`, err);
-      setErrorMsg("Failed to save. Please try again.");
+      // Rollback on error
+      updateSkuDataOptimistically(previousData);
       handleError(editSku ? "Update SKU" : "Create SKU");
+      setErrorMsg("Failed to save. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle edit
+  // Handle edit with data validation
   const handleEdit = (sku) => {
+    if (!sku) return;
+    
     setEditSku(sku);
     setNewSku({
-      product_name: sku.product_name,
-      sku_name: sku.sku_name,
-      variant_title: sku.variant_title,
-      selling_price: sku.selling_price,
-      cogs: sku.cogs,
-      margin: sku.margin,
+      product_name: sku.product_name || "",
+      sku_name: sku.sku_name || "",
+      variant_title: sku.variant_title || "NA",
+      selling_price: sku.selling_price || "",
+      cogs: sku.cogs || "",
+      margin: sku.margin || "",
     });
     setModalIsOpen(true);
   };
 
-  // Handle delete
+  // Handle delete with optimistic update
   const handleDelete = async () => {
+    // Store previous data for rollback
+    const previousData = [...skuData];
+
     try {
+      // Optimistic update
+      setSkuData(prevData => prevData.filter(sku => sku.sku_name !== deleteSkuName));
+      setConfirmModalIsOpen(false);
+
       const response = await fetch(`${config.api.baseURL}/product_metrics/${deleteSkuName}`, {
         method: "DELETE",
       });
+
       if (!response.ok) {
         throw new Error("Failed to delete SKU");
       }
-      await fetchData();
+
       handleSuccess("Delete SKU");
     } catch (error) {
       console.error("Error deleting product metric:", error);
+      // Rollback on error
+      updateSkuDataOptimistically(previousData);
       handleError("Delete SKU");
     } finally {
-      setConfirmModalIsOpen(false);
       setDeleteSkuName(null);
     }
   };
 
-  // Open / close modal
-  const openModal = () => {
-    setErrorMsg("");
+  // Reset form helper
+  const resetForm = () => {
     setNewSku({
       product_name: "",
       sku_name: "",
-      variant_title: "Default Title",
+      variant_title: "NA",
       selling_price: "",
       cogs: "",
       margin: "",
     });
     setEditSku(null);
+    setErrorMsg("");
+  };
+
+  // Open modal with reset
+  const openModal = () => {
+    resetForm();
     setModalIsOpen(true);
   };
 
+  // Close modal with cleanup
   const closeModal = () => {
     setModalIsOpen(false);
-    setEditSku(null);
-    setNewSku({
-      product_name: "",
-      sku_name: "",
-      variant_title: "Default Title",
-      selling_price: "",
-      cogs: "",
-      margin: "",
-    });
+    resetForm();
   };
 
   // Simple table row component
-  const TableRow = ({ sku, onEdit, onDelete }) => (
-    <tr key={`${sku.sku_name}-${sku.variant_title}`}>
+  const TableRow = ({ sku, onEdit, onDelete, uniqueKey }) => (
+    <tr key={uniqueKey}>
       <td>{sku.sku_name}</td>
       <td>{sku.product_name}</td>
       <td>{sku.variant_title}</td>
@@ -308,6 +355,11 @@ const SkuTableDataLayer = () => {
       </td>
     </tr>
   );
+
+  // Reset key counters when data changes
+  useEffect(() => {
+    setKeyCounters({});
+  }, [skuData]);
 
   // Generate pagination numbers
   const getPaginationNumbers = () => {
@@ -547,17 +599,21 @@ const SkuTableDataLayer = () => {
                   </td>
                 </tr>
               ) : (
-                currentData.map((sku) => (
-                  <TableRow
-                    key={`${sku.sku_name}-${sku.variant_title}`}
-                    sku={sku}
-                    onEdit={handleEdit}
-                    onDelete={(skuName) => {
-                      setDeleteSkuName(skuName);
-                      setConfirmModalIsOpen(true);
-                    }}
-                  />
-                ))
+                currentData.map((sku, index) => {
+                  const uniqueKey = `${sku.sku_name}-${sku.variant_title}-${index}`;
+                  return (
+                    <TableRow
+                      key={uniqueKey}
+                      uniqueKey={uniqueKey}
+                      sku={sku}
+                      onEdit={handleEdit}
+                      onDelete={(skuName) => {
+                        setDeleteSkuName(skuName);
+                        setConfirmModalIsOpen(true);
+                      }}
+                    />
+                  );
+                })
               )}
             </tbody>
           </table>
