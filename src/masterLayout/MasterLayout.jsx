@@ -169,6 +169,18 @@ const MasterLayout = ({ children }) => {
                     Historical Analytics
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href="/product-spend-summary"
+                    className={pathname === "/product-spend-summary" ? "active-page" : ""}
+                  >
+                    <i className="ri-circle-fill circle-icon text-info-main w-auto" />{" "}
+                    Product Spend Summary
+                  </Link>
+                  
+                </li>
+
+
                 {/* <li>
                   <Link
                     href="/index-3"
