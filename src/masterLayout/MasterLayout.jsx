@@ -18,14 +18,18 @@ const MasterLayout = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
 
     const handleDropdownClick = (event) => {
       event.preventDefault();
       const clickedLink = event.currentTarget;
       const clickedDropdown = clickedLink.closest(".dropdown");
 
-      if (!clickedDropdown) return;
+      if (!clickedDropdown) {
+        return;
+      }
 
       const isActive = clickedDropdown.classList.contains("open");
 

@@ -204,3 +204,17 @@ table.dataTable td.dt-type-date {
 .overlay.active::after {
   width: 100%;
 }
+
+@media (max-width: 767.98px) {
+  .table-actions-mobile {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+  .table-actions-mobile .btn {
+    width: 100%;
+    font-size: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+}

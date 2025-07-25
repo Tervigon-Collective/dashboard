@@ -8,7 +8,9 @@ const API_BASE = "https://skuspendsales-aghtewckaqbdfqep.centralindia-01.azurewe
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 function formatLocalISO(date) {
-  if (!date) return null;
+  if (!date) {
+    return null;
+  }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -42,7 +44,9 @@ const ProductSpendSummaryLayer = () => {
     try {
       const url = `${API_BASE}?start_datetime=${encodeURIComponent(start_datetime)}&end_datetime=${encodeURIComponent(end_datetime)}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch data");
+      if (!res.ok) {
+        throw new Error("Failed to fetch data");
+      }
       const data = await res.json();
       setSummary(data.summary_by_title || []);
     } catch (err) {
@@ -65,7 +69,9 @@ const ProductSpendSummaryLayer = () => {
 
   // Sort summary by total_quantity_sold descending
   const sortedSummary = useMemo(() => {
-    if (!summary) return [];
+    if (!summary) {
+      return [];
+    }
     return [...summary].sort((a, b) => (b.total_quantity_sold || 0) - (a.total_quantity_sold || 0));
   }, [summary]);
 
@@ -76,7 +82,9 @@ const ProductSpendSummaryLayer = () => {
 
   // Pagination controls
   const goToPage = (page) => {
-    if (page < 1 || page > totalPages) return;
+    if (page < 1 || page > totalPages) {
+      return;
+    }
     setCurrentPage(page);
   };
   const goToPrevious = () => goToPage(currentPage - 1);

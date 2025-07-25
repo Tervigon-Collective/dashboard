@@ -87,7 +87,9 @@ const SkuTableDataLayer = () => {
     setErrorMsg(""); // Clear previous errors
     try {
       const response = await fetch(`${config.api.baseURL}/product_metrics`);
-      if (!response.ok) throw new Error("Failed to fetch SKU data");
+      if (!response.ok) {
+        throw new Error("Failed to fetch SKU data");
+      }
       const data = await response.json();
       setSkuData(data || []);
     } catch (error) {
@@ -256,7 +258,9 @@ const SkuTableDataLayer = () => {
 
   // Handle edit with data validation
   const handleEdit = (sku) => {
-    if (!sku) return;
+    if (!sku) {
+      return;
+    }
     
     setEditSku(sku);
     setNewSku({
@@ -335,23 +339,25 @@ const SkuTableDataLayer = () => {
       <td>{sku.cogs}</td>
       <td>{sku.margin}</td>
       <td>
-        <button
-          className="btn btn-sm btn-success me-2"
-          onClick={() => onEdit(sku)}
-          title="Edit"
-        >
-          <Icon icon="lucide:edit" width="16" height="16" />
-        </button>
-        <button
-          className="btn btn-sm btn-danger"
-          onClick={() => {
-            setDeleteSkuName(sku.sku_name);
-            setConfirmModalIsOpen(true);
-          }}
-          title="Delete"
-        >
-          <Icon icon="lucide:trash" width="16" height="16" />
-        </button>
+        <div className="d-flex flex-row flex-md-row table-actions-mobile gap-2">
+          <button
+            className="btn btn-sm btn-success"
+            onClick={() => onEdit(sku)}
+            title="Edit"
+          >
+            <Icon icon="lucide:edit" width="16" height="16" />
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => {
+              setDeleteSkuName(sku.sku_name);
+              setConfirmModalIsOpen(true);
+            }}
+            title="Delete"
+          >
+            <Icon icon="lucide:trash" width="16" height="16" />
+          </button>
+        </div>
       </td>
     </tr>
   );
