@@ -108,11 +108,12 @@ const ProductSpendSummaryLayer = () => {
 
   return (
     <CustomProvider locale={enUS}>
-      <div className="mb-4">
-        <h2 className="fw-bold mb-2" style={{letterSpacing: 1, fontSize: 28, color: '#4e54c8'}}>Product Spend Dashboard</h2>
-      </div>
       <div className="card basic-data-table border-0 rounded-4 overflow-hidden">
-        <div className="card-body">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <h5 className="card-title mb-0">Product Spend Dashboard</h5>
+        </div>
+        <hr className="my-0" />
+        <div className="card-body pb-2 pt-3 px-3">
           <div className="row mb-3 align-items-center">
             <div className="col-md-6 d-flex align-items-center" style={{gap: 12}}>
               <label className="me-2 fw-semibold">Show</label>
@@ -155,13 +156,10 @@ const ProductSpendSummaryLayer = () => {
               />
             </div>
           </div>
-          <div className="mb-2 text-muted" style={{fontSize: 14}}>
-            Showing {startIdx} to {endIdx} of {sortedSummary.length} entries
-          </div>
           <div className="table-responsive">
-            <table className="table table-striped table-hover align-middle rounded-4 overflow-hidden" style={{borderRadius: 16, boxShadow: '0 2px 12px rgba(78,84,200,0.07)'}}>
-              <thead className="table-light rounded-4">
-                <tr style={{fontWeight: 700, fontSize: 16}}>
+            <table className="table table-striped table-bordered align-middle">
+              <thead className="table-light">
+                <tr>
                   <th style={{minWidth: 220}}>Product Title</th>
                   <th style={{minWidth: 120}}>Meta Ad Spend</th>
                   <th style={{minWidth: 120}}>Total Quantity Sold</th>
@@ -176,44 +174,45 @@ const ProductSpendSummaryLayer = () => {
                 ) : pagedSummary.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-4">No data found for this range.</td></tr>
                 ) : pagedSummary.map((row, idx) => {
-                  const isTop = row.total_quantity_sold === maxQuantity && maxQuantity > 0 && (currentPage === 1 && idx === 0);
+                  // Remove top seller highlight and badge
                   return (
-                    <tr key={row.product_title + idx} className={isTop ? "table-success" : ""} style={isTop ? {fontWeight: 700, fontSize: 16, background: 'linear-gradient(90deg, #e0eafc 0%, #cfdef3 100%)'} : {}}>
-                      <td>
-                        {row.product_title}
-                        {isTop && <span className="badge bg-success ms-2" style={{fontSize: 13, verticalAlign: 'middle'}}>Top Seller</span>}
-                      </td>
-                      <td>₹{Number(row.total_ad_spend).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                      <td style={isTop ? {color: '#388e3c', fontWeight: 800, fontSize: 18} : {}}>{row.total_quantity_sold}</td>
-                      <td>₹{Number(row.total_sales_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <tr key={row.product_title + idx} style={{paddingTop: 12, paddingBottom: 12}}>
+                      <td style={{paddingTop: 12, paddingBottom: 12}}>{row.product_title}</td>
+                      <td style={{paddingTop: 12, paddingBottom: 12}}>₹{Number(row.total_ad_spend).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td style={{paddingTop: 12, paddingBottom: 12}}>{row.total_quantity_sold}</td>
+                      <td style={{paddingTop: 12, paddingBottom: 12}}>₹{Number(row.total_sales_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-end align-items-center mt-3">
-              <ul className="pagination pagination-sm mb-0" style={{gap: 2}}>
-                <li className={`page-item${currentPage === 1 ? ' disabled' : ''}`}>
-                  <button className="page-link" onClick={goToPrevious} disabled={currentPage === 1}>Previous</button>
-                </li>
-                {getPaginationNumbers().map((number, idx) => (
-                  <li key={idx} className={`page-item${number === currentPage ? ' active' : ''} ${number === '...' ? 'disabled' : ''}`}>
-                    {number === '...' ? (
-                      <span className="page-link">...</span>
-                    ) : (
-                      <button className="page-link" onClick={() => goToPage(number)}>{number}</button>
-                    )}
-                  </li>
-                ))}
-                <li className={`page-item${currentPage === totalPages ? ' disabled' : ''}`}>
-                  <button className="page-link" onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
-                </li>
-              </ul>
+          <div className="row align-items-center mt-2">
+            <div className="col-md-6 text-muted" style={{fontSize: 14}}>
+              Showing {startIdx} to {endIdx} of {sortedSummary.length} entries
             </div>
-          )}
+            <div className="col-md-6 d-flex justify-content-end align-items-center">
+              {totalPages > 1 && (
+                <ul className="pagination pagination-sm mb-0" style={{gap: 2}}>
+                  <li className={`page-item${currentPage === 1 ? ' disabled' : ''}`}>
+                    <button className="page-link" onClick={goToPrevious} disabled={currentPage === 1}>Previous</button>
+                  </li>
+                  {getPaginationNumbers().map((number, idx) => (
+                    <li key={idx} className={`page-item${number === currentPage ? ' active' : ''} ${number === '...' ? 'disabled' : ''}`}>
+                      {number === '...' ? (
+                        <span className="page-link">...</span>
+                      ) : (
+                        <button className="page-link" onClick={() => goToPage(number)}>{number}</button>
+                      )}
+                    </li>
+                  ))}
+                  <li className={`page-item${currentPage === totalPages ? ' disabled' : ''}`}>
+                    <button className="page-link" onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
+                  </li>
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </CustomProvider>
