@@ -147,33 +147,48 @@ const MasterLayout = ({ children }) => {
         </div>
         <div className="sidebar-menu-area">
           <ul className="sidebar-menu" id="sidebar-menu">
-            <li className="dropdown">
-              <Link href="#">
-                <Icon
-                  icon="solar:home-smile-angle-outline"
-                  className="menu-icon"
-                />
-                <span>Dashboard</span>
-              </Link>
-              <ul className="sidebar-submenu">
-                <li>
-                  <Link
-                    href="/"
-                    className={pathname === "/" ? "active-page" : ""}
-                  >
-                    <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
-                    Reports Analytic
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/historical-data"
-                    className={pathname === "/historical-data" ? "active-page" : ""}
-                  >
-                    <i className="ri-circle-fill circle-icon text-warning-main w-auto" />{" "}
-                    Historical Analytics
-                  </Link>
-                </li>
+            {/* Dashboard Section - Only for Admin, Manager and Super Admin */}
+            {(() => {
+              const { role } = useRole();
+              const isSuperAdmin = role === 'super_admin';
+              const isAdmin = role === 'admin';
+              const isManager = role === 'manager';
+              
+              if (isSuperAdmin || isAdmin || isManager) {
+                return (
+                  <li className="dropdown">
+                    <Link href="#">
+                      <Icon
+                        icon="solar:home-smile-angle-outline"
+                        className="menu-icon"
+                      />
+                      <span>Dashboard</span>
+                    </Link>
+                    <ul className="sidebar-submenu">
+                      <li>
+                        <Link
+                          href="/"
+                          className={pathname === "/" ? "active-page" : ""}
+                        >
+                          <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
+                          Reports Analytic
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href="/historical-data"
+                          className={pathname === "/historical-data" ? "active-page" : ""}
+                        >
+                          <i className="ri-circle-fill circle-icon text-warning-main w-auto" />{" "}
+                          Historical Analytics
+                        </Link>
+                      </li>
+                    </ul>
+                  </li>
+                );
+              }
+              return null;
+            })()}
 
 
                 {/* <li>
@@ -257,102 +272,148 @@ const MasterLayout = ({ children }) => {
                     Finance & Banking
                   </Link>
                 </li> */}
-              </ul>
-            </li>
+              
 
-            <li className="sidebar-menu-group-title">Application</li>
-            <li>
-              <Link
-                href="/Sku-List"
-                className={pathname === "/Sku-List" ? "active-page" : ""}
-              >
-                <Icon icon="mage:box" className="menu-icon" />
-                <span>Sku List</span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/product-spend-summary"
-                className={pathname === "/product-spend-summary" ? "active-page" : ""}
-              >
-                <Icon icon="mage:box" className="menu-icon" />
-                <span>Product Spend Summary</span>
-              </Link>
-            </li>
-
-            {/* User Management Section - Only for Super Admin and Admin */}
+            {/* Application Section - Only for Admin, Manager and Super Admin */}
             {(() => {
               const { role } = useRole();
               const isSuperAdmin = role === 'super_admin';
               const isAdmin = role === 'admin';
+              const isManager = role === 'manager';
               
-              if (isSuperAdmin || isAdmin) {
+              if (isSuperAdmin || isAdmin || isManager) {
                 return (
                   <>
-                    <li className="sidebar-menu-group-title">User Management</li>
-                    
-                    {/* User Management Dropdown */}
-                    <li className="dropdown">
-                      <Link href="#">
-                        <Icon icon="mdi:account-group" className="menu-icon" />
-                        <span>User Management</span>
+                    <li className="sidebar-menu-group-title">Application</li>
+                    <li>
+                      <Link
+                        href="/Sku-List"
+                        className={pathname === "/Sku-List" ? "active-page" : ""}
+                      >
+                        <Icon icon="mage:box" className="menu-icon" />
+                        <span>Sku List</span>
                       </Link>
-                      <ul className="sidebar-submenu">
-                        <li>
-                          <Link
-                            href="/user-management"
-                            className={pathname === "/user-management" ? "active-page" : ""}
-                          >
-                            <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
-                            All Users
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/create-user"
-                            className={pathname === "/create-user" ? "active-page" : ""}
-                          >
-                            <i className="ri-circle-fill circle-icon text-success-main w-auto" />
-                            Create User
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/assign-role"
-                            className={pathname === "/assign-role" ? "active-page" : ""}
-                          >
-                            <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
-                            Assign Roles
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/user-role-info"
-                            className={pathname === "/user-role-info" ? "active-page" : ""}
-                          >
-                            <i className="ri-circle-fill circle-icon text-info-main w-auto" />
-                            Role Information
-                          </Link>
-                        </li>
-                      </ul>
                     </li>
-
-                    {/* Customer Data - Only for Super Admin */}
-                    {isSuperAdmin && (
-                      <li>
-                        <Link
-                          href="/customer-data"
-                          className={pathname === "/customer-data" ? "active-page" : ""}
-                        >
-                          <Icon icon="mdi:database" className="menu-icon" />
-                          <span>Customer Data</span>
-                        </Link>
-                      </li>
-                    )}
+                    <li>
+                      <Link
+                        href="/product-spend-summary"
+                        className={pathname === "/product-spend-summary" ? "active-page" : ""}
+                      >
+                        <Icon icon="mage:box" className="menu-icon" />
+                        <span>Product Spend Summary</span>
+                      </Link>
+                    </li>
                   </>
                 );
               }
               return null;
+            })()}
+
+            {/* Role-based Navigation */}
+            {(() => {
+              const { role } = useRole();
+              const isSuperAdmin = role === 'super_admin';
+              const isAdmin = role === 'admin';
+              const isManager = role === 'manager';
+              const isUser = role === 'user';
+              
+              return (
+                <>
+                  {/* Customer Data - Available for all roles */}
+                  {(isSuperAdmin || isAdmin || isManager || isUser) && (
+                    <li>
+                      <Link
+                        href="/customer-data"
+                        className={pathname === "/customer-data" ? "active-page" : ""}
+                      >
+                        <Icon icon="mdi:database" className="menu-icon" />
+                        <span>Customer Data</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {/* User Management Section - Only for Admin and Super Admin */}
+                  {(isSuperAdmin || isAdmin) && (
+                    <>
+                      <li className="sidebar-menu-group-title">User Management</li>
+                      
+                      {/* User Management Dropdown */}
+                      <li className="dropdown">
+                        <Link href="#">
+                          <Icon icon="mdi:account-group" className="menu-icon" />
+                          <span>User Management</span>
+                        </Link>
+                        <ul className="sidebar-submenu">
+                          <li>
+                            <Link
+                              href="/user-management"
+                              className={pathname === "/user-management" ? "active-page" : ""}
+                            >
+                              <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
+                              All Users
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/create-user"
+                              className={pathname === "/create-user" ? "active-page" : ""}
+                            >
+                              <i className="ri-circle-fill circle-icon text-success-main w-auto" />
+                              Create User
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/assign-role"
+                              className={pathname === "/assign-role" ? "active-page" : ""}
+                            >
+                              <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
+                              Assign Roles
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/user-role-info"
+                              className={pathname === "/user-role-info" ? "active-page" : ""}
+                            >
+                              <i className="ri-circle-fill circle-icon text-info-main w-auto" />
+                              Role Information
+                            </Link>
+                          </li>
+                        </ul>
+                      </li>
+                    </>
+                  )}
+
+                  {/* Super Admin Only Features */}
+                  {isSuperAdmin && (
+                    <>
+                      <li className="sidebar-menu-group-title">Super Admin</li>
+                      
+                      {/* Additional super admin features can be added here */}
+                      <li>
+                        <Link
+                          href="/system-settings"
+                          className={pathname === "/system-settings" ? "active-page" : ""}
+                        >
+                          <Icon icon="mdi:cog" className="menu-icon" />
+                          <span>System Settings</span>
+                        </Link>
+                      </li>
+                      
+                      <li>
+                        <Link
+                          href="/audit-logs"
+                          className={pathname === "/audit-logs" ? "active-page" : ""}
+                        >
+                          <Icon icon="mdi:clipboard-list" className="menu-icon" />
+                          <span>Audit Logs</span>
+                        </Link>
+                      </li>
+                    </>
+                  )}
+                </>
+              );
             })()}
             {/* <li>
               <Link
