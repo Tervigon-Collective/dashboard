@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../helper/ThemeToggleButton";
 import Link from "next/link";
 import { useUser } from "@/helper/UserContext";
+import { useRole } from "@/hook/useRole";
 import { signOut } from "firebase/auth";
 import { auth } from "@/helper/firebase";
 import { useRouter } from "next/navigation";
@@ -278,6 +279,81 @@ const MasterLayout = ({ children }) => {
                 <span>Product Spend Summary</span>
               </Link>
             </li>
+
+            {/* User Management Section - Only for Super Admin and Admin */}
+            {(() => {
+              const { role } = useRole();
+              const isSuperAdmin = role === 'super_admin';
+              const isAdmin = role === 'admin';
+              
+              if (isSuperAdmin || isAdmin) {
+                return (
+                  <>
+                    <li className="sidebar-menu-group-title">User Management</li>
+                    
+                    {/* User Management Dropdown */}
+                    <li className="dropdown">
+                      <Link href="#">
+                        <Icon icon="mdi:account-group" className="menu-icon" />
+                        <span>User Management</span>
+                      </Link>
+                      <ul className="sidebar-submenu">
+                        <li>
+                          <Link
+                            href="/user-management"
+                            className={pathname === "/user-management" ? "active-page" : ""}
+                          >
+                            <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
+                            All Users
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/create-user"
+                            className={pathname === "/create-user" ? "active-page" : ""}
+                          >
+                            <i className="ri-circle-fill circle-icon text-success-main w-auto" />
+                            Create User
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/assign-role"
+                            className={pathname === "/assign-role" ? "active-page" : ""}
+                          >
+                            <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
+                            Assign Roles
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/user-role-info"
+                            className={pathname === "/user-role-info" ? "active-page" : ""}
+                          >
+                            <i className="ri-circle-fill circle-icon text-info-main w-auto" />
+                            Role Information
+                          </Link>
+                        </li>
+                      </ul>
+                    </li>
+
+                    {/* Customer Data - Only for Super Admin */}
+                    {isSuperAdmin && (
+                      <li>
+                        <Link
+                          href="/customer-data"
+                          className={pathname === "/customer-data" ? "active-page" : ""}
+                        >
+                          <Icon icon="mdi:database" className="menu-icon" />
+                          <span>Customer Data</span>
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                );
+              }
+              return null;
+            })()}
             {/* <li>
               <Link
                 href="/email"

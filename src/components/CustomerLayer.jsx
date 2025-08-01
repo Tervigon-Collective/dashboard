@@ -278,6 +278,7 @@ const CustomerLayer = () => {
         }
 
         setFileData(parsedData);
+
         mapDataToBackendFormat(parsedData);
       } catch (error) {
         console.error("File parsing error:", error);
@@ -328,8 +329,9 @@ const CustomerLayer = () => {
       if (!groupedOrders[orderKey]) {
         
         // Construct order only once per ID
+        const orderId = findColumn(row, ['Id', 'Order ID', 'ID']) || '';
         groupedOrders[orderKey] = {
-          order_id: `gid://shopify/Order/${findColumn(row, ['Id', 'Order ID', 'ID']) || ''}`,
+          order_id: orderId ? `gid://shopify/Order/${orderId}` : `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           
           order_name: orderKey,
           email: findColumn(row, ['Email', 'Customer Email', 'Email Address']),
@@ -398,24 +400,28 @@ const CustomerLayer = () => {
       }
   
       // Add line item
-      groupedOrders[orderKey].line_items.push({
-        lineitem_quantity: parseInt(findColumn(row, ['Lineitem quantity', 'Quantity', 'Qty']) || 1),
-        lineitem_name: findColumn(row, ['Lineitem name', 'Product Name', 'Name', 'Title']),
-        lineitem_sku: findColumn(row, ['Lineitem sku', 'SKU', 'Product SKU']),
-        lineitem_price: parseFloat(findColumn(row, ['Lineitem price', 'Price', 'Unit Price']) || 0),
-        lineitem_compare_at_price: parseFloat(findColumn(row, ['Lineitem compare at price', 'Compare Price']) || 0),
-        lineitem_grams: parseInt(findColumn(row, ['Lineitem grams', 'Weight', 'Grams']) || 0),
-        lineitem_requires_shipping: findColumn(row, ['Lineitem requires shipping', 'Requires Shipping']) || 'yes',
-        lineitem_taxable: findColumn(row, ['Lineitem taxable', 'Taxable']) || 'yes',
-        lineitem_fulfillment_status: findColumn(row, ['Lineitem fulfillment status', 'Fulfillment Status']) || 'fulfilled',
-        lineitem_vendor: findColumn(row, ['Vendor', 'Product Vendor']),
-        lineitem_gift_card: findColumn(row, ['Lineitem gift_card', 'Gift Card']) || 'no',
-      });
+      const lineItemName = findColumn(row, ['Lineitem name', 'Product Name', 'Name', 'Title']);
+      if (lineItemName) { // Only add line item if there's a product name
+        groupedOrders[orderKey].line_items.push({
+          lineitem_quantity: parseInt(findColumn(row, ['Lineitem quantity', 'Quantity', 'Qty']) || 1),
+          lineitem_name: lineItemName,
+          lineitem_sku: findColumn(row, ['Lineitem sku', 'SKU', 'Product SKU']) || '',
+          lineitem_price: parseFloat(findColumn(row, ['Lineitem price', 'Price', 'Unit Price']) || 0),
+          lineitem_compare_at_price: parseFloat(findColumn(row, ['Lineitem compare at price', 'Compare Price']) || 0),
+          lineitem_grams: parseInt(findColumn(row, ['Lineitem grams', 'Weight', 'Grams']) || 0),
+          lineitem_requires_shipping: findColumn(row, ['Lineitem requires shipping', 'Requires Shipping']) || 'yes',
+          lineitem_taxable: findColumn(row, ['Lineitem taxable', 'Taxable']) || 'yes',
+          lineitem_fulfillment_status: findColumn(row, ['Lineitem fulfillment status', 'Fulfillment Status']) || 'fulfilled',
+          lineitem_vendor: findColumn(row, ['Vendor', 'Product Vendor']) || '',
+          lineitem_gift_card: findColumn(row, ['Lineitem gift_card', 'Gift Card']) || 'no',
+        });
+      }
       
       processedRows++;
     });
   
     const mapped = Object.values(groupedOrders);
+
     setMappedData(mapped);
   };
   
@@ -431,25 +437,151 @@ const CustomerLayer = () => {
     setUploadSuccess("");
 
     try {
-      const response = await fetch(`${config.api.baseURL}/api/customer-orders/bulk`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(mappedData),
+      // Ensure we're sending an array of customer order objects
+      const customerOrders = mappedData.map(order => {
+        // Validate required fields
+        if (!order.order_id || !order.order_name) {
+          throw new Error(`Invalid order data: Missing required fields (order_id: ${order.order_id}, order_name: ${order.order_name})`);
+        }
+
+        return {
+          order_id: order.order_id,
+          order_name: order.order_name,
+          created_at: order.created_at || new Date().toISOString(),
+          email: order.email || '',
+          billing_name: order.billing_name || '',
+          billing_address1: order.billing_address1 || '',
+          billing_address2: order.billing_address2 || '',
+          billing_city: order.billing_city || '',
+          billing_zip: order.billing_zip || '',
+          billing_province_name: order.billing_province_name || '',
+          billing_country: order.billing_country || 'IN',
+          billing_phone: order.billing_phone || '',
+          shipping_name: order.shipping_name || order.billing_name || '',
+          shipping_address1: order.shipping_address1 || order.billing_address1 || '',
+          shipping_address2: order.shipping_address2 || order.billing_address2 || '',
+          shipping_city: order.shipping_city || order.billing_city || '',
+          shipping_zip: order.shipping_zip || order.billing_zip || '',
+          shipping_province_name: order.shipping_province_name || order.billing_province_name || '',
+          shipping_country: order.shipping_country || order.billing_country || 'IN',
+          shipping_phone: order.shipping_phone || order.billing_phone || '',
+          payment_method: order.payment_method || '',
+          payment_status: order.payment_status || 'pending',
+          payment_id: order.payment_id || '',
+          payment_references: order.payment_references || '',
+          payment_terms_name: order.payment_terms_name || '',
+          next_payment_due_at: order.next_payment_due_at || null,
+          subtotal: parseFloat(order.subtotal) || 0,
+          shipping: parseFloat(order.shipping) || 0,
+          taxes: parseFloat(order.taxes) || 0,
+          discount_amount: parseFloat(order.discount_amount) || 0,
+          total: parseFloat(order.total) || 0,
+          tax_1_name: order.tax_1_name || '',
+          tax_1_value: parseFloat(order.tax_1_value) || 0,
+          tax_2_name: order.tax_2_name || '',
+          tax_2_value: parseFloat(order.tax_2_value) || 0,
+          notes: order.notes || '',
+          note_attributes: order.note_attributes || '',
+          phone: order.phone || order.billing_phone || '',
+          fulfillment_status: order.fulfillment_status || 'unfulfilled',
+          line_items: Array.isArray(order.line_items) ? order.line_items : []
+        };
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+
+
+      // Process in smaller batches to avoid rate limiting
+      const batchSize = 50; // Smaller batch size
+      const batches = [];
+      for (let i = 0; i < customerOrders.length; i += batchSize) {
+        batches.push(customerOrders.slice(i, i + batchSize));
       }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        setUploadSuccess(`Successfully uploaded ${result.total_processed} orders! Success: ${result.successful_inserts}, Failed: ${result.failed_inserts}`);
+
+
+      let totalProcessed = 0;
+      let totalSuccess = 0;
+      let totalFailed = 0;
+      const errors = [];
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+
+
+        let retryCount = 0;
+        const maxRetries = 3;
+        let success = false;
+
+        while (retryCount < maxRetries && !success) {
+          try {
+            const response = await fetch(`${config.api.baseURL}/api/customer-orders/bulk`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(batch),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              
+              // Check if it's a rate limit error
+              if (response.status === 429) {
+                const errorData = JSON.parse(errorText);
+                const retryAfter = errorData.retryAfter || 60;
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                retryCount++;
+                continue;
+              }
+              
+              throw new Error(`Batch ${i + 1} failed: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+              totalProcessed += result.total_processed || batch.length;
+              totalSuccess += result.successful_inserts || batch.length;
+              totalFailed += result.failed_inserts || 0;
+              
+              if (result.errors && result.errors.length > 0) {
+                errors.push(...result.errors);
+              }
+              
+  
+              success = true;
+            } else {
+              throw new Error(result.error || `Batch ${i + 1} failed`);
+            }
+
+          } catch (error) {
+            if (retryCount === maxRetries - 1) {
+              // Final attempt failed
+              errors.push({
+                batch: i + 1,
+                error: error.message
+              });
+              totalFailed += batch.length;
+            } else {
+              // Wait before retry with exponential backoff
+              const waitTime = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              retryCount++;
+            }
+          }
+        }
+
+        // Add delay between batches to avoid rate limiting
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        }
+      }
+
+      // Show results
+      if (totalSuccess > 0) {
+        setUploadSuccess(`Successfully uploaded ${totalSuccess} orders! Total processed: ${totalProcessed}, Failed: ${totalFailed}${errors.length > 0 ? `, Errors: ${errors.length}` : ''}`);
       } else {
-        throw new Error(result.error || 'Upload failed');
+        throw new Error(`All batches failed. Total failed: ${totalFailed}`);
       }
       
       setUploadModalOpen(false);
