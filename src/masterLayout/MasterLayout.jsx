@@ -385,33 +385,7 @@ const MasterLayout = ({ children }) => {
                     </>
                   )}
 
-                  {/* Super Admin Only Features */}
-                  {isSuperAdmin && (
-                    <>
-                      <li className="sidebar-menu-group-title">Super Admin</li>
-                      
-                      {/* Additional super admin features can be added here */}
-                      <li>
-                        <Link
-                          href="/system-settings"
-                          className={pathname === "/system-settings" ? "active-page" : ""}
-                        >
-                          <Icon icon="mdi:cog" className="menu-icon" />
-                          <span>System Settings</span>
-                        </Link>
-                      </li>
-                      
-                      <li>
-                        <Link
-                          href="/audit-logs"
-                          className={pathname === "/audit-logs" ? "active-page" : ""}
-                        >
-                          <Icon icon="mdi:clipboard-list" className="menu-icon" />
-                          <span>Audit Logs</span>
-                        </Link>
-                      </li>
-                    </>
-                  )}
+
                 </>
               );
             })()}
