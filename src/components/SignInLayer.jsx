@@ -138,7 +138,7 @@ const SignInLayer = () => {
               <span className='bg-base z-1 px-4'>Or sign in with</span>
             </div>
             <div className='mt-32 d-flex align-items-center gap-3'>
-              <button
+              {/* <button
                 type='button'
                 className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
                 onClick={handleFacebookSignIn}
@@ -149,7 +149,7 @@ const SignInLayer = () => {
                   className='text-primary-600 text-xl line-height-1'
                 />
                 Facebook
-              </button>
+              </button> */}
               <button
                 type='button'
                 className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
@@ -163,14 +163,14 @@ const SignInLayer = () => {
                 Google
               </button>
             </div>
-            <div className='mt-32 text-center text-sm'>
+            {/* <div className='mt-32 text-center text-sm'>
               <p className='mb-0'>
                 Don’t have an account?{" "}
                 <Link href='/sign-up' className='text-primary-600 fw-semibold'>
                   Sign Up
                 </Link>
               </p>
-            </div>
+            </div> */}
           </form>
         </div>
       </div>
