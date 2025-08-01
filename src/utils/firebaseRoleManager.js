@@ -39,11 +39,35 @@ export const isValidRole = (role) => {
 
 // Check if user has permission to assign a role
 export const canAssignRole = (currentUserRole, targetRole) => {
-  const currentLevel = ROLE_HIERARCHY[currentUserRole] || 0;
-  const targetLevel = ROLE_HIERARCHY[targetRole] || 0;
+  // Define what roles each user type can assign (matching backend logic)
+  const roleAssignmentPermissions = {
+    'super_admin': ['super_admin', 'admin', 'manager', 'user'],
+    'admin': ['admin', 'manager', 'user'],
+    'manager': ['manager', 'user'],
+    'user': [], // Users cannot assign roles
+    'none': [] // Users with no access cannot assign roles
+  };
   
-  // Users can only assign roles at or below their own level
-  return currentLevel >= targetLevel;
+  const allowedRoles = roleAssignmentPermissions[currentUserRole] || [];
+  return allowedRoles.includes(targetRole);
+};
+
+// Check if user can assign a role to themselves (prevents self-promotion)
+export const canAssignRoleToSelf = (currentUserRole, targetRole) => {
+  // Users cannot promote themselves to higher roles
+  const roleHierarchy = {
+    'none': 0,
+    'user': 1,
+    'manager': 2,
+    'admin': 3,
+    'super_admin': 4
+  };
+  
+  const currentLevel = roleHierarchy[currentUserRole] || 0;
+  const targetLevel = roleHierarchy[targetRole] || 0;
+  
+  // Users can only assign roles at or below their current level to themselves
+  return targetLevel <= currentLevel;
 };
 
 // Check if user can manage other users
@@ -56,6 +80,19 @@ export const canManageUsers = (userRole) => {
 export const canManageRoles = (userRole) => {
   const roleLevel = ROLE_HIERARCHY[userRole] || 0;
   return roleLevel >= ROLE_HIERARCHY['super_admin'];
+};
+
+// Get assignable roles for current user
+export const getAssignableRoles = (currentUserRole) => {
+  const roleAssignmentPermissions = {
+    'super_admin': ['super_admin', 'admin', 'manager', 'user'],
+    'admin': ['admin', 'manager', 'user'],
+    'manager': ['manager', 'user'],
+    'user': [], // Users cannot assign roles
+    'none': [] // Users with no access cannot assign roles
+  };
+  
+  return roleAssignmentPermissions[currentUserRole] || [];
 };
 
 // Set user role

@@ -9,18 +9,21 @@ import {
   canManageRoles,
   getRoleDisplayName,
   getValidRoles,
-  isValidRole
+  isValidRole,
+  canAssignRoleToSelf
 } from "@/utils/firebaseRoleManager";
 import { useUser } from "@/helper/UserContext";
+import config from "@/config";
 
 const UserRoleManager = () => {
-  const { user } = useUser();
+  const { user, token } = useUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [newRole, setNewRole] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const validRoles = getValidRoles();
@@ -58,6 +61,18 @@ const UserRoleManager = () => {
       return;
     }
 
+    // Check if user is trying to modify their own role
+    if (selectedUser.uid === user?.uid) {
+      // Prevent self-promotion to higher roles
+      if (!canAssignRoleToSelf(user?.role || 'none', newRole)) {
+        setMessage({ 
+          type: 'error', 
+          text: 'You cannot promote yourself to a higher role. Only a super admin can promote you.' 
+        });
+        return;
+      }
+    }
+
     setUpdating(true);
     try {
       const result = await setUserRole(selectedUser.uid, newRole, {
@@ -79,6 +94,36 @@ const UserRoleManager = () => {
       setMessage({ type: 'error', text: 'Failed to update user role' });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`${config.api.baseURL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'User deleted successfully' });
+        loadUsers(); // Reload users
+      } else {
+        const errorData = await response.json();
+        setMessage({ type: 'error', text: errorData.message || 'Failed to delete user' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setMessage({ type: 'error', text: 'Failed to delete user' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -190,16 +235,28 @@ const UserRoleManager = () => {
                       }
                     </td>
                     <td>
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => {
-                          setSelectedUser(userData);
-                          setNewRole(userData.role || 'user');
-                        }}
-                      >
-                        <Icon icon="mdi:edit" className="me-1" />
-                        Edit Role
-                      </button>
+                      <div className="btn-group" role="group">
+                        <button 
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => {
+                            setSelectedUser(userData);
+                            setNewRole(userData.role || 'user');
+                          }}
+                        >
+                          <Icon icon="mdi:edit" className="me-1" />
+                          Edit Role
+                        </button>
+                        {user?.role === 'super_admin' && userData.uid !== user?.uid && (
+                          <button 
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDeleteUser(userData.uid)}
+                            disabled={deleting}
+                          >
+                            <Icon icon="mdi:delete" className="me-1" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -250,14 +307,29 @@ const UserRoleManager = () => {
                       value={newRole}
                       onChange={(e) => setNewRole(e.target.value)}
                     >
-                      {validRoles.map(role => (
-                        <option key={role} value={role}>
-                          {getRoleDisplayName(role)}
-                        </option>
-                      ))}
-                    </select>
+                      {validRoles.map(role => {
+                        const isSelfPromotion = selectedUser.uid === user?.uid && 
+                          !canAssignRoleToSelf(user?.role || 'none', role);
+                        
+                        return (
+                          <option 
+                            key={role} 
+                            value={role}
+                            disabled={isSelfPromotion}
+                          >
+                            {getRoleDisplayName(role)}
+                            {isSelfPromotion ? ' (Self-promotion not allowed)' : ''}
+                          </option>
+                        );
+                      })}
+                                          </select>
+                      {selectedUser.uid === user?.uid && (
+                        <small className="text-muted">
+                          You can only assign roles at or below your current level to yourself.
+                        </small>
+                      )}
+                    </div>
                   </div>
-                </div>
                 <div className="modal-footer">
                   <button 
                     type="button" 

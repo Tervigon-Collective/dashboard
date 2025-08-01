@@ -269,7 +269,8 @@ const MasterLayout = ({ children }) => {
                     className={pathname === "/index-11" ? "active-page" : ""}
                   >
                     <i className="ri-circle-fill circle-icon text-info-main w-auto" />{" "}
-                    Finance & Banking
+                    Finance & </ul>
+            </li>Banking
                   </Link>
                 </li> */}
               

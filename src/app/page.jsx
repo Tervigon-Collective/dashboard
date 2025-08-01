@@ -56,7 +56,80 @@ export default function Home() {
       );
     }
 
-    // Show role-based dashboard for users with access
+    // Check if user is 'user' role - show limited access
+    if (role === 'user' || localStorageRole === 'user') {
+      return (
+        <MasterLayout>
+          <div className="container-fluid">
+            <div className="row justify-content-center">
+              <div className="col-lg-8 col-md-10">
+                <div className="card">
+                  <div className="card-body text-center p-5">
+                    <div className="mb-4">
+                      <Icon 
+                        icon="mdi:account-check" 
+                        className="text-success" 
+                        style={{ fontSize: '4rem' }} 
+                      />
+                    </div>
+                    
+                    <h2 className="mb-3">Welcome, {user?.displayName || user?.email}!</h2>
+                    <p className="text-muted mb-4">
+                      You have limited access to the system. You can view customer data and manage your profile.
+                    </p>
+                    
+                    <div className="alert alert-info mb-4">
+                      <Icon icon="mdi:information" className="me-2" />
+                      <strong>Available Features:</strong>
+                      <br />
+                      • View Customer Data
+                      <br />
+                      • Manage Your Profile
+                      <br />
+                      • Contact Administrators for additional permissions
+                    </div>
+                    
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <div className="card border">
+                          <div className="card-body">
+                            <Icon icon="mdi:database" className="text-primary fs-1 mb-2" />
+                            <h5>Customer Data</h5>
+                            <p className="text-muted small">
+                              View and manage customer information
+                            </p>
+                            <a href="/customer-data" className="btn btn-primary btn-sm">
+                              Access Customer Data
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="col-md-6 mb-3">
+                        <div className="card border">
+                          <div className="card-body">
+                            <Icon icon="mdi:account-cog" className="text-success fs-1 mb-2" />
+                            <h5>Your Profile</h5>
+                            <p className="text-muted small">
+                              Manage your account settings
+                            </p>
+                            <a href="/view-profile" className="btn btn-success btn-sm">
+                              View Profile
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </MasterLayout>
+      );
+    }
+
+    // Show full dashboard for admin, manager, and super admin
     return (
       <MasterLayout>
         <DashBoardLayerOne />

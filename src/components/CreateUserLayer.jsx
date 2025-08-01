@@ -12,7 +12,7 @@ const CreateUserLayer = () => {
   const [formData, setFormData] = useState({
     email: "",
     displayName: "",
-    role: "none"
+    role: "user"
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -44,7 +44,7 @@ const CreateUserLayer = () => {
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'User created successfully!' });
-        setFormData({ email: "", displayName: "", role: "none" });
+        setFormData({ email: "", displayName: "", role: "user" });
       } else {
         const errorData = await response.json();
         setMessage({ type: 'error', text: errorData.message || 'Failed to create user' });
