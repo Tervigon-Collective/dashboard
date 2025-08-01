@@ -46,6 +46,18 @@ export const canAssignRole = (currentUserRole, targetRole) => {
   return currentLevel >= targetLevel;
 };
 
+// Check if user can manage other users
+export const canManageUsers = (userRole) => {
+  const roleLevel = ROLE_HIERARCHY[userRole] || 0;
+  return roleLevel >= ROLE_HIERARCHY['admin'];
+};
+
+// Check if user can manage roles
+export const canManageRoles = (userRole) => {
+  const roleLevel = ROLE_HIERARCHY[userRole] || 0;
+  return roleLevel >= ROLE_HIERARCHY['super_admin'];
+};
+
 // Set user role
 export const setUserRole = async (userId, role) => {
   try {

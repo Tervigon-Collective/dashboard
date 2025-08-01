@@ -2,7 +2,7 @@
 
 const config = {
   api: {
-    baseURL: 'http://localhost:8080', 
+    baseURL: 'https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net', 
   },
 };
 
