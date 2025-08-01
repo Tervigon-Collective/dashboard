@@ -2,8 +2,11 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
-  basePath: '',
-  assetPrefix: '',
+  output: 'export',
+  distDir: 'out',
+  images: {
+    unoptimized: true
+  },
   async headers() {
     return [
       {

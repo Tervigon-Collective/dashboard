@@ -1,19 +1,12 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
   NODE_VERSION = "18"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# Handle static assets properly
-[[redirects]]
-  from = "/assets/*"
-  to = "/assets/:splat"
-  status = 200
 
 [[headers]]
   for = "/*"
