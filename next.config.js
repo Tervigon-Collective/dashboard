@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
+  basePath: '',
+  assetPrefix: '',
   async headers() {
     return [
       {
@@ -18,6 +20,16 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  // Handle static assets
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
   },
 };
 

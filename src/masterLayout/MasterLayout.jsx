@@ -128,17 +128,17 @@ const MasterLayout = ({ children }) => {
         <div>
           <Link href="/" className="sidebar-logo">
             <img
-              src="assets\images\make\dashborad-01.jpg"
+              src="assets/images/make/dashborad-01.jpg"
               alt="site logo"
               className="light-logo"
             />
             <img
-              src="assets\images\make\dashborad-01.png"
+              src="assets/images/make/dashborad-01.png"
               alt="site logo"
               className="dark-logo"
             />
             <img
-              src="assets\images\make\dashborad-09.png"
+              src="assets/images/make/dashborad-09.png"
               alt="site logo"
               className="logo-icon"
             />
@@ -1253,7 +1253,7 @@ const MasterLayout = ({ children }) => {
                     data-bs-toggle="dropdown"
                   >
                     <img
-                      src="assets\images\make\dashborad-07.jpg"
+                      src="assets/images/make/dashborad-07.jpg"
                       alt=""
                       className="w-20 h-20 object-fit-cover rounded-circle"
                     />
@@ -1274,7 +1274,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets\images\make\dashborad-07.jpg"
+                              src="assets/images/make/dashborad-07.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1412,7 +1412,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets\images\make\dashborad-06.jpg"
+                              src="assets/images/make/dashborad-06.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />

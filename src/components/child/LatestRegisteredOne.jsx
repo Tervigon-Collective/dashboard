@@ -112,7 +112,7 @@ const LatestRegisteredOne = () => {
                               <div className='d-flex align-items-center'>
                                 {/* No user image in API, use a placeholder */}
                                 <img
-                                  src='assets\images\make\dashborad-05.jpg'
+                                  src='assets/images/make/dashborad-05.jpg'
                                   alt='User'
                                   className='w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden'
                                 />

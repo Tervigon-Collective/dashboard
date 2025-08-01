@@ -9,6 +9,12 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Handle static assets properly
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
