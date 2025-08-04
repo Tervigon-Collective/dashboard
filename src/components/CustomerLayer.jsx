@@ -132,6 +132,34 @@ const CustomerLayer = () => {
       icon: 'lucide:help-circle'
     };
   };
+
+  // Get shipping status badge
+  const getShippingStatusBadge = (order) => {
+    if (order.awb_number) {
+      return {
+        text: 'AWB Generated',
+        className: 'bg-info-subtle text-info',
+        icon: 'lucide:truck',
+        tooltip: `BlueDart AWB: ${order.awb_number}`
+      };
+    }
+    
+    if (order.ewaybill_number) {
+      return {
+        text: 'eWaybill Generated',
+        className: 'bg-primary-subtle text-primary',
+        icon: 'lucide:file-text',
+        tooltip: `DHL eWaybill: ${order.ewaybill_number}`
+      };
+    }
+    
+    return {
+      text: 'No Shipping',
+      className: 'bg-light text-muted',
+      icon: 'lucide:package-x',
+      tooltip: 'No shipping documents generated'
+    };
+  };
   
 
   // Format address
@@ -176,6 +204,8 @@ const CustomerLayer = () => {
     setSelectedOrder({ order, products });
     setProductModalOpen(true);
   };
+
+
 
   // Handle file upload using SheetJS for robust parsing
   const handleFileUpload = (event) => {
@@ -1340,6 +1370,7 @@ const CustomerLayer = () => {
                             )}
                           </div>
                         </td>
+
                         <td className="px-4 py-3 text-center align-middle">
                           <button
                             className="btn btn-sm btn-outline-primary rounded-pill px-3"
@@ -1838,6 +1869,8 @@ const CustomerLayer = () => {
           </div>
         </div>
       )}
+
+
     </div>
   );
 };

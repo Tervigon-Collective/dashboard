@@ -204,7 +204,7 @@ const UnitCountOne = ({ dateRange }) => {
 
                 // Handle sales and COGS data
                 if (results[1].status === 'fulfilled') {
-                    const salesData = results[1].value.data.hourlySales.sum;
+                    const salesData = results[1].value.data.sum;
                     setTotalSales(salesData.total_sales ?? null);
                     setGoogleSales(salesData.google_sales ?? null);
                     setMetaSales(salesData.meta_sales ?? null);
