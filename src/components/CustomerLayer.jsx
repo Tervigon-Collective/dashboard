@@ -32,6 +32,7 @@ const CustomerLayer = () => {
   const [selectedOrders, setSelectedOrders] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [pageSize, setPageSize] = useState(10);
 
   // Fetch orders from API
@@ -696,9 +697,22 @@ const CustomerLayer = () => {
     try {
       const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_id));
       
-      // Create CSV content in the specified format
+      // Find the maximum number of products across all orders to determine column count
+      const maxProducts = Math.max(...selectedOrderData.map(order => 
+        order.line_items?.length || 1
+      ));
+      
+      // Create dynamic headers for products and SKUs
+      const productHeaders = [];
+      const skuHeaders = [];
+      for (let i = 1; i <= maxProducts; i++) {
+        productHeaders.push(`Product${i}`);
+        skuHeaders.push(`SKU${i}`);
+      }
+      
+      // Create CSV content with dynamic columns
       const csvContent = [
-        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', 'Product Name', 'AMOUNT', 'COUNT OF ITEMS', 'PAYMENT MODE'],
+        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', ...productHeaders, ...skuHeaders, 'AMOUNT', 'COUNT OF ITEMS', 'PAYMENT MODE'],
         ...selectedOrderData.map(order => {
           // Use order_name as ORDER NO
           const orderNo = order.order_name || 'N/A';
@@ -717,8 +731,21 @@ const CustomerLayer = () => {
             order.shipping_country
           ].filter(Boolean).join(' ');
           
-          // Get product names
-          const productNames = order.line_items?.map(item => item.lineitem_name).filter(Boolean).join(',') || 'N/A';
+          // Get product names and SKUs in separate arrays
+          const lineItems = order.line_items || [];
+          const productNames = [];
+          const productSkus = [];
+          
+          // Fill product data
+          for (let i = 0; i < maxProducts; i++) {
+            if (i < lineItems.length) {
+              productNames.push(lineItems[i].lineitem_name || 'N/A');
+              productSkus.push(lineItems[i].lineitem_sku || 'N/A');
+            } else {
+              productNames.push(''); // Empty for orders with fewer products
+              productSkus.push('');
+            }
+          }
           
           // Get total quantity
           const totalQuantity = getTotalQuantity(order.line_items);
@@ -757,7 +784,8 @@ const CustomerLayer = () => {
             order.shipping_province_name || 'N/A',
             order.phone || 'N/A',
             order.email || 'NA',
-            productNames,
+            ...productNames,
+            ...productSkus,
             parseFloat(order.total || 0).toFixed(0),
             totalQuantity,
             paymentMode
