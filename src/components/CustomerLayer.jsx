@@ -46,7 +46,12 @@ const CustomerLayer = () => {
         url += `&name=${encodeURIComponent(search)}`;
       }
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -76,10 +81,9 @@ const CustomerLayer = () => {
   // Reset select all state when page changes
   useEffect(() => {
     const currentPageOrderIds = orders
-      .filter(order => order.payment_status !== 'voided')
       .map(order => order.order_id);
     const selectedCurrentPage = currentPageOrderIds.every(id => selectedOrders.has(id));
-    setSelectAll(selectedCurrentPage);
+    setSelectAll(selectedCurrentPage && currentPageOrderIds.length > 0);
   }, [orders, selectedOrders]);
 
   // Handle search
@@ -649,10 +653,9 @@ const CustomerLayer = () => {
     
     // Update select all state based on current page
     const currentPageOrderIds = orders
-      .filter(order => order.payment_status !== 'voided')
       .map(order => order.order_id);
     const selectedCurrentPage = currentPageOrderIds.every(id => newSelectedOrders.has(id));
-    setSelectAll(selectedCurrentPage);
+    setSelectAll(selectedCurrentPage && currentPageOrderIds.length > 0);
   };
 
   // Handle select all
@@ -666,12 +669,10 @@ const CustomerLayer = () => {
       setSelectedOrders(newSelectedOrders);
       setSelectAll(false);
     } else {
-      // Select all current page orders
+      // Select all current page orders (including cancelled/voided)
       const newSelectedOrders = new Set(selectedOrders);
       orders.forEach(order => {
-        if (order.payment_status !== 'voided') {
-          newSelectedOrders.add(order.order_id);
-        }
+        newSelectedOrders.add(order.order_id);
       });
       setSelectedOrders(newSelectedOrders);
       setSelectAll(true);
@@ -791,10 +792,18 @@ const CustomerLayer = () => {
             paymentMode
           ];
         })
-      ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      ].map(row => row.map(cell => {
+        // Properly escape quotes and handle special characters
+        const cellStr = String(cell || '');
+        return `"${cellStr.replace(/"/g, '""')}"`;
+      }).join(',')).join('\n');
 
+      // Add BOM (Byte Order Mark) for proper UTF-8 encoding recognition
+      const BOM = '\uFEFF';
+      const csvWithBOM = BOM + csvContent;
+      
       // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
@@ -1336,8 +1345,7 @@ const CustomerLayer = () => {
                               type="checkbox"
                               checked={selectedOrders.has(order.order_id)}
                               onChange={() => handleOrderSelection(order.order_id)}
-                              disabled={order.payment_status === 'voided'}
-                              title={order.payment_status === 'voided' ? 'Cannot select cancelled orders' : 'Select this order'}
+                              title="Select this order"
                             />
                           </div>
                         </td>
@@ -1404,7 +1412,6 @@ const CustomerLayer = () => {
                             className="btn btn-sm btn-outline-primary rounded-pill px-3"
                             onClick={() => handleViewProducts(order)}
                             title="View Products"
-                            disabled={order.payment_status === 'voided'}
                           >
                             <Icon icon="lucide:package" width="14" height="14" />
                             <span className="ms-1 d-none d-sm-inline">Products</span>
