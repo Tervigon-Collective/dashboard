@@ -333,6 +333,19 @@ const MasterLayout = ({ children }) => {
                     </li>
                   )}
 
+                  {/* Shipping - Available for all roles */}
+                  {(isSuperAdmin || isAdmin || isManager || isUser) && (
+                    <li>
+                      <Link
+                        href="/shipping"
+                        className={pathname === "/shipping" ? "active-page" : ""}
+                      >
+                        <Icon icon="lucide:package" className="menu-icon" />
+                        <span>Shipping</span>
+                      </Link>
+                    </li>
+                  )}
+
                   {/* User Management Section - Only for Admin and Super Admin */}
                   {(isSuperAdmin || isAdmin) && (
                     <>

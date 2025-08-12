@@ -130,174 +130,143 @@ const ShippingDashboard = () => {
     setSelectAll(false);
   };
 
-  // Generate AWB for single order
-  const generateAWB = async (orderName) => {
-    try {
-      const response = await fetch(`${config.api.baseURL}/api/shipping/generate-awb`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          order_name: orderName,
-          courier: 'bluedart'
-        })
-      });
 
-      const data = await response.json();
+
+
+
+  // Validate order data for waybill generation
+  const validateOrderForWaybill = (order) => {
+    const errors = [];
+    
+    if (!order.shipping_name) {
+      errors.push('Shipping name is missing');
+    }
+    
+    if (!order.shipping_address1) {
+      errors.push('Shipping address is missing');
+    }
+    
+    if (!order.shipping_zip) {
+      errors.push('Shipping pincode is missing');
+    }
+    
+    if (!order.phone) {
+      errors.push('Phone number is missing');
+    }
+    
+    // Email is optional - removed validation
+    
+    if (!order.line_items || !Array.isArray(order.line_items) || order.line_items.length === 0) {
+      errors.push('Product information is missing');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors: errors
+    };
+  };
+
+  // Enhanced waybill generation with validation
+  const generateWaybillWithData = async (order) => {
+    try {
+      // Validate order data first
+      const validation = validateOrderForWaybill(order);
+      if (!validation.isValid) {
+        alert(`Cannot generate waybill. Please fix the following issues:\n\n${validation.errors.join('\n')}`);
+      return;
+    }
+
+      const waybillData = createWaybillData(order);
       
-      if (data.success) {
-        alert(`AWB generated successfully for ${orderName}!`);
-        fetchOrders(currentPage, searchTerm, pageSize);
-      } else {
-        alert(`Failed to generate AWB: ${data.error}`);
+      if (!waybillData) {
+        alert('Unable to create waybill data. Please check order information.');
+        return;
       }
-    } catch (error) {
-      console.error('Generate AWB error:', error);
-      alert('Failed to generate AWB. Please try again.');
+
+      const response = await fetch(`${config.api.baseURL}/api/shipping/generate-waybill`, {
+            method: 'POST',
+            headers: {
+          'Content-Type': 'application/json'
+            },
+        body: JSON.stringify(waybillData)
+          });
+
+          const data = await response.json();
+          
+          if (data.success) {
+        alert(`Waybill generated successfully for ${order.order_name}!\nAWB Number: ${data.data?.awb_number || 'N/A'}`);
+        fetchOrders(currentPage, searchTerm, pageSize);
+          } else {
+        alert(`Failed to generate waybill: ${data.error}`);
+          }
+        } catch (error) {
+      console.error('Generate waybill error:', error);
+      alert('Failed to generate waybill. Please try again.');
     }
   };
 
-  // Generate eWaybill for single order
-  const generateEWaybill = async (orderName) => {
-    try {
-      const response = await fetch(`${config.api.baseURL}/api/shipping/generate-ewaybill`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          order_name: orderName
-        })
-      });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`eWaybill generated successfully for ${orderName}!`);
-        fetchOrders(currentPage, searchTerm, pageSize);
-      } else {
-        alert(`Failed to generate eWaybill: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Generate eWaybill error:', error);
-      alert('Failed to generate eWaybill. Please try again.');
-    }
-  };
 
-  // Bulk generate AWB
-  const bulkGenerateAWB = async () => {
+
+
+  // Bulk generate waybills with product data
+  const bulkGenerateWaybills = async () => {
     if (selectedOrders.size === 0) {
       alert('Please select at least one order.');
       return;
     }
 
     setBulkLoading(true);
-    setBulkOperation('awb');
+    setBulkOperation('waybill');
 
     try {
-      const orderNames = Array.from(selectedOrders);
+      const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_name));
       let successCount = 0;
       let errorCount = 0;
 
-      for (const orderName of orderNames) {
+      for (const order of selectedOrderData) {
         try {
-          const response = await fetch(`${config.api.baseURL}/api/shipping/generate-awb`, {
+          const waybillData = createWaybillData(order);
+          
+          if (!waybillData) {
+            errorCount++;
+            console.error(`Unable to create waybill data for ${order.order_name}`);
+            continue;
+          }
+
+          const response = await fetch(`${config.api.baseURL}/api/shipping/generate-waybill`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              order_name: orderName,
-              courier: 'bluedart'
-            })
+            body: JSON.stringify(waybillData)
           });
 
           const data = await response.json();
           
           if (data.success) {
             successCount++;
+            console.log(`Waybill generated for ${order.order_name}: ${data.data?.waybill_number || 'N/A'}`);
           } else {
             errorCount++;
-            console.error(`Failed for ${orderName}:`, data.error);
+            console.error(`Failed for ${order.order_name}:`, data.error);
           }
 
           // Add delay between requests
           await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
           errorCount++;
-          console.error(`Error for ${orderName}:`, error);
+          console.error(`Error for ${order.order_name}:`, error);
         }
       }
 
-      alert(`Bulk AWB generation completed!\nSuccess: ${successCount}\nFailed: ${errorCount}`);
+      alert(`Bulk waybill generation completed!\nSuccess: ${successCount}\nFailed: ${errorCount}`);
       setSelectedOrders(new Set());
       setSelectAll(false);
       fetchOrders(currentPage, searchTerm, pageSize);
     } catch (error) {
-      console.error('Bulk AWB generation error:', error);
-      alert('Failed to generate AWB for selected orders.');
-    } finally {
-      setBulkLoading(false);
-      setBulkOperation(null);
-    }
-  };
-
-  // Bulk generate eWaybill
-  const bulkGenerateEWaybill = async () => {
-    if (selectedOrders.size === 0) {
-      alert('Please select at least one order.');
-      return;
-    }
-
-    setBulkLoading(true);
-    setBulkOperation('ewaybill');
-
-    try {
-      const orderNames = Array.from(selectedOrders);
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const orderName of orderNames) {
-        try {
-          const response = await fetch(`${config.api.baseURL}/api/shipping/generate-ewaybill`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              order_name: orderName
-            })
-          });
-
-          const data = await response.json();
-          
-          if (data.success) {
-            successCount++;
-          } else {
-            errorCount++;
-            console.error(`Failed for ${orderName}:`, data.error);
-          }
-
-          // Add delay between requests
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-          errorCount++;
-          console.error(`Error for ${orderName}:`, error);
-        }
-      }
-
-      alert(`Bulk eWaybill generation completed!\nSuccess: ${successCount}\nFailed: ${errorCount}`);
-      setSelectedOrders(new Set());
-      setSelectAll(false);
-      fetchOrders(currentPage, searchTerm, pageSize);
-    } catch (error) {
-      console.error('Bulk eWaybill generation error:', error);
-      alert('Failed to generate eWaybill for selected orders.');
+      console.error('Bulk waybill generation error:', error);
+      alert('Failed to generate waybills for selected orders.');
     } finally {
       setBulkLoading(false);
       setBulkOperation(null);
@@ -312,19 +281,12 @@ const ShippingDashboard = () => {
     setTrackingHistory([]);
 
     try {
-      const response = await fetch(`${config.api.baseURL}/api/shipping/track/${trackingNumber}?courier=${courier}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(`${config.api.baseURL}/api/shipping/track/${trackingNumber}?courier=${courier}`);
 
       const data = await response.json();
       
       if (data.success) {
         setTrackingData(data.data);
-        
-        // Save tracking data to database
-        await saveTrackingData(trackingNumber, courier, data.data, orderName);
         
         // Fetch tracking history
         await fetchTrackingHistory(trackingNumber);
@@ -339,43 +301,12 @@ const ShippingDashboard = () => {
     }
   };
 
-  // Save tracking data to database
-  const saveTrackingData = async (trackingNumber, courier, trackingData, orderName) => {
-    try {
-      const response = await fetch(`${config.api.baseURL}/api/shipping/save-tracking`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          tracking_number: trackingNumber,
-          courier: courier,
-          order_name: orderName,
-          status: trackingData.status,
-          location: trackingData.location,
-          last_update: trackingData.last_update,
-          estimated_delivery: trackingData.estimated_delivery,
-          tracking_details: trackingData
-        })
-      });
 
-      if (!response.ok) {
-        console.error('Failed to save tracking data');
-      }
-    } catch (error) {
-      console.error('Error saving tracking data:', error);
-    }
-  };
 
   // Fetch tracking history
   const fetchTrackingHistory = async (trackingNumber) => {
     try {
-      const response = await fetch(`${config.api.baseURL}/api/shipping/tracking-history/${trackingNumber}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(`${config.api.baseURL}/api/shipping/tracking-history/${trackingNumber}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -384,6 +315,102 @@ const ShippingDashboard = () => {
     } catch (error) {
       console.error('Error fetching tracking history:', error);
     }
+  };
+
+  // Format product names with quantities for display
+  const formatProductNames = (order) => {
+    if (!order.line_items || !Array.isArray(order.line_items)) {
+      return 'N/A';
+    }
+
+    const itemCount = order.line_items.length;
+    
+    if (itemCount <= 3) {
+      // Show individual SKUs for 3 or fewer items
+      return order.line_items.map(item => item.lineitem_sku || 'Unknown').join(', ');
+    } else {
+      // For more than 3 items, show as AccessoriesNx
+      return `Accessories${itemCount}x`;
+    }
+  };
+
+  // Format commodity details with quantities
+  const formatCommodityDetails = (order) => {
+    if (!order.line_items || !Array.isArray(order.line_items)) {
+      return 'N/A';
+    }
+
+    const itemCount = order.line_items.length;
+    
+    if (itemCount <= 3) {
+      // Show individual SKUs for 3 or fewer items
+      return order.line_items.map(item => {
+        const sku = item.lineitem_sku || 'Unknown';
+        const quantity = item.lineitem_quantity || 1;
+        return quantity > 1 ? item.lineitem_quantity : 1;
+      }).join(', ');
+    } else {
+      // For more than 3 items, show as AccessoriesNx
+      return `Accessories${itemCount}x`;
+    }
+  };
+
+  // Create waybill data structure for API calls
+  const createWaybillData = (order) => {
+    if (!order.line_items || !Array.isArray(order.line_items)) {
+      return null;
+    }
+
+    const itemCount = order.line_items.length;
+    let commodityDetails = [];
+    
+    if (itemCount <= 3) {
+      // Include all individual SKUs
+      commodityDetails = order.line_items.map(item => item.lineitem_sku || 'Unknown');
+    } else {
+      // For more than 3 items, use AccessoriesNx
+      commodityDetails = [`Accessories${itemCount}x`];
+    }
+
+    return {
+      consignee: {
+        ConsigneeName: order.shipping_name || 'N/A',
+        ConsigneeAddress1: order.shipping_address1 || 'N/A',
+        ConsigneeAddress2: order.shipping_address2 || '',
+        ConsigneeAddress3: `${order.shipping_province_name || ''}, ${order.shipping_city || ''}`.trim() || '',
+        ConsigneePincode: order.shipping_zip || 'N/A',
+        ConsigneeMobile: order.phone || 'N/A',
+        ConsigneeAttention: order.shipping_name || 'N/A',
+        ConsigneeEmailID: order.email || ''
+      },
+      services: {
+        ActualWeight: "0.50",
+        CreditReferenceNo: order.order_name || 'N/A',
+        PieceCount: "1",
+        ProductType: 1,
+        Commodity: {
+          CommodityDetail1: commodityDetails[0] || 'N/A',
+          CommodityDetail2: commodityDetails[1] || '',
+          CommodityDetail3: commodityDetails[2] || ''
+        },
+        Dimensions: [
+          {
+            Breadth: 32.7,
+            Count: 1,
+            Height: 3.2,
+            Length: 28.9
+          }
+        ],
+        Product1: itemCount <= 3 ? (order.line_items?.[0]?.lineitem_sku || 'N/A') : `Accessories${itemCount}x`,
+        SKU1: order.line_items?.[0]?.lineitem_sku || 'N/A',
+        SubProduct1_1: itemCount <= 3 ? (order.line_items?.[1]?.lineitem_sku || '') : '',
+        SubProduct1_2: itemCount <= 3 ? (order.line_items?.[2]?.lineitem_sku || '') : '',
+        InvoiceNumber: order.order_name || '',
+        orderAmount: order.total || 0,
+        itemCount: order.line_items?.reduce((total, item) => total + (item.lineitem_quantity || 1), 0) || 1,
+        paymentMethod: order.payment_method
+      }
+    };
   };
 
   // Download shipping report
@@ -396,15 +423,16 @@ const ShippingDashboard = () => {
     }
 
     const csvContent = [
-      ['Order Name', 'Customer Name', 'Phone', 'Address', 'Pincode', 'AWB Number', 'eWaybill Number', 'Courier', 'Status'],
+      ['Order Name', 'Customer Name', 'Phone', 'Address', 'Pincode', 'Products', 'Commodities', 'Waybill Number', 'Courier', 'Status'],
       ...selectedOrderData.map(order => [
         order.order_name || 'N/A',
         order.shipping_name || 'N/A',
         order.phone || 'N/A',
-        `${order.shipping_address1 || ''} ${order.shipping_city || ''} ${order.shipping_province_name || ''}`.trim() || 'N/A',
+        formatAddress(order),
         order.shipping_zip || 'N/A',
-        order.awb_number || 'N/A',
-        order.ewaybill_number || 'N/A',
+        formatProductNames(order),
+        formatCommodityDetails(order),
+        order.waybill_number || 'N/A',
         order.courier || 'N/A',
         order.shipping_status || 'N/A'
       ])
@@ -423,39 +451,324 @@ const ShippingDashboard = () => {
 
   // Format address for display
   const formatAddress = (order) => {
-    const parts = [
-      order.shipping_address1,
-      order.shipping_city,
-      order.shipping_province_name,
-      order.shipping_zip
-    ].filter(Boolean);
+    const parts = [];
+    
+    if (order.shipping_address1) parts.push(order.shipping_address1);
+    if (order.shipping_address2) parts.push(order.shipping_address2);
+    if (order.shipping_city) parts.push(order.shipping_city);
+    if (order.shipping_province_name) parts.push(order.shipping_province_name);
+    if (order.shipping_zip) parts.push(order.shipping_zip);
     
     return parts.length > 0 ? parts.join(', ') : 'N/A';
   };
 
-  // Get shipping status badge
-  const getShippingStatusBadge = (order) => {
+    // Get shipping status display
+  const getShippingStatusDisplay = (order) => {
+    // If AWB number exists, show it with status
     if (order.awb_number) {
       return {
-        text: 'AWB Generated',
-        className: 'bg-info-subtle text-info',
-        icon: 'lucide:truck'
+        type: 'awb',
+        awbNumber: order.awb_number,
+        status: order.shipping_status || 'Generated',
+        courier: order.courier || 'N/A',
+        generatedAt: order.awb_generated_at
       };
     }
     
-    if (order.ewaybill_number) {
+    // Check if order has required data for waybill generation
+    const validation = validateOrderForWaybill(order);
+    if (!validation.isValid) {
       return {
-        text: 'eWaybill Generated',
-        className: 'bg-primary-subtle text-primary',
-        icon: 'lucide:file-text'
+        type: 'missing',
+        text: 'Missing Data',
+        className: 'bg-warning-subtle text-warning',
+        icon: 'lucide:alert-triangle'
       };
     }
     
     return {
-      text: 'No Shipping',
-      className: 'bg-light text-muted',
-      icon: 'lucide:package-x'
+      type: 'ready',
+      text: 'Ready for Shipping',
+      className: 'bg-success-subtle text-success',
+      icon: 'lucide:package-check'
     };
+  };
+
+  // Download TH waybill PDF
+  const downloadTHWaybillPDF = async (awbNumber, orderName) => {
+    if (!awbNumber) {
+      alert('No AWB number available for this order. Please generate an AWB first.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${config.api.baseURL}/api/shipping/download-th-pdf/${awbNumber}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.data?.pdf_base64) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(data.data.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `TH-Waybill-${awbNumber}-${orderName || 'Order'}.pdf`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        alert(`TH Waybill PDF downloaded successfully for AWB: ${awbNumber}`);
+      } else {
+        alert(`Failed to download TH waybill: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Download TH waybill error:', error);
+      alert('Failed to download TH waybill PDF. Please try again.');
+    }
+  };
+
+  // Download regular waybill PDF
+  const downloadWaybillPDF = async (awbNumber, orderName) => {
+    if (!awbNumber) {
+      alert('No AWB number available for this order. Please generate an AWB first.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${config.api.baseURL}/api/shipping/download-pdf/${awbNumber}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is PDF or JSON
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/pdf')) {
+        // Direct PDF download
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Waybill-${awbNumber}-${orderName || 'Order'}.pdf`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        alert(`Waybill PDF downloaded successfully for AWB: ${awbNumber}`);
+      } else {
+        // JSON response with base64 data
+        try {
+          const data = await response.json();
+          
+          if (data.success && data.data?.pdf_base64) {
+            // Convert base64 to blob and download
+            const byteCharacters = atob(data.data.pdf_base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Waybill-${awbNumber}-${orderName || 'Order'}.pdf`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert(`Waybill PDF downloaded successfully for AWB: ${awbNumber}`);
+          } else {
+            alert(`Failed to download waybill: ${data.error || 'Unknown error'}`);
+          }
+        } catch (jsonError) {
+          console.error('JSON parsing error:', jsonError);
+          alert('Failed to parse response from server. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Download waybill error:', error);
+      alert('Failed to download waybill PDF. Please try again.');
+    }
+  };
+
+  // Download shipping label
+  const downloadShippingLabel = async (awbNumber, orderName) => {
+    if (!awbNumber) {
+      alert('No AWB number available for this order. Please generate an AWB first.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${config.api.baseURL}/api/shipping/download-th-pdf/${awbNumber}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is PDF or JSON
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/pdf')) {
+        // Direct PDF download
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Shipping-Label-${awbNumber}-${orderName || 'Order'}.pdf`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        alert(`Shipping label downloaded successfully for AWB: ${awbNumber}`);
+      } else {
+        // JSON response with base64 data
+        try {
+          const data = await response.json();
+          
+          if (data.success && data.data?.pdf_base64) {
+            // Convert base64 to blob and download
+            const byteCharacters = atob(data.data.pdf_base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Shipping-Label-${awbNumber}-${orderName || 'Order'}.pdf`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert(`Shipping label downloaded successfully for AWB: ${awbNumber}`);
+          } else {
+            alert(`Failed to download shipping label: ${data.error || 'Unknown error'}`);
+          }
+        } catch (jsonError) {
+          console.error('JSON parsing error:', jsonError);
+          alert('Failed to parse response from server. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Download shipping label error:', error);
+      alert('Failed to download shipping label. Please try again.');
+    }
+  };
+
+  // Bulk download waybill PDFs
+  const bulkDownloadWaybills = async () => {
+    const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_name));
+    const ordersWithAWB = selectedOrderData.filter(order => order.awb_number);
+    
+    if (ordersWithAWB.length === 0) {
+      alert('No selected orders have AWB numbers. Please generate waybills first.');
+      return;
+    }
+
+    if (ordersWithAWB.length !== selectedOrderData.length) {
+      const missingAWB = selectedOrderData.length - ordersWithAWB.length;
+      alert(`${missingAWB} selected order(s) don't have AWB numbers and will be skipped.`);
+    }
+
+    setBulkLoading(true);
+    setBulkOperation('download');
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const order of ordersWithAWB) {
+        try {
+          await downloadWaybillPDF(order.awb_number, order.order_name);
+          successCount++;
+          
+          // Add delay between downloads
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          errorCount++;
+          console.error(`Failed to download waybill for ${order.order_name}:`, error);
+        }
+      }
+
+      alert(`Bulk waybill download completed!\nSuccess: ${successCount}\nFailed: ${errorCount}`);
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      alert('Failed to download waybills for selected orders.');
+    } finally {
+      setBulkLoading(false);
+      setBulkOperation(null);
+    }
+  };
+
+  // Bulk download shipping labels
+  const bulkDownloadLabels = async () => {
+    const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_name));
+    const ordersWithAWB = selectedOrderData.filter(order => order.awb_number);
+    
+    if (ordersWithAWB.length === 0) {
+      alert('No selected orders have AWB numbers. Please generate waybills first.');
+      return;
+    }
+
+    if (ordersWithAWB.length !== selectedOrderData.length) {
+      const missingAWB = selectedOrderData.length - ordersWithAWB.length;
+      alert(`${missingAWB} selected order(s) don't have AWB numbers and will be skipped.`);
+    }
+
+    setBulkLoading(true);
+    setBulkOperation('downloadLabels');
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const order of ordersWithAWB) {
+        try {
+          await downloadShippingLabel(order.awb_number, order.order_name);
+          successCount++;
+          
+          // Add delay between downloads
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          errorCount++;
+          console.error(`Failed to download shipping label for ${order.order_name}:`, error);
+        }
+      }
+
+      alert(`Bulk shipping label download completed!\nSuccess: ${successCount}\nFailed: ${errorCount}`);
+    } catch (error) {
+      console.error('Bulk label download error:', error);
+      alert('Failed to download shipping labels for selected orders.');
+    } finally {
+      setBulkLoading(false);
+      setBulkOperation(null);
+    }
   };
 
   return (
@@ -485,48 +798,66 @@ const ShippingDashboard = () => {
           {selectedOrders.size > 0 && (
             <>
               <button
-                className="btn btn-success btn-sm d-flex align-items-center gap-2"
-                onClick={bulkGenerateAWB}
-                disabled={bulkLoading}
-                title={`Generate AWB for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
-              >
-                {bulkLoading && bulkOperation === 'awb' ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm" role="status"></span>
-                    <span className="d-none d-sm-inline">Generating AWB...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon icon="lucide:truck" width="16" height="16" />
-                    <span className="d-none d-sm-inline">Bulk AWB ({selectedOrders.size})</span>
-                  </>
-                )}
-              </button>
-              <button
-                className="btn btn-primary btn-sm d-flex align-items-center gap-2"
-                onClick={bulkGenerateEWaybill}
-                disabled={bulkLoading}
-                title={`Generate eWaybill for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
-              >
-                {bulkLoading && bulkOperation === 'ewaybill' ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm" role="status"></span>
-                    <span className="d-none d-sm-inline">Generating eWaybill...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon icon="lucide:file-text" width="16" height="16" />
-                    <span className="d-none d-sm-inline">Bulk eWaybill ({selectedOrders.size})</span>
-                  </>
-                )}
-              </button>
-              <button
                 className="btn btn-info btn-sm d-flex align-items-center gap-2"
                 onClick={downloadShippingReport}
                 title={`Download shipping report for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
               >
                 <Icon icon="lucide:download" width="16" height="16" />
                 <span className="d-none d-sm-inline">Download Report</span>
+              </button>
+              <button
+                className="btn btn-warning btn-sm d-flex align-items-center gap-2"
+                onClick={bulkGenerateWaybills}
+                disabled={bulkLoading}
+                title={`Generate waybills with product data for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
+              >
+                {bulkLoading && bulkOperation === 'waybill' ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                    <span className="d-none d-sm-inline">Generating Waybills...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="lucide:package" width="16" height="16" />
+                    <span className="d-none d-sm-inline">Bulk Waybills ({selectedOrders.size})</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm d-flex align-items-center gap-2"
+                onClick={bulkDownloadWaybills}
+                disabled={bulkLoading}
+                title={`Download Waybill PDFs for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
+              >
+                {bulkLoading && bulkOperation === 'download' ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                    <span className="d-none d-sm-inline">Downloading PDFs...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="lucide:file-text" width="16" height="16" />
+                    <span className="d-none d-sm-inline">Bulk PDFs ({selectedOrders.size})</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="btn btn-info btn-sm d-flex align-items-center gap-2"
+                onClick={bulkDownloadLabels}
+                disabled={bulkLoading}
+                title={`Download Shipping Labels for ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''}`}
+              >
+                {bulkLoading && bulkOperation === 'downloadLabels' ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                    <span className="d-none d-sm-inline">Downloading Labels...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="lucide:tag" width="16" height="16" />
+                    <span className="d-none d-sm-inline">Bulk Labels ({selectedOrders.size})</span>
+                  </>
+                )}
               </button>
             </>
           )}
@@ -567,6 +898,16 @@ const ShippingDashboard = () => {
                     <th className="border-end px-4 py-3 fw-semibold bg-light">Customer</th>
                     <th className="border-end px-4 py-3 fw-semibold d-none d-lg-table-cell bg-light">Email</th>
                     <th className="border-end px-4 py-3 fw-semibold d-none d-xl-table-cell bg-light">Address</th>
+                    <th className="border-end px-4 py-3 fw-semibold d-none d-lg-table-cell bg-light">
+                      Products
+                      <Icon 
+                        icon="lucide:info" 
+                        width="14" 
+                        height="14" 
+                        className="ms-1 text-muted" 
+                        title="Products: Shows individual names for ≤3 items, Accessories4x+ for >3 items"
+                      />
+                    </th>
                     <th className="border-end px-4 py-3 fw-semibold d-none d-md-table-cell bg-light">Phone</th>
                     <th className="border-end px-4 py-3 fw-semibold text-center bg-light">Shipping</th>
                     <th className="px-4 py-3 fw-semibold text-center bg-light">Actions</th>
@@ -575,7 +916,7 @@ const ShippingDashboard = () => {
                 <tbody>
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-5 border-0">
+                      <td colSpan="9" className="text-center py-5 border-0">
                         <div className="text-muted">
                           <Icon icon="lucide:package" width="48" height="48" className="mb-3 opacity-50" />
                           <p className="mb-0">
@@ -586,7 +927,7 @@ const ShippingDashboard = () => {
                     </tr>
                   ) : (
                     orders.map((order, index) => {
-                      const shippingStatus = getShippingStatusBadge(order);
+                      const shippingStatus = getShippingStatusDisplay(order);
                       return (
                         <tr key={order.order_id || index} className={`border-bottom ${selectedOrders.has(order.order_name) ? 'table-active' : ''}`}>
                           <td className="border-end px-4 py-3 align-middle">
@@ -633,46 +974,76 @@ const ShippingDashboard = () => {
                               {formatAddress(order)}
                             </div>
                           </td>
+                          <td className="border-end px-4 py-3 d-none d-lg-table-cell align-middle">
+                            <div className="text-break" style={{ maxWidth: "150px" }}>
+                              <small className="fw-medium">{formatProductNames(order)}</small>
+                             
+                            </div>
+                          </td>
                           <td className="border-end px-4 py-3 d-none d-md-table-cell align-middle">
                             <span className="text-break">{order.phone || 'N/A'}</span>
                           </td>
                           <td className="border-end px-4 py-3 text-center align-middle">
-                            <span className={`badge ${shippingStatus.className} rounded-pill px-3 py-2`}>
-                              <Icon icon={shippingStatus.icon} className="me-1" width="12" height="12" />
-                              {shippingStatus.text}
-                            </span>
+                            {shippingStatus.type === 'awb' ? (
+                              <div className="d-flex flex-column align-items-center">
+                                <span className="fw-semibold text-primary mb-1">
+                                  {shippingStatus.awbNumber}
+                                </span>
+                                <small className="text-muted">
+                                  {shippingStatus.generatedAt ? 
+                                    new Date(shippingStatus.generatedAt).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    }) : 
+                                    shippingStatus.status
+                                  }
+                                  {shippingStatus.courier && shippingStatus.courier !== 'N/A' ? ` • ${shippingStatus.courier}` : ''}
+                                </small>
+                              </div>
+                            ) : (
+                              <span 
+                                className={`badge ${shippingStatus.className} rounded-pill px-3 py-2`}
+                                title={shippingStatus.text === 'Missing Data' ? 
+                                  `Missing: ${validateOrderForWaybill(order).errors.join(', ')}` : 
+                                  shippingStatus.text
+                                }
+                              >
+                                <Icon icon={shippingStatus.icon} className="me-1" width="12" height="12" />
+                                {shippingStatus.text}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center align-middle">
                             <div className="d-flex gap-1 justify-content-center">
                               <button
-                                className="btn btn-sm btn-outline-success rounded-pill px-3"
-                                onClick={() => generateAWB(order.order_name)}
-                                title="Generate AWB"
+                                className="btn btn-sm btn-outline-warning rounded-pill px-3"
+                                onClick={() => generateWaybillWithData(order)}
+                                title="Generate Waybill with Product Data"
                               >
-                                <Icon icon="lucide:truck" width="14" height="14" />
-                                <span className="ms-1 d-none d-sm-inline">AWB</span>
+                                <Icon icon="lucide:package" width="14" height="14" />
+                                <span className="ms-1 d-none d-sm-inline">Waybill</span>
                               </button>
-                              <button
-                                className="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                onClick={() => generateEWaybill(order.order_name)}
-                                title="Generate eWaybill"
-                              >
-                                <Icon icon="lucide:file-text" width="14" height="14" />
-                                <span className="ms-1 d-none d-sm-inline">eWaybill</span>
-                              </button>
-                              {(order.awb_number || order.ewaybill_number) && (
-                                <button
-                                  className="btn btn-sm btn-outline-info rounded-pill px-3"
-                                  onClick={() => trackShipment(
-                                    order.awb_number || order.ewaybill_number,
-                                    order.courier || 'bluedart',
-                                    order.order_name
-                                  )}
-                                  title="Track Shipment"
-                                >
-                                  <Icon icon="lucide:map-pin" width="14" height="14" />
-                                  <span className="ms-1 d-none d-sm-inline">Track</span>
-                                </button>
+
+                              {order.awb_number && (
+                                <>
+                                  <button
+                                    className="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                    onClick={() => downloadWaybillPDF(order.awb_number, order.order_name)}
+                                    title="Download Waybill PDF (includes TH waybill)"
+                                  >
+                                    <Icon icon="lucide:file-text" width="14" height="14" />
+                                    <span className="ms-1 d-none d-sm-inline">PDF</span>
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-outline-info rounded-pill px-3"
+                                    onClick={() => downloadShippingLabel(order.awb_number, order.order_name)}
+                                    title="Download Shipping Label"
+                                  >
+                                    <Icon icon="lucide:tag" width="14" height="14" />
+                                    <span className="ms-1 d-none d-sm-inline">Label</span>
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>
