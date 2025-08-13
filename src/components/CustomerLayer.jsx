@@ -67,7 +67,6 @@ const CustomerLayer = () => {
         hasPrev: false
       });
     } catch (err) {
-      console.error("Error fetching orders:", err);
       setError("Failed to load customer orders. Please try again.");
     } finally {
       setLoading(false);
@@ -103,6 +102,26 @@ const CustomerLayer = () => {
       return 1; // Default to 1 if no line items available
     }
     return lineItems.reduce((total, item) => total + (item.lineitem_quantity || 0), 0);
+  };
+
+  // Format phone number by removing country code prefix
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return 'N/A';
+    
+    // Remove "91" prefix if it exists at the beginning
+    let formattedPhone = phone.toString().trim();
+    
+    // Check if phone starts with "91" and has more than 10 digits
+    if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+      formattedPhone = formattedPhone.substring(2);
+    }
+    
+    // If still more than 10 digits, truncate to last 10 digits
+    if (formattedPhone.length > 10) {
+      formattedPhone = formattedPhone.substring(formattedPhone.length - 10);
+    }
+    
+    return formattedPhone;
   };
 
   // Get status badge for order
@@ -315,10 +334,9 @@ const CustomerLayer = () => {
         setFileData(parsedData);
 
         mapDataToBackendFormat(parsedData);
-      } catch (error) {
-        console.error("File parsing error:", error);
-        setUploadError(`Error parsing file: ${error.message}`);
-      }
+              } catch (error) {
+          setUploadError(`Error parsing file: ${error.message}`);
+        }
     };
 
     // Read file as array buffer for SheetJS
@@ -690,7 +708,6 @@ const CustomerLayer = () => {
   // Download selected orders
   const downloadSelectedOrders = async () => {
     if (selectedOrders.size === 0) {
-      alert('Please select at least one order to download.');
       return;
     }
 
@@ -713,7 +730,7 @@ const CustomerLayer = () => {
       
       // Create CSV content with dynamic columns
       const csvContent = [
-        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', ...productHeaders, ...skuHeaders, 'AMOUNT', 'COUNT OF ITEMS', 'PAYMENT MODE'],
+        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', 'AWB NUMBER', ...productHeaders, ...skuHeaders, 'AMOUNT', 'COUNT OF ITEMS', 'PAYMENT MODE'],
         ...selectedOrderData.map(order => {
           // Use order_name as ORDER NO
           const orderNo = order.order_name || 'N/A';
@@ -783,8 +800,9 @@ const CustomerLayer = () => {
             address,
             order.shipping_zip || 'N/A',
             order.shipping_province_name || 'N/A',
-            order.phone || 'N/A',
+            formatPhoneNumber(order.phone),
             order.email || 'NA',
+            order.awb_number || 'N/A',
             ...productNames,
             ...productSkus,
             parseFloat(order.total || 0).toFixed(0),
@@ -813,8 +831,7 @@ const CustomerLayer = () => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download orders. Please try again.');
+      // Download failed silently
     } finally {
       setDownloading(false);
     }
@@ -1386,7 +1403,7 @@ const CustomerLayer = () => {
                           </div>
                         </td>
                         <td className="border-end px-4 py-3 d-none d-md-table-cell align-middle">
-                          <span className="text-break">{order.phone || 'N/A'}</span>
+                          <span className="text-break">{formatPhoneNumber(order.phone)}</span>
                         </td>
                         <td className="border-end px-4 py-3 text-center align-middle">
                           <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
@@ -1605,7 +1622,9 @@ const CustomerLayer = () => {
                       className="btn btn-outline-info btn-sm mt-2"
                       onClick={() => {
                         if (fileData.length > 0) {
-                          alert(`Available columns in CSV:\n${Object.keys(fileData[0]).join('\n')}`);
+                          // Show columns info in a more user-friendly way
+                          const columns = Object.keys(fileData[0]);
+                          setUploadSuccess(`File loaded successfully! Available columns: ${columns.join(', ')}`);
                         }
                       }}
                     >
@@ -1712,7 +1731,7 @@ const CustomerLayer = () => {
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Phone:</span>
-                        <span className="fw-medium">{selectedOrder.order.phone || 'N/A'}</span>
+                        <span className="fw-medium">{formatPhoneNumber(selectedOrder.order.phone)}</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Date:</span>
