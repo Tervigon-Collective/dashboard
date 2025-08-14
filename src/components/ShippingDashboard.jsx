@@ -170,6 +170,11 @@ const ShippingDashboard = () => {
       errors.push('Product information is missing');
     }
     
+    // Check BlueDart service availability
+    if (order.bluedart_service_available === false) {
+      errors.push('BlueDart service not available for this pincode');
+    }
+    
     return {
       isValid: errors.length === 0,
       errors: errors
@@ -230,12 +235,28 @@ const ShippingDashboard = () => {
     setBulkOperation('waybill');
 
     try {
-      const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_name) && !isOrderCancelled(order));
+      const selectedOrderData = orders.filter(order => 
+        selectedOrders.has(order.order_name) && 
+        !isOrderCancelled(order) && 
+        order.bluedart_service_available !== false
+      );
       
 
       
       if (selectedOrderData.length === 0) {
-        alert('No valid orders selected for waybill generation.');
+        // Check if any selected orders have unavailable service
+        const unavailableOrders = orders.filter(order => 
+          selectedOrders.has(order.order_name) && 
+          !isOrderCancelled(order) && 
+          order.bluedart_service_available === false
+        );
+        
+        if (unavailableOrders.length > 0) {
+          const unavailableNames = unavailableOrders.map(order => order.order_name).join(', ');
+          alert(`Cannot generate waybills for the following orders due to BlueDart service unavailability:\n\n${unavailableNames}\n\nPlease check pincode and payment method compatibility.`);
+        } else {
+          alert('No valid orders selected for waybill generation.');
+        }
         return;
       }
 
@@ -477,6 +498,17 @@ const ShippingDashboard = () => {
       };
     }
     
+    // Check BlueDart service availability first
+    if (order.bluedart_service_available === false) {
+      return {
+        type: 'unavailable',
+        text: 'Service Unavailable',
+        className: 'bg-danger-subtle text-danger',
+        icon: 'lucide:x-circle',
+        tooltip: 'BlueDart service not available for this pincode and payment method'
+      };
+    }
+    
     // Check if order has required data for waybill generation
     const validation = validateOrderForWaybill(order);
     if (!validation.isValid) {
@@ -484,7 +516,8 @@ const ShippingDashboard = () => {
         type: 'missing',
         text: 'Missing Data',
         className: 'bg-warning-subtle text-warning',
-        icon: 'lucide:alert-triangle'
+        icon: 'lucide:alert-triangle',
+        tooltip: `Missing: ${validation.errors.join(', ')}`
       };
     }
     
@@ -492,7 +525,8 @@ const ShippingDashboard = () => {
       type: 'ready',
       text: 'Ready for Shipping',
       className: 'bg-success-subtle text-success',
-      icon: 'lucide:package-check'
+      icon: 'lucide:package-check',
+      tooltip: 'Order is ready for waybill generation'
     };
   };
 
@@ -1094,6 +1128,30 @@ const ShippingDashboard = () => {
                                   </span>
                                 </div>
                               )}
+                              
+                              {/* BlueDart Service Availability Indicator */}
+                              {!isOrderCancelled(order) && order.bluedart_service_available === false && (
+                                <div className="d-flex align-items-center gap-1 mb-1">
+                                  <Icon icon="lucide:x-circle" width="12" height="12" className="text-danger" />
+                                  <span className="badge bg-danger-subtle text-danger border border-danger rounded-pill px-2 py-1" 
+                                        style={{ fontSize: '9px', fontWeight: '500', letterSpacing: '0.3px' }}
+                                        title="BlueDart service not available for this pincode and payment method">
+                                    SERVICE UNAVAILABLE
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* BlueDart Service Available Indicator */}
+                              {!isOrderCancelled(order) && order.bluedart_service_available === true && !order.awb_number && (
+                                <div className="d-flex align-items-center gap-1 mb-1">
+                                  <Icon icon="lucide:check-circle" width="12" height="12" className="text-success" />
+                                  <span className="badge bg-success-subtle text-success border border-success rounded-pill px-2 py-1" 
+                                        style={{ fontSize: '9px', fontWeight: '500', letterSpacing: '0.3px' }}
+                                        title="BlueDart service available - ready for waybill generation">
+                                    SERVICE AVAILABLE
+                                  </span>
+                                </div>
+                              )}
                               <small className="text-muted">
                                 {new Date(order.created_at).toLocaleDateString('en-US', {
                                   year: 'numeric',
@@ -1167,8 +1225,12 @@ const ShippingDashboard = () => {
                               <button
                                 className="btn btn-sm btn-outline-warning rounded-pill px-3"
                                 onClick={() => generateWaybillWithData(order)}
-                                disabled={isOrderCancelled(order)}
-                                title={isOrderCancelled(order) ? "Cannot generate waybill for cancelled orders" : "Generate Waybill with Product Data"}
+                                disabled={isOrderCancelled(order) || order.bluedart_service_available === false}
+                                title={
+                                  isOrderCancelled(order) ? "Cannot generate waybill for cancelled orders" :
+                                  order.bluedart_service_available === false ? "BlueDart service not available for this pincode and payment method" :
+                                  "Generate Waybill with Product Data"
+                                }
                               >
                                 <Icon icon="lucide:package" width="14" height="14" />
                                 <span className="ms-1 d-none d-sm-inline">Waybill</span>
