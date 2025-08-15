@@ -430,7 +430,7 @@ const ShippingDashboard = () => {
             Breadth: 15,
             Count: 1,
             Height: 15,
-            Length: 25
+            Length: 23
           }
         ],
         Product1: itemCount <= 3 ? (order.line_items?.[0]?.lineitem_sku || 'N/A') : `Accessories${itemCount}x`,
