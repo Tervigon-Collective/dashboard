@@ -3,75 +3,73 @@ import { useEffect, useRef, useState } from "react";
 import hljs from "highlight.js";
 import dynamic from "next/dynamic";
 import "highlight.js/styles/github.css";
+
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-const TermsConditionLayer = () => {
+
+const PrivacyPolicyLayer = () => {
   const quillRef = useRef(null);
   const [value, setValue] = useState(`<div id="editor">
-        <h4>Terms and Conditions</h4>
+        <h4>Privacy Policy</h4>
         <p>Last updated: ${new Date().toLocaleDateString()}</p>
         
-        <h6>1. Acceptance of Terms</h6>
-        <p>By accessing and using Seleric Dashboard ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
-        
-        <h6>2. Use License</h6>
-        <p>Permission is granted to temporarily download one copy of the materials (information or software) on Seleric Dashboard for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:</p>
+        <h6>1. Information We Collect</h6>
+        <p>We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This may include:</p>
         <ul>
-          <li>Modify or copy the materials</li>
-          <li>Use the materials for any commercial purpose or for any public display</li>
-          <li>Attempt to reverse engineer any software contained on the Service</li>
-          <li>Remove any copyright or other proprietary notations from the materials</li>
+          <li>Name, email address, and contact information</li>
+          <li>Account credentials and profile information</li>
+          <li>Payment and billing information</li>
+          <li>Communication preferences and settings</li>
         </ul>
         
-        <h6>3. User Account</h6>
-        <p>To access certain features of the Service, you must create an account. You are responsible for:</p>
+        <h6>2. How We Use Your Information</h6>
+        <p>We use the information we collect to:</p>
         <ul>
-          <li>Maintaining the confidentiality of your account credentials</li>
-          <li>All activities that occur under your account</li>
-          <li>Notifying us immediately of any unauthorized use</li>
-          <li>Ensuring your account information is accurate and up-to-date</li>
+          <li>Provide, maintain, and improve our services</li>
+          <li>Process transactions and send related information</li>
+          <li>Send technical notices, updates, and support messages</li>
+          <li>Respond to your comments and questions</li>
+          <li>Protect against fraudulent or illegal activity</li>
         </ul>
         
-        <h6>4. Acceptable Use</h6>
-        <p>You agree not to use the Service to:</p>
+        <h6>3. Information Sharing</h6>
+        <p>We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy. We may share information with:</p>
         <ul>
-          <li>Violate any applicable laws or regulations</li>
-          <li>Infringe upon the rights of others</li>
-          <li>Transmit harmful, offensive, or inappropriate content</li>
-          <li>Attempt to gain unauthorized access to the Service</li>
-          <li>Interfere with the proper functioning of the Service</li>
+          <li>Service providers who assist in our operations</li>
+          <li>Legal authorities when required by law</li>
+          <li>Business partners with your explicit consent</li>
         </ul>
         
-        <h6>5. Intellectual Property</h6>
-        <p>The Service and its original content, features, and functionality are and will remain the exclusive property of Seleric and its licensors. The Service is protected by copyright, trademark, and other laws.</p>
+        <h6>4. Data Security</h6>
+        <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.</p>
         
-        <h6>6. Privacy Policy</h6>
-        <p>Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices.</p>
+        <h6>5. Your Rights</h6>
+        <p>You have the right to:</p>
+        <ul>
+          <li>Access and update your personal information</li>
+          <li>Request deletion of your data</li>
+          <li>Opt-out of marketing communications</li>
+          <li>File a complaint with supervisory authorities</li>
+        </ul>
         
-        <h6>7. Disclaimers</h6>
-        <p>The materials on the Service are provided on an 'as is' basis. Seleric makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property.</p>
+        <h6>6. Cookies and Tracking</h6>
+        <p>We use cookies and similar technologies to enhance your experience, analyze usage patterns, and personalize content. You can control cookie settings through your browser preferences.</p>
         
-        <h6>8. Limitations</h6>
-        <p>In no event shall Seleric or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the Service.</p>
+        <h6>7. Children's Privacy</h6>
+        <p>Our services are not intended for children under 13. We do not knowingly collect personal information from children under 13. If you believe we have collected such information, please contact us immediately.</p>
         
-        <h6>9. Revisions and Errata</h6>
-        <p>The materials appearing on the Service could include technical, typographical, or photographic errors. Seleric does not warrant that any of the materials on the Service are accurate, complete, or current.</p>
+        <h6>8. International Transfers</h6>
+        <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place to protect your data during such transfers.</p>
         
-        <h6>10. Links</h6>
-        <p>Seleric has not reviewed all of the sites linked to the Service and is not responsible for the contents of any such linked site. The inclusion of any link does not imply endorsement by Seleric of the site.</p>
+        <h6>9. Changes to This Policy</h6>
+        <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Last updated" date.</p>
         
-        <h6>11. Modifications</h6>
-        <p>Seleric may revise these terms of service at any time without notice. By using this Service, you are agreeing to be bound by the then current version of these Terms of Service.</p>
-        
-        <h6>12. Governing Law</h6>
-        <p>These terms and conditions are governed by and construed in accordance with the laws and you irrevocably submit to the exclusive jurisdiction of the courts in that location.</p>
-        
-        <h6>13. Contact Information</h6>
-        <p>If you have any questions about these Terms and Conditions, please contact us at:</p>
+        <h6>10. Contact Us</h6>
+        <p>If you have any questions about this privacy policy or our data practices, please contact us at:</p>
         <p>Email: admin@seleric.com<br>
         Address: B1/D4, Mohan Cooperative Industrial Estate, New Delhi - 110044<br>
         Phone: 9818856823</p>
       </div>`);
-  // eslint-disable-next-line no-unused-vars
+  
   const [isHighlightReady, setIsHighlightReady] = useState(false);
 
   useEffect(() => {
@@ -194,7 +192,7 @@ const TermsConditionLayer = () => {
             onChange={setValue}
             modules={modules}
             formats={formats}
-            placeholder='Compose an epic...'
+            placeholder='Compose privacy policy content...'
           />
         </div>
 
@@ -220,4 +218,4 @@ const TermsConditionLayer = () => {
   );
 };
 
-export default TermsConditionLayer;
+export default PrivacyPolicyLayer;

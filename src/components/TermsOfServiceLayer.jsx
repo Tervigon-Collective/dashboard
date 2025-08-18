@@ -3,75 +3,74 @@ import { useEffect, useRef, useState } from "react";
 import hljs from "highlight.js";
 import dynamic from "next/dynamic";
 import "highlight.js/styles/github.css";
+
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-const TermsConditionLayer = () => {
+
+const TermsOfServiceLayer = () => {
   const quillRef = useRef(null);
   const [value, setValue] = useState(`<div id="editor">
-        <h4>Terms and Conditions</h4>
+        <h4>Terms of Service</h4>
         <p>Last updated: ${new Date().toLocaleDateString()}</p>
         
-        <h6>1. Acceptance of Terms</h6>
-        <p>By accessing and using Seleric Dashboard ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+        <h6>1. Service Description</h6>
+        <p>Seleric Dashboard provides a comprehensive business management platform that includes analytics, reporting, user management, and various business tools. Our services are designed to help businesses streamline their operations and make data-driven decisions.</p>
         
-        <h6>2. Use License</h6>
-        <p>Permission is granted to temporarily download one copy of the materials (information or software) on Seleric Dashboard for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:</p>
+        <h6>2. Service Availability</h6>
+        <p>We strive to maintain high service availability but cannot guarantee uninterrupted access. We may perform maintenance, updates, or modifications that could temporarily affect service availability.</p>
+        
+        <h6>3. User Responsibilities</h6>
+        <p>As a user of our service, you agree to:</p>
         <ul>
-          <li>Modify or copy the materials</li>
-          <li>Use the materials for any commercial purpose or for any public display</li>
-          <li>Attempt to reverse engineer any software contained on the Service</li>
-          <li>Remove any copyright or other proprietary notations from the materials</li>
+          <li>Provide accurate and complete information</li>
+          <li>Maintain the security of your account</li>
+          <li>Use the service in compliance with applicable laws</li>
+          <li>Not attempt to gain unauthorized access to our systems</li>
+          <li>Report any security concerns immediately</li>
         </ul>
         
-        <h6>3. User Account</h6>
-        <p>To access certain features of the Service, you must create an account. You are responsible for:</p>
+        <h6>4. Data and Privacy</h6>
+        <p>We are committed to protecting your data and privacy. Our data handling practices are outlined in our Privacy Policy. By using our service, you consent to our data collection and use practices as described therein.</p>
+        
+        <h6>5. Service Limitations</h6>
+        <p>Our service is provided "as is" and "as available." We do not guarantee that the service will meet your specific requirements or that it will be error-free or uninterrupted.</p>
+        
+        <h6>6. Payment Terms</h6>
+        <p>If you subscribe to a paid plan:</p>
         <ul>
-          <li>Maintaining the confidentiality of your account credentials</li>
-          <li>All activities that occur under your account</li>
-          <li>Notifying us immediately of any unauthorized use</li>
-          <li>Ensuring your account information is accurate and up-to-date</li>
+          <li>Fees are billed in advance on a recurring basis</li>
+          <li>All fees are non-refundable except as required by law</li>
+          <li>We may change our pricing with 30 days notice</li>
+          <li>Failure to pay may result in service suspension</li>
         </ul>
         
-        <h6>4. Acceptable Use</h6>
-        <p>You agree not to use the Service to:</p>
-        <ul>
-          <li>Violate any applicable laws or regulations</li>
-          <li>Infringe upon the rights of others</li>
-          <li>Transmit harmful, offensive, or inappropriate content</li>
-          <li>Attempt to gain unauthorized access to the Service</li>
-          <li>Interfere with the proper functioning of the Service</li>
-        </ul>
+        <h6>7. Termination</h6>
+        <p>You may cancel your account at any time. We may terminate or suspend your access to the service immediately, without prior notice, for conduct that we believe violates these Terms of Service or is harmful to other users or our business.</p>
         
-        <h6>5. Intellectual Property</h6>
-        <p>The Service and its original content, features, and functionality are and will remain the exclusive property of Seleric and its licensors. The Service is protected by copyright, trademark, and other laws.</p>
+        <h6>8. Intellectual Property</h6>
+        <p>The service and its original content, features, and functionality are owned by Seleric and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.</p>
         
-        <h6>6. Privacy Policy</h6>
-        <p>Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices.</p>
+        <h6>9. Third-Party Services</h6>
+        <p>Our service may integrate with third-party services. We are not responsible for the content, privacy policies, or practices of any third-party services.</p>
         
-        <h6>7. Disclaimers</h6>
-        <p>The materials on the Service are provided on an 'as is' basis. Seleric makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property.</p>
+        <h6>10. Limitation of Liability</h6>
+        <p>To the maximum extent permitted by law, Seleric shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.</p>
         
-        <h6>8. Limitations</h6>
-        <p>In no event shall Seleric or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the Service.</p>
-        
-        <h6>9. Revisions and Errata</h6>
-        <p>The materials appearing on the Service could include technical, typographical, or photographic errors. Seleric does not warrant that any of the materials on the Service are accurate, complete, or current.</p>
-        
-        <h6>10. Links</h6>
-        <p>Seleric has not reviewed all of the sites linked to the Service and is not responsible for the contents of any such linked site. The inclusion of any link does not imply endorsement by Seleric of the site.</p>
-        
-        <h6>11. Modifications</h6>
-        <p>Seleric may revise these terms of service at any time without notice. By using this Service, you are agreeing to be bound by the then current version of these Terms of Service.</p>
+        <h6>11. Indemnification</h6>
+        <p>You agree to defend, indemnify, and hold harmless Seleric and its officers, directors, employees, and agents from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use of the service.</p>
         
         <h6>12. Governing Law</h6>
-        <p>These terms and conditions are governed by and construed in accordance with the laws and you irrevocably submit to the exclusive jurisdiction of the courts in that location.</p>
+        <p>These Terms of Service shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law provisions.</p>
         
-        <h6>13. Contact Information</h6>
-        <p>If you have any questions about these Terms and Conditions, please contact us at:</p>
+        <h6>13. Changes to Terms</h6>
+        <p>We reserve the right to modify these terms at any time. We will notify users of any material changes via email or through the service. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+        
+        <h6>14. Contact Information</h6>
+        <p>For questions about these Terms of Service, please contact us at:</p>
         <p>Email: admin@seleric.com<br>
         Address: B1/D4, Mohan Cooperative Industrial Estate, New Delhi - 110044<br>
         Phone: 9818856823</p>
       </div>`);
-  // eslint-disable-next-line no-unused-vars
+  
   const [isHighlightReady, setIsHighlightReady] = useState(false);
 
   useEffect(() => {
@@ -194,7 +193,7 @@ const TermsConditionLayer = () => {
             onChange={setValue}
             modules={modules}
             formats={formats}
-            placeholder='Compose an epic...'
+            placeholder='Compose terms of service content...'
           />
         </div>
 
@@ -220,4 +219,4 @@ const TermsConditionLayer = () => {
   );
 };
 
-export default TermsConditionLayer;
+export default TermsOfServiceLayer;

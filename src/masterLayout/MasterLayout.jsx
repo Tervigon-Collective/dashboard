@@ -2008,12 +2008,18 @@ const MasterLayout = ({ children }) => {
         <footer className="d-footer">
           <div className="row align-items-center justify-content-between">
             <div className="col-auto">
-              <p className="mb-0">© 2025 . All Rights Reserved.</p>
+              <p className="mb-0">© 2025 Seleric. All Rights Reserved.</p>
             </div>
             <div className="col-auto">
-              <p className="mb-0">
-                {/* Made by <span className='text-primary-600'>Parveen</span> */}
-              </p>
+              <div className="d-flex align-items-center gap-3">
+                <Link href="/privacy-policy" className="text-secondary-light text-sm text-decoration-none hover-text-primary">
+                  Privacy Policy
+                </Link>
+                <span className="text-secondary-light">|</span>
+                <Link href="/terms-condition" className="text-secondary-light text-sm text-decoration-none hover-text-primary">
+                  Terms & Conditions
+                </Link>
+              </div>
             </div>
           </div>
         </footer>

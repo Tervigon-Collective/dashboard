@@ -142,11 +142,11 @@ const SignUpLayer = () => {
                     htmlFor='condition'
                   >
                     By creating an account means you agree to the
-                    <Link href='#' className='text-primary-600 fw-semibold'>
+                    <Link href='/terms-condition' className='text-primary-600 fw-semibold'>
                       Terms & Conditions
                     </Link>{" "}
                     and our
-                    <Link href='#' className='text-primary-600 fw-semibold'>
+                    <Link href='/privacy-policy' className='text-primary-600 fw-semibold'>
                       Privacy Policy
                     </Link>
                   </label>
