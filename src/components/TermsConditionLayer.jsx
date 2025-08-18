@@ -1,221 +1,434 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import hljs from "highlight.js";
-import dynamic from "next/dynamic";
-import "highlight.js/styles/github.css";
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import React from "react";
+
 const TermsConditionLayer = () => {
-  const quillRef = useRef(null);
-  const [value, setValue] = useState(`<div id="editor">
-        <h4>Terms and Conditions</h4>
-        <p>Last updated: ${new Date().toLocaleDateString()}</p>
-        
-        <h6>1. Acceptance of Terms</h6>
-        <p>By accessing and using Seleric Dashboard ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
-        
-        <h6>2. Use License</h6>
-        <p>Permission is granted to temporarily download one copy of the materials (information or software) on Seleric Dashboard for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:</p>
-        <ul>
-          <li>Modify or copy the materials</li>
-          <li>Use the materials for any commercial purpose or for any public display</li>
-          <li>Attempt to reverse engineer any software contained on the Service</li>
-          <li>Remove any copyright or other proprietary notations from the materials</li>
-        </ul>
-        
-        <h6>3. User Account</h6>
-        <p>To access certain features of the Service, you must create an account. You are responsible for:</p>
-        <ul>
-          <li>Maintaining the confidentiality of your account credentials</li>
-          <li>All activities that occur under your account</li>
-          <li>Notifying us immediately of any unauthorized use</li>
-          <li>Ensuring your account information is accurate and up-to-date</li>
-        </ul>
-        
-        <h6>4. Acceptable Use</h6>
-        <p>You agree not to use the Service to:</p>
-        <ul>
-          <li>Violate any applicable laws or regulations</li>
-          <li>Infringe upon the rights of others</li>
-          <li>Transmit harmful, offensive, or inappropriate content</li>
-          <li>Attempt to gain unauthorized access to the Service</li>
-          <li>Interfere with the proper functioning of the Service</li>
-        </ul>
-        
-        <h6>5. Intellectual Property</h6>
-        <p>The Service and its original content, features, and functionality are and will remain the exclusive property of Seleric and its licensors. The Service is protected by copyright, trademark, and other laws.</p>
-        
-        <h6>6. Privacy Policy</h6>
-        <p>Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices.</p>
-        
-        <h6>7. Disclaimers</h6>
-        <p>The materials on the Service are provided on an 'as is' basis. Seleric makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property.</p>
-        
-        <h6>8. Limitations</h6>
-        <p>In no event shall Seleric or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the Service.</p>
-        
-        <h6>9. Revisions and Errata</h6>
-        <p>The materials appearing on the Service could include technical, typographical, or photographic errors. Seleric does not warrant that any of the materials on the Service are accurate, complete, or current.</p>
-        
-        <h6>10. Links</h6>
-        <p>Seleric has not reviewed all of the sites linked to the Service and is not responsible for the contents of any such linked site. The inclusion of any link does not imply endorsement by Seleric of the site.</p>
-        
-        <h6>11. Modifications</h6>
-        <p>Seleric may revise these terms of service at any time without notice. By using this Service, you are agreeing to be bound by the then current version of these Terms of Service.</p>
-        
-        <h6>12. Governing Law</h6>
-        <p>These terms and conditions are governed by and construed in accordance with the laws and you irrevocably submit to the exclusive jurisdiction of the courts in that location.</p>
-        
-        <h6>13. Contact Information</h6>
-        <p>If you have any questions about these Terms and Conditions, please contact us at:</p>
-        <p>Email: admin@seleric.com<br>
-        Address: B1/D4, Mohan Cooperative Industrial Estate, New Delhi - 110044<br>
-        Phone: 9818856823</p>
-      </div>`);
-  // eslint-disable-next-line no-unused-vars
-  const [isHighlightReady, setIsHighlightReady] = useState(false);
-
-  useEffect(() => {
-    // Load highlight.js configuration and signal when ready
-    hljs?.configure({
-      languages: [
-        "javascript",
-        "ruby",
-        "python",
-        "java",
-        "csharp",
-        "cpp",
-        "go",
-        "php",
-        "swift",
-      ],
-    });
-  }, []);
-
-  const handleSave = () => {
-    const editorContent = quillRef.current.getEditor().root.innerHTML;
-    console.log("Editor content:", editorContent);
-  };
-
-  // Quill editor modules with syntax highlighting (only load if highlight.js is ready)
-  const modules = isHighlightReady
-    ? {
-        syntax: {
-          highlight: (text) => hljs?.highlightAuto(text).value, // Enable highlight.js in Quill
-        },
-        toolbar: {
-          container: "#toolbar-container", // Custom toolbar container
-        },
-      }
-    : {
-        toolbar: {
-          container: "#toolbar-container", // Custom toolbar container
-        },
-      };
-
-  const formats = [
-    "font",
-    "size",
-    "bold",
-    "italic",
-    "underline",
-    "strike",
-    "color",
-    "background",
-    "script",
-    "header",
-    "blockquote",
-    "code-block",
-    "list",
-    "indent",
-    "direction",
-    "align",
-    "link",
-    "image",
-    "video",
-    "formula",
-  ];
-
   return (
     <>
       <div className='card basic-data-table radius-12 overflow-hidden'>
-        <div className='card-body p-0'>
-          {/* Editor Toolbar */}
-          <div id='toolbar-container'>
-            <span className='ql-formats'>
-              <select className='ql-font'></select>
-              <select className='ql-size'></select>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-bold'></button>
-              <button className='ql-italic'></button>
-              <button className='ql-underline'></button>
-              <button className='ql-strike'></button>
-            </span>
-            <span className='ql-formats'>
-              <select className='ql-color'></select>
-              <select className='ql-background'></select>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-script' value='sub'></button>
-              <button className='ql-script' value='super'></button>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-header' value='1'></button>
-              <button className='ql-header' value='2'></button>
-              <button className='ql-blockquote'></button>
-              <button className='ql-code-block'></button>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-list' value='ordered'></button>
-              <button className='ql-list' value='bullet'></button>
-              <button className='ql-indent' value='-1'></button>
-              <button className='ql-indent' value='+1'></button>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-direction' value='rtl'></button>
-              <select className='ql-align'></select>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-link'></button>
-              <button className='ql-image'></button>
-              <button className='ql-video'></button>
-              <button className='ql-formula'></button>
-            </span>
-            <span className='ql-formats'>
-              <button className='ql-clean'></button>
-            </span>
+        <div className='card-body p-32'>
+          <div className="terms-content">
+            {/* Stylish Header Section */}
+            <div className="text-center mb-5 pb-4 border-bottom border-2 border-primary-200">
+              <div className="d-inline-block p-3 bg-primary-50 radius-12 mb-3">
+                <i className="ri-file-text-line text-primary-600" style={{fontSize: '3rem'}}></i>
+              </div>
+              <h1 className="display-6 fw-bold text-primary-600 mb-2">Terms and Conditions</h1>
+              {/* <p className="text-muted fw-medium mb-0">Last updated: {new Date().toLocaleDateString()}</p> */}
+            </div>
+            
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>1</div>
+                <h3 className="fw-bold text-dark mb-0">Acceptance of Terms</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">
+                  By accessing and using Seleric Dashboard ("the Service"), you accept and agree to be bound by the terms and provisions 
+                  of this agreement. These Terms and Conditions constitute a legally binding agreement between you and Seleric regarding 
+                  your use of our dashboard platform and related services.
+                </p>
+                <p className="text-dark lh-base fs-5">
+                  If you do not agree to abide by these terms, please do not use our Service. Your continued use of the Service 
+                  constitutes acceptance of any modifications to these terms.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>2</div>
+                <h3 className="fw-bold text-dark mb-0">Service Description</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">
+                  Seleric Dashboard is a comprehensive business management platform that provides:
+                </p>
+                <div className="row g-3 mb-4">
+                  <div className="col-md-6">
+                    <div className="feature-card bg-light p-3 radius-8 border-start border-4 border-primary-600">
+                      <i className="ri-bar-chart-line text-primary-600 me-2"></i>
+                      <span className="text-dark fw-medium">Advanced analytics and reporting tools</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="feature-card bg-light p-3 radius-8 border-start border-4 border-success-600">
+                      <i className="ri-team-line text-success-600 me-2"></i>
+                      <span className="text-dark fw-medium">User and role management systems</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="feature-card bg-light p-3 radius-8 border-start border-4 border-info-600">
+                      <i className="ri-dashboard-line text-info-600 me-2"></i>
+                      <span className="text-dark fw-medium">Business intelligence dashboards</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="feature-card bg-light p-3 radius-8 border-start border-4 border-warning-600">
+                      <i className="ri-pie-chart-line text-warning-600 me-2"></i>
+                      <span className="text-dark fw-medium">Data visualization and insights</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-dark lh-base fs-5">
+                  We reserve the right to modify, suspend, or discontinue any aspect of the Service at any time with reasonable notice.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>3</div>
+                <h3 className="fw-bold text-dark mb-0">User Accounts and Registration</h3>
+              </div>
+              <div className="ps-5">
+                <div className="sub-section mb-4">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-user-add-line me-2"></i>3.1 Account Creation
+                  </h5>
+                  <p className="text-dark mb-3 lh-base fs-5">To access certain features of the Service, you must create an account by providing:</p>
+                  <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                    <li className="mb-2">Valid and accurate personal information</li>
+                    <li className="mb-2">A unique username and secure password</li>
+                    <li className="mb-2">Verifiable email address and contact details</li>
+                    <li className="mb-2">Company information (for business accounts)</li>
+                  </ul>
+                </div>
+                
+                <div className="sub-section">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-shield-user-line me-2"></i>3.2 Account Responsibilities
+                  </h5>
+                  <p className="text-dark mb-3 lh-base fs-5">You are responsible for:</p>
+                  <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                    <li className="mb-2">Maintaining the confidentiality of your account credentials</li>
+                    <li className="mb-2">All activities that occur under your account</li>
+                    <li className="mb-2">Notifying us immediately of any unauthorized use</li>
+                    <li className="mb-2">Ensuring your account information remains accurate and current</li>
+                    <li className="mb-2">Keeping your password secure and changing it regularly</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>4</div>
+                <h3 className="fw-bold text-dark mb-0">Acceptable Use Policy</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">You agree to use the Service only for lawful purposes and in accordance with these Terms. You agree NOT to:</p>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <div className="prohibition-card bg-danger-50 p-3 radius-8 border border-danger-200">
+                      <i className="ri-error-warning-line text-danger-600 me-2"></i>
+                      <span className="text-dark">Use the Service for any illegal purpose</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="prohibition-card bg-danger-50 p-3 radius-8 border border-danger-200">
+                      <i className="ri-lock-line text-danger-600 me-2"></i>
+                      <span className="text-dark">Attempt unauthorized access to systems</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="prohibition-card bg-danger-50 p-3 radius-8 border border-danger-200">
+                      <i className="ri-bug-line text-danger-600 me-2"></i>
+                      <span className="text-dark">Interfere with Service operation</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="prohibition-card bg-danger-50 p-3 radius-8 border border-danger-200">
+                      <i className="ri-spam-line text-danger-600 me-2"></i>
+                      <span className="text-dark">Transmit harmful content</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>5</div>
+                <h3 className="fw-bold text-dark mb-0">Intellectual Property Rights</h3>
+              </div>
+              <div className="ps-5">
+                <div className="sub-section mb-4">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-copyright-line me-2"></i>5.1 Our Rights
+                  </h5>
+                  <p className="text-dark mb-3 lh-base fs-5">
+                    The Service and its original content, features, functionality, and design are owned by Seleric and are protected by:
+                  </p>
+                  <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                    <li className="mb-2">Copyright laws and international treaties</li>
+                    <li className="mb-2">Trademark and service mark protections</li>
+                    <li className="mb-2">Patent and trade secret laws</li>
+                    <li className="mb-2">Other intellectual property rights</li>
+                  </ul>
+                </div>
+                
+                <div className="sub-section">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-user-star-line me-2"></i>5.2 Your Rights
+                  </h5>
+                  <p className="text-dark lh-base fs-5">
+                    You retain ownership of content you create or upload to the Service. By using our Service, you grant us a limited, 
+                    non-exclusive license to use, store, and display your content solely for the purpose of providing the Service.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>6</div>
+                <h3 className="fw-bold text-dark mb-0">Privacy and Data Protection</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark lh-base fs-5">
+                  Your privacy is important to us. Our collection, use, and protection of your personal information is governed by 
+                  our Privacy Policy, which is incorporated into these Terms by reference. By using the Service, you consent to 
+                  our data practices as described in our Privacy Policy.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>7</div>
+                <h3 className="fw-bold text-dark mb-0">Service Availability and Maintenance</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">We strive to maintain high service availability but cannot guarantee:</p>
+                <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                  <li className="mb-2">Uninterrupted or error-free operation</li>
+                  <li className="mb-2">Specific response times or performance levels</li>
+                  <li className="mb-2">Compatibility with all devices or browsers</li>
+                  <li className="mb-2">Availability during scheduled maintenance windows</li>
+                </ul>
+                <p className="text-dark lh-base fs-5">
+                  We will provide reasonable notice for scheduled maintenance and work to minimize service disruptions.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>8</div>
+                <h3 className="fw-bold text-dark mb-0">Payment Terms and Billing</h3>
+              </div>
+              <div className="ps-5">
+                <div className="sub-section mb-4">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-bank-card-line me-2"></i>8.1 Subscription Plans
+                  </h5>
+                  <p className="text-dark mb-3 lh-base fs-5">For paid subscription plans:</p>
+                  <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                    <li className="mb-2">Fees are billed in advance on a recurring basis</li>
+                    <li className="mb-2">All fees are non-refundable except as required by law</li>
+                    <li className="mb-2">We may change pricing with 30 days written notice</li>
+                    <li className="mb-2">Failure to pay may result in service suspension or termination</li>
+                  </ul>
           </div>
 
-          {/* Quill Editor */}
-          <ReactQuill
-            ref={quillRef}
-            theme='snow'
-            value={value}
-            onChange={setValue}
-            modules={modules}
-            formats={formats}
-            placeholder='Compose an epic...'
-          />
+                <div className="sub-section">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-gift-line me-2"></i>8.2 Free Tier
+                  </h5>
+                  <p className="text-dark lh-base fs-5">
+                    We may offer a free tier with limited features. We reserve the right to modify or discontinue free services 
+                    at any time without notice.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>9</div>
+                <h3 className="fw-bold text-dark mb-0">Limitation of Liability</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">To the maximum extent permitted by law, Seleric shall not be liable for:</p>
+                <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                  <li className="mb-2">Indirect, incidental, special, or consequential damages</li>
+                  <li className="mb-2">Loss of profits, data, use, goodwill, or other intangible losses</li>
+                  <li className="mb-2">Damages resulting from unauthorized access to your account</li>
+                  <li className="mb-2">Service interruptions or data loss</li>
+                  <li className="mb-2">Third-party actions or content</li>
+                </ul>
+                <p className="text-dark lh-base fs-5">
+                  Our total liability shall not exceed the amount you paid for the Service in the 12 months preceding the claim.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>10</div>
+                <h3 className="fw-bold text-dark mb-0">Indemnification</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark lh-base fs-5">
+                  You agree to defend, indemnify, and hold harmless Seleric and its officers, directors, employees, and agents 
+                  from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use 
+                  of the Service, violation of these Terms, or violation of any third-party rights.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>11</div>
+                <h3 className="fw-bold text-dark mb-0">Termination and Suspension</h3>
+              </div>
+              <div className="ps-5">
+                <div className="sub-section mb-4">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-logout-box-line me-2"></i>11.1 Your Rights
+                  </h5>
+                  <p className="text-dark mb-3 lh-base fs-5">You may terminate your account at any time by:</p>
+                  <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                    <li className="mb-2">Contacting our support team</li>
+                    <li className="mb-2">Using the account deletion feature in your settings</li>
+                    <li className="mb-2">Providing written notice of termination</li>
+                  </ul>
         </div>
 
-        <div className='card-footer p-24 bg-base border border-bottom-0 border-end-0 border-start-0'>
-          <div className='d-flex align-items-center justify-content-center gap-3'>
-            <button
-              type='button'
-              className='border border-danger-600 bg-hover-danger-200 text-danger-600 text-md px-50 py-11 radius-8'
-            >
-              Cancel
-            </button>
-            <button
-              type='button'
-              className='btn btn-primary border border-primary-600 text-md px-28 py-12 radius-8'
-              onClick={handleSave}
-            >
-              Save Changes
-            </button>
+                <div className="sub-section">
+                  <h5 className="fw-semibold mb-3 text-primary-600 d-flex align-items-center">
+                    <i className="ri-shield-cross-line me-2"></i>11.2 Our Rights
+                  </h5>
+                  <p className="text-dark lh-base fs-5">
+                    We may terminate or suspend your access immediately for violations of these Terms, fraudulent activity, 
+                    or to protect the security of our Service and other users.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>12</div>
+                <h3 className="fw-bold text-dark mb-0">Governing Law and Dispute Resolution</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">These Terms shall be governed by the laws of India. Any disputes shall be resolved through:</p>
+                <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                  <li className="mb-2">Good faith negotiations between the parties</li>
+                  <li className="mb-2">Mediation if negotiations fail</li>
+                  <li className="mb-2">Arbitration as a final resolution method</li>
+                  <li className="mb-2">Legal proceedings in courts of competent jurisdiction in New Delhi, India</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>13</div>
+                <h3 className="fw-bold text-dark mb-0">Changes to Terms</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">We reserve the right to modify these Terms at any time. Material changes will be communicated through:</p>
+                <ul className="text-dark mb-4 lh-base ps-4 custom-list">
+                  <li className="mb-2">Email notifications to registered users</li>
+                  <li className="mb-2">Prominent notices on our website</li>
+                  <li className="mb-2">Updates to the "Last updated" date</li>
+                </ul>
+                <p className="text-dark lh-base fs-5">
+                  Continued use of the Service after changes constitutes acceptance of the new Terms.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>14</div>
+                <h3 className="fw-bold text-dark mb-0">Severability and Waiver</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark lh-base fs-5">
+                  If any provision of these Terms is found to be unenforceable, the remaining provisions will continue in full force. 
+                  Our failure to enforce any right or provision does not constitute a waiver of that right or provision.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section mb-5">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>15</div>
+                <h3 className="fw-bold text-dark mb-0">Contact Information</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark mb-3 lh-base fs-5">For questions about these Terms and Conditions, please contact us:</p>
+                <div className="contact-info bg-primary text-white p-4 radius-12 shadow-sm">
+                  <div className="row g-3">
+                    <div className="col-md-4">
+                      <div className="text-center">
+                        <i className="ri-mail-line text-white mb-2" style={{fontSize: '2rem'}}></i>
+                        <p className="mb-1 fw-medium text-white">admin@seleric.com</p>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="text-center">
+                        <i className="ri-map-pin-line text-white mb-2" style={{fontSize: '2rem'}}></i>
+                        <p className="mb-1 fw-medium text-white">B1/D4, Mohan Cooperative Industrial Estate, New Delhi - 110044</p>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="text-center">
+                        <i className="ri-phone-line text-white mb-2" style={{fontSize: '2rem'}}></i>
+                        <p className="mb-1 fw-medium text-white">9818856823</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-dark mt-4 lh-base fs-5">
+                  We will respond to your inquiry within 48 hours during business days.
+                </p>
+              </div>
+            </div>
+
+            <div className="terms-section">
+              <div className="section-header d-flex align-items-center mb-4">
+                <div className="section-number bg-primary-600 text-white fw-bold rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>16</div>
+                <h3 className="fw-bold text-dark mb-0">Entire Agreement</h3>
+              </div>
+              <div className="ps-5">
+                <p className="text-dark lh-base fs-5">
+                  These Terms and Conditions, together with our Privacy Policy and any other policies referenced herein, 
+                  constitute the entire agreement between you and Seleric regarding the Service. These Terms supersede all 
+                  prior agreements, representations, and understandings between the parties.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .custom-list li {
+          position: relative;
+          padding-left: 1.5rem;
+        }
+        .custom-list li:before {
+          content: "•";
+          color: var(--bs-primary);
+          font-weight: bold;
+          position: absolute;
+          left: 0;
+        }
+        .bg-gradient-primary {
+          background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-600) 100%);
+        }
+        .feature-card, .prohibition-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .feature-card:hover, .prohibition-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+      `}</style>
     </>
   );
 };
