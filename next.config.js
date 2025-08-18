@@ -1,36 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  trailingSlash: false,
-  output: 'export',
-  distDir: 'out',
-  images: {
-    unoptimized: true
-  },
+  trailingSlash: false,      // ok for export (creates about.html instead of about/index.html)
+  output: 'export',          // static export → writes to out/
+  images: { unoptimized: true },
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },
     ];
   },
-  // Handle static assets
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-      };
+      config.resolve.fallback = { ...config.resolve.fallback, fs: false };
     }
     return config;
   },
