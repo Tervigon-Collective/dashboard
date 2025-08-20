@@ -163,15 +163,6 @@ const SignInLayer = () => {
                 Google
               </button>
             </div>
-            {/* <div className='mt-32 text-center text-sm'>
-              <p className='mb-0'>
-                Don’t have an account?{" "}
-                <Link href='/sign-up' className='text-primary-600 fw-semibold'>
-                  Sign Up
-                </Link>
-              </p>
-            </div> */}
-            
             {/* Privacy Policy and Terms Links */}
             <div className='mt-24 text-center'>
               <div className='text-sm text-secondary-light mb-2'>
@@ -188,6 +179,16 @@ const SignInLayer = () => {
                 <Icon icon="mdi:shield-check" className="me-1" />
                 Your data is protected and encrypted
               </div>
+            </div>
+            
+            {/* Sign Up Link */}
+            <div className='mt-24 text-center text-sm'>
+              <p className='mb-0 text-secondary-light'>
+                Don't have an account?{" "}
+                <Link href='/sign-up' className='text-primary-600 fw-semibold text-decoration-none hover-underline'>
+                  Sign Up
+                </Link>
+              </p>
             </div>
           </form>
         </div>

@@ -17,3 +17,8 @@
 @import url("~/public/assets/css/lib/animate.min.css");
 @import url("~/public/assets/css/style.css");
 @import url("~/public/assets/css/extra.css");
+
+/* Custom styles for sign-in page */
+.hover-underline:hover {
+  text-decoration: underline !important;
+}
