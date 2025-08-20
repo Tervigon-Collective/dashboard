@@ -171,6 +171,24 @@ const SignInLayer = () => {
                 </Link>
               </p>
             </div> */}
+            
+            {/* Privacy Policy and Terms Links */}
+            <div className='mt-24 text-center'>
+              <div className='text-sm text-secondary-light mb-2'>
+                By signing in, you agree to our{" "}
+                <Link href='/terms-of-service' className='text-primary-600 fw-medium text-decoration-none hover-underline'>
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href='/privacy-policy' className='text-primary-600 fw-medium text-decoration-none hover-underline'>
+                  Privacy Policy
+                </Link>
+              </div>
+              <div className='text-xs text-secondary-light'>
+                <Icon icon="mdi:shield-check" className="me-1" />
+                Your data is protected and encrypted
+              </div>
+            </div>
           </form>
         </div>
       </div>
