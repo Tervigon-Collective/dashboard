@@ -42,8 +42,10 @@ const CustomerLayer = () => {
     
     try {
       let url = `${config.api.baseURL}/api/customer-orders?page=${page}&limit=${limit}`;
+      
       if (search) {
-        url += `&name=${encodeURIComponent(search)}`;
+        // Use universal search endpoint to search across all fields
+        url = `${config.api.baseURL}/api/customer-orders/search?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
       }
       
       const response = await fetch(url, {
@@ -76,6 +78,8 @@ const CustomerLayer = () => {
   useEffect(() => {
     fetchOrders(currentPage, searchTerm, pageSize);
   }, [currentPage, searchTerm, pageSize]);
+
+
 
   // Reset select all state when page changes
   useEffect(() => {
@@ -1260,12 +1264,51 @@ const CustomerLayer = () => {
             <input
               type="text"
               className="form-control form-control-sm"
-              placeholder="Search by Name..."
+              placeholder="Search by email, phone, name, or order name... (Press Enter)"
               value={searchTerm}
               onChange={handleSearch}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  fetchOrders(1, searchTerm, pageSize);
+                  setCurrentPage(1);
+                }
+              }}
               style={{ paddingLeft: "35px", minWidth: "200px" }}
             />
+            {/* Search Help Tooltip */}
+            <div className="position-absolute top-50 translate-middle-y" style={{ right: "8px", cursor: "help" }}>
+              <Icon
+                icon="lucide:help-circle"
+                width="14"
+                height="14"
+                className="text-muted"
+                title={`Search Help:
+                
+Universal Search: Searches across all fields simultaneously
+
+Searchable Fields:
+• Order Name/Number
+• Customer Email
+• Phone Number
+• Billing Name
+• Shipping Name
+
+Examples:
+• "john" finds matches in any field
+• "john@example.com" finds by email
+• "1234567890" finds by phone
+• "John Doe" finds by name
+• "ORDER-123" finds by order number
+
+Press Enter to search or type to search as you type`}
+              />
+            </div>
           </div>
+          
+
+          
+
           
           {/* Download Selected Button - Only show when orders are selected */}
           {selectedOrders.size > 0 && (
@@ -1315,6 +1358,35 @@ const CustomerLayer = () => {
           </div>
         ) : (
           <>
+            {/* Search Results Summary */}
+            {searchTerm && (
+              <div className="p-3 border-bottom bg-light">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <Icon icon="lucide:search" width="16" height="16" className="text-muted" />
+                    <span className="text-muted">
+                      Universal search for "<strong>{searchTerm}</strong>" across all fields
+                    </span>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge bg-primary-subtle text-primary">
+                      {pagination.total} result{pagination.total !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setCurrentPage(1);
+                      }}
+                      title="Clear search"
+                    >
+                      <Icon icon="lucide:x" width="14" height="14" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="table-responsive">
               <table className='table table-hover mb-0 border'>
                 <thead className="table-light">
