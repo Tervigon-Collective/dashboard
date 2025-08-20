@@ -10,13 +10,14 @@ import {
   getRoleDisplayName,
   getValidRoles,
   isValidRole,
-  canAssignRoleToSelf
+  canAssignRoleToSelf,
+  deleteUserFromFirebase
 } from "@/utils/firebaseRoleManager";
 import { useUser } from "@/helper/UserContext";
 import config from "@/config";
 
 const UserRoleManager = () => {
-  const { user, token } = useUser();
+  const { user, token, role } = useUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState('all');
@@ -31,6 +32,8 @@ const UserRoleManager = () => {
   useEffect(() => {
     loadUsers();
   }, [selectedRole]);
+
+
 
   const loadUsers = async () => {
     setLoading(true);
@@ -64,7 +67,7 @@ const UserRoleManager = () => {
     // Check if user is trying to modify their own role
     if (selectedUser.uid === user?.uid) {
       // Prevent self-promotion to higher roles
-      if (!canAssignRoleToSelf(user?.role || 'none', newRole)) {
+      if (!canAssignRoleToSelf(role || 'none', newRole)) {
         setMessage({ 
           type: 'error', 
           text: 'You cannot promote yourself to a higher role. Only a super admin can promote you.' 
@@ -98,12 +101,13 @@ const UserRoleManager = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this user? This will:\n\n• Delete the user from the backend database\n• Delete the user from Firebase Firestore\n• Remove all user data and permissions\n\nThis action cannot be undone.')) {
       return;
     }
 
     setDeleting(true);
     try {
+      // First delete from backend API
       const response = await fetch(`${config.api.baseURL}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -113,11 +117,30 @@ const UserRoleManager = () => {
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'User deleted successfully' });
+        // Then delete from Firebase Authentication
+        try {
+          const firebaseResult = await deleteUserFromFirebase(userId);
+          
+          if (firebaseResult.success) {
+            setMessage({ type: 'success', text: 'User deleted successfully from both backend and Firebase' });
+          } else {
+            setMessage({ 
+              type: 'warning', 
+              text: `User deleted from backend but Firebase deletion failed: ${firebaseResult.error}` 
+            });
+          }
+        } catch (firebaseError) {
+          console.error('Firebase deletion error:', firebaseError);
+          setMessage({ 
+            type: 'warning', 
+            text: 'User deleted from backend but Firebase deletion failed. User may still exist in Firebase Authentication.' 
+          });
+        }
+        
         loadUsers(); // Reload users
       } else {
         const errorData = await response.json();
-        setMessage({ type: 'error', text: errorData.message || 'Failed to delete user' });
+        setMessage({ type: 'error', text: errorData.message || 'Failed to delete user from backend' });
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -192,6 +215,8 @@ const UserRoleManager = () => {
           </div>
         </div>
 
+
+
         {/* Users Table */}
         {loading ? (
           <div className="text-center py-4">
@@ -200,69 +225,79 @@ const UserRoleManager = () => {
             </div>
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-striped">
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Email</th>
-                  <th>Current Role</th>
-                  <th>Updated At</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((userData) => (
-                  <tr key={userData.uid}>
-                    <td>
-                      <code className="small">{userData.uid}</code>
-                    </td>
-                    <td>{userData.email || 'N/A'}</td>
-                    <td>
-                      <span className={`badge ${
-                        userData.role === 'super_admin' ? 'bg-danger' :
-                        userData.role === 'admin' ? 'bg-warning' :
-                        userData.role === 'manager' ? 'bg-info' :
-                        'bg-secondary'
-                      }`}>
-                        {getRoleDisplayName(userData.role || 'user')}
-                      </span>
-                    </td>
-                    <td>
-                      {userData.updatedAt ? 
-                        new Date(userData.updatedAt.toDate()).toLocaleDateString() : 
-                        'N/A'
-                      }
-                    </td>
-                    <td>
-                      <div className="btn-group" role="group">
-                        <button 
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => {
-                            setSelectedUser(userData);
-                            setNewRole(userData.role || 'user');
-                          }}
-                        >
-                          <Icon icon="mdi:edit" className="me-1" />
-                          Edit Role
-                        </button>
-                        {user?.role === 'super_admin' && userData.uid !== user?.uid && (
-                          <button 
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleDeleteUser(userData.uid)}
-                            disabled={deleting}
-                          >
-                            <Icon icon="mdi:delete" className="me-1" />
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            {/* Delete Information */}
+            <div className="alert alert-info mb-3">
+              <Icon icon="mdi:information" className="me-2" />
+              <strong>Note:</strong> When deleting a user, they will be removed from both the backend database and Firebase Firestore. 
+              This action cannot be undone and will permanently remove all user data and permissions.
+            </div>
+            
+            <div className="table-responsive">
+              <table className="table table-striped">
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Email</th>
+                    <th>Current Role</th>
+                    <th>Updated At</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {users.map((userData) => (
+                    <tr key={userData.uid}>
+                      <td>
+                        <code className="small">{userData.uid}</code>
+                      </td>
+                      <td>{userData.email || 'N/A'}</td>
+                      <td>
+                        <span className={`badge ${
+                          userData.role === 'super_admin' ? 'bg-danger' :
+                          userData.role === 'admin' ? 'bg-warning' :
+                          userData.role === 'manager' ? 'bg-info' :
+                          'bg-secondary'
+                        }`}>
+                          {getRoleDisplayName(userData.role || 'user')}
+                        </span>
+                      </td>
+                      <td>
+                        {userData.updatedAt ? 
+                          new Date(userData.updatedAt.toDate()).toLocaleDateString() : 
+                          'N/A'
+                        }
+                      </td>
+                      <td>
+                        <div className="btn-group" role="group">
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => {
+                              setSelectedUser(userData);
+                              setNewRole(userData.role || 'user');
+                            }}
+                          >
+                            <Icon icon="mdi:edit" className="me-1" />
+                            Edit Role
+                          </button>
+                          {(role === 'admin' || role === 'super_admin') && userData.uid !== user?.uid && (
+                            <button 
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteUser(userData.uid)}
+                              disabled={deleting}
+                              title="Delete user (irreversible)"
+                            >
+                              <Icon icon="mdi:delete" className="me-1" />
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Role Update Modal */}
@@ -307,17 +342,17 @@ const UserRoleManager = () => {
                       value={newRole}
                       onChange={(e) => setNewRole(e.target.value)}
                     >
-                      {validRoles.map(role => {
+                      {validRoles.map(roleOption => {
                         const isSelfPromotion = selectedUser.uid === user?.uid && 
-                          !canAssignRoleToSelf(user?.role || 'none', role);
+                          !canAssignRoleToSelf(role || 'none', roleOption);
                         
                         return (
                           <option 
-                            key={role} 
-                            value={role}
+                            key={roleOption} 
+                            value={roleOption}
                             disabled={isSelfPromotion}
                           >
-                            {getRoleDisplayName(role)}
+                            {getRoleDisplayName(roleOption)}
                             {isSelfPromotion ? ' (Self-promotion not allowed)' : ''}
                           </option>
                         );

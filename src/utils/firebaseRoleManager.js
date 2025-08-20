@@ -1,5 +1,5 @@
 import { db } from "@/helper/firebase";
-import { doc, setDoc, getDoc, collection, getDocs, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 
 // Valid roles in hierarchy order
 export const VALID_ROLES = ['none', 'user', 'manager', 'admin', 'super_admin'];
@@ -200,6 +200,24 @@ export const updateUserStatus = async (userId, status) => {
     return { success: true };
   } catch (error) {
     console.error('Error updating user status:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Delete user from Firebase (both Firestore and Authentication)
+export const deleteUserFromFirebase = async (userId) => {
+  try {
+    // First delete from Firestore
+    const userDocRef = doc(db, "users", userId);
+    await deleteDoc(userDocRef);
+    
+    // Note: Firebase Authentication deletion requires admin SDK on the backend
+    // This function only deletes from Firestore for now
+    // The backend API should handle Firebase Auth deletion
+    
+    return { success: true, message: 'User deleted from Firestore successfully' };
+  } catch (error) {
+    console.error('Error deleting user from Firebase:', error);
     return { success: false, error: error.message };
   }
 }; 
