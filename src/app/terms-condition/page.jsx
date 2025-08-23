@@ -1,25 +1,18 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import TermsConditionLayer from "@/components/TermsConditionLayer";
-import MasterLayout from "@/masterLayout/MasterLayout";
+import PublicLayout from "@/components/PublicLayout";
 
 export const metadata = {
-  title: "NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
+  title: "Terms & Conditions - Seleric Dashboard",
   description:
-    "NEXT JS is a developer-friendly, ready-to-use admin template designed for building attractive, scalable, and high-performing web applications.",
+    "Terms & Conditions for Seleric Dashboard - Comprehensive terms and conditions for users.",
 };
 
 const Page = () => {
   return (
-    <>
-      {/* MasterLayout */}
-      <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title='Terms & Conditions' />
-
-        {/* TermsConditionLayer */}
-        <TermsConditionLayer />
-      </MasterLayout>
-    </>
+    <PublicLayout>
+      {/* TermsConditionLayer */}
+      <TermsConditionLayer />
+    </PublicLayout>
   );
 };
 

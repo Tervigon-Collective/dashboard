@@ -1,6 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import TermsOfServiceLayer from "@/components/TermsOfServiceLayer";
-import MasterLayout from "@/masterLayout/MasterLayout";
+import PublicLayout from "@/components/PublicLayout";
 
 export const metadata = {
   title: "Terms of Service - Seleric Dashboard",
@@ -10,16 +9,10 @@ export const metadata = {
 
 const Page = () => {
   return (
-    <>
-      {/* MasterLayout */}
-      <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title='Terms of Service' />
-
-        {/* TermsOfServiceLayer */}
-        <TermsOfServiceLayer />
-      </MasterLayout>
-    </>
+    <PublicLayout>
+      {/* TermsOfServiceLayer */}
+      <TermsOfServiceLayer />
+    </PublicLayout>
   );
 };
 

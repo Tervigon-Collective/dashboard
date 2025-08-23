@@ -1,6 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import PrivacyPolicyLayer from "@/components/PrivacyPolicyLayer";
-import MasterLayout from "@/masterLayout/MasterLayout";
+import PublicLayout from "@/components/PublicLayout";
 
 export const metadata = {
   title: "Privacy Policy - Seleric Dashboard",
@@ -10,16 +9,10 @@ export const metadata = {
 
 const Page = () => {
   return (
-    <>
-      {/* MasterLayout */}
-      <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title='Privacy Policy' />
-
-        {/* PrivacyPolicyLayer */}
-        <PrivacyPolicyLayer />
-      </MasterLayout>
-    </>
+    <PublicLayout>
+      {/* PrivacyPolicyLayer */}
+      <PrivacyPolicyLayer />
+    </PublicLayout>
   );
 };
 
