@@ -4,17 +4,6 @@ const nextConfig = {
   trailingSlash: false,      // ok for export (creates about.html instead of about/index.html)
   output: 'export',          // static export → writes to out/
   images: { unoptimized: true },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-        ],
-      },
-    ];
-  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = { ...config.resolve.fallback, fs: false };
