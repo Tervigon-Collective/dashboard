@@ -398,7 +398,23 @@ const CustomerLayer = () => {
           total: parseFloat(findColumn(row, ['Total', 'Order Total', 'Total Amount']) || 0),
           discount_amount: parseFloat(findColumn(row, ['Discount Amount', 'Discount', 'Discount Total']) || 0),
           created_at: findColumn(row, ['Created at', 'Created At', 'Created Date', 'Date']) || new Date().toISOString(),
-  
+          
+          // Outstanding Balance - calculate based on payment status and total
+          outstanding_balance: (() => {
+            const total = parseFloat(findColumn(row, ['Total', 'Order Total', 'Total Amount']) || 0);
+            const paymentStatus = findColumn(row, ['Financial Status', 'Payment Status', 'Status']) || 'pending';
+            
+            // If payment status is 'paid', outstanding balance is 0
+            // If payment status is 'pending' or 'voided', outstanding balance is the total amount
+            if (paymentStatus.toLowerCase() === 'paid') {
+              return 0;
+            } else if (paymentStatus.toLowerCase() === 'voided') {
+              return 0; // Cancelled orders have no outstanding balance
+            } else {
+              return total; // Pending orders have full outstanding balance
+            }
+          })(),
+
           // Billing
           billing_name: findColumn(row, ['Billing Name', 'Billing Name', 'Customer Name']),
           billing_company: findColumn(row, ['Billing Company', 'Company']),
@@ -410,7 +426,7 @@ const CustomerLayer = () => {
           billing_country: findColumn(row, ['Billing Country', 'Country']) || 'IN',
           billing_province_name: findColumn(row, ['Billing Province Name', 'Province', 'State']),
           phone: findColumn(row, ['Billing Phone', 'Phone', 'Phone Number']),
-  
+
           // Shipping
           shipping_name: findColumn(row, ['Shipping Name', 'Shipping Name', 'Customer Name']),
           shipping_company: findColumn(row, ['Shipping Company', 'Company']),
@@ -421,7 +437,7 @@ const CustomerLayer = () => {
           shipping_zip: findColumn(row, ['Shipping Zip', 'Zip', 'Postal Code']),
           shipping_country: findColumn(row, ['Shipping Country', 'Country']) || 'IN',
           shipping_province_name: findColumn(row, ['Shipping Province Name', 'Province', 'State']),
-  
+
           // Fallback shipping from billing if shipping block missing
           ...(findColumn(row, ['Shipping Address1', 'Shipping Address']) ? {} : {
             shipping_name: findColumn(row, ['Billing Name', 'Customer Name']),
@@ -434,24 +450,24 @@ const CustomerLayer = () => {
             shipping_country: findColumn(row, ['Billing Country', 'Country']) || 'IN',
             shipping_province_name: findColumn(row, ['Billing Province Name', 'Province', 'State']),
           }),
-  
+
           payment_method: findColumn(row, ['Payment Method', 'Payment Type']),
           payment_status: findColumn(row, ['Financial Status', 'Payment Status', 'Status']) || 'pending',
           fulfillment_status: findColumn(row, ['Fulfillment Status', 'Fulfillment']) || 'unfulfilled',
-  
+
           tax_1_name: findColumn(row, ['Tax 1 Name', 'Tax Name']),
           tax_1_value: parseFloat(findColumn(row, ['Tax 1 Value', 'Tax Value']) || 0),
           tax_2_name: findColumn(row, ['Tax 2 Name']),
           tax_2_value: parseFloat(findColumn(row, ['Tax 2 Value']) || 0),
-  
+
           payment_id: findColumn(row, ['Payment ID', 'Payment ID']),
           payment_terms_name: findColumn(row, ['Payment Terms Name']),
           next_payment_due_at: findColumn(row, ['Next Payment Due At']),
           payment_references: findColumn(row, ['Payment References']),
-  
+
           notes: findColumn(row, ['Notes', 'Note']),
           note_attributes: findColumn(row, ['Note Attributes']),
-  
+
           line_items: []
         };
       }
@@ -533,6 +549,7 @@ const CustomerLayer = () => {
           taxes: parseFloat(order.taxes) || 0,
           discount_amount: parseFloat(order.discount_amount) || 0,
           total: parseFloat(order.total) || 0,
+          outstanding_balance: parseFloat(order.outstanding_balance) || 0,
           tax_1_name: order.tax_1_name || '',
           tax_1_value: parseFloat(order.tax_1_value) || 0,
           tax_2_name: order.tax_2_name || '',
@@ -734,7 +751,7 @@ const CustomerLayer = () => {
       
       // Create CSV content with dynamic columns
       const csvContent = [
-        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', 'AWB NUMBER', ...productHeaders, ...skuHeaders, 'AMOUNT', 'COUNT OF ITEMS', 'PAYMENT MODE'],
+        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', 'AWB NUMBER', ...productHeaders, ...skuHeaders, 'AMOUNT', 'OUTSTANDING BALANCE', 'COUNT OF ITEMS', 'PAYMENT MODE'],
         ...selectedOrderData.map(order => {
           // Use order_name as ORDER NO
           const orderNo = order.order_name || 'N/A';
@@ -771,6 +788,17 @@ const CustomerLayer = () => {
           
           // Get total quantity
           const totalQuantity = getTotalQuantity(order.line_items);
+          
+          // Calculate outstanding balance
+          const outstandingBalance = (() => {
+            if (order.payment_status === 'paid') {
+              return 0;
+            } else if (order.payment_status === 'voided') {
+              return 0; // Cancelled orders have no outstanding balance
+            } else {
+              return parseFloat(order.total || 0); // Pending orders have full outstanding balance
+            }
+          })();
           
           // Format payment mode
           const paymentMode = (() => {
@@ -810,6 +838,7 @@ const CustomerLayer = () => {
             ...productNames,
             ...productSkus,
             parseFloat(order.total || 0).toFixed(0),
+            outstandingBalance.toFixed(0),
             totalQuantity,
             paymentMode
           ];
@@ -1415,7 +1444,7 @@ Press Enter to search or type to search as you type`}
                 <tbody>
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-5 border-0">
+                      <td colSpan="7" className="text-center py-5 border-0">
                         <div className="text-muted">
                           <Icon icon="lucide:package" width="48" height="48" className="mb-3 opacity-50" />
                           <p className="mb-0">
@@ -1837,6 +1866,57 @@ Press Enter to search or type to search as you type`}
                         <span className="fw-bold">Total:</span>
                         <span className="fw-bold fs-5 text-primary">₹{parseFloat(selectedOrder.order.total || 0).toFixed(2)}</span>
                       </div>
+                      <hr className="my-2" />
+                      <div className="d-flex justify-content-between">
+                        <span className="fw-bold">Outstanding Balance:</span>
+                        <span className={`fw-bold fs-5 ${(() => {
+                          const outstanding = selectedOrder.order.outstanding_balance !== undefined 
+                            ? parseFloat(selectedOrder.order.outstanding_balance || 0) 
+                            : (selectedOrder.order.payment_status === 'paid' ? 0 : parseFloat(selectedOrder.order.total || 0));
+                          return outstanding > 0 ? 'text-warning' : 'text-success';
+                        })()}`}>
+                          ₹{(() => {
+                            if (selectedOrder.order.outstanding_balance !== undefined) {
+                              return parseFloat(selectedOrder.order.outstanding_balance || 0).toFixed(2);
+                            } else {
+                              // Fallback calculation for existing orders
+                              if (selectedOrder.order.payment_status === 'paid') {
+                                return '0.00';
+                              } else if (selectedOrder.order.payment_status === 'voided') {
+                                return '0.00';
+                              } else {
+                                return parseFloat(selectedOrder.order.total || 0).toFixed(2);
+                              }
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      {(() => {
+                        const outstanding = selectedOrder.order.outstanding_balance !== undefined 
+                          ? parseFloat(selectedOrder.order.outstanding_balance || 0) 
+                          : (selectedOrder.order.payment_status === 'paid' ? 0 : parseFloat(selectedOrder.order.total || 0));
+                        
+                        if (outstanding > 0) {
+                          return (
+                            <div className="text-center">
+                              <span className="badge bg-warning-subtle text-warning small">
+                                <Icon icon="lucide:clock" className="me-1" width="12" height="12" />
+                                Payment Pending
+                              </span>
+                            </div>
+                          );
+                        } else if (outstanding === 0 && selectedOrder.order.payment_status === 'paid') {
+                          return (
+                            <div className="text-center">
+                              <span className="badge bg-success-subtle text-success small">
+                                <Icon icon="lucide:check-circle" className="me-1" width="12" height="12" />
+                                Fully Paid
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 </div>
