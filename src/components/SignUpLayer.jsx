@@ -21,21 +21,27 @@ const SignUpLayer = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const syncUserToFirestore = async (user) => {
+  const syncUserToFirestore = async (user, providedUsername = null) => {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
+    const finalUsername =
+      providedUsername || user.displayName || user.email.split("@")[0];
+
+    const userData = {
+      uid: user.uid,
+      email: user.email || "N/A",
+      username: finalUsername,
+      role: "user",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        username: user.displayName || username || user.email.split("@")[0], // Fallback to input or email prefix
-        role: "none",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      await setDoc(userRef, userData);
     } else {
-      await setDoc(userRef, { updatedAt: new Date() }, { merge: true });
+      await setDoc(userRef, userData, { merge: true });
     }
   };
 

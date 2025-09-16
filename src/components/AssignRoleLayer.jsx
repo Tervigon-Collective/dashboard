@@ -760,8 +760,8 @@ const AssignRoleLayer = () => {
                           {updating ? "Updating..." : "Assign Role"}
                         </button>
                         <ul className="dropdown-menu">
-                          {[...validRoles, "none"].map((role) => (
-                            <li key={role}>
+                          {[...validRoles, "none"].map((role,index) => (
+                            <li key={index + 1}>
                               <button
                                 className="dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-neutral-200 text-hover-neutral-900"
                                 onClick={() =>
