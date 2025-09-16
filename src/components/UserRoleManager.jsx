@@ -238,6 +238,7 @@ const UserRoleManager = () => {
                 <thead>
                   <tr>
                     <th>User ID</th>
+                    <th>Username</th> 
                     <th>Email</th>
                     <th>Current Role</th>
                     <th>Updated At</th>
@@ -250,6 +251,23 @@ const UserRoleManager = () => {
                       <td>
                         <code className="small">{userData.uid}</code>
                       </td>
+                      {/* <td>{userData.displayName || 'N/A'}</td>  */}
+                      <td>
+                  <div className='d-flex align-items-center'>
+                    <img
+                          src={userData.photoURL || '/assets/images/make/dashborad-03.jpg'}
+                      alt=''
+                      className='w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden'
+                    />
+                    <div className='flex-grow-1'>
+                      <span className='text-md mb-0 fw-normal text-secondary-light'>
+                            {userData.displayName || userData.email}
+                      </span>
+                          <br />
+                          <small className='text-muted'>{userData.email}</small>
+                    </div>
+                  </div>
+                </td>
                       <td>{userData.email || 'N/A'}</td>
                       <td>
                         <span className={`badge ${
