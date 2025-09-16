@@ -401,19 +401,6 @@
 
 // export default AssignRoleLayer;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 "use client";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -529,9 +516,12 @@ const AssignRoleLayer = () => {
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      (user.name || user.username || user.email || "")?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.name || user.username || user.email || "")
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       (user.email || "")?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === "all" || (user.role || "none") === selectedRole;
+    const matchesRole =
+      selectedRole === "all" || (user.role || "none") === selectedRole;
     const matchesStatus =
       statusFilter === "all" || (user.status || "active") === statusFilter;
 
@@ -603,7 +593,8 @@ const AssignRoleLayer = () => {
             onChange={(e) => setSelectedRole(e.target.value)}
           >
             <option value="all">All Roles</option>
-            <option value="none">None</option> {/* Added to include role: "none" */}
+            <option value="none">None</option>{" "}
+            {/* Added to include role: "none" */}
             {validRoles.map((role) => (
               <option key={role} value={role}>
                 {getRoleDisplayName(role)}
@@ -698,7 +689,9 @@ const AssignRoleLayer = () => {
                             name="checkbox"
                           />
                         </div>
-                        {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, "0")}
+                        {String(
+                          (currentPage - 1) * itemsPerPage + index + 1
+                        ).padStart(2, "0")}
                       </div>
                     </td>
                     <td>
@@ -713,7 +706,9 @@ const AssignRoleLayer = () => {
                         />
                         <div className="flex-grow-1">
                           <span className="text-md mb-0 fw-normal text-secondary-light">
-                            {userData.displayName || userData.username || userData.email}
+                            {userData.displayName ||
+                              userData.username ||
+                              userData.email}
                           </span>
                           <br />
                           <small className="text-muted">{userData.email}</small>
@@ -760,8 +755,8 @@ const AssignRoleLayer = () => {
                           {updating ? "Updating..." : "Assign Role"}
                         </button>
                         <ul className="dropdown-menu">
-                          {[...validRoles, "none"].map((role,index) => (
-                            <li key={index + 1}>
+                          {validRoles.map((role) => (
+                            <li key={role}>
                               <button
                                 className="dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-neutral-200 text-hover-neutral-900"
                                 onClick={() =>
@@ -804,9 +799,10 @@ const AssignRoleLayer = () => {
 
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-24">
           <span>
-            Showing {currentUsers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{" "}
-            {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length}{" "}
-            entries
+            Showing{" "}
+            {currentUsers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}{" "}
+            to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of{" "}
+            {filteredUsers.length} entries
           </span>
           <ul className="pagination d-flex flex-wrap align-items-center gap-2 justify-content-center">
             <li className="page-item">
@@ -822,7 +818,9 @@ const AssignRoleLayer = () => {
               <li className="page-item" key={num}>
                 <button
                   className={`page-link fw-semibold radius-8 border-0 d-flex align-items-center justify-content-center h-32-px w-32-px text-md ${
-                    currentPage === num ? "bg-primary-600 text-white" : "bg-neutral-200 text-secondary-light"
+                    currentPage === num
+                      ? "bg-primary-600 text-white"
+                      : "bg-neutral-200 text-secondary-light"
                   }`}
                   onClick={() => setCurrentPage(num)}
                 >
@@ -833,7 +831,9 @@ const AssignRoleLayer = () => {
             <li className="page-item">
               <button
                 className="page-link bg-neutral-200 text-secondary-light fw-semibold radius-8 border-0 d-flex align-items-center justify-content-center h-32-px w-32-px text-md"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
               >
                 <Icon icon="ep:d-arrow-right" />
