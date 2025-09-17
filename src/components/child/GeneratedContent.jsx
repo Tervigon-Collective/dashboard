@@ -127,7 +127,7 @@ const GeneratedContent = () => {
                   <ReactApexChart
                     options={chartOptions}
                     series={chartSeries}
-                    type='bar'
+                    type='area'
                     height={350}
                   />
                 </div>

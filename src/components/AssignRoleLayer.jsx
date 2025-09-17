@@ -570,9 +570,9 @@ const AssignRoleLayer = () => {
   }
 
   return (
-    <div className="card h-100 p-0 radius-12">
-      <div className="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
-        <div className="d-flex align-items-center flex-wrap gap-3">
+    <div className="card h-100 p-0 radius-12" style={{ overflow: 'visible' }}>
+      <div className="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between" style={{ overflow: 'visible' }}>
+        <div className="d-flex align-items-center flex-wrap gap-3" style={{ position: 'relative', zIndex: 10 }}>
           <span className="text-md fw-medium text-secondary-light mb-0">
             Show
           </span>
@@ -580,13 +580,14 @@ const AssignRoleLayer = () => {
             className="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px"
             value={itemsPerPage}
             onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            style={{ zIndex: 1050 }}
           >
             <option value="5">5</option>
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
           </select>
-          <form className="navbar-search">
+          <form className="navbar-search" style={{ position: 'relative', zIndex: 1049 }}>
             <input
               type="text"
               className="bg-base h-40-px w-auto"
@@ -601,9 +602,9 @@ const AssignRoleLayer = () => {
             className="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px"
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
+            style={{ zIndex: 1048 }}
           >
             <option value="all">All Roles</option>
-            <option value="none">None</option> {/* Added to include role: "none" */}
             {validRoles.map((role) => (
               <option key={role} value={role}>
                 {getRoleDisplayName(role)}
@@ -614,6 +615,7 @@ const AssignRoleLayer = () => {
             className="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ zIndex: 1047 }}
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -657,7 +659,7 @@ const AssignRoleLayer = () => {
             </div>
           </div>
         ) : (
-          <div className="table-responsive scroll-sm">
+          <div className="table-responsive scroll-sm" style={{ overflow: 'visible' }}>
             <table className="table bordered-table sm-table mb-0">
               <thead>
                 <tr>
@@ -749,7 +751,7 @@ const AssignRoleLayer = () => {
                       </span>
                     </td>
                     <td className="text-center">
-                      <div className="dropdown">
+                      <div className="dropdown" style={{ position: 'static' }}>
                         <button
                           className="btn btn-outline-primary-600 not-active px-18 py-11 dropdown-toggle toggle-icon"
                           type="button"
@@ -759,9 +761,9 @@ const AssignRoleLayer = () => {
                         >
                           {updating ? "Updating..." : "Assign Role"}
                         </button>
-                        <ul className="dropdown-menu">
-                          {[...validRoles, "none"].map((role,index) => (
-                            <li key={index + 1}>
+                        <ul className="dropdown-menu" style={{ position: 'absolute', zIndex: 1060 }}>
+                          {validRoles.map((role) => (
+                            <li key={role}>
                               <button
                                 className="dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-neutral-200 text-hover-neutral-900"
                                 onClick={() =>
