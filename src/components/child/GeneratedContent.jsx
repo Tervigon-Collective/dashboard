@@ -118,19 +118,16 @@ const GeneratedContent = () => {
             </div>
           </div>
           <div className='mt-40'>
-            {/* Make chart horizontally scrollable if too many dates */}
-            <div className='margin-16-minus' style={{ overflowX: 'auto' }}>
+            <div className='margin-16-minus'>
               {loading ? (
                 <Loader />
               ) : (
-                <div style={{ minWidth: timeframe === 'Month' ? 900 : 'auto' }}>
-                  <ReactApexChart
-                    options={chartOptions}
-                    series={chartSeries}
-                    type='area'
-                    height={350}
-                  />
-                </div>
+                <ReactApexChart
+                  options={chartOptions}
+                  series={chartSeries}
+                  type='bar'
+                  height={350}
+                />
               )}
             </div>
           </div>
