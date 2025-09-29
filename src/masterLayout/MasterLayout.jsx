@@ -129,17 +129,17 @@ const MasterLayout = ({ children }) => {
         <div>
           <Link href="/" className="sidebar-logo">
             <img
-              src="assets/images/make/dashborad-01.jpg"
+              src="/assets/images/make/dashborad-01.jpg"
               alt="site logo"
               className="light-logo"
             />
             <img
-              src="assets/images/make/dashborad-01.png"
+              src="/assets/images/make/dashborad-01.png"
               alt="site logo"
               className="dark-logo"
             />
             <img
-              src="assets/images/make/dashborad-09.png"
+              src="/assets/images/make/dashborad-09.png"
               alt="site logo"
               className="logo-icon"
             />
@@ -150,10 +150,10 @@ const MasterLayout = ({ children }) => {
             {/* Dashboard Section - Only for Admin, Manager and Super Admin */}
             {(() => {
               const { role } = useRole();
-              const isSuperAdmin = role === 'super_admin';
-              const isAdmin = role === 'admin';
-              const isManager = role === 'manager';
-              
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
               if (isSuperAdmin || isAdmin || isManager) {
                 return (
                   <li className="dropdown">
@@ -177,7 +177,9 @@ const MasterLayout = ({ children }) => {
                       <li>
                         <Link
                           href="/historical-data"
-                          className={pathname === "/historical-data" ? "active-page" : ""}
+                          className={
+                            pathname === "/historical-data" ? "active-page" : ""
+                          }
                         >
                           <i className="ri-circle-fill circle-icon text-warning-main w-auto" />{" "}
                           Historical Analytics
@@ -190,8 +192,7 @@ const MasterLayout = ({ children }) => {
               return null;
             })()}
 
-
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-3"
                     className={pathname === "/index-3" ? "active-page" : ""}
@@ -200,7 +201,7 @@ const MasterLayout = ({ children }) => {
                     eCommerce
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-4"
                     className={pathname === "/index-4" ? "active-page" : ""}
@@ -209,7 +210,7 @@ const MasterLayout = ({ children }) => {
                     Cryptocurrency
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-5"
                     className={pathname === "/index-5" ? "active-page" : ""}
@@ -218,7 +219,7 @@ const MasterLayout = ({ children }) => {
                     Investment
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-6"
                     className={pathname === "/index-6" ? "active-page" : ""}
@@ -227,7 +228,7 @@ const MasterLayout = ({ children }) => {
                     LMS
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-7"
                     className={pathname === "/index-7" ? "active-page" : ""}
@@ -236,7 +237,7 @@ const MasterLayout = ({ children }) => {
                     NFT &amp; Gaming
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-8"
                     className={pathname === "/index-8" ? "active-page" : ""}
@@ -245,7 +246,7 @@ const MasterLayout = ({ children }) => {
                     Medical
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-9"
                     className={pathname === "/index-9" ? "active-page" : ""}
@@ -254,7 +255,7 @@ const MasterLayout = ({ children }) => {
                     Analytics
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-10"
                     className={pathname === "/index-10" ? "active-page" : ""}
@@ -263,7 +264,7 @@ const MasterLayout = ({ children }) => {
                     POS & Inventory
                   </Link>
                 </li> */}
-                {/* <li>
+            {/* <li>
                   <Link
                     href="/index-11"
                     className={pathname === "/index-11" ? "active-page" : ""}
@@ -273,15 +274,14 @@ const MasterLayout = ({ children }) => {
             </li>Banking
                   </Link>
                 </li> */}
-              
 
             {/* Application Section - Only for Admin, Manager and Super Admin */}
             {(() => {
               const { role } = useRole();
-              const isSuperAdmin = role === 'super_admin';
-              const isAdmin = role === 'admin';
-              const isManager = role === 'manager';
-              
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
               if (isSuperAdmin || isAdmin || isManager) {
                 return (
                   <>
@@ -289,7 +289,9 @@ const MasterLayout = ({ children }) => {
                     <li>
                       <Link
                         href="/Sku-List"
-                        className={pathname === "/Sku-List" ? "active-page" : ""}
+                        className={
+                          pathname === "/Sku-List" ? "active-page" : ""
+                        }
                       >
                         <Icon icon="mage:box" className="menu-icon" />
                         <span>Sku List</span>
@@ -298,10 +300,28 @@ const MasterLayout = ({ children }) => {
                     <li>
                       <Link
                         href="/product-spend-summary"
-                        className={pathname === "/product-spend-summary" ? "active-page" : ""}
+                        className={
+                          pathname === "/product-spend-summary"
+                            ? "active-page"
+                            : ""
+                        }
                       >
                         <Icon icon="mage:box" className="menu-icon" />
                         <span>Product Spend Summary</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/procurement"
+                        className={
+                          pathname === "/procurement" ? "active-page" : ""
+                        }
+                      >
+                        <Icon
+                          icon="mdi:package-variant"
+                          className="menu-icon"
+                        />
+                        <span>Procurement</span>
                       </Link>
                     </li>
                   </>
@@ -313,11 +333,11 @@ const MasterLayout = ({ children }) => {
             {/* Role-based Navigation */}
             {(() => {
               const { role } = useRole();
-              const isSuperAdmin = role === 'super_admin';
-              const isAdmin = role === 'admin';
-              const isManager = role === 'manager';
-              const isUser = role === 'user';
-              
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+              const isUser = role === "user";
+
               return (
                 <>
                   {/* Customer Data - Available for all roles */}
@@ -325,7 +345,9 @@ const MasterLayout = ({ children }) => {
                     <li>
                       <Link
                         href="/customer-data"
-                        className={pathname === "/customer-data" ? "active-page" : ""}
+                        className={
+                          pathname === "/customer-data" ? "active-page" : ""
+                        }
                       >
                         <Icon icon="mdi:database" className="menu-icon" />
                         <span>Customer Data</span>
@@ -338,7 +360,9 @@ const MasterLayout = ({ children }) => {
                     <li>
                       <Link
                         href="/shipping"
-                        className={pathname === "/shipping" ? "active-page" : ""}
+                        className={
+                          pathname === "/shipping" ? "active-page" : ""
+                        }
                       >
                         <Icon icon="lucide:package" className="menu-icon" />
                         <span>Shipping</span>
@@ -349,19 +373,28 @@ const MasterLayout = ({ children }) => {
                   {/* User Management Section - Only for Admin and Super Admin */}
                   {(isSuperAdmin || isAdmin) && (
                     <>
-                      <li className="sidebar-menu-group-title">User Management</li>
-                      
+                      <li className="sidebar-menu-group-title">
+                        User Management
+                      </li>
+
                       {/* User Management Dropdown */}
                       <li className="dropdown">
                         <Link href="#">
-                          <Icon icon="mdi:account-group" className="menu-icon" />
+                          <Icon
+                            icon="mdi:account-group"
+                            className="menu-icon"
+                          />
                           <span>User Management</span>
                         </Link>
                         <ul className="sidebar-submenu">
                           <li>
                             <Link
                               href="/user-management"
-                              className={pathname === "/user-management" ? "active-page" : ""}
+                              className={
+                                pathname === "/user-management"
+                                  ? "active-page"
+                                  : ""
+                              }
                             >
                               <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
                               All Users
@@ -370,7 +403,9 @@ const MasterLayout = ({ children }) => {
                           <li>
                             <Link
                               href="/create-user"
-                              className={pathname === "/create-user" ? "active-page" : ""}
+                              className={
+                                pathname === "/create-user" ? "active-page" : ""
+                              }
                             >
                               <i className="ri-circle-fill circle-icon text-success-main w-auto" />
                               Create User
@@ -379,7 +414,9 @@ const MasterLayout = ({ children }) => {
                           <li>
                             <Link
                               href="/assign-role"
-                              className={pathname === "/assign-role" ? "active-page" : ""}
+                              className={
+                                pathname === "/assign-role" ? "active-page" : ""
+                              }
                             >
                               <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
                               Assign Roles
@@ -388,7 +425,11 @@ const MasterLayout = ({ children }) => {
                           <li>
                             <Link
                               href="/user-role-info"
-                              className={pathname === "/user-role-info" ? "active-page" : ""}
+                              className={
+                                pathname === "/user-role-info"
+                                  ? "active-page"
+                                  : ""
+                              }
                             >
                               <i className="ri-circle-fill circle-icon text-info-main w-auto" />
                               Role Information
@@ -398,8 +439,6 @@ const MasterLayout = ({ children }) => {
                       </li>
                     </>
                   )}
-
-
                 </>
               );
             })()}
@@ -1378,7 +1417,7 @@ const MasterLayout = ({ children }) => {
                     data-bs-toggle="dropdown"
                   >
                     <img
-                      src="assets/images/make/dashborad-07.jpg"
+                      src="/assets/images/make/dashborad-07.jpg"
                       alt=""
                       className="w-20 h-20 object-fit-cover rounded-circle"
                     />
@@ -1399,7 +1438,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/make/dashborad-07.jpg"
+                              src="/assets/images/make/dashborad-07.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1422,7 +1461,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag2.png"
+                              src="/assets/images/flags/flag2.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1445,7 +1484,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag3.png"
+                              src="/assets/images/flags/flag3.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1468,7 +1507,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag4.png"
+                              src="/assets/images/flags/flag4.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1491,7 +1530,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag5.png"
+                              src="/assets/images/flags/flag5.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1514,7 +1553,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag6.png"
+                              src="/assets/images/flags/flag6.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1537,7 +1576,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/make/dashborad-06.jpg"
+                              src="/assets/images/make/dashborad-06.jpg"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1560,7 +1599,7 @@ const MasterLayout = ({ children }) => {
                         >
                           <span className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                             <img
-                              src="assets/images/flags/flag8.png"
+                              src="/assets/images/flags/flag8.png"
                               alt=""
                               className="w-36-px h-36-px bg-success-subtle text-success-main rounded-circle flex-shrink-0"
                             />
@@ -1610,7 +1649,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-40-px h-40-px rounded-circle flex-shrink-0 position-relative">
                             <img
-                              src="assets/images/notification/profile-3.png"
+                              src="/assets/images/notification/profile-3.png"
                               alt=""
                             />
                             <span className="w-8-px h-8-px bg-success-main rounded-circle position-absolute end-0 bottom-0" />
@@ -1640,7 +1679,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-40-px h-40-px rounded-circle flex-shrink-0 position-relative">
                             <img
-                              src="assets/images/notification/profile-4.png"
+                              src="/assets/images/notification/profile-4.png"
                               alt=""
                             />
                             <span className="w-8-px h-8-px  bg-neutral-300 rounded-circle position-absolute end-0 bottom-0" />
@@ -1670,7 +1709,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-40-px h-40-px rounded-circle flex-shrink-0 position-relative">
                             <img
-                              src="assets/images/notification/profile-5.png"
+                              src="/assets/images/notification/profile-5.png"
                               alt=""
                             />
                             <span className="w-8-px h-8-px bg-success-main rounded-circle position-absolute end-0 bottom-0" />
@@ -1700,7 +1739,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-40-px h-40-px rounded-circle flex-shrink-0 position-relative">
                             <img
-                              src="assets/images/notification/profile-6.png"
+                              src="/assets/images/notification/profile-6.png"
                               alt=""
                             />
                             <span className="w-8-px h-8-px bg-neutral-300 rounded-circle position-absolute end-0 bottom-0" />
@@ -1730,7 +1769,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-40-px h-40-px rounded-circle flex-shrink-0 position-relative">
                             <img
-                              src="assets/images/notification/profile-7.png"
+                              src="/assets/images/notification/profile-7.png"
                               alt=""
                             />
                             <span className="w-8-px h-8-px bg-success-main rounded-circle position-absolute end-0 bottom-0" />
@@ -1821,7 +1860,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-44-px h-44-px bg-success-subtle text-success-main rounded-circle d-flex justify-content-center align-items-center flex-shrink-0">
                             <img
-                              src="assets/images/notification/profile-1.png"
+                              src="/assets/images/notification/profile-1.png"
                               alt=""
                             />
                           </span>
@@ -1866,7 +1905,7 @@ const MasterLayout = ({ children }) => {
                         <div className="text-black hover-bg-transparent hover-text-primary d-flex align-items-center gap-3">
                           <span className="w-44-px h-44-px bg-success-subtle text-success-main rounded-circle d-flex justify-content-center align-items-center flex-shrink-0">
                             <img
-                              src='assets/images/notification/profile-2.png'
+                              src='/assets/images/notification/profile-2.png'
                               alt=''
                             />
                           </span>
@@ -1923,7 +1962,11 @@ const MasterLayout = ({ children }) => {
                     data-bs-toggle="dropdown"
                   >
                     <img
-                      src={user && user.photoURL ? user.photoURL : "assets/images/make/dashborad-03.jpg"}
+                      src={
+                        user && user.photoURL
+                          ? user.photoURL
+                          : "/assets/images/make/dashborad-03.jpg"
+                      }
                       alt="image_user"
                       className="w-40-px h-40-px object-fit-cover rounded-circle"
                     />
@@ -1932,7 +1975,7 @@ const MasterLayout = ({ children }) => {
                     <div className="py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2">
                       <div>
                         <h6 className="text-lg text-primary-light fw-semibold mb-2">
-                          {user ? (user.displayName || user.email) : "Guest"}
+                          {user ? user.displayName || user.email : "Guest"}
                         </h6>
                         <span className="text-secondary-light fw-medium text-sm">
                           {user ? user.email : "Not signed in"}
@@ -2012,11 +2055,17 @@ const MasterLayout = ({ children }) => {
             </div>
             <div className="col-auto">
               <div className="d-flex align-items-center gap-3">
-                <Link href="/privacy-policy" className="text-secondary-light text-sm text-decoration-none hover-text-primary">
+                <Link
+                  href="/privacy-policy"
+                  className="text-secondary-light text-sm text-decoration-none hover-text-primary"
+                >
                   Privacy Policy
                 </Link>
                 <span className="text-secondary-light">|</span>
-                <Link href="/terms-condition" className="text-secondary-light text-sm text-decoration-none hover-text-primary">
+                <Link
+                  href="/terms-condition"
+                  className="text-secondary-light text-sm text-decoration-none hover-text-primary"
+                >
                   Terms & Conditions
                 </Link>
               </div>

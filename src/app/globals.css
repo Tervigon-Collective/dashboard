@@ -18,6 +18,75 @@
 @import url("~/public/assets/css/style.css");
 @import url("~/public/assets/css/extra.css");
 
+/* Delete Confirmation Modal Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Delete Confirmation Modal Styles */
+.delete-confirmation-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.delete-confirmation-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+.delete-confirmation-card:hover {
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+  .delete-confirmation-card {
+    max-width: 95% !important;
+    margin: 10px !important;
+    max-height: 85vh !important;
+  }
+  
+  .delete-confirmation-body {
+    padding: 40px 20px 30px 20px !important;
+  }
+  
+  .delete-actions {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  
+  .delete-actions button {
+    width: 100% !important;
+    min-width: auto !important;
+  }
+}
+
 /* Custom styles for sign-in page */
 .hover-underline:hover {
   text-decoration: underline !important;
