@@ -31,5 +31,41 @@ export const fetchProductMetrics = async () => {
   }
 };
 
+// Analytics API functions
+export const fetchGoogleAdsReport = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams(params);
+    const response = await apiClient.get(`/google_ads_report?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching Google Ads report:", error);
+    throw error;
+  }
+};
+
+export const fetchMetaAdsReport = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams(params);
+    const response = await apiClient.get(`/meta_ads_report?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching Meta Ads report:", error);
+    throw error;
+  }
+};
+
+export const fetchOrganicAttributionReport = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams(params);
+    const response = await apiClient.get(
+      `/organic_attribution_report?${queryParams}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching Organic Attribution report:", error);
+    throw error;
+  }
+};
+
 // Export the axios instance if needed
 export { apiClient };

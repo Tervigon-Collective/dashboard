@@ -324,6 +324,17 @@ const MasterLayout = ({ children }) => {
                         <span>Procurement</span>
                       </Link>
                     </li>
+                    <li>
+                      <Link
+                        href="/entity-report"
+                        className={
+                          pathname === "/entity-report" ? "active-page" : ""
+                        }
+                      >
+                        <Icon icon="solar:chart-2-bold" className="menu-icon" />
+                        <span>Entity Report</span>
+                      </Link>
+                    </li>
                   </>
                 );
               }
