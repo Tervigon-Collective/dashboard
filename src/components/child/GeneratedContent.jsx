@@ -62,32 +62,37 @@ const GeneratedContent = () => {
         },
         yaxis: {
           labels: {
+            
             formatter: (value) => {
               if (value >= 1000) {
                 return `Rs ${(value / 1000).toFixed(0)}k`;
               }
               return `Rs ${value}`;
             },
-            style: { fontSize: '13px' },
-            offsetY: 54,
+            style: { fontSize: '11px' },
+            offsetY: 0,
+            offsetX: 0,
+            minWidth: 56,
+            align: 'right',
           },
           title: {
             text: 'Rs',
-            style: { fontWeight: 600, fontSize: '15px' },
+            style: { fontWeight: 600, fontSize: '12px' },
           },
           tickAmount: 6,
-        },
+        }
+        ,
         fill: { opacity: 1 },
         colors: ["#487FFF", "#FFC107"],
         legend: { show: false },
-        grid: { padding: { left: 60, right: 10 } },
+        grid: { padding: { left: 28, right: 8 } },
       },
     };
   }, [data, timeframe]);
 
   return (
     <div className='col-xxl-7'>
-      <div className='card' style={{ padding: 24 }}>
+      <div className='card' style={{ padding: 14 }}>
         <div className='card-body'>
           <div className='d-flex align-items-center flex-wrap gap-2 justify-content-between'>
             <h6 className='mb-2 fw-bold text-lg mb-0'>Ad Spend & Revenue Overview</h6>
@@ -113,19 +118,16 @@ const GeneratedContent = () => {
             </div>
           </div>
           <div className='mt-40'>
-            {/* Make chart horizontally scrollable if too many dates */}
-            <div className='margin-16-minus' style={{ overflowX: 'auto' }}>
+            <div className='margin-16-minus'>
               {loading ? (
                 <Loader />
               ) : (
-                <div style={{ minWidth: timeframe === 'Month' ? 900 : 'auto' }}>
-                  <ReactApexChart
-                    options={chartOptions}
-                    series={chartSeries}
-                    type='bar'
-                    height={350}
-                  />
-                </div>
+                <ReactApexChart
+                  options={chartOptions}
+                  series={chartSeries}
+                  type='bar'
+                  height={350}
+                />
               )}
             </div>
           </div>
