@@ -11,7 +11,7 @@ export default function EditProductPage() {
   const [productId, setProductId] = useState(null);
 
   useEffect(() => {
-    const id = searchParams.get('id');
+    const id = searchParams.get("id");
     setProductId(id);
   }, [searchParams]);
 
