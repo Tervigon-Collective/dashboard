@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false, // ok for export (creates about.html instead of about/index.html)
-  // output: "export", // static export → writes to out/ (commented out for dynamic routes)
+  output: "export", // static export → writes to out/
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {

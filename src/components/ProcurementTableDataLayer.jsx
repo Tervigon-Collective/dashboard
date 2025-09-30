@@ -199,7 +199,7 @@ const ProcurementTableDataLayer = () => {
   // Handle edit
   const handleEdit = (product) => {
     if (!product) return;
-    router.push(`/procurement/edit-products/${product.product_id}`);
+    router.push(`/procurement/edit-product?id=${product.product_id}`);
   };
 
   // Handle view
