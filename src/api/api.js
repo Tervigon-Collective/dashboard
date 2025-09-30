@@ -35,7 +35,9 @@ export const fetchProductMetrics = async () => {
 export const fetchGoogleAdsReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
-    const response = await apiClient.get(`/google_ads_report?${queryParams}`);
+    const response = await apiClient.get(
+      `/api/google_ads_report?${queryParams}`
+    );
     return response.data;
   } catch (error) {
     console.error("Error fetching Google Ads report:", error);
@@ -46,7 +48,7 @@ export const fetchGoogleAdsReport = async (params = {}) => {
 export const fetchMetaAdsReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
-    const response = await apiClient.get(`/meta_ads_report?${queryParams}`);
+    const response = await apiClient.get(`/api/meta_ads_report?${queryParams}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching Meta Ads report:", error);
@@ -58,7 +60,7 @@ export const fetchOrganicAttributionReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
     const response = await apiClient.get(
-      `/organic_attribution_report?${queryParams}`
+      `/api/organic_attribution_report?${queryParams}`
     );
     return response.data;
   } catch (error) {

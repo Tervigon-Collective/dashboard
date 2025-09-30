@@ -1,11 +1,11 @@
 import Breadcrumb from "../../components/Breadcrumb";
-import EntityReportLayer from "../../components/EntityReportLayer";
+import CampaignDetailsLayer from "../../components/CampaignDetailsLayer";
 import MasterLayout from "../../masterLayout/MasterLayout";
 
 export const metadata = {
-  title: "Entity Report - Admin Dashboard",
+  title: "Campaign Details - Admin Dashboard",
   description:
-    "Entity Report for analyzing Google Ads, Meta Ads, and Organic Attribution data.",
+    "Campaign Details for viewing adset data of a specific Meta Ads campaign.",
 };
 
 const Page = () => {
@@ -14,13 +14,14 @@ const Page = () => {
       {/* MasterLayout */}
       <MasterLayout>
         {/* Breadcrumb */}
-        <Breadcrumb title="Components / Entity Report" />
+        <Breadcrumb title="Components / Campaign Details" />
 
-        {/* EntityReportLayer */}
-        <EntityReportLayer />
+        {/* CampaignDetailsLayer */}
+        <CampaignDetailsLayer />
       </MasterLayout>
     </>
   );
 };
 
 export default Page;
+

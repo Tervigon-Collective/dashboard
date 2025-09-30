@@ -1,13 +1,15 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Icon } from "@iconify/react";
+import { useRouter } from "next/navigation";
 import {
   fetchGoogleAdsReport,
   fetchMetaAdsReport,
   fetchOrganicAttributionReport,
-} from "@/api/api";
+} from "../api/api";
 
 const EntityReportLayer = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("google");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,24 +19,7 @@ const EntityReportLayer = () => {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    campaignName: "",
-    level: "campaign",
-    adsetName: "",
-    adName: "",
   });
-
-  // Set default date range (last 7 days)
-  useEffect(() => {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 7);
-
-    setFilters((prev) => ({
-      ...prev,
-      startDate: startDate.toISOString().split("T")[0],
-      endDate: endDate.toISOString().split("T")[0],
-    }));
-  }, []);
 
   const fetchData = async (reportType) => {
     if (!filters.startDate || !filters.endDate) {
@@ -54,25 +39,16 @@ const EntityReportLayer = () => {
 
       switch (reportType) {
         case "google":
-          response = await fetchGoogleAdsReport({
-            ...baseParams,
-            ...(filters.campaignName && { campaignName: filters.campaignName }),
-          });
+          response = await fetchGoogleAdsReport(baseParams);
           break;
         case "meta":
           response = await fetchMetaAdsReport({
             ...baseParams,
-            level: filters.level,
-            ...(filters.campaignName && { campaignName: filters.campaignName }),
-            ...(filters.adsetName && { adsetName: filters.adsetName }),
-            ...(filters.adName && { adName: filters.adName }),
+            level: "campaign",
           });
           break;
         case "organic":
-          response = await fetchOrganicAttributionReport({
-            ...baseParams,
-            ...(filters.campaignName && { campaignName: filters.campaignName }),
-          });
+          response = await fetchOrganicAttributionReport(baseParams);
           break;
         default:
           throw new Error("Invalid report type");
@@ -97,21 +73,42 @@ const EntityReportLayer = () => {
     }));
   };
 
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    // Clear data when switching tabs to avoid confusion
+    setData({});
+    setError(null);
+  };
+
+  const handleCampaignClick = (campaignName) => {
+    if (activeTab === "meta" && campaignName) {
+      const params = new URLSearchParams({
+        campaign: campaignName,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+      router.push(`/campaign-details?${params}`);
+    }
+  };
+
   const formatCurrency = (amount) => {
+    const numericValue = parseFloat(amount) || 0;
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount || 0);
+    }).format(numericValue);
   };
 
   const formatNumber = (num) => {
-    return new Intl.NumberFormat("en-IN").format(num || 0);
+    const numericValue = Number(num) || 0;
+    return new Intl.NumberFormat("en-IN").format(numericValue);
   };
 
   const formatPercentage = (num) => {
-    return `${(num || 0).toFixed(2)}%`;
+    const numericValue = parseFloat(num) || 0;
+    return `${numericValue.toFixed(2)}%`;
   };
 
   const renderGoogleAdsTable = () => {
@@ -207,8 +204,18 @@ const EntityReportLayer = () => {
               <tr key={index}>
                 <td>{row.date_start}</td>
                 <td>
-                  <span className="badge bg-primary-subtle text-primary">
+                  <span
+                    className="badge bg-primary-subtle text-primary cursor-pointer"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleCampaignClick(row.campaign_name)}
+                    title="Click to view adset details"
+                  >
                     {row.campaign_name}
+                    <Icon
+                      icon="solar:arrow-right-bold"
+                      className="ms-1"
+                      style={{ fontSize: "12px" }}
+                    />
                   </span>
                 </td>
                 <td>
@@ -322,24 +329,23 @@ const EntityReportLayer = () => {
   };
 
   const renderSummaryCards = () => {
-    const googleData = data.google || [];
-    const metaData = data.meta || [];
-    const organicData = data.organic || [];
+    // Only show summary for the currently active tab
+    const currentData = data[activeTab] || [];
 
-    const totalSpend = [...googleData, ...metaData].reduce(
-      (sum, row) => sum + (row.spend || 0),
+    const totalSpend = currentData.reduce(
+      (sum, row) => sum + (Number(row.spend) || 0),
       0
     );
-    const totalRevenue = [...googleData, ...metaData, ...organicData].reduce(
-      (sum, row) => sum + (row.shopify_revenue || 0),
+    const totalRevenue = currentData.reduce(
+      (sum, row) => sum + (Number(row.shopify_revenue) || 0),
       0
     );
-    const totalOrders = [...googleData, ...metaData].reduce(
-      (sum, row) => sum + (row.shopify_orders || 0),
+    const totalOrders = currentData.reduce(
+      (sum, row) => sum + (Number(row.shopify_orders) || 0),
       0
     );
-    const totalNetProfit = [...googleData, ...metaData, ...organicData].reduce(
-      (sum, row) => sum + (row.net_profit || 0),
+    const totalNetProfit = currentData.reduce(
+      (sum, row) => sum + (Number(row.net_profit) || 0),
       0
     );
 
@@ -399,9 +405,9 @@ const EntityReportLayer = () => {
           />
         </div>
 
-        {/* Filters */}
-        <div className="row mb-20">
-          <div className="col-md-2">
+        {/* Filters and Action Buttons in One Row */}
+        <div className="row mb-20 align-items-end">
+          <div className="col-md-3">
             <label className="form-label">Start Date</label>
             <input
               type="date"
@@ -410,7 +416,7 @@ const EntityReportLayer = () => {
               onChange={(e) => handleFilterChange("startDate", e.target.value)}
             />
           </div>
-          <div className="col-md-2">
+          <div className="col-md-3">
             <label className="form-label">End Date</label>
             <input
               type="date"
@@ -420,55 +426,33 @@ const EntityReportLayer = () => {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Campaign Name</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Filter by campaign"
-              value={filters.campaignName}
-              onChange={(e) =>
-                handleFilterChange("campaignName", e.target.value)
-              }
-            />
+            <button
+              className="btn btn-primary w-100"
+              onClick={() => fetchData(activeTab)}
+              disabled={loading}
+            >
+              {loading ? (
+                <Icon icon="eos-icons:loading" className="me-1" />
+              ) : (
+                <Icon icon="solar:magnifer-linear" className="me-1" />
+              )}
+              {loading ? "Loading..." : "Fetch Data"}
+            </button>
           </div>
-          {activeTab === "meta" && (
-            <>
-              <div className="col-md-2">
-                <label className="form-label">Level</label>
-                <select
-                  className="form-control"
-                  value={filters.level}
-                  onChange={(e) => handleFilterChange("level", e.target.value)}
-                >
-                  <option value="campaign">Campaign</option>
-                  <option value="adset">Adset</option>
-                  <option value="ad">Ad</option>
-                </select>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Adset Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Filter by adset"
-                  value={filters.adsetName}
-                  onChange={(e) =>
-                    handleFilterChange("adsetName", e.target.value)
-                  }
-                />
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Ad Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Filter by ad"
-                  value={filters.adName}
-                  onChange={(e) => handleFilterChange("adName", e.target.value)}
-                />
-              </div>
-            </>
-          )}
+          <div className="col-md-2">
+            <button
+              className="btn btn-success w-100"
+              onClick={() => {
+                fetchData("google");
+                fetchData("meta");
+                fetchData("organic");
+              }}
+              disabled={loading}
+            >
+              <Icon icon="solar:refresh-bold" className="me-1" />
+              Fetch All Reports
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -477,7 +461,7 @@ const EntityReportLayer = () => {
             <li className="nav-item" role="presentation">
               <button
                 className={`nav-link ${activeTab === "google" ? "active" : ""}`}
-                onClick={() => setActiveTab("google")}
+                onClick={() => handleTabChange("google")}
               >
                 <Icon icon="logos:google-icon" className="me-2" />
                 Google Ads
@@ -486,7 +470,7 @@ const EntityReportLayer = () => {
             <li className="nav-item" role="presentation">
               <button
                 className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
-                onClick={() => setActiveTab("meta")}
+                onClick={() => handleTabChange("meta")}
               >
                 <Icon icon="logos:meta-icon" className="me-2" />
                 Meta Ads
@@ -497,41 +481,13 @@ const EntityReportLayer = () => {
                 className={`nav-link ${
                   activeTab === "organic" ? "active" : ""
                 }`}
-                onClick={() => setActiveTab("organic")}
+                onClick={() => handleTabChange("organic")}
               >
                 <Icon icon="solar:leaf-bold" className="me-2" />
                 Organic Attribution
               </button>
             </li>
           </ul>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mb-20">
-          <button
-            className="btn btn-primary me-2"
-            onClick={() => fetchData(activeTab)}
-            disabled={loading}
-          >
-            {loading ? (
-              <Icon icon="eos-icons:loading" className="me-1" />
-            ) : (
-              <Icon icon="solar:magnifer-linear" className="me-1" />
-            )}
-            {loading ? "Loading..." : "Fetch Data"}
-          </button>
-          <button
-            className="btn btn-success"
-            onClick={() => {
-              fetchData("google");
-              fetchData("meta");
-              fetchData("organic");
-            }}
-            disabled={loading}
-          >
-            <Icon icon="solar:refresh-bold" className="me-1" />
-            Fetch All Reports
-          </button>
         </div>
 
         {/* Error Message */}
@@ -543,8 +499,7 @@ const EntityReportLayer = () => {
         )}
 
         {/* Summary Cards */}
-        {Object.keys(data).some((key) => data[key].length > 0) &&
-          renderSummaryCards()}
+        {data[activeTab] && data[activeTab].length > 0 && renderSummaryCards()}
 
         {/* Data Tables */}
         <div className="tab-content">
