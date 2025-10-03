@@ -89,9 +89,8 @@ const ProcurementTableDataLayer = () => {
       // Calculate summary data from all variants
       let totalVariants = product.variants ? product.variants.length : 0;
       let totalQuantity = 0;
-      let avgMRP = 0;
-      let avgCOGS = 0;
-      let avgMargin = 0;
+      let mrpRange = "N/A";
+      let cogsRange = "N/A";
       let variantTypes = [];
 
       if (product.variants && product.variants.length > 0) {
@@ -99,17 +98,28 @@ const ProcurementTableDataLayer = () => {
           (sum, variant) => sum + (variant.quantity || 0),
           0
         );
-        avgMRP =
-          product.variants.reduce(
-            (sum, variant) => sum + (variant.mrp || 0),
-            0
-          ) / product.variants.length;
-        avgCOGS =
-          product.variants.reduce(
-            (sum, variant) => sum + (variant.cogs || 0),
-            0
-          ) / product.variants.length;
-        avgMargin = avgMRP - avgCOGS;
+
+        // Calculate MRP range
+        const mrpValues = product.variants
+          .map((variant) => variant.mrp || 0)
+          .filter((mrp) => mrp > 0);
+        if (mrpValues.length > 0) {
+          const minMRP = Math.min(...mrpValues);
+          const maxMRP = Math.max(...mrpValues);
+          mrpRange =
+            minMRP === maxMRP ? minMRP.toString() : `${minMRP}-${maxMRP}`;
+        }
+
+        // Calculate COGS range
+        const cogsValues = product.variants
+          .map((variant) => variant.cogs || 0)
+          .filter((cogs) => cogs > 0);
+        if (cogsValues.length > 0) {
+          const minCOGS = Math.min(...cogsValues);
+          const maxCOGS = Math.max(...cogsValues);
+          cogsRange =
+            minCOGS === maxCOGS ? minCOGS.toString() : `${minCOGS}-${maxCOGS}`;
+        }
 
         // Collect unique variant types
         product.variants.forEach((variant) => {
@@ -133,9 +143,8 @@ const ProcurementTableDataLayer = () => {
         product_price_category: product.product_price_category,
         total_variants: totalVariants,
         total_quantity: totalQuantity,
-        avg_selling_price: avgMRP.toFixed(2),
-        avg_cogs: avgCOGS.toFixed(2),
-        avg_margin: avgMargin.toFixed(2),
+        mrp_range: mrpRange,
+        cogs_range: cogsRange,
         variant_types: variantTypes.join("; "),
         variants: product.variants || [],
         vendor:
@@ -399,9 +408,8 @@ const ProcurementTableDataLayer = () => {
           )}
         </div>
       </td>
-      <td>₹{product.avg_selling_price}</td>
-      <td>₹{product.avg_cogs}</td>
-      <td>₹{product.avg_margin}</td>
+      <td>₹{product.mrp_range}</td>
+      <td>₹{product.cogs_range}</td>
       <td>
         <span className="badge bg-light text-dark">
           {product.total_quantity} units
@@ -510,9 +518,8 @@ const ProcurementTableDataLayer = () => {
                 <th>Status</th>
                 <th>Product Price Category</th>
                 <th>Variants</th>
-                <th>Avg Selling Price</th>
-                <th>Avg COGS</th>
-                <th>Avg Margin</th>
+                <th>Selling Price Range</th>
+                <th>COGS Range</th>
                 <th>Total Quantity</th>
                 <th>Action</th>
               </tr>
@@ -520,7 +527,7 @@ const ProcurementTableDataLayer = () => {
             <tbody>
               {currentData.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="text-center py-4">
+                  <td colSpan="9" className="text-center py-4">
                     <div className="d-flex flex-column align-items-center">
                       <Icon
                         icon="lucide:package"
@@ -937,7 +944,7 @@ const ProcurementTableDataLayer = () => {
               background: "white",
               borderRadius: "16px",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              maxWidth: "800px",
+              maxWidth: "1000px",
               width: "100%",
               maxHeight: "90vh",
               overflow: "hidden",
@@ -1179,26 +1186,17 @@ const ProcurementTableDataLayer = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="col-md-3">
+                    <div className="col-md-4">
                       <div className="card text-center">
                         <div className="card-body">
-                          <h6 className="card-title">Avg Selling Price</h6>
-                          <h4 className="text-info">
-                            ₹{selectedProduct.avg_selling_price}
-                          </h4>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="card text-center">
-                        <div className="card-body">
-                          <h6 className="card-title">Avg Margin</h6>
+                          <h6 className="card-title">COGS Range</h6>
                           <h4 className="text-warning">
-                            ₹{selectedProduct.avg_margin}
+                            ₹{selectedProduct.cogs_range}
                           </h4>
                         </div>
                       </div>
                     </div>
+                    <div className="col-md-2"></div>
                   </div>
                 </>
               )}
