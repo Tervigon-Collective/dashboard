@@ -7,31 +7,52 @@ import axios from "axios";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
-import config from '../../config';
+import config from "../../config";
 const TotalSubscriberOne = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [latestNetProfit, setLatestNetProfit] = useState(null);
+  const [totalNetProfit, setTotalNetProfit] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    axios.get(`${config.api.baseURL}/api/net_profit_daily?n=7`)
+
+    // Calculate date range for last 7 days
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - 1); // Yesterday to avoid future date issues
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 6); // 6 days before yesterday (total 7 days)
+
+    // Format dates as YYYY-MM-DD
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const startDateStr = formatDate(startDate);
+    const endDateStr = formatDate(endDate);
+
+    axios
+      .get(
+        `${config.api.baseURL}/api/net_profit_single_day?startDate=${startDateStr}&endDate=${endDateStr}`
+      )
       .then((res) => {
-        setData(res.data);
+        // Extract dailyBreakdowns from the response
+        const dailyBreakdowns = res.data?.data?.dailyBreakdowns || [];
+        setData(dailyBreakdowns);
+
+        // Extract total net profit from the response
+        const total = res.data?.data?.totals?.netProfit || 0;
+        setTotalNetProfit(total);
+
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Error fetching net profit data:", err);
         setError("Failed to load data");
         setLoading(false);
-      });
-    // Fetch latest net profit for stat
-    axios.get(`${config.api.baseURL}/api/net_profit`)
-      .then((res) => {
-        setLatestNetProfit(res.data.totalNetProfit || 0);
-      })
-      .catch(() => {
-        setLatestNetProfit(0);
       });
   }, []);
 
@@ -39,23 +60,27 @@ const TotalSubscriberOne = () => {
   const chartLabels = data.map((d) => {
     const date = new Date(d.date);
     // Remove any trailing .0 from day string
-    return date.toLocaleDateString("en-US", { weekday: "short" }).replace(/\.0$/, "");
+    return date
+      .toLocaleDateString("en-US", { weekday: "short" })
+      .replace(/\.0$/, "");
   });
   const chartSeries = [
     {
       name: "Net Profit",
-      data: data.map((d) => Number(d.net_profit)),
+      data: data.map((d) => Number(d.netProfit)),
     },
   ];
   // Bar colors: green for profit, red for loss
-  const barColors = data.map((d) => (Number(d.net_profit) >= 0 ? "#388e3c" : "#d32f2f"));
+  const barColors = data.map((d) =>
+    Number(d.netProfit) >= 0 ? "#388e3c" : "#d32f2f"
+  );
 
-  // Latest value (today or most recent)
-  const latest = latestNetProfit !== null ? Number(latestNetProfit) : 0;
+  // Use the total net profit for last 7 days
+  const latest = totalNetProfit;
   const latestColor = latest >= 0 ? "#388e3c" : "#d32f2f";
   const formatK = (val) => {
     const n = Math.abs(val);
-    return (n >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(2));
+    return n >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(2);
   };
 
   // Chart options
@@ -78,7 +103,7 @@ const TotalSubscriberOne = () => {
     xaxis: {
       categories: chartLabels,
       labels: {
-        style: { fontWeight: 600, fontSize: '12px' },
+        style: { fontWeight: 600, fontSize: "12px" },
         rotate: -30,
         minHeight: 20,
         maxHeight: 40,
@@ -102,17 +127,19 @@ const TotalSubscriberOne = () => {
   };
 
   return (
-    <div className='col-xxl-3 col-xl-6'>
-      <div className='card h-100 radius-8 border'>
-        <div className='card-body p-24'>
-          <h6 className='mb-12 fw-semibold text-lg mb-16'>Net Profit (Last 7 Days)</h6>
-          <div className='d-flex align-items-center gap-2 mb-20'>
+    <div className="col-xxl-3 col-xl-6">
+      <div className="card h-100 radius-8 border">
+        <div className="card-body p-24">
+          <h6 className="mb-12 fw-semibold text-lg mb-16">
+            Net Profit (Last 7 Days)
+          </h6>
+          <div className="d-flex align-items-center gap-2 mb-20">
             {loading ? (
-              <h6 className='fw-semibold mb-0'>Loading...</h6>
+              <h6 className="fw-semibold mb-0">Loading...</h6>
             ) : error ? (
-              <h6 className='fw-semibold mb-0 text-danger'>{error}</h6>
+              <h6 className="fw-semibold mb-0 text-danger">{error}</h6>
             ) : (
-              <h6 className='fw-semibold mb-0' style={{ color: latestColor }}>
+              <h6 className="fw-semibold mb-0" style={{ color: latestColor }}>
                 ₹{formatK(latest)}
               </h6>
             )}
@@ -120,7 +147,7 @@ const TotalSubscriberOne = () => {
           <ReactApexChart
             options={barChartOptions}
             series={chartSeries}
-            type='bar'
+            type="bar"
             height={260}
           />
         </div>
