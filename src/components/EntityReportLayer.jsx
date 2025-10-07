@@ -47,6 +47,17 @@ const processGoogleData = (data) => {
 
         // Only add rows that have either google data or shopify data
         if (impressions > 0 || shopifyOrders > 0) {
+          // Extract SKUs from shopify orders
+          const skus = shopifyData.flatMap((order) =>
+            order.line_items
+              ? order.line_items.map((item) => item.sku)
+              : order.items
+              ? order.items.map((item) => item.sku)
+              : []
+          );
+          const uniqueSkus = [...new Set(skus)]; // Remove duplicates
+          const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
           processedData.push({
             date_start: hourData.date
               ? hourData.date.split("T")[0]
@@ -62,6 +73,7 @@ const processGoogleData = (data) => {
             gross_roas: grossRoas,
             net_roas: netRoas,
             net_profit: netProfit,
+            product_details: skuString,
           });
         }
       });
@@ -105,6 +117,17 @@ const processOrganicData = (data) => {
 
         const netProfit = totalRevenue - totalCogs;
 
+        // Extract SKUs from organic orders
+        const skus = hourData.orders.flatMap((order) =>
+          order.line_items
+            ? order.line_items.map((item) => item.sku)
+            : order.items
+            ? order.items.map((item) => item.sku)
+            : []
+        );
+        const uniqueSkus = [...new Set(skus)]; // Remove duplicates
+        const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
         processedData.push({
           date_start: new Date(hourData.hour).toISOString().split("T")[0],
           channel: "organic",
@@ -122,6 +145,7 @@ const processOrganicData = (data) => {
               ),
             0
           ),
+          product_details: skuString,
         });
       }
     });
@@ -352,7 +376,6 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th>Date</th>
                 <th>Campaign</th>
                 <th>Impressions</th>
                 <th>Clicks</th>
@@ -362,12 +385,12 @@ const EntityReportLayer = () => {
                 <th>Orders</th>
                 <th>Revenue</th>
                 <th>Net Profit</th>
+                <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((row, index) => (
                 <tr key={index}>
-                  <td>{row.date_start}</td>
                   <td>
                     <span className="badge bg-primary-subtle text-primary">
                       {row.campaign_name}
@@ -388,6 +411,11 @@ const EntityReportLayer = () => {
                     }`}
                   >
                     {formatCurrency(row.net_profit)}
+                  </td>
+                  <td>
+                    <small className="text-muted">
+                      {row.product_details || "-"}
+                    </small>
                   </td>
                 </tr>
               ))}
@@ -479,6 +507,25 @@ const EntityReportLayer = () => {
       const cpm =
         totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
 
+      // Extract SKUs from shopify orders across all adsets and ads
+      const allSkus = [];
+      Object.values(campaign.adsets || {}).forEach((adset) => {
+        Object.values(adset.ads || {}).forEach((ad) => {
+          Object.values(ad.hourly_data || {}).forEach((hourData) => {
+            const shopifyData = hourData.shopify_data || [];
+            shopifyData.forEach((order) => {
+              if (order.line_items) {
+                order.line_items.forEach((item) => {
+                  if (item.sku) allSkus.push(item.sku);
+                });
+              }
+            });
+          });
+        });
+      });
+      const uniqueSkus = [...new Set(allSkus)]; // Remove duplicates
+      const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
       return {
         totalImpressions,
         totalClicks,
@@ -494,6 +541,7 @@ const EntityReportLayer = () => {
         cpm,
         totalActions,
         totalValues,
+        productDetails: skuString,
       };
     };
 
@@ -517,7 +565,9 @@ const EntityReportLayer = () => {
                 <th>Gross ROAS</th>
                 <th>Net ROAS</th>
                 <th>Net Profit</th>
-                <th>Actions</th>
+                <th>Add to Cart</th>
+                <th>Checkout Initiated</th>
+                <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
@@ -592,9 +642,19 @@ const EntityReportLayer = () => {
                     </td>
                     <td>
                       <small className="text-muted">
-                        Purchases:{" "}
-                        {campaignMetrics.totalActions.onsite_web_purchase +
-                          campaignMetrics.totalActions.offsite_pixel_purchase}
+                        {campaignMetrics.totalActions.onsite_web_add_to_cart ||
+                          0}
+                      </small>
+                    </td>
+                    <td>
+                      <small className="text-muted">
+                        {campaignMetrics.totalActions
+                          .onsite_web_initiate_checkout || 0}
+                      </small>
+                    </td>
+                    <td>
+                      <small className="text-muted">
+                        {campaignMetrics.productDetails || "-"}
                       </small>
                     </td>
                   </tr>
@@ -618,19 +678,18 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th>Date</th>
                 <th>Channel</th>
                 <th>Campaign</th>
                 <th>Revenue</th>
                 <th>COGS</th>
                 <th>Net Profit</th>
                 <th>Quantity</th>
+                <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((row, index) => (
                 <tr key={index}>
-                  <td>{row.date_start}</td>
                   <td>
                     <span className="badge bg-success-subtle text-success">
                       {row.channel}
@@ -655,6 +714,11 @@ const EntityReportLayer = () => {
                     {formatCurrency(row.net_profit)}
                   </td>
                   <td>{formatNumber(row.total_sku_quantity)}</td>
+                  <td>
+                    <small className="text-muted">
+                      {row.product_details || "-"}
+                    </small>
+                  </td>
                 </tr>
               ))}
             </tbody>

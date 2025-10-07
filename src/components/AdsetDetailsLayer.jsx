@@ -160,6 +160,21 @@ const AdsetDetailsLayer = () => {
     const cpm =
       totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
 
+    // Extract SKUs from shopify orders
+    const skus = [];
+    Object.values(ad.hourly_data || {}).forEach((hourData) => {
+      const shopifyData = hourData.shopify_data || [];
+      shopifyData.forEach((order) => {
+        if (order.line_items) {
+          order.line_items.forEach((item) => {
+            if (item.sku) skus.push(item.sku);
+          });
+        }
+      });
+    });
+    const uniqueSkus = [...new Set(skus)]; // Remove duplicates
+    const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
     return {
       totalImpressions,
       totalClicks,
@@ -175,6 +190,7 @@ const AdsetDetailsLayer = () => {
       cpm,
       totalActions,
       totalValues,
+      productDetails: skuString,
     };
   };
 
@@ -200,7 +216,9 @@ const AdsetDetailsLayer = () => {
               <th>Gross ROAS</th>
               <th>Net ROAS</th>
               <th>Net Profit</th>
-              <th>Actions</th>
+              <th>Add to Cart</th>
+              <th>Checkout Initiated</th>
+              <th>Product Details</th>
             </tr>
           </thead>
           <tbody>
@@ -250,9 +268,17 @@ const AdsetDetailsLayer = () => {
                 </td>
                 <td>
                   <small className="text-muted">
-                    Purchases:{" "}
-                    {row.totalActions.onsite_web_purchase +
-                      row.totalActions.offsite_pixel_purchase}
+                    {row.totalActions.onsite_web_add_to_cart || 0}
+                  </small>
+                </td>
+                <td>
+                  <small className="text-muted">
+                    {row.totalActions.onsite_web_initiate_checkout || 0}
+                  </small>
+                </td>
+                <td>
+                  <small className="text-muted">
+                    {row.productDetails || "-"}
                   </small>
                 </td>
               </tr>
