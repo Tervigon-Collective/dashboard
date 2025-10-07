@@ -156,23 +156,77 @@ const processOrganicData = (data) => {
 
 const EntityReportLayer = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("google");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
-
   // Date filters - set default to current date
   const getCurrentDate = () => {
     const today = new Date();
     return today.toISOString().split("T")[0];
   };
 
-  const [filters, setFilters] = useState({
-    startDate: getCurrentDate(),
-    endDate: getCurrentDate(),
-  });
+  // Initialize state with sessionStorage data if available
+  const getInitialData = () => {
+    if (typeof window !== "undefined") {
+      const savedData = sessionStorage.getItem("entityReportData");
+      const savedFilters = sessionStorage.getItem("entityReportFilters");
+      const savedTab = sessionStorage.getItem("entityReportActiveTab");
+
+      return {
+        data: savedData ? JSON.parse(savedData) : {},
+        filters: savedFilters
+          ? JSON.parse(savedFilters)
+          : {
+              startDate: getCurrentDate(),
+              endDate: getCurrentDate(),
+            },
+        activeTab: savedTab || "google",
+      };
+    }
+    return {
+      data: {},
+      filters: {
+        startDate: getCurrentDate(),
+        endDate: getCurrentDate(),
+      },
+      activeTab: "google",
+    };
+  };
+
+  const initialState = getInitialData();
+  const [activeTab, setActiveTab] = useState(initialState.activeTab);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState(initialState.data);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [filters, setFilters] = useState(initialState.filters);
+
+  // Restore data from sessionStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedData = sessionStorage.getItem("entityReportData");
+      if (savedData && Object.keys(JSON.parse(savedData)).length > 0) {
+        // Data is already loaded from getInitialData, no need to fetch again
+        console.log("Restored data from sessionStorage");
+      }
+    }
+  }, []);
+
+  // Save data to sessionStorage
+  const saveToSessionStorage = (data, filters, activeTab) => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("entityReportData", JSON.stringify(data));
+      sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
+      sessionStorage.setItem("entityReportActiveTab", activeTab);
+    }
+  };
+
+  // Clear sessionStorage
+  const clearSessionStorage = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("entityReportData");
+      sessionStorage.removeItem("entityReportFilters");
+      sessionStorage.removeItem("entityReportActiveTab");
+    }
+  };
 
   const fetchData = async (reportType) => {
     if (!filters.startDate || !filters.endDate) {
@@ -226,8 +280,8 @@ const EntityReportLayer = () => {
         }
       }
 
-      setData((prev) => ({
-        ...prev,
+      const updatedData = {
+        ...data,
         [reportType]: processedData,
         ...(reportType === "google" && response.data.summary
           ? { googleSummary: response.data.summary }
@@ -241,7 +295,12 @@ const EntityReportLayer = () => {
               metaSummary: response.data.summary || {},
             }
           : {}),
-      }));
+      };
+
+      setData(updatedData);
+
+      // Save to sessionStorage after successful fetch
+      saveToSessionStorage(updatedData, filters, activeTab);
 
       // Reset pagination when new data is loaded
       setCurrentPage(1);
@@ -262,11 +321,13 @@ const EntityReportLayer = () => {
 
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
-    // Clear data when switching tabs to avoid confusion
-    setData({});
     setError(null);
     // Reset pagination when switching tabs
     setCurrentPage(1);
+    // Save active tab to sessionStorage
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("entityReportActiveTab", tabName);
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -563,7 +624,6 @@ const EntityReportLayer = () => {
                 <th>Orders</th>
                 <th>Revenue</th>
                 <th>Gross ROAS</th>
-                <th>Net ROAS</th>
                 <th>Net Profit</th>
                 <th>Add to Cart</th>
                 <th>Checkout Initiated</th>
@@ -618,17 +678,6 @@ const EntityReportLayer = () => {
                         }`}
                       >
                         {campaignMetrics.grossRoas?.toFixed(2)}x
-                      </span>
-                    </td>
-                    <td className="fw-semibold">
-                      <span
-                        className={`badge ${
-                          campaignMetrics.netRoas >= 2
-                            ? "bg-success-subtle text-success"
-                            : "bg-warning-subtle text-warning"
-                        }`}
-                      >
-                        {campaignMetrics.netRoas?.toFixed(2)}x
                       </span>
                     </td>
                     <td
@@ -811,7 +860,7 @@ const EntityReportLayer = () => {
 
       return (
         <div className="row mb-20">
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-primary-subtle">
               <div className="card-body text-center">
                 <h6 className="text-primary">Total Spend</h6>
@@ -819,7 +868,7 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-success-subtle">
               <div className="card-body text-center">
                 <h6 className="text-success">Total Revenue</h6>
@@ -827,7 +876,7 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-info-subtle">
               <div className="card-body text-center">
                 <h6 className="text-info">Total Orders</h6>
@@ -838,7 +887,7 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-warning-subtle">
               <div className="card-body text-center">
                 <h6 className="text-warning">Net Profit</h6>
@@ -848,6 +897,22 @@ const EntityReportLayer = () => {
                 <small className="text-muted">
                   Attribution: {attributionRate.toFixed(1)}%
                 </small>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
+            <div className="card bg-info-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-info">Gross ROAS</h6>
+                <h4 className="text-info">{grossRoas.toFixed(2)}x</h4>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
+            <div className="card bg-secondary-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-secondary">Net ROAS</h6>
+                <h4 className="text-secondary">{netRoas.toFixed(2)}x</h4>
               </div>
             </div>
           </div>
@@ -1057,22 +1122,6 @@ const EntityReportLayer = () => {
           {activeTab === "meta" && renderMetaHierarchicalTable()}
           {activeTab === "organic" && renderOrganicTable()}
         </div>
-
-        {/* No Data Message */}
-        {!loading &&
-          !error &&
-          (!data[activeTab] || data[activeTab].length === 0) && (
-            <div className="text-center py-4">
-              <Icon
-                icon="solar:chart-2-bold"
-                className="text-muted"
-                style={{ fontSize: "48px" }}
-              />
-              <p className="text-muted mt-2">
-                No data available for the selected date range
-              </p>
-            </div>
-          )}
       </div>
     </div>
   );

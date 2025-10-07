@@ -211,7 +211,6 @@ const CampaignDetailsLayer = () => {
               <th>Orders</th>
               <th>Revenue</th>
               <th>Gross ROAS</th>
-              <th>Net ROAS</th>
               <th>Net Profit</th>
               <th>Add to Cart</th>
               <th>Checkout Initiated</th>
@@ -262,17 +261,6 @@ const CampaignDetailsLayer = () => {
                     }`}
                   >
                     {row.grossRoas?.toFixed(2)}x
-                  </span>
-                </td>
-                <td className="fw-semibold">
-                  <span
-                    className={`badge ${
-                      row.netRoas >= 2
-                        ? "bg-success-subtle text-success"
-                        : "bg-warning-subtle text-warning"
-                    }`}
-                  >
-                    {row.netRoas?.toFixed(2)}x
                   </span>
                 </td>
                 <td
