@@ -18045,2069 +18045,1360 @@ http://localhost:8080/api/organic_entity_report?startDate=2025-10-06&endDate=202
 }
 
 
-http://localhost:8080/api/google_entity_report?startDate=2025-10-06&endDate=2025-10-06
+http://localhost:8080/api/google_entity_report?startDate=2025-10-07&endDate=2025-10-07
+
+
 
 {
-  "success": true,
-  "data": {
-    "unknown": {
-      "campaign_id": "unknown",
-      "campaign_name": "Unknown Campaign",
-      "hourly_data": {
-        "2025-10-06_10:00": {
-          "date": "2025-10-06",
-          "hour": "10:00",
-          "google_data": null,
-          "shopify_data": [
-            {
-              "order_id": "gid://shopify/Order/6512452534361",
-              "order_name": "TC-001/25-26/6999",
-              "total_amount": 1099,
-              "shipping_amount": 0,
-              "total_cogs": 397,
-              "net_profit": 702,
-              "line_items": [
-                {
-                  "item_id": "gid://shopify/LineItem/15533853966425",
-                  "title": "TrimEase Paw Trimmer | Precise & Gentle Grooming For Pets | Rechargeable & Safe",
-                  "quantity": 1,
-                  "unit_price": 1099,
-                  "discounted_price": 1099,
-                  "variant_id": "gid://shopify/ProductVariant/42312283881561",
-                  "sku": "TH-038-PAWTR",
-                  "product_title": "TrimEase Paw Trimmer | Precise & Gentle Grooming For Pets | Rechargeable & Safe",
-                  "vendor": "Tilting Heads",
-                  "unit_cost": 397,
-                  "total_cogs": 397,
-                  "total_revenue": 1099,
-                  "profit": 702
+    "success": true,
+    "data": {
+        "unknown": {
+            "campaign_id": "unknown",
+            "campaign_name": "Unknown Campaign",
+            "hourly_data": {
+                "2025-10-07_12:00": {
+                    "date": "2025-10-07",
+                    "hour": "12:00",
+                    "google_data": null,
+                    "shopify_data": [
+                        {
+                            "order_id": "gid://shopify/Order/6514459934809",
+                            "order_name": "TC-001/25-26/7045",
+                            "total_amount": 4198,
+                            "shipping_amount": 0,
+                            "total_cogs": 2289,
+                            "net_profit": 1909,
+                            "line_items": [
+                                {
+                                    "item_id": "gid://shopify/LineItem/15537545707609",
+                                    "title": "Meow Scratch Lounge – Cat Scratcher & Relax Bed",
+                                    "quantity": 1,
+                                    "unit_price": 2199,
+                                    "discounted_price": 2099,
+                                    "variant_id": "gid://shopify/ProductVariant/42674537300057",
+                                    "sku": "TH-149-SCRATCHLOUNGE",
+                                    "product_title": "Meow Scratch Lounge – Cat Scratcher & Relax Bed",
+                                    "vendor": "Tilting Heads",
+                                    "unit_cost": 1199,
+                                    "total_cogs": 1199,
+                                    "total_revenue": 2099,
+                                    "profit": 900
+                                },
+                                {
+                                    "item_id": "gid://shopify/LineItem/15537545740377",
+                                    "title": "Moonbeam Nap Pod | Cozy Capsule Bed | Playful Comfort for Cats",
+                                    "quantity": 1,
+                                    "unit_price": 2199,
+                                    "discounted_price": 2099,
+                                    "variant_id": "gid://shopify/ProductVariant/42710836150361",
+                                    "sku": "TH-182-MOONBEAMNAPPOD",
+                                    "product_title": "Moonbeam Nap Pod | Cozy Capsule Bed | Playful Comfort for Cats",
+                                    "vendor": "Tilting Heads",
+                                    "unit_cost": 1090,
+                                    "total_cogs": 1090,
+                                    "total_revenue": 2099,
+                                    "profit": 1009
+                                }
+                            ],
+                            "shipping": {
+                                "city": "Mumbai",
+                                "province": "Maharashtra",
+                                "country": "India"
+                            },
+                            "utm_data": {
+                                "source": "google",
+                                "medium": "Organic",
+                                "campaign": "Organic",
+                                "content": null,
+                                "term": null
+                            }
+                        }
+                    ],
+                    "attribution_status": "unmatched"
                 }
-              ],
-              "shipping": {
-                "city": "Mumbai",
-                "province": "Maharashtra",
-                "country": "India"
-              },
-              "utm_data": {
-                "source": "google",
-                "medium": "Organic",
-                "campaign": "Organic",
-                "content": null,
-                "term": null
-              }
             }
-          ],
-          "attribution_status": "unmatched"
-        }
-      }
-    },
-    "22934352697": {
-      "campaign_id": "22934352697",
-      "campaign_name": "TH - Performance Max -Shoes-23/08/2025",
-      "hourly_data": {
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 0,
-          "google_data": {
-            "impressions": 332,
-            "clicks": 5,
-            "spend": 29.43,
-            "cpm": 88.65,
-            "cpc": 5.89,
-            "ctr": 0.0150602409638554,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
         },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 1,
-          "google_data": {
-            "impressions": 211,
-            "clicks": 3,
-            "spend": 25.37,
-            "cpm": 120.24,
-            "cpc": 8.46,
-            "ctr": 0.014218009478673,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 2,
-          "google_data": {
-            "impressions": 120,
-            "clicks": 5,
-            "spend": 8.77,
-            "cpm": 73.11,
-            "cpc": 1.75,
-            "ctr": 0.0416666666666667,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 3,
-          "google_data": {
-            "impressions": 60,
-            "clicks": 1,
-            "spend": 1.81,
-            "cpm": 30.15,
-            "cpc": 1.81,
-            "ctr": 0.0166666666666667,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 4,
-          "google_data": {
-            "impressions": 52,
-            "clicks": 1,
-            "spend": 8.42,
-            "cpm": 161.96,
-            "cpc": 8.42,
-            "ctr": 0.0192307692307692,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 5,
-          "google_data": {
-            "impressions": 64,
-            "clicks": 2,
-            "spend": 4.8,
-            "cpm": 74.93,
-            "cpc": 2.4,
-            "ctr": 0.03125,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 6,
-          "google_data": {
-            "impressions": 120,
-            "clicks": 4,
-            "spend": 15.71,
-            "cpm": 130.94,
-            "cpc": 3.93,
-            "ctr": 0.0333333333333333,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 7,
-          "google_data": {
-            "impressions": 242,
-            "clicks": 5,
-            "spend": 23.21,
-            "cpm": 95.92,
-            "cpc": 4.64,
-            "ctr": 0.0206611570247934,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 8,
-          "google_data": {
-            "impressions": 256,
-            "clicks": 3,
-            "spend": 35.04,
-            "cpm": 136.89,
-            "cpc": 11.68,
-            "ctr": 0.01171875,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 9,
-          "google_data": {
-            "impressions": 389,
-            "clicks": 14,
-            "spend": 125.51,
-            "cpm": 322.65,
-            "cpc": 8.96,
-            "ctr": 0.0359897172236504,
-            "conversions": 1,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 10,
-          "google_data": {
-            "impressions": 395,
-            "clicks": 3,
-            "spend": 20.04,
-            "cpm": 50.73,
-            "cpc": 6.68,
-            "ctr": 0.00759493670886076,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 11,
-          "google_data": {
-            "impressions": 362,
-            "clicks": 5,
-            "spend": 53.61,
-            "cpm": 148.08,
-            "cpc": 10.72,
-            "ctr": 0.0138121546961326,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 12,
-          "google_data": {
-            "impressions": 417,
-            "clicks": 6,
-            "spend": 65.06,
-            "cpm": 156.01,
-            "cpc": 10.84,
-            "ctr": 0.0143884892086331,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 13,
-          "google_data": {
-            "impressions": 395,
-            "clicks": 13,
-            "spend": 47.99,
-            "cpm": 121.5,
-            "cpc": 3.69,
-            "ctr": 0.0329113924050633,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 14,
-          "google_data": {
-            "impressions": 549,
-            "clicks": 9,
-            "spend": 33.35,
-            "cpm": 60.75,
-            "cpc": 3.71,
-            "ctr": 0.0163934426229508,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 15,
-          "google_data": {
-            "impressions": 393,
-            "clicks": 10,
-            "spend": 84.36,
-            "cpm": 214.65,
-            "cpc": 8.44,
-            "ctr": 0.0254452926208651,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_16": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 16,
-          "google_data": {
-            "impressions": 423,
-            "clicks": 3,
-            "spend": 28.25,
-            "cpm": 66.78,
-            "cpc": 9.42,
-            "ctr": 0.00709219858156028,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_17": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 17,
-          "google_data": {
-            "impressions": 350,
-            "clicks": 3,
-            "spend": 30.25,
-            "cpm": 86.43,
-            "cpc": 10.08,
-            "ctr": 0.00857142857142857,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_18": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 18,
-          "google_data": {
-            "impressions": 432,
-            "clicks": 6,
-            "spend": 52.38,
-            "cpm": 121.25,
-            "cpc": 8.73,
-            "ctr": 0.0138888888888889,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_19": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 19,
-          "google_data": {
-            "impressions": 500,
-            "clicks": 8,
-            "spend": 48.86,
-            "cpm": 97.71,
-            "cpc": 6.11,
-            "ctr": 0.016,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_20": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 20,
-          "google_data": {
-            "impressions": 546,
-            "clicks": 9,
-            "spend": 65.83,
-            "cpm": 120.57,
-            "cpc": 7.31,
-            "ctr": 0.0164835164835165,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_21": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 21,
-          "google_data": {
-            "impressions": 503,
-            "clicks": 10,
-            "spend": 41.36,
-            "cpm": 82.22,
-            "cpc": 4.14,
-            "ctr": 0.0198807157057654,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_22": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 22,
-          "google_data": {
-            "impressions": 484,
-            "clicks": 11,
-            "spend": 217.17,
-            "cpm": 448.7,
-            "cpc": 19.74,
-            "ctr": 0.0227272727272727,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_23": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 23,
-          "google_data": {
-            "impressions": 614,
-            "clicks": 8,
-            "spend": 89.61,
-            "cpm": 145.95,
-            "cpc": 11.2,
-            "ctr": 0.0130293159609121,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "2025-10-06_09:00": {
-          "date": "2025-10-06",
-          "hour": "09:00",
-          "google_data": null,
-          "shopify_data": [
-            {
-              "order_id": "gid://shopify/Order/6512396763225",
-              "order_name": "TC-001/25-26/6996",
-              "total_amount": 919,
-              "shipping_amount": 0,
-              "total_cogs": 354,
-              "net_profit": 565,
-              "line_items": [
-                {
-                  "item_id": "gid://shopify/LineItem/15533753237593",
-                  "title": "Therapeutic Aromatherapy Dog Shampoo - Tilting Heads",
-                  "quantity": 1,
-                  "unit_price": 919,
-                  "discounted_price": 919,
-                  "variant_id": "gid://shopify/ProductVariant/41944442470489",
-                  "sku": "TH-001-THARSH",
-                  "product_title": "Therapeutic Aromatherapy Dog Shampoo - Tilting Heads",
-                  "vendor": "Tilting Heads",
-                  "unit_cost": 354,
-                  "total_cogs": 354,
-                  "total_revenue": 919,
-                  "profit": 565
+        "22934352697": {
+            "campaign_id": "22934352697",
+            "campaign_name": "TH - Performance Max -Shoes-23/08/2025",
+            "hourly_data": {
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 0,
+                    "google_data": {
+                        "impressions": 328,
+                        "clicks": 6,
+                        "spend": 35.19,
+                        "cpm": 107.28,
+                        "cpc": 5.86,
+                        "ctr": 0.018292682926829267,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 1,
+                    "google_data": {
+                        "impressions": 206,
+                        "clicks": 6,
+                        "spend": 22.3,
+                        "cpm": 108.23,
+                        "cpc": 3.72,
+                        "ctr": 0.02912621359223301,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 2,
+                    "google_data": {
+                        "impressions": 146,
+                        "clicks": 3,
+                        "spend": 17.87,
+                        "cpm": 122.39,
+                        "cpc": 5.96,
+                        "ctr": 0.02054794520547945,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 3,
+                    "google_data": {
+                        "impressions": 60,
+                        "clicks": 2,
+                        "spend": 31.28,
+                        "cpm": 521.33,
+                        "cpc": 15.64,
+                        "ctr": 0.03333333333333333,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 4,
+                    "google_data": {
+                        "impressions": 47,
+                        "clicks": 2,
+                        "spend": 9.06,
+                        "cpm": 192.74,
+                        "cpc": 4.53,
+                        "ctr": 0.0425531914893617,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 5,
+                    "google_data": {
+                        "impressions": 59,
+                        "clicks": 1,
+                        "spend": 2.2,
+                        "cpm": 37.27,
+                        "cpc": 2.2,
+                        "ctr": 0.01694915254237288,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 6,
+                    "google_data": {
+                        "impressions": 135,
+                        "clicks": 2,
+                        "spend": 3.31,
+                        "cpm": 24.54,
+                        "cpc": 1.66,
+                        "ctr": 0.014814814814814815,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 7,
+                    "google_data": {
+                        "impressions": 329,
+                        "clicks": 8,
+                        "spend": 44.54,
+                        "cpm": 135.38,
+                        "cpc": 5.57,
+                        "ctr": 0.0243161094224924,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 8,
+                    "google_data": {
+                        "impressions": 453,
+                        "clicks": 5,
+                        "spend": 40.85,
+                        "cpm": 90.18,
+                        "cpc": 8.17,
+                        "ctr": 0.011037527593818985,
+                        "conversions": 1,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 9,
+                    "google_data": {
+                        "impressions": 572,
+                        "clicks": 7,
+                        "spend": 26.23,
+                        "cpm": 45.85,
+                        "cpc": 3.75,
+                        "ctr": 0.012237762237762238,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 10,
+                    "google_data": {
+                        "impressions": 671,
+                        "clicks": 7,
+                        "spend": 66.65,
+                        "cpm": 99.33,
+                        "cpc": 9.52,
+                        "ctr": 0.010432190760059613,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 11,
+                    "google_data": {
+                        "impressions": 590,
+                        "clicks": 12,
+                        "spend": 233.33,
+                        "cpm": 395.47,
+                        "cpc": 19.44,
+                        "ctr": 0.020338983050847456,
+                        "conversions": 1,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 12,
+                    "google_data": {
+                        "impressions": 470,
+                        "clicks": 15,
+                        "spend": 151.18,
+                        "cpm": 321.65,
+                        "cpc": 10.08,
+                        "ctr": 0.031914893617021274,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 13,
+                    "google_data": {
+                        "impressions": 433,
+                        "clicks": 9,
+                        "spend": 41.25,
+                        "cpm": 95.28,
+                        "cpc": 4.58,
+                        "ctr": 0.020785219399538105,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 14,
+                    "google_data": {
+                        "impressions": 480,
+                        "clicks": 9,
+                        "spend": 57.43,
+                        "cpm": 119.65,
+                        "cpc": 6.38,
+                        "ctr": 0.01875,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 15,
+                    "google_data": {
+                        "impressions": 308,
+                        "clicks": 3,
+                        "spend": 12.74,
+                        "cpm": 41.36,
+                        "cpc": 4.25,
+                        "ctr": 0.00974025974025974,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "2025-10-07_08:00": {
+                    "date": "2025-10-07",
+                    "hour": "08:00",
+                    "google_data": null,
+                    "shopify_data": [
+                        {
+                            "order_id": "gid://shopify/Order/6514270503001",
+                            "order_name": "TC-001/25-26/7035",
+                            "total_amount": 1699,
+                            "shipping_amount": 0,
+                            "total_cogs": 0,
+                            "net_profit": 1699,
+                            "line_items": [
+                                {
+                                    "item_id": "gid://shopify/LineItem/15537207410777",
+                                    "title": "FestiveGlow Bundle with Mystery Gift",
+                                    "quantity": 1,
+                                    "unit_price": 1899,
+                                    "discounted_price": 1699,
+                                    "variant_id": "gid://shopify/ProductVariant/42706983813209",
+                                    "sku": "TH-179-FESTIVEBUNDLE",
+                                    "product_title": "FestiveGlow Bundle with Mystery Gift",
+                                    "vendor": "Tilting Heads",
+                                    "unit_cost": 0,
+                                    "total_cogs": 0,
+                                    "total_revenue": 1699,
+                                    "profit": 1699
+                                }
+                            ],
+                            "shipping": {
+                                "city": "Kolkata",
+                                "province": "West Bengal",
+                                "country": "India"
+                            },
+                            "utm_data": {
+                                "source": "google",
+                                "medium": "pmax",
+                                "campaign": "22934352697",
+                                "content": "6608712419",
+                                "term": null
+                            }
+                        }
+                    ],
+                    "attribution_status": "matched"
+                },
+                "2025-10-07_11:00": {
+                    "date": "2025-10-07",
+                    "hour": "11:00",
+                    "google_data": null,
+                    "shopify_data": [
+                        {
+                            "order_id": "gid://shopify/Order/6514437488729",
+                            "order_name": "TC-001/25-26/7042",
+                            "total_amount": 1899,
+                            "shipping_amount": 0,
+                            "total_cogs": 725,
+                            "net_profit": 1174,
+                            "line_items": [
+                                {
+                                    "item_id": "gid://shopify/LineItem/15537508384857",
+                                    "title": "WildTrail Boots | Waterproof Dog Boots | Non-Slip Soles | Perfect for All Terrains",
+                                    "quantity": 1,
+                                    "unit_price": 1899,
+                                    "discounted_price": 1899,
+                                    "variant_id": "gid://shopify/ProductVariant/42435800039513",
+                                    "sku": "TH-068-WILD-M",
+                                    "product_title": "WildTrail Boots | Waterproof Dog Boots | Non-Slip Soles | Perfect for All Terrains",
+                                    "vendor": "Tilting Heads",
+                                    "unit_cost": 725,
+                                    "total_cogs": 725,
+                                    "total_revenue": 1899,
+                                    "profit": 1174
+                                }
+                            ],
+                            "shipping": {
+                                "city": "New Delhi",
+                                "province": "Delhi",
+                                "country": "India"
+                            },
+                            "utm_data": {
+                                "source": "google",
+                                "medium": "pmax",
+                                "campaign": "22934352697",
+                                "content": "6608712419",
+                                "term": "shopify_IN_8029915054169_42679479533657"
+                            }
+                        }
+                    ],
+                    "attribution_status": "matched"
+                },
+                "2025-10-07_15:00": {
+                    "date": "2025-10-07",
+                    "hour": "15:00",
+                    "google_data": null,
+                    "shopify_data": [
+                        {
+                            "order_id": "gid://shopify/Order/6514615976025",
+                            "order_name": "TC-001/25-26/7055",
+                            "total_amount": 899,
+                            "shipping_amount": 0,
+                            "total_cogs": 397,
+                            "net_profit": 502,
+                            "line_items": [
+                                {
+                                    "item_id": "gid://shopify/LineItem/15537779441753",
+                                    "title": "TrimEase Paw Trimmer | Precise & Gentle Grooming For Pets | Rechargeable & Safe",
+                                    "quantity": 1,
+                                    "unit_price": 1099,
+                                    "discounted_price": 899,
+                                    "variant_id": "gid://shopify/ProductVariant/42312283881561",
+                                    "sku": "TH-038-PAWTR",
+                                    "product_title": "TrimEase Paw Trimmer | Precise & Gentle Grooming For Pets | Rechargeable & Safe",
+                                    "vendor": "Tilting Heads",
+                                    "unit_cost": 397,
+                                    "total_cogs": 397,
+                                    "total_revenue": 899,
+                                    "profit": 502
+                                }
+                            ],
+                            "shipping": {
+                                "city": "Hyderabad",
+                                "province": "Telangana",
+                                "country": "India"
+                            },
+                            "utm_data": {
+                                "source": "google",
+                                "medium": "pmax",
+                                "campaign": "22934352697",
+                                "content": "6608712419",
+                                "term": "shopify_IN_7947664031833_42312283881561"
+                            }
+                        }
+                    ],
+                    "attribution_status": "matched"
                 }
-              ],
-              "shipping": {
-                "city": "Gurgaon",
-                "province": "Haryana",
-                "country": "India"
-              },
-              "utm_data": {
-                "source": "google",
-                "medium": "pmax",
-                "campaign": "22934352697",
-                "content": "6608712419",
-                "term": null
-              }
             }
-          ],
-          "attribution_status": "matched"
+        },
+        "22939266178": {
+            "campaign_id": "22939266178",
+            "campaign_name": "TH - Performance Max -Grooming Tools-25/08/2025",
+            "hourly_data": {
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 0,
+                    "google_data": {
+                        "impressions": 401,
+                        "clicks": 16,
+                        "spend": 7.09,
+                        "cpm": 17.69,
+                        "cpc": 0.44,
+                        "ctr": 0.0399002493765586,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 1,
+                    "google_data": {
+                        "impressions": 2179,
+                        "clicks": 156,
+                        "spend": 123.04,
+                        "cpm": 56.47,
+                        "cpc": 0.79,
+                        "ctr": 0.0715924736117485,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 2,
+                    "google_data": {
+                        "impressions": 138,
+                        "clicks": 11,
+                        "spend": 7.54,
+                        "cpm": 54.61,
+                        "cpc": 0.69,
+                        "ctr": 0.07971014492753623,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 3,
+                    "google_data": {
+                        "impressions": 31,
+                        "clicks": 0,
+                        "spend": 0,
+                        "cpm": 0,
+                        "cpc": 0,
+                        "ctr": 0,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 4,
+                    "google_data": {
+                        "impressions": 118,
+                        "clicks": 8,
+                        "spend": 3.58,
+                        "cpm": 30.38,
+                        "cpc": 0.45,
+                        "ctr": 0.06779661016949153,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 5,
+                    "google_data": {
+                        "impressions": 225,
+                        "clicks": 15,
+                        "spend": 7.67,
+                        "cpm": 34.08,
+                        "cpc": 0.51,
+                        "ctr": 0.06666666666666667,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 6,
+                    "google_data": {
+                        "impressions": 698,
+                        "clicks": 43,
+                        "spend": 24.62,
+                        "cpm": 35.27,
+                        "cpc": 0.57,
+                        "ctr": 0.06160458452722063,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 7,
+                    "google_data": {
+                        "impressions": 1163,
+                        "clicks": 68,
+                        "spend": 41.32,
+                        "cpm": 35.53,
+                        "cpc": 0.61,
+                        "ctr": 0.058469475494411005,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 8,
+                    "google_data": {
+                        "impressions": 2711,
+                        "clicks": 221,
+                        "spend": 111.89,
+                        "cpm": 41.27,
+                        "cpc": 0.51,
+                        "ctr": 0.0815197344153449,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 9,
+                    "google_data": {
+                        "impressions": 4615,
+                        "clicks": 309,
+                        "spend": 148.33,
+                        "cpm": 32.14,
+                        "cpc": 0.48,
+                        "ctr": 0.06695557963163597,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 10,
+                    "google_data": {
+                        "impressions": 4863,
+                        "clicks": 368,
+                        "spend": 163.44,
+                        "cpm": 33.61,
+                        "cpc": 0.44,
+                        "ctr": 0.07567345260127493,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 11,
+                    "google_data": {
+                        "impressions": 3962,
+                        "clicks": 265,
+                        "spend": 109.18,
+                        "cpm": 27.56,
+                        "cpc": 0.41,
+                        "ctr": 0.0668854114083796,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 12,
+                    "google_data": {
+                        "impressions": 2025,
+                        "clicks": 130,
+                        "spend": 52.79,
+                        "cpm": 26.07,
+                        "cpc": 0.41,
+                        "ctr": 0.06419753086419754,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 13,
+                    "google_data": {
+                        "impressions": 1441,
+                        "clicks": 70,
+                        "spend": 22.76,
+                        "cpm": 15.79,
+                        "cpc": 0.33,
+                        "ctr": 0.048577376821651634,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 14,
+                    "google_data": {
+                        "impressions": 1538,
+                        "clicks": 98,
+                        "spend": 29.87,
+                        "cpm": 19.42,
+                        "cpc": 0.3,
+                        "ctr": 0.06371911573472042,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 15,
+                    "google_data": {
+                        "impressions": 572,
+                        "clicks": 136,
+                        "spend": 39.47,
+                        "cpm": 69,
+                        "cpc": 0.29,
+                        "ctr": 0.23776223776223776,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                }
+            }
+        },
+        "22942963129": {
+            "campaign_id": "22942963129",
+            "campaign_name": "TH - Performance Max -Beds & Mats-25/08/2025",
+            "hourly_data": {
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 0,
+                    "google_data": {
+                        "impressions": 90,
+                        "clicks": 8,
+                        "spend": 11.15,
+                        "cpm": 123.88,
+                        "cpc": 1.39,
+                        "ctr": 0.08888888888888889,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 1,
+                    "google_data": {
+                        "impressions": 560,
+                        "clicks": 39,
+                        "spend": 61.1,
+                        "cpm": 109.11,
+                        "cpc": 1.57,
+                        "ctr": 0.06964285714285715,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 2,
+                    "google_data": {
+                        "impressions": 159,
+                        "clicks": 16,
+                        "spend": 21.69,
+                        "cpm": 136.4,
+                        "cpc": 1.36,
+                        "ctr": 0.10062893081761007,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 3,
+                    "google_data": {
+                        "impressions": 19,
+                        "clicks": 1,
+                        "spend": 1.35,
+                        "cpm": 71.16,
+                        "cpc": 1.35,
+                        "ctr": 0.05263157894736842,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 4,
+                    "google_data": {
+                        "impressions": 30,
+                        "clicks": 2,
+                        "spend": 2.16,
+                        "cpm": 71.92,
+                        "cpc": 1.08,
+                        "ctr": 0.06666666666666667,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 5,
+                    "google_data": {
+                        "impressions": 39,
+                        "clicks": 3,
+                        "spend": 3.11,
+                        "cpm": 79.79,
+                        "cpc": 1.04,
+                        "ctr": 0.07692307692307693,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 6,
+                    "google_data": {
+                        "impressions": 161,
+                        "clicks": 7,
+                        "spend": 3.65,
+                        "cpm": 22.65,
+                        "cpc": 0.52,
+                        "ctr": 0.043478260869565216,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 7,
+                    "google_data": {
+                        "impressions": 361,
+                        "clicks": 30,
+                        "spend": 21.5,
+                        "cpm": 59.55,
+                        "cpc": 0.72,
+                        "ctr": 0.08310249307479224,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 8,
+                    "google_data": {
+                        "impressions": 501,
+                        "clicks": 41,
+                        "spend": 28.46,
+                        "cpm": 56.81,
+                        "cpc": 0.69,
+                        "ctr": 0.08183632734530938,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 9,
+                    "google_data": {
+                        "impressions": 703,
+                        "clicks": 86,
+                        "spend": 62.15,
+                        "cpm": 88.41,
+                        "cpc": 0.72,
+                        "ctr": 0.12233285917496443,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 10,
+                    "google_data": {
+                        "impressions": 770,
+                        "clicks": 82,
+                        "spend": 61.63,
+                        "cpm": 80.03,
+                        "cpc": 0.75,
+                        "ctr": 0.10649350649350649,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 11,
+                    "google_data": {
+                        "impressions": 789,
+                        "clicks": 70,
+                        "spend": 56.61,
+                        "cpm": 71.76,
+                        "cpc": 0.81,
+                        "ctr": 0.08871989860583017,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 12,
+                    "google_data": {
+                        "impressions": 854,
+                        "clicks": 86,
+                        "spend": 47.31,
+                        "cpm": 55.39,
+                        "cpc": 0.55,
+                        "ctr": 0.10070257611241218,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 13,
+                    "google_data": {
+                        "impressions": 1346,
+                        "clicks": 154,
+                        "spend": 94.03,
+                        "cpm": 69.86,
+                        "cpc": 0.61,
+                        "ctr": 0.11441307578008915,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 14,
+                    "google_data": {
+                        "impressions": 1074,
+                        "clicks": 111,
+                        "spend": 59.81,
+                        "cpm": 55.69,
+                        "cpc": 0.54,
+                        "ctr": 0.10335195530726257,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 15,
+                    "google_data": {
+                        "impressions": 557,
+                        "clicks": 57,
+                        "spend": 30.51,
+                        "cpm": 54.78,
+                        "cpc": 0.54,
+                        "ctr": 0.10233393177737882,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                }
+            }
+        },
+        "22949154718": {
+            "campaign_id": "22949154718",
+            "campaign_name": "TH - Performance Max -Shampoo-27/08/2025",
+            "hourly_data": {
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 0,
+                    "google_data": {
+                        "impressions": 27,
+                        "clicks": 0,
+                        "spend": 0,
+                        "cpm": 0,
+                        "cpc": 0,
+                        "ctr": 0,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 1,
+                    "google_data": {
+                        "impressions": 9,
+                        "clicks": 1,
+                        "spend": 0.09,
+                        "cpm": 9.97,
+                        "cpc": 0.09,
+                        "ctr": 0.1111111111111111,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 2,
+                    "google_data": {
+                        "impressions": 24,
+                        "clicks": 0,
+                        "spend": 0,
+                        "cpm": 0,
+                        "cpc": 0,
+                        "ctr": 0,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 3,
+                    "google_data": {
+                        "impressions": 17,
+                        "clicks": 3,
+                        "spend": 1.85,
+                        "cpm": 108.75,
+                        "cpc": 0.62,
+                        "ctr": 0.17647058823529413,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                }
+            }
+        },
+        "22950208267": {
+            "campaign_id": "22950208267",
+            "campaign_name": "TH - Performance Max -Bowls-feedes-28/08/2025",
+            "hourly_data": {
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 0,
+                    "google_data": {
+                        "impressions": 113,
+                        "clicks": 3,
+                        "spend": 58.17,
+                        "cpm": 514.78,
+                        "cpc": 19.39,
+                        "ctr": 0.02654867256637168,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 1,
+                    "google_data": {
+                        "impressions": 124,
+                        "clicks": 4,
+                        "spend": 78,
+                        "cpm": 629,
+                        "cpc": 19.5,
+                        "ctr": 0.03225806451612903,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 2,
+                    "google_data": {
+                        "impressions": 68,
+                        "clicks": 5,
+                        "spend": 18.55,
+                        "cpm": 272.86,
+                        "cpc": 3.71,
+                        "ctr": 0.07352941176470588,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 3,
+                    "google_data": {
+                        "impressions": 56,
+                        "clicks": 1,
+                        "spend": 8.36,
+                        "cpm": 149.22,
+                        "cpc": 8.36,
+                        "ctr": 0.017857142857142856,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 4,
+                    "google_data": {
+                        "impressions": 52,
+                        "clicks": 0,
+                        "spend": 0.29,
+                        "cpm": 5.5,
+                        "cpc": 0,
+                        "ctr": 0,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 5,
+                    "google_data": {
+                        "impressions": 95,
+                        "clicks": 1,
+                        "spend": 0.28,
+                        "cpm": 2.95,
+                        "cpc": 0.28,
+                        "ctr": 0.010526315789473684,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 6,
+                    "google_data": {
+                        "impressions": 187,
+                        "clicks": 10,
+                        "spend": 14.91,
+                        "cpm": 79.71,
+                        "cpc": 1.49,
+                        "ctr": 0.053475935828877004,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 7,
+                    "google_data": {
+                        "impressions": 295,
+                        "clicks": 6,
+                        "spend": 29.85,
+                        "cpm": 101.18,
+                        "cpc": 4.97,
+                        "ctr": 0.020338983050847456,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 8,
+                    "google_data": {
+                        "impressions": 212,
+                        "clicks": 10,
+                        "spend": 408.02,
+                        "cpm": 1924.64,
+                        "cpc": 40.8,
+                        "ctr": 0.04716981132075472,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 9,
+                    "google_data": {
+                        "impressions": 105,
+                        "clicks": 4,
+                        "spend": 63.12,
+                        "cpm": 601.13,
+                        "cpc": 15.78,
+                        "ctr": 0.0380952380952381,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 10,
+                    "google_data": {
+                        "impressions": 159,
+                        "clicks": 4,
+                        "spend": 16.48,
+                        "cpm": 103.62,
+                        "cpc": 4.12,
+                        "ctr": 0.025157232704402517,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 11,
+                    "google_data": {
+                        "impressions": 135,
+                        "clicks": 5,
+                        "spend": 76.04,
+                        "cpm": 563.22,
+                        "cpc": 15.21,
+                        "ctr": 0.037037037037037035,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 12,
+                    "google_data": {
+                        "impressions": 236,
+                        "clicks": 3,
+                        "spend": 4.08,
+                        "cpm": 17.27,
+                        "cpc": 1.36,
+                        "ctr": 0.012711864406779662,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 13,
+                    "google_data": {
+                        "impressions": 351,
+                        "clicks": 18,
+                        "spend": 48.39,
+                        "cpm": 137.86,
+                        "cpc": 2.69,
+                        "ctr": 0.05128205128205128,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 14,
+                    "google_data": {
+                        "impressions": 400,
+                        "clicks": 19,
+                        "spend": 52.87,
+                        "cpm": 132.18,
+                        "cpc": 2.78,
+                        "ctr": 0.0475,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                },
+                "Tue Oct 07 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
+                    "date": "2025-10-06T18:30:00.000Z",
+                    "hour": 15,
+                    "google_data": {
+                        "impressions": 236,
+                        "clicks": 13,
+                        "spend": 26.21,
+                        "cpm": 111.06,
+                        "cpc": 2.02,
+                        "ctr": 0.05508474576271186,
+                        "conversions": 0,
+                        "conversion_value": 0
+                    },
+                    "shopify_data": [],
+                    "attribution_status": "unmatched"
+                }
+            }
+        },
+        "summary": {
+            "total_spend": 3159.7800000000007,
+            "total_impressions": 42881,
+            "total_clicks": 2914,
+            "total_conversions": 2,
+            "total_orders": 4,
+            "total_revenue": 8695,
+            "total_cogs": 3411,
+            "gross_profit": 5284,
+            "net_profit": 2124.2199999999993,
+            "matched_orders": 3,
+            "unmatched_orders": 1,
+            "attribution_rate": 75,
+            "gross_roas": 2.751773857673635,
+            "net_roas": 1.672268322478147,
+            "average_cpc": 1.0843445435827044,
+            "average_cpm": 73.68718080268651,
+            "ctr": 6.795550476901193,
+            "conversion_rate": 0.06863417982155114
         }
-      }
     },
-    "22939266178": {
-      "campaign_id": "22939266178",
-      "campaign_name": "TH - Performance Max -Grooming Tools-25/08/2025",
-      "hourly_data": {
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 0,
-          "google_data": {
-            "impressions": 68,
-            "clicks": 1,
-            "spend": 2.12,
-            "cpm": 31.13,
-            "cpc": 2.12,
-            "ctr": 0.0147058823529412,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 1,
-          "google_data": {
-            "impressions": 42,
-            "clicks": 4,
-            "spend": 8.26,
-            "cpm": 196.58,
-            "cpc": 2.06,
-            "ctr": 0.0952380952380952,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 2,
-          "google_data": {
-            "impressions": 28,
-            "clicks": 1,
-            "spend": 11.15,
-            "cpm": 398.11,
-            "cpc": 11.15,
-            "ctr": 0.0357142857142857,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 3,
-          "google_data": {
-            "impressions": 23,
-            "clicks": 1,
-            "spend": 11.27,
-            "cpm": 489.92,
-            "cpc": 11.27,
-            "ctr": 0.0434782608695652,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 4,
-          "google_data": {
-            "impressions": 12,
-            "clicks": 1,
-            "spend": 0.35,
-            "cpm": 29.05,
-            "cpc": 0.35,
-            "ctr": 0.0833333333333333,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 5,
-          "google_data": {
-            "impressions": 31,
-            "clicks": 1,
-            "spend": 3.64,
-            "cpm": 117.5,
-            "cpc": 3.64,
-            "ctr": 0.032258064516129,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 6,
-          "google_data": {
-            "impressions": 63,
-            "clicks": 4,
-            "spend": 10.28,
-            "cpm": 163.11,
-            "cpc": 2.57,
-            "ctr": 0.0634920634920635,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 7,
-          "google_data": {
-            "impressions": 119,
-            "clicks": 6,
-            "spend": 37.24,
-            "cpm": 312.92,
-            "cpc": 6.21,
-            "ctr": 0.0504201680672269,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 8,
-          "google_data": {
-            "impressions": 230,
-            "clicks": 5,
-            "spend": 1.69,
-            "cpm": 7.33,
-            "cpc": 0.34,
-            "ctr": 0.0217391304347826,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 9,
-          "google_data": {
-            "impressions": 336,
-            "clicks": 12,
-            "spend": 20.45,
-            "cpm": 60.87,
-            "cpc": 1.7,
-            "ctr": 0.0357142857142857,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 10,
-          "google_data": {
-            "impressions": 401,
-            "clicks": 34,
-            "spend": 39.39,
-            "cpm": 98.23,
-            "cpc": 1.16,
-            "ctr": 0.084788029925187,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 11,
-          "google_data": {
-            "impressions": 126,
-            "clicks": 1,
-            "spend": 18.46,
-            "cpm": 146.48,
-            "cpc": 18.46,
-            "ctr": 0.00793650793650794,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 12,
-          "google_data": {
-            "impressions": 122,
-            "clicks": 3,
-            "spend": 11.23,
-            "cpm": 92.02,
-            "cpc": 3.74,
-            "ctr": 0.0245901639344262,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 13,
-          "google_data": {
-            "impressions": 83,
-            "clicks": 1,
-            "spend": 6.4,
-            "cpm": 77.06,
-            "cpc": 6.4,
-            "ctr": 0.0120481927710843,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 14,
-          "google_data": {
-            "impressions": 97,
-            "clicks": 4,
-            "spend": 15.56,
-            "cpm": 160.41,
-            "cpc": 3.89,
-            "ctr": 0.0412371134020619,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 15,
-          "google_data": {
-            "impressions": 102,
-            "clicks": 2,
-            "spend": 4.37,
-            "cpm": 42.83,
-            "cpc": 2.18,
-            "ctr": 0.0196078431372549,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_16": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 16,
-          "google_data": {
-            "impressions": 91,
-            "clicks": 0,
-            "spend": 0.65,
-            "cpm": 7.15,
-            "cpc": 0,
-            "ctr": 0,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_17": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 17,
-          "google_data": {
-            "impressions": 108,
-            "clicks": 3,
-            "spend": 16.94,
-            "cpm": 156.88,
-            "cpc": 5.65,
-            "ctr": 0.0277777777777778,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_18": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 18,
-          "google_data": {
-            "impressions": 102,
-            "clicks": 1,
-            "spend": 21.12,
-            "cpm": 207.07,
-            "cpc": 21.12,
-            "ctr": 0.00980392156862745,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_19": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 19,
-          "google_data": {
-            "impressions": 123,
-            "clicks": 3,
-            "spend": 10.26,
-            "cpm": 83.45,
-            "cpc": 3.42,
-            "ctr": 0.024390243902439,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_20": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 20,
-          "google_data": {
-            "impressions": 139,
-            "clicks": 5,
-            "spend": 38.6,
-            "cpm": 277.73,
-            "cpc": 7.72,
-            "ctr": 0.0359712230215827,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_21": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 21,
-          "google_data": {
-            "impressions": 146,
-            "clicks": 5,
-            "spend": 19.03,
-            "cpm": 130.37,
-            "cpc": 3.81,
-            "ctr": 0.0342465753424658,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_22": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 22,
-          "google_data": {
-            "impressions": 93,
-            "clicks": 1,
-            "spend": 0.34,
-            "cpm": 3.66,
-            "cpc": 0.34,
-            "ctr": 0.010752688172043,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_23": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 23,
-          "google_data": {
-            "impressions": 90,
-            "clicks": 3,
-            "spend": 27.32,
-            "cpm": 303.51,
-            "cpc": 9.11,
-            "ctr": 0.0333333333333333,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        }
-      }
-    },
-    "22942963129": {
-      "campaign_id": "22942963129",
-      "campaign_name": "TH - Performance Max -Beds & Mats-25/08/2025",
-      "hourly_data": {
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 0,
-          "google_data": {
-            "impressions": 80,
-            "clicks": 1,
-            "spend": 0.34,
-            "cpm": 4.25,
-            "cpc": 0.34,
-            "ctr": 0.0125,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 1,
-          "google_data": {
-            "impressions": 49,
-            "clicks": 1,
-            "spend": 35.79,
-            "cpm": 730.38,
-            "cpc": 35.79,
-            "ctr": 0.0204081632653061,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 2,
-          "google_data": {
-            "impressions": 19,
-            "clicks": 0,
-            "spend": 0.01,
-            "cpm": 0.36,
-            "cpc": 0,
-            "ctr": 0,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 3,
-          "google_data": {
-            "impressions": 21,
-            "clicks": 2,
-            "spend": 12.3,
-            "cpm": 585.93,
-            "cpc": 6.15,
-            "ctr": 0.0952380952380952,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 4,
-          "google_data": {
-            "impressions": 18,
-            "clicks": 1,
-            "spend": 1.03,
-            "cpm": 57.25,
-            "cpc": 1.03,
-            "ctr": 0.0555555555555556,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 5,
-          "google_data": {
-            "impressions": 33,
-            "clicks": 1,
-            "spend": 18.21,
-            "cpm": 551.78,
-            "cpc": 18.21,
-            "ctr": 0.0303030303030303,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 6,
-          "google_data": {
-            "impressions": 68,
-            "clicks": 2,
-            "spend": 23.27,
-            "cpm": 342.23,
-            "cpc": 11.64,
-            "ctr": 0.0294117647058824,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 7,
-          "google_data": {
-            "impressions": 82,
-            "clicks": 5,
-            "spend": 18.1,
-            "cpm": 220.69,
-            "cpc": 3.62,
-            "ctr": 0.0609756097560976,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 8,
-          "google_data": {
-            "impressions": 161,
-            "clicks": 4,
-            "spend": 3.05,
-            "cpm": 18.95,
-            "cpc": 0.76,
-            "ctr": 0.0248447204968944,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 9,
-          "google_data": {
-            "impressions": 132,
-            "clicks": 7,
-            "spend": 46.46,
-            "cpm": 351.95,
-            "cpc": 6.64,
-            "ctr": 0.053030303030303,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 10,
-          "google_data": {
-            "impressions": 148,
-            "clicks": 6,
-            "spend": 42.42,
-            "cpm": 286.63,
-            "cpc": 7.07,
-            "ctr": 0.0405405405405405,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 11,
-          "google_data": {
-            "impressions": 131,
-            "clicks": 3,
-            "spend": 21.98,
-            "cpm": 167.8,
-            "cpc": 7.33,
-            "ctr": 0.0229007633587786,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 12,
-          "google_data": {
-            "impressions": 123,
-            "clicks": 4,
-            "spend": 183.69,
-            "cpm": 1493.43,
-            "cpc": 45.92,
-            "ctr": 0.032520325203252,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 13,
-          "google_data": {
-            "impressions": 117,
-            "clicks": 7,
-            "spend": 96.62,
-            "cpm": 825.85,
-            "cpc": 13.8,
-            "ctr": 0.0598290598290598,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 14,
-          "google_data": {
-            "impressions": 122,
-            "clicks": 4,
-            "spend": 45.46,
-            "cpm": 372.59,
-            "cpc": 11.36,
-            "ctr": 0.0327868852459016,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 15,
-          "google_data": {
-            "impressions": 157,
-            "clicks": 2,
-            "spend": 1.74,
-            "cpm": 11.08,
-            "cpc": 0.87,
-            "ctr": 0.0127388535031847,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_16": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 16,
-          "google_data": {
-            "impressions": 108,
-            "clicks": 1,
-            "spend": 0.62,
-            "cpm": 5.75,
-            "cpc": 0.62,
-            "ctr": 0.00925925925925926,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_17": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 17,
-          "google_data": {
-            "impressions": 113,
-            "clicks": 6,
-            "spend": 54.54,
-            "cpm": 482.67,
-            "cpc": 9.09,
-            "ctr": 0.0530973451327434,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_18": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 18,
-          "google_data": {
-            "impressions": 143,
-            "clicks": 6,
-            "spend": 8.13,
-            "cpm": 56.85,
-            "cpc": 1.35,
-            "ctr": 0.041958041958042,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_19": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 19,
-          "google_data": {
-            "impressions": 182,
-            "clicks": 3,
-            "spend": 1.6,
-            "cpm": 8.78,
-            "cpc": 0.53,
-            "ctr": 0.0164835164835165,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_20": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 20,
-          "google_data": {
-            "impressions": 146,
-            "clicks": 3,
-            "spend": 6.55,
-            "cpm": 44.87,
-            "cpc": 2.18,
-            "ctr": 0.0205479452054795,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_21": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 21,
-          "google_data": {
-            "impressions": 141,
-            "clicks": 5,
-            "spend": 5.33,
-            "cpm": 37.81,
-            "cpc": 1.07,
-            "ctr": 0.0354609929078014,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_22": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 22,
-          "google_data": {
-            "impressions": 149,
-            "clicks": 7,
-            "spend": 72.98,
-            "cpm": 489.79,
-            "cpc": 10.43,
-            "ctr": 0.0469798657718121,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        }
-      }
-    },
-    "22949154718": {
-      "campaign_id": "22949154718",
-      "campaign_name": "TH - Performance Max -Shampoo-27/08/2025",
-      "hourly_data": {
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 0,
-          "google_data": {
-            "impressions": 40,
-            "clicks": 7,
-            "spend": 3.64,
-            "cpm": 91.08,
-            "cpc": 0.52,
-            "ctr": 0.175,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 1,
-          "google_data": {
-            "impressions": 121,
-            "clicks": 26,
-            "spend": 18.15,
-            "cpm": 150.01,
-            "cpc": 0.7,
-            "ctr": 0.214876033057851,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 2,
-          "google_data": {
-            "impressions": 218,
-            "clicks": 22,
-            "spend": 13.89,
-            "cpm": 63.7,
-            "cpc": 0.63,
-            "ctr": 0.100917431192661,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 3,
-          "google_data": {
-            "impressions": 195,
-            "clicks": 21,
-            "spend": 12.92,
-            "cpm": 66.27,
-            "cpc": 0.62,
-            "ctr": 0.107692307692308,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 4,
-          "google_data": {
-            "impressions": 244,
-            "clicks": 27,
-            "spend": 15.14,
-            "cpm": 62.06,
-            "cpc": 0.56,
-            "ctr": 0.110655737704918,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 5,
-          "google_data": {
-            "impressions": 211,
-            "clicks": 26,
-            "spend": 14.17,
-            "cpm": 67.15,
-            "cpc": 0.54,
-            "ctr": 0.123222748815166,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 6,
-          "google_data": {
-            "impressions": 556,
-            "clicks": 61,
-            "spend": 32.46,
-            "cpm": 58.38,
-            "cpc": 0.53,
-            "ctr": 0.109712230215827,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 7,
-          "google_data": {
-            "impressions": 725,
-            "clicks": 76,
-            "spend": 43.41,
-            "cpm": 59.88,
-            "cpc": 0.57,
-            "ctr": 0.104827586206897,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 8,
-          "google_data": {
-            "impressions": 572,
-            "clicks": 82,
-            "spend": 42.15,
-            "cpm": 73.69,
-            "cpc": 0.51,
-            "ctr": 0.143356643356643,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 9,
-          "google_data": {
-            "impressions": 797,
-            "clicks": 130,
-            "spend": 67.41,
-            "cpm": 84.59,
-            "cpc": 0.52,
-            "ctr": 0.163111668757842,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 10,
-          "google_data": {
-            "impressions": 605,
-            "clicks": 119,
-            "spend": 62.51,
-            "cpm": 103.32,
-            "cpc": 0.53,
-            "ctr": 0.196694214876033,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 11,
-          "google_data": {
-            "impressions": 751,
-            "clicks": 141,
-            "spend": 68.72,
-            "cpm": 91.5,
-            "cpc": 0.49,
-            "ctr": 0.187749667110519,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 12,
-          "google_data": {
-            "impressions": 244,
-            "clicks": 48,
-            "spend": 22.06,
-            "cpm": 90.41,
-            "cpc": 0.46,
-            "ctr": 0.19672131147541,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 13,
-          "google_data": {
-            "impressions": 817,
-            "clicks": 88,
-            "spend": 40.65,
-            "cpm": 49.76,
-            "cpc": 0.46,
-            "ctr": 0.107711138310894,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 14,
-          "google_data": {
-            "impressions": 1500,
-            "clicks": 132,
-            "spend": 62.41,
-            "cpm": 41.6,
-            "cpc": 0.47,
-            "ctr": 0.088,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 15,
-          "google_data": {
-            "impressions": 1016,
-            "clicks": 90,
-            "spend": 36.03,
-            "cpm": 35.46,
-            "cpc": 0.4,
-            "ctr": 0.0885826771653543,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_16": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 16,
-          "google_data": {
-            "impressions": 964,
-            "clicks": 107,
-            "spend": 49.86,
-            "cpm": 51.72,
-            "cpc": 0.47,
-            "ctr": 0.110995850622407,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_17": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 17,
-          "google_data": {
-            "impressions": 950,
-            "clicks": 119,
-            "spend": 54.69,
-            "cpm": 57.57,
-            "cpc": 0.46,
-            "ctr": 0.125263157894737,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_18": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 18,
-          "google_data": {
-            "impressions": 984,
-            "clicks": 72,
-            "spend": 27.49,
-            "cpm": 27.94,
-            "cpc": 0.38,
-            "ctr": 0.0731707317073171,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_19": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 19,
-          "google_data": {
-            "impressions": 734,
-            "clicks": 60,
-            "spend": 21.43,
-            "cpm": 29.2,
-            "cpc": 0.36,
-            "ctr": 0.0817438692098093,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_20": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 20,
-          "google_data": {
-            "impressions": 545,
-            "clicks": 37,
-            "spend": 14.82,
-            "cpm": 27.19,
-            "cpc": 0.4,
-            "ctr": 0.0678899082568807,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_21": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 21,
-          "google_data": {
-            "impressions": 594,
-            "clicks": 43,
-            "spend": 14.7,
-            "cpm": 24.75,
-            "cpc": 0.34,
-            "ctr": 0.0723905723905724,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_22": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 22,
-          "google_data": {
-            "impressions": 502,
-            "clicks": 27,
-            "spend": 9.71,
-            "cpm": 19.35,
-            "cpc": 0.36,
-            "ctr": 0.0537848605577689,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_23": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 23,
-          "google_data": {
-            "impressions": 289,
-            "clicks": 16,
-            "spend": 4.86,
-            "cpm": 16.83,
-            "cpc": 0.3,
-            "ctr": 0.055363321799308,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        }
-      }
-    },
-    "22950208267": {
-      "campaign_id": "22950208267",
-      "campaign_name": "TH - Performance Max -Bowls-feedes-28/08/2025",
-      "hourly_data": {
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_0": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 0,
-          "google_data": {
-            "impressions": 57,
-            "clicks": 1,
-            "spend": 3.53,
-            "cpm": 61.93,
-            "cpc": 3.53,
-            "ctr": 0.0175438596491228,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_1": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 1,
-          "google_data": {
-            "impressions": 21,
-            "clicks": 1,
-            "spend": 9.86,
-            "cpm": 469.64,
-            "cpc": 9.86,
-            "ctr": 0.0476190476190476,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_2": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 2,
-          "google_data": {
-            "impressions": 36,
-            "clicks": 3,
-            "spend": 2.57,
-            "cpm": 71.29,
-            "cpc": 0.86,
-            "ctr": 0.0833333333333333,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_3": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 3,
-          "google_data": {
-            "impressions": 26,
-            "clicks": 0,
-            "spend": 0.3,
-            "cpm": 11.42,
-            "cpc": 0,
-            "ctr": 0,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_4": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 4,
-          "google_data": {
-            "impressions": 36,
-            "clicks": 1,
-            "spend": 7.97,
-            "cpm": 221.44,
-            "cpc": 7.97,
-            "ctr": 0.0277777777777778,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_5": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 5,
-          "google_data": {
-            "impressions": 37,
-            "clicks": 5,
-            "spend": 111.45,
-            "cpm": 3012.23,
-            "cpc": 22.29,
-            "ctr": 0.135135135135135,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_6": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 6,
-          "google_data": {
-            "impressions": 99,
-            "clicks": 3,
-            "spend": 8.52,
-            "cpm": 86.04,
-            "cpc": 2.84,
-            "ctr": 0.0303030303030303,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_7": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 7,
-          "google_data": {
-            "impressions": 153,
-            "clicks": 3,
-            "spend": 7.53,
-            "cpm": 49.23,
-            "cpc": 2.51,
-            "ctr": 0.0196078431372549,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_8": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 8,
-          "google_data": {
-            "impressions": 135,
-            "clicks": 9,
-            "spend": 24.93,
-            "cpm": 184.64,
-            "cpc": 2.77,
-            "ctr": 0.0666666666666667,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_9": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 9,
-          "google_data": {
-            "impressions": 153,
-            "clicks": 5,
-            "spend": 25.68,
-            "cpm": 167.87,
-            "cpc": 5.14,
-            "ctr": 0.0326797385620915,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_10": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 10,
-          "google_data": {
-            "impressions": 217,
-            "clicks": 7,
-            "spend": 31.12,
-            "cpm": 143.41,
-            "cpc": 4.45,
-            "ctr": 0.032258064516129,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_11": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 11,
-          "google_data": {
-            "impressions": 212,
-            "clicks": 7,
-            "spend": 17.27,
-            "cpm": 81.45,
-            "cpc": 2.47,
-            "ctr": 0.0330188679245283,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_12": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 12,
-          "google_data": {
-            "impressions": 225,
-            "clicks": 6,
-            "spend": 12.31,
-            "cpm": 54.69,
-            "cpc": 2.05,
-            "ctr": 0.0266666666666667,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_13": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 13,
-          "google_data": {
-            "impressions": 307,
-            "clicks": 8,
-            "spend": 96.46,
-            "cpm": 314.2,
-            "cpc": 12.06,
-            "ctr": 0.0260586319218241,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_14": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 14,
-          "google_data": {
-            "impressions": 307,
-            "clicks": 11,
-            "spend": 32.3,
-            "cpm": 105.22,
-            "cpc": 2.94,
-            "ctr": 0.0358306188925081,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_15": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 15,
-          "google_data": {
-            "impressions": 355,
-            "clicks": 9,
-            "spend": 7.67,
-            "cpm": 21.6,
-            "cpc": 0.85,
-            "ctr": 0.0253521126760563,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_16": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 16,
-          "google_data": {
-            "impressions": 305,
-            "clicks": 18,
-            "spend": 44.13,
-            "cpm": 144.7,
-            "cpc": 2.45,
-            "ctr": 0.059016393442623,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_17": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 17,
-          "google_data": {
-            "impressions": 254,
-            "clicks": 6,
-            "spend": 10.88,
-            "cpm": 42.83,
-            "cpc": 1.81,
-            "ctr": 0.0236220472440945,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_18": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 18,
-          "google_data": {
-            "impressions": 176,
-            "clicks": 1,
-            "spend": 21.41,
-            "cpm": 121.65,
-            "cpc": 21.41,
-            "ctr": 0.00568181818181818,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_19": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 19,
-          "google_data": {
-            "impressions": 179,
-            "clicks": 7,
-            "spend": 53.99,
-            "cpm": 301.6,
-            "cpc": 7.71,
-            "ctr": 0.0391061452513967,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_20": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 20,
-          "google_data": {
-            "impressions": 165,
-            "clicks": 9,
-            "spend": 18.88,
-            "cpm": 114.41,
-            "cpc": 2.1,
-            "ctr": 0.0545454545454545,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_21": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 21,
-          "google_data": {
-            "impressions": 170,
-            "clicks": 8,
-            "spend": 8.44,
-            "cpm": 49.65,
-            "cpc": 1.06,
-            "ctr": 0.0470588235294118,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_22": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 22,
-          "google_data": {
-            "impressions": 163,
-            "clicks": 4,
-            "spend": 20.06,
-            "cpm": 123.09,
-            "cpc": 5.02,
-            "ctr": 0.0245398773006135,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        },
-        "Mon Oct 06 2025 00:00:00 GMT+0530 (India Standard Time)_23": {
-          "date": "2025-10-05T18:30:00.000Z",
-          "hour": 23,
-          "google_data": {
-            "impressions": 136,
-            "clicks": 8,
-            "spend": 29.22,
-            "cpm": 214.87,
-            "cpc": 3.65,
-            "ctr": 0.0588235294117647,
-            "conversions": 0,
-            "conversion_value": 0
-          },
-          "shopify_data": [],
-          "attribution_status": "unmatched"
-        }
-      }
-    },
-    "summary": {
-      "total_spend": 3552.29,
-      "total_impressions": 31525,
-      "total_clicks": 2047,
-      "total_conversions": 1,
-      "total_orders": 2,
-      "total_revenue": 2018,
-      "total_cogs": 751,
-      "gross_profit": 1267,
-      "net_profit": -2285.29,
-      "matched_orders": 1,
-      "unmatched_orders": 1,
-      "attribution_rate": 50,
-      "gross_roas": 0.568084249878248,
-      "net_roas": 0.356671330324945,
-      "average_cpc": 1.73536394723986,
-      "average_cpm": 112.681681205393,
-      "ctr": 6.49325931800159,
-      "conversion_rate": 0.0488519785051295
+    "meta": {
+        "startDate": "2025-10-07",
+        "endDate": "2025-10-07",
+        "reportType": "google_entity_report",
+        "totalCampaigns": 7,
+        "totalGoogleAttributedOrders": 4,
+        "generatedAt": "2025-10-07T10:30:48.323Z",
+        "generationTimeMs": 1
     }
-  },
-  "meta": {
-    "startDate": "2025-10-06",
-    "endDate": "2025-10-06",
-    "reportType": "google_entity_report",
-    "totalCampaigns": 7,
-    "totalGoogleAttributedOrders": 2,
-    "generatedAt": "2025-10-07T07:33:48.263Z",
-    "generationTimeMs": 0
-  }
 }

@@ -2,11 +2,485 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
+import ExcelJS from "exceljs";
 import {
   fetchGoogleEntityReport,
   fetchMetaEntityReportHierarchy,
   fetchOrganicEntityReport,
 } from "../api/api";
+
+// ExcelJS Download Functions
+const downloadGoogleReportExcel = async (
+  data,
+  startDate,
+  endDate,
+  summary = null
+) => {
+  if (!data || data.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Google Entity Report");
+
+  // Calculate aggregated totals for ROAS
+  const totalSpend = data.reduce((sum, row) => sum + (row.spend || 0), 0);
+  const totalRevenue = data.reduce(
+    (sum, row) => sum + (row.shopify_revenue || 0),
+    0
+  );
+  const totalCogs = data.reduce((sum, row) => sum + (row.shopify_cogs || 0), 0);
+  const totalNetProfit = data.reduce(
+    (sum, row) => sum + (row.net_profit || 0),
+    0
+  );
+
+  const aggregatedGrossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const aggregatedNetRoas = totalSpend > 0 ? totalNetProfit / totalSpend : 0;
+
+  // Define headers
+  const headers = [
+    "Campaign",
+    "Impressions",
+    "Clicks",
+    "CTR",
+    "CPC",
+    "Spend",
+    "Orders",
+    "Revenue",
+    "COGS",
+    "Gross ROAS",
+    "Net ROAS",
+    "Net Profit",
+    "Product Details",
+  ];
+
+  // Add headers row
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE6E6FA" },
+  };
+
+  // Add data rows
+  data.forEach((row, index) => {
+    const rowData = [
+      row.campaign_name || "",
+      row.impressions > 0 ? row.impressions : "",
+      row.clicks > 0 ? row.clicks : "",
+      row.ctr > 0 ? `${row.ctr.toFixed(2)}%` : "0.00%",
+      row.cpc > 0 ? `₹${row.cpc.toFixed(2)}` : "₹0.00",
+      `₹${(row.spend || 0).toFixed(2)}`,
+      row.shopify_orders || 0,
+      `₹${(row.shopify_revenue || 0).toFixed(2)}`,
+      `₹${(row.shopify_cogs || 0).toFixed(2)}`,
+      index === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+      index === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+      `₹${(row.net_profit || 0).toFixed(2)}`,
+      row.product_details || "-",
+    ];
+
+    worksheet.addRow(rowData);
+  });
+
+  // Add total row
+  const totalRow = [
+    "TOTAL",
+    data.reduce((sum, row) => sum + (row.impressions || 0), 0),
+    data.reduce((sum, row) => sum + (row.clicks || 0), 0),
+    totalSpend > 0
+      ? `${(
+          (data.reduce((sum, row) => sum + (row.clicks || 0), 0) /
+            data.reduce((sum, row) => sum + (row.impressions || 0), 0)) *
+          100
+        ).toFixed(2)}%`
+      : "0.00%",
+    totalSpend > 0
+      ? `₹${(
+          totalSpend / data.reduce((sum, row) => sum + (row.clicks || 0), 0)
+        ).toFixed(2)}`
+      : "₹0.00",
+    `₹${totalSpend.toFixed(2)}`,
+    data.reduce((sum, row) => sum + (row.shopify_orders || 0), 0),
+    `₹${totalRevenue.toFixed(2)}`,
+    `₹${totalCogs.toFixed(2)}`,
+    `${aggregatedGrossRoas.toFixed(2)}x`,
+    `${aggregatedNetRoas.toFixed(2)}x`,
+    `₹${totalNetProfit.toFixed(2)}`,
+    "All Products",
+  ];
+
+  const totalRowIndex = worksheet.addRow(totalRow);
+
+  // Style total row
+  const totalRowStyle = worksheet.getRow(totalRowIndex.number);
+  totalRowStyle.font = { bold: true };
+  totalRowStyle.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF0F8FF" },
+  };
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    column.width = 15;
+  });
+
+  // Generate and download file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Google_Entity_Report_${startDate}_to_${endDate}.xlsx`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+const downloadMetaReportExcel = async (
+  metaHierarchy,
+  startDate,
+  endDate,
+  summary = null
+) => {
+  if (!metaHierarchy || Object.keys(metaHierarchy).length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Meta Entity Report");
+
+  // Calculate aggregated totals for ROAS across all campaigns
+  let totalSpend = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+  let totalNetProfit = 0;
+
+  Object.values(metaHierarchy).forEach((campaign) => {
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    totalSpend += campaignMetrics.totalSpend || 0;
+    totalRevenue += campaignMetrics.totalRevenue || 0;
+    totalCogs += campaignMetrics.totalCogs || 0;
+    totalNetProfit += campaignMetrics.netProfit || 0;
+  });
+
+  const aggregatedGrossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const aggregatedNetRoas = totalSpend > 0 ? totalNetProfit / totalSpend : 0;
+
+  // Define headers
+  const headers = [
+    "Type",
+    "Campaign Name",
+    "Adset Name",
+    "Ad Name",
+    "Impressions",
+    "Clicks",
+    "CTR",
+    "CPC",
+    "CPM",
+    "Spend",
+    "Orders",
+    "Revenue",
+    "COGS",
+    "Gross ROAS",
+    "Net ROAS",
+    "Net Profit",
+    "Add to Cart",
+    "Checkout Initiated",
+    "Product Details",
+  ];
+
+  // Add headers row
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE6E6FA" },
+  };
+
+  let rowIndex = 0;
+  Object.values(metaHierarchy).forEach((campaign) => {
+    // Campaign level data
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    const campaignRow = [
+      "Campaign",
+      campaign.campaign_name || "",
+      "",
+      "",
+      campaignMetrics.totalImpressions || 0,
+      campaignMetrics.totalClicks || 0,
+      `${(campaignMetrics.ctr || 0).toFixed(2)}%`,
+      `₹${(campaignMetrics.cpc || 0).toFixed(2)}`,
+      `₹${(campaignMetrics.cpm || 0).toFixed(2)}`,
+      `₹${(campaignMetrics.totalSpend || 0).toFixed(2)}`,
+      campaignMetrics.totalOrders || 0,
+      `₹${(campaignMetrics.totalRevenue || 0).toFixed(2)}`,
+      `₹${(campaignMetrics.totalCogs || 0).toFixed(2)}`,
+      rowIndex === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+      rowIndex === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+      `₹${(campaignMetrics.netProfit || 0).toFixed(2)}`,
+      campaignMetrics.totalActions?.onsite_web_add_to_cart || 0,
+      campaignMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+      campaignMetrics.productDetails || "-",
+    ];
+    worksheet.addRow(campaignRow);
+    rowIndex++;
+
+    // Adset level data
+    Object.values(campaign.adsets || {}).forEach((adset) => {
+      const adsetMetrics = calculateAdsetMetrics(adset);
+      const adsetRow = [
+        "Adset",
+        campaign.campaign_name || "",
+        adset.adset_name || "",
+        "",
+        adsetMetrics.totalImpressions || 0,
+        adsetMetrics.totalClicks || 0,
+        `${(adsetMetrics.ctr || 0).toFixed(2)}%`,
+        `₹${(adsetMetrics.cpc || 0).toFixed(2)}`,
+        `₹${(adsetMetrics.cpm || 0).toFixed(2)}`,
+        `₹${(adsetMetrics.totalSpend || 0).toFixed(2)}`,
+        adsetMetrics.totalOrders || 0,
+        `₹${(adsetMetrics.totalRevenue || 0).toFixed(2)}`,
+        `₹${(adsetMetrics.totalCogs || 0).toFixed(2)}`,
+        "",
+        "",
+        `₹${(adsetMetrics.netProfit || 0).toFixed(2)}`,
+        adsetMetrics.totalActions?.onsite_web_add_to_cart || 0,
+        adsetMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+        adsetMetrics.productDetails || "-",
+      ];
+      worksheet.addRow(adsetRow);
+
+      // Ad level data
+      Object.values(adset.ads || {}).forEach((ad) => {
+        const adMetrics = calculateAdMetrics(ad);
+        const adRow = [
+          "Ad",
+          campaign.campaign_name || "",
+          adset.adset_name || "",
+          ad.ad_name || "",
+          adMetrics.totalImpressions || 0,
+          adMetrics.totalClicks || 0,
+          `${(adMetrics.ctr || 0).toFixed(2)}%`,
+          `₹${(adMetrics.cpc || 0).toFixed(2)}`,
+          `₹${(adMetrics.cpm || 0).toFixed(2)}`,
+          `₹${(adMetrics.totalSpend || 0).toFixed(2)}`,
+          adMetrics.totalOrders || 0,
+          `₹${(adMetrics.totalRevenue || 0).toFixed(2)}`,
+          `₹${(adMetrics.totalCogs || 0).toFixed(2)}`,
+          "",
+          "",
+          `₹${(adMetrics.netProfit || 0).toFixed(2)}`,
+          adMetrics.totalActions?.onsite_web_add_to_cart || 0,
+          adMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+          adMetrics.productDetails || "-",
+        ];
+        worksheet.addRow(adRow);
+      });
+    });
+  });
+
+  // Add total row
+  const totalImpressions = Object.values(metaHierarchy).reduce(
+    (sum, campaign) => {
+      const campaignMetrics = calculateCampaignMetrics(campaign);
+      return sum + (campaignMetrics.totalImpressions || 0);
+    },
+    0
+  );
+
+  const totalClicks = Object.values(metaHierarchy).reduce((sum, campaign) => {
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    return sum + (campaignMetrics.totalClicks || 0);
+  }, 0);
+
+  const totalOrders = Object.values(metaHierarchy).reduce((sum, campaign) => {
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    return sum + (campaignMetrics.totalOrders || 0);
+  }, 0);
+
+  const totalRow = [
+    "TOTAL",
+    "",
+    "",
+    "",
+    totalImpressions,
+    totalClicks,
+    totalImpressions > 0
+      ? `${((totalClicks / totalImpressions) * 100).toFixed(2)}%`
+      : "0.00%",
+    totalClicks > 0 ? `₹${(totalSpend / totalClicks).toFixed(2)}` : "₹0.00",
+    totalImpressions > 0
+      ? `₹${((totalSpend / totalImpressions) * 1000).toFixed(2)}`
+      : "₹0.00",
+    `₹${totalSpend.toFixed(2)}`,
+    totalOrders,
+    `₹${totalRevenue.toFixed(2)}`,
+    `₹${totalCogs.toFixed(2)}`,
+    `${aggregatedGrossRoas.toFixed(2)}x`,
+    `${aggregatedNetRoas.toFixed(2)}x`,
+    `₹${totalNetProfit.toFixed(2)}`,
+    "",
+    "",
+    "All Products",
+  ];
+
+  const totalRowIndex = worksheet.addRow(totalRow);
+
+  // Style total row
+  const totalRowStyle = worksheet.getRow(totalRowIndex.number);
+  totalRowStyle.font = { bold: true };
+  totalRowStyle.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF0F8FF" },
+  };
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    column.width = 15;
+  });
+
+  // Generate and download file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Meta_Entity_Report_${startDate}_to_${endDate}.xlsx`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+const downloadOrganicReportExcel = async (
+  data,
+  startDate,
+  endDate,
+  summary = null
+) => {
+  if (!data || data.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Organic Entity Report");
+
+  // Calculate aggregated totals for ROAS
+  const totalRevenue = data.reduce(
+    (sum, row) => sum + (row.shopify_revenue || 0),
+    0
+  );
+  const totalCogs = data.reduce((sum, row) => sum + (row.shopify_cogs || 0), 0);
+  const totalNetProfit = data.reduce(
+    (sum, row) => sum + (row.net_profit || 0),
+    0
+  );
+
+  // For organic, there's no ad spend, so ROAS is calculated differently
+  const aggregatedGrossRoas = totalCogs > 0 ? totalRevenue / totalCogs : 0; // Revenue per COGS
+  const aggregatedNetRoas = totalCogs > 0 ? totalNetProfit / totalCogs : 0; // Net profit per COGS
+
+  // Define headers
+  const headers = [
+    "Channel",
+    "Campaign",
+    "Revenue",
+    "COGS",
+    "Gross Profit",
+    "Net Profit",
+    "Gross ROAS",
+    "Net ROAS",
+    "Product Details",
+  ];
+
+  // Add headers row
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE6E6FA" },
+  };
+
+  // Add data rows
+  data.forEach((row, index) => {
+    const rowData = [
+      row.channel || "",
+      row.campaign_name || "",
+      `₹${(row.shopify_revenue || 0).toFixed(2)}`,
+      `₹${(row.shopify_cogs || 0).toFixed(2)}`,
+      `₹${((row.shopify_revenue || 0) - (row.shopify_cogs || 0)).toFixed(2)}`,
+      `₹${(row.net_profit || 0).toFixed(2)}`,
+      index === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+      index === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+      row.product_details || "-",
+    ];
+
+    worksheet.addRow(rowData);
+  });
+
+  // Add total row
+  const totalGrossProfit = totalRevenue - totalCogs;
+  const totalRow = [
+    "TOTAL",
+    "",
+    `₹${totalRevenue.toFixed(2)}`,
+    `₹${totalCogs.toFixed(2)}`,
+    `₹${totalGrossProfit.toFixed(2)}`,
+    `₹${totalNetProfit.toFixed(2)}`,
+    `${aggregatedGrossRoas.toFixed(2)}x`,
+    `${aggregatedNetRoas.toFixed(2)}x`,
+    "All Products",
+  ];
+
+  const totalRowIndex = worksheet.addRow(totalRow);
+
+  // Style total row
+  const totalRowStyle = worksheet.getRow(totalRowIndex.number);
+  totalRowStyle.font = { bold: true };
+  totalRowStyle.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF0F8FF" },
+  };
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    column.width = 15;
+  });
+
+  // Generate and download file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Organic_Entity_Report_${startDate}_to_${endDate}.xlsx`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
 
 // Data processing functions for new API response structure
 const processGoogleData = (data) => {
@@ -25,24 +499,26 @@ const processGoogleData = (data) => {
         const googleData = hourData.google_data || {};
         const shopifyData = hourData.shopify_data || [];
 
-        // Get metrics from API response
-        const impressions = googleData.impressions || 0;
-        const clicks = googleData.clicks || 0;
-        const spend = googleData.spend || 0;
-        const cpc = googleData.cpc || 0;
-        const ctr = googleData.ctr || 0;
+        // Get metrics from API response - handle null/undefined values
+        const impressions = googleData?.impressions || 0;
+        const clicks = googleData?.clicks || 0;
+        const spend = googleData?.spend || 0;
+        const cpc = googleData?.cpc || 0;
+        const ctr = googleData?.ctr || 0;
 
         const shopifyOrders = shopifyData.length;
         const shopifyRevenue = shopifyData.reduce(
           (sum, order) => sum + (order.total_amount || 0),
           0
         );
+        const shopifyCogs = shopifyData.reduce(
+          (sum, order) => sum + (order.total_cogs || 0),
+          0
+        );
 
         // Calculate ROAS per row
         const grossRoas = spend > 0 ? shopifyRevenue / spend : 0;
-        const netProfit =
-          shopifyData.reduce((sum, order) => sum + (order.net_profit || 0), 0) -
-          spend;
+        const netProfit = shopifyRevenue - shopifyCogs - spend;
         const netRoas = spend > 0 ? netProfit / spend : 0;
 
         // Only add rows that have either google data or shopify data
@@ -70,6 +546,7 @@ const processGoogleData = (data) => {
             ctr,
             shopify_orders: shopifyOrders,
             shopify_revenue: shopifyRevenue,
+            shopify_cogs: shopifyCogs,
             gross_roas: grossRoas,
             net_roas: netRoas,
             net_profit: netProfit,
@@ -91,8 +568,832 @@ const processMetaData = (data) => {
   return [];
 };
 
+// Download functions for each tab
+const downloadGoogleReport = (data, startDate, endDate, summary = null) => {
+  if (!data || data.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const headers = [
+    "Campaign",
+    "Impressions",
+    "Clicks",
+    "CTR",
+    "CPC",
+    "Spend",
+    "Orders",
+    "Revenue",
+    "COGS",
+    "Gross ROAS",
+    "Net ROAS",
+    "Net Profit",
+    "Product Details",
+  ];
+
+  // Calculate aggregated totals for ROAS
+  const totalSpend = data.reduce((sum, row) => sum + (row.spend || 0), 0);
+  const totalRevenue = data.reduce(
+    (sum, row) => sum + (row.shopify_revenue || 0),
+    0
+  );
+  const totalCogs = data.reduce((sum, row) => sum + (row.shopify_cogs || 0), 0);
+  const totalNetProfit = data.reduce(
+    (sum, row) => sum + (row.net_profit || 0),
+    0
+  );
+
+  const aggregatedGrossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const aggregatedNetRoas = totalSpend > 0 ? totalNetProfit / totalSpend : 0;
+
+  // Process campaign data - fix field mapping
+  const csvData = data.map((row, index) => ({
+    Campaign: row.campaign_name || "",
+    Impressions: row.impressions > 0 ? row.impressions : "",
+    Clicks: row.clicks > 0 ? row.clicks : "",
+    CTR: row.ctr > 0 ? `${row.ctr.toFixed(2)}%` : "0.00%",
+    CPC: row.cpc > 0 ? `₹${row.cpc.toFixed(2)}` : "₹0.00",
+    Spend: `₹${(row.spend || 0).toFixed(2)}`,
+    Orders: row.shopify_orders || 0,
+    Revenue: `₹${(row.shopify_revenue || 0).toFixed(2)}`,
+    COGS: `₹${(row.shopify_cogs || 0).toFixed(2)}`,
+    "Gross ROAS": index === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+    "Net ROAS": index === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+    "Net Profit": `₹${(row.net_profit || 0).toFixed(2)}`,
+    "Product Details": row.product_details || "-",
+  }));
+
+  // Add summary section if available
+  let summaryData = [];
+  if (summary) {
+    summaryData = [
+      {}, // Empty row
+      {
+        Campaign: "=== SUMMARY ===",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "Total Spend",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: `₹${(summary.total_spend || 0).toFixed(2)}`,
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "Total Revenue",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: "",
+        Orders: "",
+        Revenue: `₹${(summary.total_revenue || 0).toFixed(2)}`,
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "Total Orders",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: "",
+        Orders: summary.total_orders || 0,
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "Net Profit",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": `₹${(summary.net_profit || 0).toFixed(2)}`,
+        "Product Details": "",
+      },
+      {
+        Campaign: "ROAS Summary",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": `${(summary.gross_roas || 0).toFixed(2)}x`,
+        "Net ROAS": `${(summary.net_roas || 0).toFixed(2)}x`,
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "Average CPC",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: `₹${(summary.average_cpc || 0).toFixed(2)}`,
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+      {
+        Campaign: "CTR",
+        Impressions: "",
+        Clicks: "",
+        CTR: `${(summary.ctr || 0).toFixed(2)}%`,
+        CPC: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Product Details": "",
+      },
+    ];
+  }
+
+  const csvContent = convertToCSV(csvData, headers);
+
+  const filename = `Google_Entity_Report_${startDate}_to_${endDate}.csv`;
+  downloadCSV(csvContent, filename);
+};
+
+const downloadMetaReport = (
+  metaHierarchy,
+  startDate,
+  endDate,
+  summary = null
+) => {
+  if (!metaHierarchy || Object.keys(metaHierarchy).length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const headers = [
+    "Type",
+    "Campaign Name",
+    "Adset Name",
+    "Ad Name",
+    "Impressions",
+    "Clicks",
+    "CTR",
+    "CPC",
+    "CPM",
+    "Spend",
+    "Orders",
+    "Revenue",
+    "COGS",
+    "Gross ROAS",
+    "Net ROAS",
+    "Net Profit",
+    "Add to Cart",
+    "Checkout Initiated",
+    "Product Details",
+  ];
+
+  const csvData = [];
+
+  // Calculate aggregated totals for ROAS across all campaigns
+  let totalSpend = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+  let totalNetProfit = 0;
+
+  Object.values(metaHierarchy).forEach((campaign) => {
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    totalSpend += campaignMetrics.totalSpend || 0;
+    totalRevenue += campaignMetrics.totalRevenue || 0;
+    totalCogs += campaignMetrics.totalCogs || 0;
+    totalNetProfit += campaignMetrics.netProfit || 0;
+  });
+
+  const aggregatedGrossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const aggregatedNetRoas = totalSpend > 0 ? totalNetProfit / totalSpend : 0;
+
+  let rowIndex = 0;
+  Object.values(metaHierarchy).forEach((campaign) => {
+    // Campaign level data
+    const campaignMetrics = calculateCampaignMetrics(campaign);
+    csvData.push({
+      Type: "Campaign",
+      "Campaign Name": campaign.campaign_name || "",
+      "Adset Name": "",
+      "Ad Name": "",
+      Impressions: campaignMetrics.totalImpressions || 0,
+      Clicks: campaignMetrics.totalClicks || 0,
+      CTR: `${(campaignMetrics.ctr || 0).toFixed(2)}%`,
+      CPC: `₹${(campaignMetrics.cpc || 0).toFixed(2)}`,
+      CPM: `₹${(campaignMetrics.cpm || 0).toFixed(2)}`,
+      Spend: `₹${(campaignMetrics.totalSpend || 0).toFixed(2)}`,
+      Orders: campaignMetrics.totalOrders || 0,
+      Revenue: `₹${(campaignMetrics.totalRevenue || 0).toFixed(2)}`,
+      COGS: `₹${(campaignMetrics.totalCogs || 0).toFixed(2)}`,
+      "Gross ROAS": rowIndex === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+      "Net ROAS": rowIndex === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+      "Net Profit": `₹${(campaignMetrics.netProfit || 0).toFixed(2)}`,
+      "Add to Cart": campaignMetrics.totalActions?.onsite_web_add_to_cart || 0,
+      "Checkout Initiated":
+        campaignMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+      "Product Details": campaignMetrics.productDetails || "-",
+    });
+    rowIndex++;
+
+    // Adset level data
+    Object.values(campaign.adsets || {}).forEach((adset) => {
+      const adsetMetrics = calculateAdsetMetrics(adset);
+      csvData.push({
+        Type: "Adset",
+        "Campaign Name": campaign.campaign_name || "",
+        "Adset Name": adset.adset_name || "",
+        "Ad Name": "",
+        Impressions: adsetMetrics.totalImpressions || 0,
+        Clicks: adsetMetrics.totalClicks || 0,
+        CTR: `${(adsetMetrics.ctr || 0).toFixed(2)}%`,
+        CPC: `₹${(adsetMetrics.cpc || 0).toFixed(2)}`,
+        CPM: `₹${(adsetMetrics.cpm || 0).toFixed(2)}`,
+        Spend: `₹${(adsetMetrics.totalSpend || 0).toFixed(2)}`,
+        Orders: adsetMetrics.totalOrders || 0,
+        Revenue: `₹${(adsetMetrics.totalRevenue || 0).toFixed(2)}`,
+        COGS: `₹${(adsetMetrics.totalCogs || 0).toFixed(2)}`,
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": `₹${(adsetMetrics.netProfit || 0).toFixed(2)}`,
+        "Add to Cart": adsetMetrics.totalActions?.onsite_web_add_to_cart || 0,
+        "Checkout Initiated":
+          adsetMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+        "Product Details": adsetMetrics.productDetails || "-",
+      });
+
+      // Ad level data
+      Object.values(adset.ads || {}).forEach((ad) => {
+        const adMetrics = calculateAdMetrics(ad);
+        csvData.push({
+          Type: "Ad",
+          "Campaign Name": campaign.campaign_name || "",
+          "Adset Name": adset.adset_name || "",
+          "Ad Name": ad.ad_name || "",
+          Impressions: adMetrics.totalImpressions || 0,
+          Clicks: adMetrics.totalClicks || 0,
+          CTR: `${(adMetrics.ctr || 0).toFixed(2)}%`,
+          CPC: `₹${(adMetrics.cpc || 0).toFixed(2)}`,
+          CPM: `₹${(adMetrics.cpm || 0).toFixed(2)}`,
+          Spend: `₹${(adMetrics.totalSpend || 0).toFixed(2)}`,
+          Orders: adMetrics.totalOrders || 0,
+          Revenue: `₹${(adMetrics.totalRevenue || 0).toFixed(2)}`,
+          COGS: `₹${(adMetrics.totalCogs || 0).toFixed(2)}`,
+          "Gross ROAS": "",
+          "Net ROAS": "",
+          "Net Profit": `₹${(adMetrics.netProfit || 0).toFixed(2)}`,
+          "Add to Cart": adMetrics.totalActions?.onsite_web_add_to_cart || 0,
+          "Checkout Initiated":
+            adMetrics.totalActions?.onsite_web_initiate_checkout || 0,
+          "Product Details": adMetrics.productDetails || "-",
+        });
+      });
+    });
+  });
+
+  // Add summary section if available
+  let summaryData = [];
+  if (summary) {
+    summaryData = [
+      {}, // Empty row
+      {
+        Type: "=== SUMMARY ===",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Total Spend",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: `₹${(summary.total_spend || 0).toFixed(2)}`,
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Total Revenue",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: `₹${(summary.total_revenue || 0).toFixed(2)}`,
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Total Orders",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: summary.total_orders || 0,
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Matched Orders",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: summary.matched_orders || 0,
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Unmatched Orders",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: summary.unmatched_orders || 0,
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Attribution Rate",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: `${(summary.attribution_rate || 0).toFixed(2)}%`,
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Net Profit",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": `₹${(summary.net_profit || 0).toFixed(2)}`,
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "ROAS Summary",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": `${(summary.gross_roas || 0).toFixed(2)}x`,
+        "Net ROAS": `${(summary.net_roas || 0).toFixed(2)}x`,
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "Average CPC",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: "",
+        CPC: `₹${(summary.average_cpc || 0).toFixed(2)}`,
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+      {
+        Type: "CTR",
+        "Campaign Name": "",
+        "Adset Name": "",
+        "Ad Name": "",
+        Impressions: "",
+        Clicks: "",
+        CTR: `${(summary.ctr || 0).toFixed(2)}%`,
+        CPC: "",
+        CPM: "",
+        Spend: "",
+        Orders: "",
+        Revenue: "",
+        COGS: "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Net Profit": "",
+        "Add to Cart": "",
+        "Checkout Initiated": "",
+        "Product Details": "",
+      },
+    ];
+  }
+
+  const csvContent = convertToCSV(csvData, headers);
+  const filename = `Meta_Entity_Report_${startDate}_to_${endDate}.csv`;
+  downloadCSV(csvContent, filename);
+};
+
+const downloadOrganicReport = (data, startDate, endDate, summary = null) => {
+  if (!data || data.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const headers = [
+    "Channel",
+    "Campaign",
+    "Revenue",
+    "COGS",
+    "Gross Profit",
+    "Net Profit",
+    "Gross ROAS",
+    "Net ROAS",
+    "Product Details",
+  ];
+
+  // Calculate aggregated totals for ROAS
+  const totalRevenue = data.reduce(
+    (sum, row) => sum + (row.shopify_revenue || 0),
+    0
+  );
+  const totalCogs = data.reduce((sum, row) => sum + (row.shopify_cogs || 0), 0);
+  const totalNetProfit = data.reduce(
+    (sum, row) => sum + (row.net_profit || 0),
+    0
+  );
+
+  // For organic, there's no ad spend, so ROAS is calculated differently
+  const aggregatedGrossRoas = totalCogs > 0 ? totalRevenue / totalCogs : 0; // Revenue per COGS
+  const aggregatedNetRoas = totalCogs > 0 ? totalNetProfit / totalCogs : 0; // Net profit per COGS
+
+  const csvData = data.map((row, index) => ({
+    Channel: row.channel || "",
+    Campaign: row.campaign_name || "",
+    Revenue: `₹${(row.shopify_revenue || 0).toFixed(2)}`,
+    COGS: `₹${(row.shopify_cogs || 0).toFixed(2)}`,
+    "Gross Profit": `₹${(
+      (row.shopify_revenue || 0) - (row.shopify_cogs || 0)
+    ).toFixed(2)}`,
+    "Net Profit": `₹${(row.net_profit || 0).toFixed(2)}`,
+    "Gross ROAS": index === 0 ? `${aggregatedGrossRoas.toFixed(2)}x` : "",
+    "Net ROAS": index === 0 ? `${aggregatedNetRoas.toFixed(2)}x` : "",
+    "Product Details": row.product_details || "-",
+  }));
+
+  // Add summary section if available
+  let summaryData = [];
+  if (summary) {
+    summaryData = [
+      {}, // Empty row
+      {
+        Channel: "=== SUMMARY ===",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Total Revenue",
+        Campaign: "",
+        Revenue: `₹${(summary.total_revenue || 0).toFixed(2)}`,
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Total COGS",
+        Campaign: "",
+        Revenue: "",
+        COGS: `₹${(summary.total_cogs || 0).toFixed(2)}`,
+        "Gross Profit": "",
+        "Net Profit": "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Total Orders",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": summary.total_orders || 0,
+      },
+      {
+        Channel: "Net Profit",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": `₹${(summary.net_profit || 0).toFixed(2)}`,
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Profit Margin",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": summary.profit_margin || "0%",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Attribution Rate",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": summary.attribution_rate || "0%",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Average Order Value",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": summary.average_order_value || "₹0.00",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": "",
+      },
+      {
+        Channel: "Total Items",
+        Campaign: "",
+        Revenue: "",
+        COGS: "",
+        "Gross Profit": "",
+        "Net Profit": "",
+        "Gross ROAS": "",
+        "Net ROAS": "",
+        "Product Details": summary.total_items || 0,
+      },
+    ];
+  }
+
+  const csvContent = convertToCSV(csvData, headers);
+  const filename = `Organic_Entity_Report_${startDate}_to_${endDate}.csv`;
+  downloadCSV(csvContent, filename);
+};
+
+// Calculate metrics for a campaign (used in download function)
+const calculateCampaignMetrics = (campaign) => {
+  let totalImpressions = 0;
+  let totalClicks = 0;
+  let totalSpend = 0;
+  let totalOrders = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+  let totalActions = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    onsite_web_initiate_checkout: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    offsite_pixel_initiate_checkout: 0,
+  };
+  let totalValues = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    initiate_checkout: 0,
+  };
+  const allSkus = [];
+
+  Object.values(campaign.adsets || {}).forEach((adset) => {
+    Object.values(adset.ads || {}).forEach((ad) => {
+      Object.values(ad.hourly_data || {}).forEach((hourData) => {
+        const metaData = hourData.meta_data || {};
+        const shopifyData = hourData.shopify_data || [];
+
+        totalImpressions += metaData.impressions || 0;
+        totalClicks += metaData.clicks || 0;
+        totalSpend += metaData.spend || 0;
+        totalOrders += shopifyData.length;
+        totalRevenue += shopifyData.reduce(
+          (sum, order) => sum + (order.total_amount || 0),
+          0
+        );
+        totalCogs += shopifyData.reduce(
+          (sum, order) => sum + (order.total_cogs || 0),
+          0
+        );
+
+        if (metaData.actions) {
+          Object.keys(totalActions).forEach((key) => {
+            totalActions[key] += metaData.actions[key] || 0;
+          });
+        }
+
+        if (metaData.values) {
+          Object.keys(totalValues).forEach((key) => {
+            totalValues[key] += metaData.values[key] || 0;
+          });
+        }
+
+        shopifyData.forEach((order) => {
+          if (order.line_items) {
+            order.line_items.forEach((item) => {
+              if (item.sku) allSkus.push(item.sku);
+            });
+          }
+        });
+      });
+    });
+  });
+
+  const netProfit = totalRevenue - totalCogs - totalSpend;
+  const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
+  const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+  const cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+
+  const uniqueSkus = [...new Set(allSkus)]; // Remove duplicates
+  const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
+  return {
+    totalImpressions,
+    totalClicks,
+    totalSpend,
+    totalOrders,
+    totalRevenue,
+    totalCogs,
+    netProfit,
+    grossRoas,
+    netRoas,
+    ctr,
+    cpc,
+    cpm,
+    totalActions,
+    totalValues,
+    productDetails: skuString,
+  };
+};
+
 const processOrganicData = (data) => {
   const processedData = [];
+  const organicAggregates = {};
 
   // Process organic data from hourly_data structure
   if (data.hourly_data) {
@@ -125,18 +1426,26 @@ const processOrganicData = (data) => {
             ? order.items.map((item) => item.sku)
             : []
         );
-        const uniqueSkus = [...new Set(skus)]; // Remove duplicates
-        const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
 
-        processedData.push({
-          date_start: new Date(hourData.hour).toISOString().split("T")[0],
-          channel: "organic",
-          campaign_name: "Organic Traffic",
-          shopify_revenue: totalRevenue,
-          shopify_cogs: totalCogs,
-          gross_roas: 0, // No ad spend for organic
-          net_profit: netProfit,
-          total_sku_quantity: hourData.orders.reduce(
+        const campaignName = "Organic Traffic";
+
+        // Initialize organic aggregate if not exists
+        if (!organicAggregates[campaignName]) {
+          organicAggregates[campaignName] = {
+            channel: "organic",
+            campaign_name: campaignName,
+            shopify_revenue: 0,
+            shopify_cogs: 0,
+            total_sku_quantity: 0,
+            all_skus: new Set(),
+          };
+        }
+
+        // Aggregate metrics
+        organicAggregates[campaignName].shopify_revenue += totalRevenue;
+        organicAggregates[campaignName].shopify_cogs += totalCogs;
+        organicAggregates[campaignName].total_sku_quantity +=
+          hourData.orders.reduce(
             (sum, order) =>
               sum +
               order.items.reduce(
@@ -144,10 +1453,38 @@ const processOrganicData = (data) => {
                 0
               ),
             0
-          ),
-          product_details: skuString,
-        });
+          );
+
+        // Collect SKUs
+        skus.forEach((sku) =>
+          organicAggregates[campaignName].all_skus.add(sku)
+        );
       }
+    });
+
+    // Convert aggregated data to processed data
+    Object.values(organicAggregates).forEach((campaign) => {
+      const totalRevenue = campaign.shopify_revenue;
+      const totalCogs = campaign.shopify_cogs;
+      const netProfit = totalRevenue - totalCogs;
+
+      // Convert SKU set to string
+      const skuString =
+        campaign.all_skus.size > 0
+          ? Array.from(campaign.all_skus).join(", ")
+          : "";
+
+      processedData.push({
+        channel: campaign.channel,
+        campaign_name: campaign.campaign_name,
+        shopify_revenue: totalRevenue,
+        shopify_cogs: totalCogs,
+        gross_roas: 0, // No ad spend for organic
+        net_roas: 0, // No ad spend for organic
+        net_profit: netProfit,
+        total_sku_quantity: campaign.total_sku_quantity,
+        product_details: skuString,
+      });
     });
   }
 
@@ -351,6 +1688,59 @@ const EntityReportLayer = () => {
     // Save active tab to sessionStorage
     if (typeof window !== "undefined") {
       sessionStorage.setItem("entityReportActiveTab", tabName);
+    }
+  };
+
+  // Check if there's data available for download
+  const hasData = () => {
+    if (activeTab === "meta") {
+      return data.metaHierarchy && Object.keys(data.metaHierarchy).length > 0;
+    }
+    return data[activeTab] && data[activeTab].length > 0;
+  };
+
+  // Handle download functionality
+  const handleDownload = async () => {
+    if (!hasData()) {
+      alert("No data available to download");
+      return;
+    }
+
+    const startDate = filters.startDate;
+    const endDate = filters.endDate;
+
+    try {
+      switch (activeTab) {
+        case "google":
+          await downloadGoogleReportExcel(
+            data.google,
+            startDate,
+            endDate,
+            data.googleSummary
+          );
+          break;
+        case "meta":
+          await downloadMetaReportExcel(
+            data.metaHierarchy,
+            startDate,
+            endDate,
+            data.metaSummary
+          );
+          break;
+        case "organic":
+          await downloadOrganicReportExcel(
+            data.organic,
+            startDate,
+            endDate,
+            data.organicSummary
+          );
+          break;
+        default:
+          alert("Invalid tab selected");
+      }
+    } catch (error) {
+      console.error("Error downloading Excel file:", error);
+      alert("Error downloading file. Please try again.");
     }
   };
 
@@ -609,6 +1999,196 @@ const EntityReportLayer = () => {
         });
       });
       const uniqueSkus = [...new Set(allSkus)]; // Remove duplicates
+      const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
+      return {
+        totalImpressions,
+        totalClicks,
+        totalSpend,
+        totalOrders,
+        totalRevenue,
+        totalCogs,
+        netProfit,
+        grossRoas,
+        netRoas,
+        ctr,
+        cpc,
+        cpm,
+        totalActions,
+        totalValues,
+        productDetails: skuString,
+      };
+    };
+
+    // Calculate metrics for an adset (used in download function)
+    const calculateAdsetMetrics = (adset) => {
+      let totalImpressions = 0;
+      let totalClicks = 0;
+      let totalSpend = 0;
+      let totalOrders = 0;
+      let totalRevenue = 0;
+      let totalCogs = 0;
+      let totalActions = {
+        onsite_web_purchase: 0,
+        onsite_web_add_to_cart: 0,
+        onsite_web_initiate_checkout: 0,
+        offsite_pixel_purchase: 0,
+        offsite_pixel_add_to_cart: 0,
+        offsite_pixel_initiate_checkout: 0,
+      };
+      let totalValues = {
+        onsite_web_purchase: 0,
+        onsite_web_add_to_cart: 0,
+        offsite_pixel_purchase: 0,
+        offsite_pixel_add_to_cart: 0,
+        initiate_checkout: 0,
+      };
+      const skus = [];
+
+      Object.values(adset.ads || {}).forEach((ad) => {
+        Object.values(ad.hourly_data || {}).forEach((hourData) => {
+          const metaData = hourData.meta_data || {};
+          const shopifyData = hourData.shopify_data || [];
+
+          totalImpressions += metaData.impressions || 0;
+          totalClicks += metaData.clicks || 0;
+          totalSpend += metaData.spend || 0;
+          totalOrders += shopifyData.length;
+          totalRevenue += shopifyData.reduce(
+            (sum, order) => sum + (order.total_amount || 0),
+            0
+          );
+          totalCogs += shopifyData.reduce(
+            (sum, order) => sum + (order.total_cogs || 0),
+            0
+          );
+
+          if (metaData.actions) {
+            Object.keys(totalActions).forEach((key) => {
+              totalActions[key] += metaData.actions[key] || 0;
+            });
+          }
+
+          if (metaData.values) {
+            Object.keys(totalValues).forEach((key) => {
+              totalValues[key] += metaData.values[key] || 0;
+            });
+          }
+
+          shopifyData.forEach((order) => {
+            if (order.line_items) {
+              order.line_items.forEach((item) => {
+                if (item.sku) skus.push(item.sku);
+              });
+            }
+          });
+        });
+      });
+
+      const netProfit = totalRevenue - totalCogs - totalSpend;
+      const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+      const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
+      const ctr =
+        totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+      const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+      const cpm =
+        totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+
+      const uniqueSkus = [...new Set(skus)];
+      const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
+      return {
+        totalImpressions,
+        totalClicks,
+        totalSpend,
+        totalOrders,
+        totalRevenue,
+        totalCogs,
+        netProfit,
+        grossRoas,
+        netRoas,
+        ctr,
+        cpc,
+        cpm,
+        totalActions,
+        totalValues,
+        productDetails: skuString,
+      };
+    };
+
+    // Calculate metrics for an ad (used in download function)
+    const calculateAdMetrics = (ad) => {
+      let totalImpressions = 0;
+      let totalClicks = 0;
+      let totalSpend = 0;
+      let totalOrders = 0;
+      let totalRevenue = 0;
+      let totalCogs = 0;
+      let totalActions = {
+        onsite_web_purchase: 0,
+        onsite_web_add_to_cart: 0,
+        onsite_web_initiate_checkout: 0,
+        offsite_pixel_purchase: 0,
+        offsite_pixel_add_to_cart: 0,
+        offsite_pixel_initiate_checkout: 0,
+      };
+      let totalValues = {
+        onsite_web_purchase: 0,
+        onsite_web_add_to_cart: 0,
+        offsite_pixel_purchase: 0,
+        offsite_pixel_add_to_cart: 0,
+        initiate_checkout: 0,
+      };
+      const skus = [];
+
+      Object.values(ad.hourly_data || {}).forEach((hourData) => {
+        const metaData = hourData.meta_data || {};
+        const shopifyData = hourData.shopify_data || [];
+
+        totalImpressions += metaData.impressions || 0;
+        totalClicks += metaData.clicks || 0;
+        totalSpend += metaData.spend || 0;
+        totalOrders += shopifyData.length;
+        totalRevenue += shopifyData.reduce(
+          (sum, order) => sum + (order.total_amount || 0),
+          0
+        );
+        totalCogs += shopifyData.reduce(
+          (sum, order) => sum + (order.total_cogs || 0),
+          0
+        );
+
+        if (metaData.actions) {
+          Object.keys(totalActions).forEach((key) => {
+            totalActions[key] += metaData.actions[key] || 0;
+          });
+        }
+
+        if (metaData.values) {
+          Object.keys(totalValues).forEach((key) => {
+            totalValues[key] += metaData.values[key] || 0;
+          });
+        }
+
+        shopifyData.forEach((order) => {
+          if (order.line_items) {
+            order.line_items.forEach((item) => {
+              if (item.sku) skus.push(item.sku);
+            });
+          }
+        });
+      });
+
+      const netProfit = totalRevenue - totalCogs - totalSpend;
+      const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+      const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
+      const ctr =
+        totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+      const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+      const cpm =
+        totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+
+      const uniqueSkus = [...new Set(skus)];
       const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
 
       return {
@@ -1087,6 +2667,16 @@ const EntityReportLayer = () => {
                 <Icon icon="solar:magnifer-linear" className="me-1" />
               )}
               {loading ? "Loading..." : "Fetch Data"}
+            </button>
+          </div>
+          <div className="col-md-2">
+            <button
+              className="btn btn-success w-100"
+              onClick={() => handleDownload()}
+              disabled={loading || !hasData()}
+            >
+              <Icon icon="solar:download-linear" className="me-1" />
+              Download Excel
             </button>
           </div>
         </div>
