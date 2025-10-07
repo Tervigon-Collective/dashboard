@@ -937,20 +937,6 @@ const EntityReportLayer = () => {
               {loading ? "Loading..." : "Fetch Data"}
             </button>
           </div>
-          <div className="col-md-2">
-            <button
-              className="btn btn-success w-100"
-              onClick={() => {
-                fetchData("google");
-                fetchData("meta");
-                fetchData("organic");
-              }}
-              disabled={loading}
-            >
-              <Icon icon="solar:refresh-bold" className="me-1" />
-              Fetch All Reports
-            </button>
-          </div>
         </div>
 
         {/* Tabs */}
