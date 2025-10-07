@@ -165,6 +165,18 @@ const EntityReportLayer = () => {
   // Initialize state with sessionStorage data if available
   const getInitialData = () => {
     if (typeof window !== "undefined") {
+      // Check if this is a page refresh by looking for a special flag
+      const isPageRefresh = sessionStorage.getItem("pageRefreshed") === "true";
+
+      if (isPageRefresh) {
+        // Clear sessionStorage on page refresh
+        sessionStorage.removeItem("entityReportData");
+        sessionStorage.removeItem("entityReportFilters");
+        sessionStorage.removeItem("entityReportActiveTab");
+        sessionStorage.removeItem("pageRefreshed");
+        console.log("Page refreshed - cleared sessionStorage");
+      }
+
       const savedData = sessionStorage.getItem("entityReportData");
       const savedFilters = sessionStorage.getItem("entityReportFilters");
       const savedTab = sessionStorage.getItem("entityReportActiveTab");
@@ -207,6 +219,18 @@ const EntityReportLayer = () => {
         // Data is already loaded from getInitialData, no need to fetch again
         console.log("Restored data from sessionStorage");
       }
+
+      // Set up beforeunload listener to detect refresh
+      const handleBeforeUnload = () => {
+        sessionStorage.setItem("pageRefreshed", "true");
+      };
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
+
+      // Cleanup
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
     }
   }, []);
 
