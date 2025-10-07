@@ -136,13 +136,18 @@ const EntityReportLayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState({});
-  const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
-  const [expandedAdsets, setExpandedAdsets] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
 
-  // Date filters
+  // Date filters - set default to current date
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
   const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
+    startDate: getCurrentDate(),
+    endDate: getCurrentDate(),
   });
 
   const fetchData = async (reportType) => {
@@ -213,6 +218,9 @@ const EntityReportLayer = () => {
             }
           : {}),
       }));
+
+      // Reset pagination when new data is loaded
+      setCurrentPage(1);
     } catch (err) {
       setError(err.message || `Failed to fetch ${reportType} report`);
       console.error(`${reportType} report error:`, err);
@@ -233,6 +241,8 @@ const EntityReportLayer = () => {
     // Clear data when switching tabs to avoid confusion
     setData({});
     setError(null);
+    // Reset pagination when switching tabs
+    setCurrentPage(1);
   };
 
   const formatCurrency = (amount) => {
@@ -255,89 +265,152 @@ const EntityReportLayer = () => {
     return `${numericValue.toFixed(2)}%`;
   };
 
-  const renderGoogleAdsTable = () => {
-    const googleData = data.google || [];
+  // Pagination helper functions
+  const getPaginatedData = (dataArray) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return dataArray.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = (dataArray) => {
+    return Math.ceil(dataArray.length / itemsPerPage);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const renderPagination = (dataArray) => {
+    const totalPages = getTotalPages(dataArray);
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <li
+          key={i}
+          className={`page-item ${currentPage === i ? "active" : ""}`}
+        >
+          <button className="page-link" onClick={() => handlePageChange(i)}>
+            {i}
+          </button>
+        </li>
+      );
+    }
 
     return (
-      <div className="table-responsive">
-        <table className="table table-hover">
-          <thead className="table-light">
-            <tr>
-              <th>Date</th>
-              <th>Campaign</th>
-              <th>Impressions</th>
-              <th>Clicks</th>
-              <th>CTR</th>
-              <th>Spend</th>
-              <th>CPC</th>
-              <th>Orders</th>
-              <th>Revenue</th>
-              <th>Net Profit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {googleData.map((row, index) => (
-              <tr key={index}>
-                <td>{row.date_start}</td>
-                <td>
-                  <span className="badge bg-primary-subtle text-primary">
-                    {row.campaign_name}
-                  </span>
-                </td>
-                <td>{formatNumber(row.impressions)}</td>
-                <td>{formatNumber(row.clicks)}</td>
-                <td>{formatPercentage(row.ctr)}</td>
-                <td className="fw-semibold">{formatCurrency(row.spend)}</td>
-                <td>{formatCurrency(row.cpc)}</td>
-                <td>{formatNumber(row.shopify_orders)}</td>
-                <td className="fw-semibold text-success">
-                  {formatCurrency(row.shopify_revenue)}
-                </td>
-                <td
-                  className={`fw-semibold ${
-                    row.net_profit >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {formatCurrency(row.net_profit)}
-                </td>
+      <nav aria-label="Table pagination">
+        <ul className="pagination justify-content-center">
+          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <Icon icon="solar:arrow-left-bold" />
+            </button>
+          </li>
+          {pages}
+          <li
+            className={`page-item ${
+              currentPage === totalPages ? "disabled" : ""
+            }`}
+          >
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <Icon icon="solar:arrow-right-bold" />
+            </button>
+          </li>
+        </ul>
+        <div className="text-center text-muted">
+          Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+          {Math.min(currentPage * itemsPerPage, dataArray.length)} of{" "}
+          {dataArray.length} entries
+        </div>
+      </nav>
+    );
+  };
+
+  const renderGoogleAdsTable = () => {
+    const googleData = data.google || [];
+    const paginatedData = getPaginatedData(googleData);
+
+    return (
+      <>
+        <div className="table-responsive">
+          <table className="table table-hover">
+            <thead className="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Campaign</th>
+                <th>Impressions</th>
+                <th>Clicks</th>
+                <th>CTR</th>
+                <th>Spend</th>
+                <th>CPC</th>
+                <th>Orders</th>
+                <th>Revenue</th>
+                <th>Net Profit</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {paginatedData.map((row, index) => (
+                <tr key={index}>
+                  <td>{row.date_start}</td>
+                  <td>
+                    <span className="badge bg-primary-subtle text-primary">
+                      {row.campaign_name}
+                    </span>
+                  </td>
+                  <td>{formatNumber(row.impressions)}</td>
+                  <td>{formatNumber(row.clicks)}</td>
+                  <td>{formatPercentage(row.ctr)}</td>
+                  <td className="fw-semibold">{formatCurrency(row.spend)}</td>
+                  <td>{formatCurrency(row.cpc)}</td>
+                  <td>{formatNumber(row.shopify_orders)}</td>
+                  <td className="fw-semibold text-success">
+                    {formatCurrency(row.shopify_revenue)}
+                  </td>
+                  <td
+                    className={`fw-semibold ${
+                      row.net_profit >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {formatCurrency(row.net_profit)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {renderPagination(googleData)}
+      </>
     );
   };
 
   const renderMetaHierarchicalTable = () => {
     const metaHierarchyData = data.metaHierarchy || {};
 
-    const toggleCampaign = (campaignId) => {
-      const newExpanded = new Set(expandedCampaigns);
-      if (newExpanded.has(campaignId)) {
-        newExpanded.delete(campaignId);
-        // Also collapse all adsets for this campaign
-        const newExpandedAdsets = new Set(expandedAdsets);
-        Object.keys(metaHierarchyData[campaignId]?.adsets || {}).forEach(
-          (adsetId) => {
-            newExpandedAdsets.delete(adsetId);
-          }
-        );
-        setExpandedAdsets(newExpandedAdsets);
-      } else {
-        newExpanded.add(campaignId);
-      }
-      setExpandedCampaigns(newExpanded);
-    };
+    // Convert object to array for pagination
+    const campaignsArray = Object.entries(metaHierarchyData).map(
+      ([campaignId, campaign]) => ({
+        campaignId,
+        ...campaign,
+      })
+    );
 
-    const toggleAdset = (adsetId) => {
-      const newExpanded = new Set(expandedAdsets);
-      if (newExpanded.has(adsetId)) {
-        newExpanded.delete(adsetId);
-      } else {
-        newExpanded.add(adsetId);
-      }
-      setExpandedAdsets(newExpanded);
-    };
+    const paginatedCampaigns = getPaginatedData(campaignsArray);
 
     const calculateCampaignMetrics = (campaign) => {
       let totalImpressions = 0;
@@ -424,211 +497,51 @@ const EntityReportLayer = () => {
       };
     };
 
-    const calculateAdsetMetrics = (adset) => {
-      let totalImpressions = 0;
-      let totalClicks = 0;
-      let totalSpend = 0;
-      let totalOrders = 0;
-      let totalRevenue = 0;
-      let totalCogs = 0;
-      let totalActions = {
-        onsite_web_purchase: 0,
-        onsite_web_add_to_cart: 0,
-        onsite_web_initiate_checkout: 0,
-        offsite_pixel_purchase: 0,
-        offsite_pixel_add_to_cart: 0,
-        offsite_pixel_initiate_checkout: 0,
-      };
-      let totalValues = {
-        onsite_web_purchase: 0,
-        onsite_web_add_to_cart: 0,
-        offsite_pixel_purchase: 0,
-        offsite_pixel_add_to_cart: 0,
-        initiate_checkout: 0,
-      };
-
-      Object.values(adset.ads || {}).forEach((ad) => {
-        Object.values(ad.hourly_data || {}).forEach((hourData) => {
-          const metaData = hourData.meta_data || {};
-          const shopifyData = hourData.shopify_data || [];
-
-          // Use pre-calculated values from API
-          totalImpressions += metaData.impressions || 0;
-          totalClicks += metaData.clicks || 0;
-          totalSpend += metaData.spend || 0;
-          totalOrders += shopifyData.length;
-          totalRevenue += shopifyData.reduce(
-            (sum, order) => sum + (order.total_amount || 0),
-            0
-          );
-          totalCogs += shopifyData.reduce(
-            (sum, order) => sum + (order.total_cogs || 0),
-            0
-          );
-
-          // Aggregate actions and values
-          if (metaData.actions) {
-            Object.keys(totalActions).forEach((key) => {
-              totalActions[key] += metaData.actions[key] || 0;
-            });
-          }
-          if (metaData.values) {
-            Object.keys(totalValues).forEach((key) => {
-              totalValues[key] += metaData.values[key] || 0;
-            });
-          }
-        });
-      });
-
-      const netProfit = totalRevenue - totalCogs - totalSpend;
-      const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
-      const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
-      const ctr =
-        totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-      const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
-      const cpm =
-        totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
-
-      return {
-        totalImpressions,
-        totalClicks,
-        totalSpend,
-        totalOrders,
-        totalRevenue,
-        totalCogs,
-        netProfit,
-        grossRoas,
-        netRoas,
-        ctr,
-        cpc,
-        cpm,
-        totalActions,
-        totalValues,
-      };
-    };
-
-    const calculateAdMetrics = (ad) => {
-      let totalImpressions = 0;
-      let totalClicks = 0;
-      let totalSpend = 0;
-      let totalOrders = 0;
-      let totalRevenue = 0;
-      let totalCogs = 0;
-      let totalActions = {
-        onsite_web_purchase: 0,
-        onsite_web_add_to_cart: 0,
-        onsite_web_initiate_checkout: 0,
-        offsite_pixel_purchase: 0,
-        offsite_pixel_add_to_cart: 0,
-        offsite_pixel_initiate_checkout: 0,
-      };
-      let totalValues = {
-        onsite_web_purchase: 0,
-        onsite_web_add_to_cart: 0,
-        offsite_pixel_purchase: 0,
-        offsite_pixel_add_to_cart: 0,
-        initiate_checkout: 0,
-      };
-
-      Object.values(ad.hourly_data || {}).forEach((hourData) => {
-        const metaData = hourData.meta_data || {};
-        const shopifyData = hourData.shopify_data || [];
-
-        // Use pre-calculated values from API
-        totalImpressions += metaData.impressions || 0;
-        totalClicks += metaData.clicks || 0;
-        totalSpend += metaData.spend || 0;
-        totalOrders += shopifyData.length;
-        totalRevenue += shopifyData.reduce(
-          (sum, order) => sum + (order.total_amount || 0),
-          0
-        );
-        totalCogs += shopifyData.reduce(
-          (sum, order) => sum + (order.total_cogs || 0),
-          0
-        );
-
-        // Aggregate actions and values
-        if (metaData.actions) {
-          Object.keys(totalActions).forEach((key) => {
-            totalActions[key] += metaData.actions[key] || 0;
-          });
-        }
-        if (metaData.values) {
-          Object.keys(totalValues).forEach((key) => {
-            totalValues[key] += metaData.values[key] || 0;
-          });
-        }
-      });
-
-      const netProfit = totalRevenue - totalCogs - totalSpend;
-      const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
-      const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
-      const ctr =
-        totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-      const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
-      const cpm =
-        totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
-
-      return {
-        totalImpressions,
-        totalClicks,
-        totalSpend,
-        totalOrders,
-        totalRevenue,
-        totalCogs,
-        netProfit,
-        grossRoas,
-        netRoas,
-        ctr,
-        cpc,
-        cpm,
-        totalActions,
-        totalValues,
-      };
-    };
-
     return (
-      <div className="table-responsive">
-        <table className="table table-hover">
-          <thead className="table-light">
-            <tr>
-              <th style={{ width: "30px" }}></th>
-              <th>Type</th>
-              <th>Name</th>
-              <th>Impressions</th>
-              <th>Clicks</th>
-              <th>CTR</th>
-              <th>Spend</th>
-              <th>CPC</th>
-              <th>CPM</th>
-              <th>Orders</th>
-              <th>Revenue</th>
-              <th>Gross ROAS</th>
-              <th>Net ROAS</th>
-              <th>Net Profit</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(metaHierarchyData).map(([campaignId, campaign]) => {
-              const campaignMetrics = calculateCampaignMetrics(campaign);
-              const isCampaignExpanded = expandedCampaigns.has(campaignId);
+      <>
+        <div className="table-responsive">
+          <table className="table table-hover">
+            <thead className="table-light">
+              <tr>
+                <th style={{ width: "30px" }}></th>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Impressions</th>
+                <th>Clicks</th>
+                <th>CTR</th>
+                <th>Spend</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Orders</th>
+                <th>Revenue</th>
+                <th>Gross ROAS</th>
+                <th>Net ROAS</th>
+                <th>Net Profit</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedCampaigns.map((campaign) => {
+                const campaignMetrics = calculateCampaignMetrics(campaign);
 
-              return (
-                <React.Fragment key={campaignId}>
-                  {/* Campaign Row */}
+                return (
                   <tr
+                    key={campaign.campaignId}
                     className="table-primary"
                     style={{ cursor: "pointer" }}
-                    onClick={() => toggleCampaign(campaignId)}
+                    onClick={() => {
+                      // Navigate to campaign details page
+                      const params = new URLSearchParams({
+                        campaign: campaign.campaign_name,
+                        campaignId: campaign.campaignId,
+                        startDate: filters.startDate,
+                        endDate: filters.endDate,
+                      });
+                      router.push(`/campaign-details?${params.toString()}`);
+                    }}
                   >
                     <td>
-                      <i
-                        className={`fas fa-chevron-${
-                          isCampaignExpanded ? "down" : "right"
-                        }`}
-                      ></i>
+                      <Icon icon="solar:arrow-right-bold" />
                     </td>
                     <td>
                       <span className="badge bg-primary">Campaign</span>
@@ -685,241 +598,70 @@ const EntityReportLayer = () => {
                       </small>
                     </td>
                   </tr>
-
-                  {/* Adset Rows */}
-                  {isCampaignExpanded &&
-                    Object.entries(campaign.adsets || {}).map(
-                      ([adsetId, adset]) => {
-                        const adsetMetrics = calculateAdsetMetrics(adset);
-                        const isAdsetExpanded = expandedAdsets.has(adsetId);
-
-                        return (
-                          <React.Fragment key={adsetId}>
-                            {/* Adset Row */}
-                            <tr
-                              className="table-info"
-                              style={{ cursor: "pointer", paddingLeft: "20px" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleAdset(adsetId);
-                              }}
-                            >
-                              <td style={{ paddingLeft: "30px" }}>
-                                <i
-                                  className={`fas fa-chevron-${
-                                    isAdsetExpanded ? "down" : "right"
-                                  }`}
-                                ></i>
-                              </td>
-                              <td>
-                                <span className="badge bg-info">Adset</span>
-                              </td>
-                              <td
-                                className="fw-semibold"
-                                style={{ paddingLeft: "20px" }}
-                              >
-                                {adset.adset_name}
-                              </td>
-                              <td>
-                                {formatNumber(adsetMetrics.totalImpressions)}
-                              </td>
-                              <td>{formatNumber(adsetMetrics.totalClicks)}</td>
-                              <td>{formatPercentage(adsetMetrics.ctr)}</td>
-                              <td className="fw-semibold">
-                                {formatCurrency(adsetMetrics.totalSpend)}
-                              </td>
-                              <td>{formatCurrency(adsetMetrics.cpc)}</td>
-                              <td>{formatCurrency(adsetMetrics.cpm)}</td>
-                              <td>{formatNumber(adsetMetrics.totalOrders)}</td>
-                              <td className="fw-semibold text-success">
-                                {formatCurrency(adsetMetrics.totalRevenue)}
-                              </td>
-                              <td className="fw-semibold">
-                                <span
-                                  className={`badge ${
-                                    adsetMetrics.grossRoas >= 2
-                                      ? "bg-success-subtle text-success"
-                                      : "bg-warning-subtle text-warning"
-                                  }`}
-                                >
-                                  {adsetMetrics.grossRoas?.toFixed(2)}x
-                                </span>
-                              </td>
-                              <td className="fw-semibold">
-                                <span
-                                  className={`badge ${
-                                    adsetMetrics.netRoas >= 2
-                                      ? "bg-success-subtle text-success"
-                                      : "bg-warning-subtle text-warning"
-                                  }`}
-                                >
-                                  {adsetMetrics.netRoas?.toFixed(2)}x
-                                </span>
-                              </td>
-                              <td
-                                className={`fw-semibold ${
-                                  adsetMetrics.netProfit >= 0
-                                    ? "text-success"
-                                    : "text-danger"
-                                }`}
-                              >
-                                {formatCurrency(adsetMetrics.netProfit)}
-                              </td>
-                              <td>
-                                <small className="text-muted">
-                                  Purchases:{" "}
-                                  {adsetMetrics.totalActions
-                                    .onsite_web_purchase +
-                                    adsetMetrics.totalActions
-                                      .offsite_pixel_purchase}
-                                </small>
-                              </td>
-                            </tr>
-
-                            {/* Ad Rows */}
-                            {isAdsetExpanded &&
-                              Object.entries(adset.ads || {}).map(
-                                ([adId, ad]) => {
-                                  const adMetrics = calculateAdMetrics(ad);
-
-                                  return (
-                                    <tr key={adId} className="table-light">
-                                      <td style={{ paddingLeft: "60px" }}></td>
-                                      <td>
-                                        <span className="badge bg-secondary">
-                                          Ad
-                                        </span>
-                                      </td>
-                                      <td style={{ paddingLeft: "40px" }}>
-                                        {ad.ad_name}
-                                      </td>
-                                      <td>
-                                        {formatNumber(
-                                          adMetrics.totalImpressions
-                                        )}
-                                      </td>
-                                      <td>
-                                        {formatNumber(adMetrics.totalClicks)}
-                                      </td>
-                                      <td>{formatPercentage(adMetrics.ctr)}</td>
-                                      <td className="fw-semibold">
-                                        {formatCurrency(adMetrics.totalSpend)}
-                                      </td>
-                                      <td>{formatCurrency(adMetrics.cpc)}</td>
-                                      <td>{formatCurrency(adMetrics.cpm)}</td>
-                                      <td>
-                                        {formatNumber(adMetrics.totalOrders)}
-                                      </td>
-                                      <td className="fw-semibold text-success">
-                                        {formatCurrency(adMetrics.totalRevenue)}
-                                      </td>
-                                      <td className="fw-semibold">
-                                        <span
-                                          className={`badge ${
-                                            adMetrics.grossRoas >= 2
-                                              ? "bg-success-subtle text-success"
-                                              : "bg-warning-subtle text-warning"
-                                          }`}
-                                        >
-                                          {adMetrics.grossRoas?.toFixed(2)}x
-                                        </span>
-                                      </td>
-                                      <td className="fw-semibold">
-                                        <span
-                                          className={`badge ${
-                                            adMetrics.netRoas >= 2
-                                              ? "bg-success-subtle text-success"
-                                              : "bg-warning-subtle text-warning"
-                                          }`}
-                                        >
-                                          {adMetrics.netRoas?.toFixed(2)}x
-                                        </span>
-                                      </td>
-                                      <td
-                                        className={`fw-semibold ${
-                                          adMetrics.netProfit >= 0
-                                            ? "text-success"
-                                            : "text-danger"
-                                        }`}
-                                      >
-                                        {formatCurrency(adMetrics.netProfit)}
-                                      </td>
-                                      <td>
-                                        <small className="text-muted">
-                                          Purchases:{" "}
-                                          {adMetrics.totalActions
-                                            .onsite_web_purchase +
-                                            adMetrics.totalActions
-                                              .offsite_pixel_purchase}
-                                        </small>
-                                      </td>
-                                    </tr>
-                                  );
-                                }
-                              )}
-                          </React.Fragment>
-                        );
-                      }
-                    )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {renderPagination(campaignsArray)}
+      </>
     );
   };
 
   const renderOrganicTable = () => {
     const organicData = data.organic || [];
+    const paginatedData = getPaginatedData(organicData);
 
     return (
-      <div className="table-responsive">
-        <table className="table table-hover">
-          <thead className="table-light">
-            <tr>
-              <th>Date</th>
-              <th>Channel</th>
-              <th>Campaign</th>
-              <th>Revenue</th>
-              <th>COGS</th>
-              <th>Net Profit</th>
-              <th>Quantity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {organicData.map((row, index) => (
-              <tr key={index}>
-                <td>{row.date_start}</td>
-                <td>
-                  <span className="badge bg-success-subtle text-success">
-                    {row.channel}
-                  </span>
-                </td>
-                <td>
-                  <span className="badge bg-primary-subtle text-primary">
-                    {row.campaign_name}
-                  </span>
-                </td>
-                <td className="fw-semibold text-success">
-                  {formatCurrency(row.shopify_revenue)}
-                </td>
-                <td className="fw-semibold">
-                  {formatCurrency(row.shopify_cogs)}
-                </td>
-                <td
-                  className={`fw-semibold ${
-                    row.net_profit >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {formatCurrency(row.net_profit)}
-                </td>
-                <td>{formatNumber(row.total_sku_quantity)}</td>
+      <>
+        <div className="table-responsive">
+          <table className="table table-hover">
+            <thead className="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Channel</th>
+                <th>Campaign</th>
+                <th>Revenue</th>
+                <th>COGS</th>
+                <th>Net Profit</th>
+                <th>Quantity</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {paginatedData.map((row, index) => (
+                <tr key={index}>
+                  <td>{row.date_start}</td>
+                  <td>
+                    <span className="badge bg-success-subtle text-success">
+                      {row.channel}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="badge bg-primary-subtle text-primary">
+                      {row.campaign_name}
+                    </span>
+                  </td>
+                  <td className="fw-semibold text-success">
+                    {formatCurrency(row.shopify_revenue)}
+                  </td>
+                  <td className="fw-semibold">
+                    {formatCurrency(row.shopify_cogs)}
+                  </td>
+                  <td
+                    className={`fw-semibold ${
+                      row.net_profit >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {formatCurrency(row.net_profit)}
+                  </td>
+                  <td>{formatNumber(row.total_sku_quantity)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {renderPagination(organicData)}
+      </>
     );
   };
 
