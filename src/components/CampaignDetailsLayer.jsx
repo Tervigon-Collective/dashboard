@@ -221,7 +221,6 @@ const CampaignDetailsLayer = () => {
             {data.map((row, index) => (
               <tr
                 key={index}
-                className="table-info"
                 style={{ cursor: "pointer" }}
                 onClick={() => {
                   // Navigate to adset details page

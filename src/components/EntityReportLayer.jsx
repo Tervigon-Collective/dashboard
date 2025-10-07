@@ -661,7 +661,6 @@ const EntityReportLayer = () => {
                 return (
                   <tr
                     key={campaign.campaignId}
-                    className="table-primary"
                     style={{ cursor: "pointer" }}
                     onClick={() => {
                       // Navigate to campaign details page
