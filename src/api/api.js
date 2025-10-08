@@ -31,40 +31,42 @@ export const fetchProductMetrics = async () => {
   }
 };
 
-// Analytics API functions
-export const fetchGoogleAdsReport = async (params = {}) => {
+// Entity Report API functions
+export const fetchGoogleEntityReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
     const response = await apiClient.get(
-      `/api/google_ads_report?${queryParams}`
+      `/api/google_entity_report?${queryParams}`
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching Google Ads report:", error);
+    console.error("Error fetching Google Entity report:", error);
     throw error;
   }
 };
 
-export const fetchMetaAdsReport = async (params = {}) => {
+export const fetchMetaEntityReportHierarchy = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
-    const response = await apiClient.get(`/api/meta_ads_report?${queryParams}`);
+    const response = await apiClient.get(
+      `/api/meta_entity_report_hierarchy?${queryParams}`
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching Meta Ads report:", error);
+    console.error("Error fetching Meta Entity report hierarchy:", error);
     throw error;
   }
 };
 
-export const fetchOrganicAttributionReport = async (params = {}) => {
+export const fetchOrganicEntityReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
     const response = await apiClient.get(
-      `/api/organic_attribution_report?${queryParams}`
+      `/api/organic_entity_report?${queryParams}`
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching Organic Attribution report:", error);
+    console.error("Error fetching Organic Entity report:", error);
     throw error;
   }
 };

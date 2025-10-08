@@ -4,27 +4,30 @@ import { Icon } from "@iconify/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { fetchMetaEntityReportHierarchy } from "../api/api";
 
-const CampaignDetailsLayer = () => {
+const AdsetDetailsLayer = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [data, setData] = useState([]);
-  const [campaignData, setCampaignData] = useState(null);
+  const [adsetData, setAdsetData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Get parameters from URL
   const campaignName = searchParams.get("campaign");
+  const campaignId = searchParams.get("campaignId");
+  const adsetName = searchParams.get("adset");
+  const adsetId = searchParams.get("adsetId");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
   useEffect(() => {
-    if (campaignName && startDate && endDate) {
-      fetchAdsetData();
+    if (campaignName && adsetName && startDate && endDate) {
+      fetchAdData();
     }
-  }, [campaignName, startDate, endDate]);
+  }, [campaignName, adsetName, startDate, endDate]);
 
-  const fetchAdsetData = async () => {
+  const fetchAdData = async () => {
     setLoading(true);
     setError(null);
 
@@ -36,34 +39,39 @@ const CampaignDetailsLayer = () => {
       });
 
       if (response.success && response.data) {
-        // Find the specific campaign data
-        const campaignId = searchParams.get("campaignId");
+        // Find the specific campaign and adset data
         const campaign = response.data[campaignId];
 
-        if (campaign) {
-          setCampaignData(campaign);
+        if (campaign && campaign.adsets) {
+          const adset = campaign.adsets[adsetId];
 
-          // Process adset data for the table
-          const adsetData = [];
-          Object.values(campaign.adsets || {}).forEach((adset) => {
-            const adsetMetrics = calculateAdsetMetrics(adset);
-            adsetData.push({
-              adset_id: adset.adset_id,
-              adset_name: adset.adset_name,
-              ...adsetMetrics,
+          if (adset) {
+            setAdsetData(adset);
+
+            // Process ad data for the table
+            const adData = [];
+            Object.values(adset.ads || {}).forEach((ad) => {
+              const adMetrics = calculateAdMetrics(ad);
+              adData.push({
+                ad_id: ad.ad_id,
+                ad_name: ad.ad_name,
+                ...adMetrics,
+              });
             });
-          });
 
-          setData(adsetData);
+            setData(adData);
+          } else {
+            setError("Adset not found");
+          }
         } else {
           setError("Campaign not found");
         }
       } else {
-        setError("Failed to fetch campaign data");
+        setError("Failed to fetch adset data");
       }
     } catch (err) {
-      setError(err.message || "Failed to fetch adset data");
-      console.error("Adset data error:", err);
+      setError(err.message || "Failed to fetch ad data");
+      console.error("Ad data error:", err);
     } finally {
       setLoading(false);
     }
@@ -89,7 +97,7 @@ const CampaignDetailsLayer = () => {
     return `${numericValue.toFixed(2)}%`;
   };
 
-  const calculateAdsetMetrics = (adset) => {
+  const calculateAdMetrics = (ad) => {
     let totalImpressions = 0;
     let totalClicks = 0;
     let totalSpend = 0;
@@ -112,37 +120,35 @@ const CampaignDetailsLayer = () => {
       initiate_checkout: 0,
     };
 
-    Object.values(adset.ads || {}).forEach((ad) => {
-      Object.values(ad.hourly_data || {}).forEach((hourData) => {
-        const metaData = hourData.meta_data || {};
-        const shopifyData = hourData.shopify_data || [];
+    Object.values(ad.hourly_data || {}).forEach((hourData) => {
+      const metaData = hourData.meta_data || {};
+      const shopifyData = hourData.shopify_data || [];
 
-        // Use pre-calculated values from API
-        totalImpressions += metaData.impressions || 0;
-        totalClicks += metaData.clicks || 0;
-        totalSpend += metaData.spend || 0;
-        totalOrders += shopifyData.length;
-        totalRevenue += shopifyData.reduce(
-          (sum, order) => sum + (order.total_amount || 0),
-          0
-        );
-        totalCogs += shopifyData.reduce(
-          (sum, order) => sum + (order.total_cogs || 0),
-          0
-        );
+      // Use pre-calculated values from API
+      totalImpressions += metaData.impressions || 0;
+      totalClicks += metaData.clicks || 0;
+      totalSpend += metaData.spend || 0;
+      totalOrders += shopifyData.length;
+      totalRevenue += shopifyData.reduce(
+        (sum, order) => sum + (order.total_amount || 0),
+        0
+      );
+      totalCogs += shopifyData.reduce(
+        (sum, order) => sum + (order.total_cogs || 0),
+        0
+      );
 
-        // Aggregate actions and values
-        if (metaData.actions) {
-          Object.keys(totalActions).forEach((key) => {
-            totalActions[key] += metaData.actions[key] || 0;
-          });
-        }
-        if (metaData.values) {
-          Object.keys(totalValues).forEach((key) => {
-            totalValues[key] += metaData.values[key] || 0;
-          });
-        }
-      });
+      // Aggregate actions and values
+      if (metaData.actions) {
+        Object.keys(totalActions).forEach((key) => {
+          totalActions[key] += metaData.actions[key] || 0;
+        });
+      }
+      if (metaData.values) {
+        Object.keys(totalValues).forEach((key) => {
+          totalValues[key] += metaData.values[key] || 0;
+        });
+      }
     });
 
     const netProfit = totalRevenue - totalCogs - totalSpend;
@@ -156,16 +162,14 @@ const CampaignDetailsLayer = () => {
 
     // Extract SKUs from shopify orders
     const skus = [];
-    Object.values(adset.ads || {}).forEach((ad) => {
-      Object.values(ad.hourly_data || {}).forEach((hourData) => {
-        const shopifyData = hourData.shopify_data || [];
-        shopifyData.forEach((order) => {
-          if (order.line_items) {
-            order.line_items.forEach((item) => {
-              if (item.sku) skus.push(item.sku);
-            });
-          }
-        });
+    Object.values(ad.hourly_data || {}).forEach((hourData) => {
+      const shopifyData = hourData.shopify_data || [];
+      shopifyData.forEach((order) => {
+        if (order.line_items) {
+          order.line_items.forEach((item) => {
+            if (item.sku) skus.push(item.sku);
+          });
+        }
       });
     });
     const uniqueSkus = [...new Set(skus)]; // Remove duplicates
@@ -194,14 +198,13 @@ const CampaignDetailsLayer = () => {
     router.back();
   };
 
-  const renderAdsetTable = () => {
+  const renderAdTable = () => {
     return (
       <div className="table-responsive">
         <table className="table table-hover">
           <thead className="table-light">
             <tr>
-              <th style={{ width: "30px" }}></th>
-              <th>Adset Name</th>
+              <th>Ad Name</th>
               <th>Impressions</th>
               <th>Clicks</th>
               <th>CTR</th>
@@ -219,26 +222,8 @@ const CampaignDetailsLayer = () => {
           </thead>
           <tbody>
             {data.map((row, index) => (
-              <tr
-                key={index}
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  // Navigate to adset details page
-                  const params = new URLSearchParams({
-                    campaign: campaignName,
-                    campaignId: searchParams.get("campaignId"),
-                    adset: row.adset_name,
-                    adsetId: row.adset_id,
-                    startDate: startDate,
-                    endDate: endDate,
-                  });
-                  router.push(`/adset-details?${params.toString()}`);
-                }}
-              >
-                <td>
-                  <Icon icon="solar:arrow-right-bold" />
-                </td>
-                <td className="fw-semibold">{row.adset_name}</td>
+              <tr key={index} className="table-light">
+                <td className="fw-semibold">{row.ad_name}</td>
                 <td>{formatNumber(row.totalImpressions)}</td>
                 <td>{formatNumber(row.totalClicks)}</td>
                 <td>{formatPercentage(row.ctr)}</td>
@@ -354,7 +339,7 @@ const CampaignDetailsLayer = () => {
     );
   };
 
-  if (!campaignName || !startDate || !endDate) {
+  if (!campaignName || !adsetName || !startDate || !endDate) {
     return (
       <div className="card h-100 radius-8 border">
         <div className="card-body p-24 text-center">
@@ -365,7 +350,7 @@ const CampaignDetailsLayer = () => {
           />
           <h5 className="mt-3">Missing Parameters</h5>
           <p className="text-muted">
-            Please navigate from the Entity Report page.
+            Please navigate from the Campaign Details page.
           </p>
           <button className="btn btn-primary" onClick={goBack}>
             <Icon icon="solar:arrow-left-bold" className="me-2" />
@@ -382,20 +367,20 @@ const CampaignDetailsLayer = () => {
         <div className="d-flex justify-content-between align-items-center mb-20">
           <div>
             <h6 className="fw-semibold text-lg mb-0">
-              Campaign Details: {campaignName}
+              Adset Details: {adsetName}
             </h6>
             <p className="text-muted mb-0">
-              Date Range: {startDate} to {endDate}
+              Campaign: {campaignName} | Date Range: {startDate} to {endDate}
             </p>
           </div>
           <div className="d-flex gap-2">
             <button className="btn btn-outline-secondary" onClick={goBack}>
               <Icon icon="solar:arrow-left-bold" className="me-2" />
-              Back to Reports
+              Back to Campaign
             </button>
             <button
               className="btn btn-primary"
-              onClick={fetchAdsetData}
+              onClick={fetchAdData}
               disabled={loading}
             >
               {loading ? (
@@ -420,7 +405,7 @@ const CampaignDetailsLayer = () => {
         {data.length > 0 && renderSummaryCards()}
 
         {/* Data Table */}
-        {data.length > 0 && renderAdsetTable()}
+        {data.length > 0 && renderAdTable()}
 
         {/* No Data Message */}
         {!loading && !error && data.length === 0 && (
@@ -431,7 +416,7 @@ const CampaignDetailsLayer = () => {
               style={{ fontSize: "48px" }}
             />
             <p className="text-muted mt-2">
-              No adset data available for this campaign
+              No ad data available for this adset
             </p>
           </div>
         )}
@@ -444,7 +429,7 @@ const CampaignDetailsLayer = () => {
               className="text-primary"
               style={{ fontSize: "48px" }}
             />
-            <p className="text-muted mt-2">Loading adset data...</p>
+            <p className="text-muted mt-2">Loading ad data...</p>
           </div>
         )}
       </div>
@@ -452,4 +437,4 @@ const CampaignDetailsLayer = () => {
   );
 };
 
-export default CampaignDetailsLayer;
+export default AdsetDetailsLayer;
