@@ -2402,16 +2402,20 @@ const EntityReportLayer = () => {
       0
     );
 
-    // For Google tab, show ROAS cards instead of regular summary
+    // For Google tab, use API summary data directly
     if (activeTab === "google" && data.google && data.google.length > 0) {
       // Get the summary data from the API response
       const googleSummary = data.googleSummary || {};
+      const totalSpend = googleSummary.total_spend || 0;
+      const totalRevenue = googleSummary.total_revenue || 0;
+      const totalOrders = googleSummary.total_orders || 0;
       const grossRoas = googleSummary.gross_roas || 0;
       const netRoas = googleSummary.net_roas || 0;
+      const netProfit = googleSummary.net_profit || 0;
 
       return (
         <div className="row mb-20">
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-primary-subtle">
               <div className="card-body text-center">
                 <h6 className="text-primary">Total Spend</h6>
@@ -2419,7 +2423,7 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-success-subtle">
               <div className="card-body text-center">
                 <h6 className="text-success">Total Revenue</h6>
@@ -2427,7 +2431,15 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
+            <div className="card bg-secondary-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-secondary">Total Orders</h6>
+                <h4 className="text-secondary">{totalOrders}</h4>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
             <div className="card bg-info-subtle">
               <div className="card-body text-center">
                 <h6 className="text-info">Gross ROAS</h6>
@@ -2435,11 +2447,19 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-warning-subtle">
               <div className="card-body text-center">
                 <h6 className="text-warning">Net ROAS</h6>
                 <h4 className="text-warning">{netRoas.toFixed(2)}x</h4>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
+            <div className="card bg-danger-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-danger">Net Profit</h6>
+                <h4 className="text-danger">{formatCurrency(netProfit)}</h4>
               </div>
             </div>
           </div>
@@ -2523,7 +2543,7 @@ const EntityReportLayer = () => {
       );
     }
 
-    // For Organic tab, show organic-specific summary cards
+    // For Organic tab, use API summary data directly
     if (activeTab === "organic" && data.organic && data.organic.length > 0) {
       // Get the summary data from the API response
       const organicSummary = data.organicSummary || {};
@@ -2533,16 +2553,18 @@ const EntityReportLayer = () => {
       const totalCogs = parseFloat(
         organicSummary.total_cogs?.replace(/[₹,]/g, "") || 0
       );
+      const totalOrders = organicSummary.total_orders || 0;
       const netProfit = parseFloat(
         organicSummary.net_profit?.replace(/[₹,]/g, "") || 0
       );
       const profitMargin = parseFloat(
         organicSummary.profit_margin?.replace(/%/g, "") || 0
       );
+      const grossProfit = totalRevenue - totalCogs;
 
       return (
         <div className="row mb-20">
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-success-subtle">
               <div className="card-body text-center">
                 <h6 className="text-success">Total Revenue</h6>
@@ -2550,7 +2572,7 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <div className="card bg-warning-subtle">
               <div className="card-body text-center">
                 <h6 className="text-warning">Total COGS</h6>
@@ -2558,7 +2580,23 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
+            <div className="card bg-secondary-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-secondary">Total Orders</h6>
+                <h4 className="text-secondary">{totalOrders}</h4>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
+            <div className="card bg-primary-subtle">
+              <div className="card-body text-center">
+                <h6 className="text-primary">Gross Profit</h6>
+                <h4 className="text-primary">{formatCurrency(grossProfit)}</h4>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2">
             <div className="card bg-info-subtle">
               <div className="card-body text-center">
                 <h6 className="text-info">Net Profit</h6>
@@ -2566,11 +2604,11 @@ const EntityReportLayer = () => {
               </div>
             </div>
           </div>
-          <div className="col-md-3">
-            <div className="card bg-primary-subtle">
+          <div className="col-md-2">
+            <div className="card bg-danger-subtle">
               <div className="card-body text-center">
-                <h6 className="text-primary">Profit Margin</h6>
-                <h4 className="text-primary">{profitMargin.toFixed(1)}%</h4>
+                <h6 className="text-danger">Profit Margin</h6>
+                <h4 className="text-danger">{profitMargin.toFixed(1)}%</h4>
               </div>
             </div>
           </div>
