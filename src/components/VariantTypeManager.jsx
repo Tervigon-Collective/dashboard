@@ -143,7 +143,7 @@ const VariantTypeManager = ({ variantIndex, variant, onVariantChange }) => {
     <div className="variant-type-manager">
       {/* Variant Type Selection */}
       <div className="mb-3">
-        <label className="form-label">Variant Types *</label>
+        <label className="form-label">Variant Types </label>
         <div className="variant-types-container">
           {predefinedTypes.map((type) => (
             <div key={type.id} className="form-check form-check-inline">

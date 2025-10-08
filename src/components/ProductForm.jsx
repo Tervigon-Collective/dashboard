@@ -383,27 +383,11 @@ const ProductForm = ({ mode = "add", productId = null }) => {
       return;
     }
 
-    // Vendor validation
-    if (!vendor.vendor_name) {
-      setErrorMsg("Vendor name is required.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Validate variants
+    // Validate variants - MRP and COGS are required
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
-      if (
-        !variant.mrp ||
-        !variant.cogs ||
-        !variant.variant_type ||
-        Object.keys(variant.variant_type).length === 0
-      ) {
-        setErrorMsg(
-          `Variant ${
-            i + 1
-          }: MRP, COGS, and at least one variant type are required.`
-        );
+      if (!variant.mrp || !variant.cogs) {
+        setErrorMsg(`Variant ${i + 1}: MRP and COGS are required.`);
         setIsSubmitting(false);
         return;
       }
@@ -443,6 +427,16 @@ const ProductForm = ({ mode = "add", productId = null }) => {
       // Calculate product_price_category based on variant MRP averages
       const productPriceCategory = calculateProductPriceCategory(variants);
 
+      // Prepare vendor data - only include fields with values
+      const vendorData = {};
+      if (vendor.vendor_name) vendorData.vendor_name = vendor.vendor_name;
+      if (vendor.common_name) vendorData.common_name = vendor.common_name;
+      if (vendor.manufactured_by)
+        vendorData.manufactured_by = vendor.manufactured_by;
+      if (vendor.manufacturing_date)
+        vendorData.manufacturing_date = vendor.manufacturing_date;
+      if (vendor.vendor_status) vendorData.vendor_status = vendor.vendor_status;
+
       // Prepare data for API
       const productData = {
         product: {
@@ -452,13 +446,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           product_price_category: productPriceCategory, // Auto-calculated
         },
         variants: variantsData,
-        vendor: {
-          vendor_name: vendor.vendor_name,
-          common_name: vendor.common_name,
-          manufactured_by: vendor.manufactured_by,
-          manufacturing_date: vendor.manufacturing_date,
-          vendor_status: vendor.vendor_status,
-        },
+        vendor: vendorData,
         imageRequests: imageRequests,
       };
 
@@ -472,7 +460,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
             product_price_category: productPriceCategory, // Auto-calculated
           },
           variants: variantsData,
-          vendor: vendor,
+          vendor: vendorData,
         };
 
         // Add image requests if there are new images to upload
@@ -617,7 +605,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label htmlFor="vendor_name" className="form-label">
-                        Vendor Details *
+                        Vendor Details
                       </label>
                       <input
                         type="text"
@@ -626,7 +614,6 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                         className="form-control"
                         value={vendor.vendor_name}
                         onChange={handleVendorInputChange}
-                        required
                         placeholder="Enter vendor details"
                       />
                     </div>
