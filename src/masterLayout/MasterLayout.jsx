@@ -341,6 +341,29 @@ const MasterLayout = ({ children }) => {
               return null;
             })()}
 
+            {/* Procurement - Available for User role too */}
+            {(() => {
+              const { role } = useRole();
+              const isUser = role === "user";
+
+              if (isUser) {
+                return (
+                  <li>
+                    <Link
+                      href="/procurement"
+                      className={
+                        pathname === "/procurement" ? "active-page" : ""
+                      }
+                    >
+                      <Icon icon="mdi:package-variant" className="menu-icon" />
+                      <span>Procurement</span>
+                    </Link>
+                  </li>
+                );
+              }
+              return null;
+            })()}
+
             {/* Role-based Navigation */}
             {(() => {
               const { role } = useRole();
