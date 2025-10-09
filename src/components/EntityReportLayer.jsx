@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import ExcelJS from "exceljs";
+import { DateRangePicker, CustomProvider } from "rsuite";
+import enUS from "rsuite/locales/en_US";
+import "rsuite/dist/rsuite.min.css";
 import {
   fetchGoogleEntityReport,
   fetchMetaEntityReportHierarchy,
@@ -485,76 +488,49 @@ const downloadOrganicReportExcel = async (
 // Data processing functions for new API response structure
 const processGoogleData = (data) => {
   const processedData = [];
-  const summary = data.summary || {};
 
-  // Process campaign data from the new structure
+  // Process campaign data from the new aggregated structure
   Object.keys(data).forEach((key) => {
     // Skip summary object
     if (key === "summary") return;
 
     const campaign = data[key];
-    if (campaign.hourly_data) {
-      Object.values(campaign.hourly_data).forEach((hourData) => {
-        // Process both cases: with google_data and without (shopify_data only)
-        const googleData = hourData.google_data || {};
-        const shopifyData = hourData.shopify_data || [];
 
-        // Get metrics from API response - handle null/undefined values
-        const impressions = googleData?.impressions || 0;
-        const clicks = googleData?.clicks || 0;
-        const spend = googleData?.spend || 0;
-        const cpc = googleData?.cpc || 0;
-        const ctr = googleData?.ctr || 0;
-
-        const shopifyOrders = shopifyData.length;
-        const shopifyRevenue = shopifyData.reduce(
-          (sum, order) => sum + (order.total_amount || 0),
-          0
-        );
-        const shopifyCogs = shopifyData.reduce(
-          (sum, order) => sum + (order.total_cogs || 0),
-          0
-        );
-
-        // Calculate ROAS per row
-        const grossRoas = spend > 0 ? shopifyRevenue / spend : 0;
-        const netProfit = shopifyRevenue - shopifyCogs - spend;
-        const netRoas = spend > 0 ? netProfit / spend : 0;
-
-        // Only add rows that have either google data or shopify data
-        if (impressions > 0 || shopifyOrders > 0) {
-          // Extract SKUs from shopify orders
-          const skus = shopifyData.flatMap((order) =>
-            order.line_items
-              ? order.line_items.map((item) => item.sku)
-              : order.items
-              ? order.items.map((item) => item.sku)
-              : []
-          );
-          const uniqueSkus = [...new Set(skus)]; // Remove duplicates
-          const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
-
-          processedData.push({
-            date_start: hourData.date
-              ? hourData.date.split("T")[0]
-              : "2025-09-24",
-            campaign_name: campaign.campaign_name,
-            impressions,
-            clicks,
-            spend,
-            cpc,
-            ctr,
-            shopify_orders: shopifyOrders,
-            shopify_revenue: shopifyRevenue,
-            shopify_cogs: shopifyCogs,
-            gross_roas: grossRoas,
-            net_roas: netRoas,
-            net_profit: netProfit,
-            product_details: skuString,
-          });
-        }
-      });
+    // Skip campaigns with no meaningful data
+    if (campaign.total_impressions === 0 && campaign.total_orders === 0) {
+      return;
     }
+
+    // Extract SKUs from product_details array
+    let skuString = "";
+    if (campaign.product_details && Array.isArray(campaign.product_details)) {
+      const skus = campaign.product_details.map((product) => product.sku);
+      skuString = skus.length > 0 ? skus.join(", ") : "";
+    }
+
+    // Map the aggregated data to our display format
+    processedData.push({
+      campaign_id: campaign.campaign_id,
+      campaign_name: campaign.campaign_name,
+      impressions: campaign.total_impressions || 0,
+      clicks: campaign.total_clicks || 0,
+      spend: campaign.total_spend || 0,
+      cpc: campaign.average_cpc || 0,
+      ctr: campaign.ctr || 0,
+      shopify_orders: campaign.total_orders || 0,
+      shopify_revenue: campaign.total_revenue || 0,
+      shopify_cogs: campaign.total_cogs || 0,
+      gross_roas: campaign.gross_roas || 0,
+      net_roas: campaign.net_roas || 0,
+      net_profit: campaign.net_profit || 0,
+      gross_profit: campaign.gross_profit || 0,
+      matched_orders: campaign.matched_orders || 0,
+      unmatched_orders: campaign.unmatched_orders || 0,
+      attribution_rate: campaign.attribution_rate || 0,
+      average_cpm: campaign.average_cpm || 0,
+      conversion_rate: campaign.conversion_rate || 0,
+      product_details: skuString,
+    });
   });
 
   return processedData;
@@ -1391,6 +1367,192 @@ const calculateCampaignMetrics = (campaign) => {
   };
 };
 
+// Calculate metrics for an adset (used in download function)
+const calculateAdsetMetrics = (adset) => {
+  let totalImpressions = 0;
+  let totalClicks = 0;
+  let totalSpend = 0;
+  let totalOrders = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+  let totalActions = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    onsite_web_initiate_checkout: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    offsite_pixel_initiate_checkout: 0,
+  };
+  let totalValues = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    initiate_checkout: 0,
+  };
+  const allSkus = [];
+
+  Object.values(adset.ads || {}).forEach((ad) => {
+    Object.values(ad.hourly_data || {}).forEach((hourData) => {
+      const metaData = hourData.meta_data || {};
+      const shopifyData = hourData.shopify_data || [];
+
+      totalImpressions += metaData.impressions || 0;
+      totalClicks += metaData.clicks || 0;
+      totalSpend += metaData.spend || 0;
+      totalOrders += shopifyData.length;
+      totalRevenue += shopifyData.reduce(
+        (sum, order) => sum + (order.total_amount || 0),
+        0
+      );
+      totalCogs += shopifyData.reduce(
+        (sum, order) => sum + (order.total_cogs || 0),
+        0
+      );
+
+      if (metaData.actions) {
+        Object.keys(totalActions).forEach((key) => {
+          totalActions[key] += metaData.actions[key] || 0;
+        });
+      }
+
+      if (metaData.values) {
+        Object.keys(totalValues).forEach((key) => {
+          totalValues[key] += metaData.values[key] || 0;
+        });
+      }
+
+      shopifyData.forEach((order) => {
+        if (order.line_items) {
+          order.line_items.forEach((item) => {
+            if (item.sku) allSkus.push(item.sku);
+          });
+        }
+      });
+    });
+  });
+
+  const netProfit = totalRevenue - totalCogs - totalSpend;
+  const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
+  const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+  const cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+
+  const uniqueSkus = [...new Set(allSkus)];
+  const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
+  return {
+    totalImpressions,
+    totalClicks,
+    totalSpend,
+    totalOrders,
+    totalRevenue,
+    totalCogs,
+    netProfit,
+    grossRoas,
+    netRoas,
+    ctr,
+    cpc,
+    cpm,
+    totalActions,
+    totalValues,
+    productDetails: skuString,
+  };
+};
+
+// Calculate metrics for an ad (used in download function)
+const calculateAdMetrics = (ad) => {
+  let totalImpressions = 0;
+  let totalClicks = 0;
+  let totalSpend = 0;
+  let totalOrders = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+  let totalActions = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    onsite_web_initiate_checkout: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    offsite_pixel_initiate_checkout: 0,
+  };
+  let totalValues = {
+    onsite_web_purchase: 0,
+    onsite_web_add_to_cart: 0,
+    offsite_pixel_purchase: 0,
+    offsite_pixel_add_to_cart: 0,
+    initiate_checkout: 0,
+  };
+  const allSkus = [];
+
+  Object.values(ad.hourly_data || {}).forEach((hourData) => {
+    const metaData = hourData.meta_data || {};
+    const shopifyData = hourData.shopify_data || [];
+
+    totalImpressions += metaData.impressions || 0;
+    totalClicks += metaData.clicks || 0;
+    totalSpend += metaData.spend || 0;
+    totalOrders += shopifyData.length;
+    totalRevenue += shopifyData.reduce(
+      (sum, order) => sum + (order.total_amount || 0),
+      0
+    );
+    totalCogs += shopifyData.reduce(
+      (sum, order) => sum + (order.total_cogs || 0),
+      0
+    );
+
+    if (metaData.actions) {
+      Object.keys(totalActions).forEach((key) => {
+        totalActions[key] += metaData.actions[key] || 0;
+      });
+    }
+
+    if (metaData.values) {
+      Object.keys(totalValues).forEach((key) => {
+        totalValues[key] += metaData.values[key] || 0;
+      });
+    }
+
+    shopifyData.forEach((order) => {
+      if (order.line_items) {
+        order.line_items.forEach((item) => {
+          if (item.sku) allSkus.push(item.sku);
+        });
+      }
+    });
+  });
+
+  const netProfit = totalRevenue - totalCogs - totalSpend;
+  const grossRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const netRoas = totalSpend > 0 ? netProfit / totalSpend : 0;
+  const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+  const cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+
+  const uniqueSkus = [...new Set(allSkus)];
+  const skuString = uniqueSkus.length > 0 ? uniqueSkus.join(", ") : "";
+
+  return {
+    totalImpressions,
+    totalClicks,
+    totalSpend,
+    totalOrders,
+    totalRevenue,
+    totalCogs,
+    netProfit,
+    grossRoas,
+    netRoas,
+    ctr,
+    cpc,
+    cpm,
+    totalActions,
+    totalValues,
+    productDetails: skuString,
+  };
+};
+
 const processOrganicData = (data) => {
   const processedData = [];
   const organicAggregates = {};
@@ -1548,6 +1710,16 @@ const EntityReportLayer = () => {
   const [itemsPerPage] = useState(20);
   const [filters, setFilters] = useState(initialState.filters);
 
+  // DateRangePicker state - synced with filters
+  const [dateRange, setDateRange] = useState(() => {
+    if (filters.startDate && filters.endDate) {
+      const start = new Date(filters.startDate);
+      const end = new Date(filters.endDate);
+      return [start, end];
+    }
+    return null;
+  });
+
   // Restore data from sessionStorage on component mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1555,6 +1727,10 @@ const EntityReportLayer = () => {
       if (savedData && Object.keys(JSON.parse(savedData)).length > 0) {
         // Data is already loaded from getInitialData, no need to fetch again
         console.log("Restored data from sessionStorage");
+      } else {
+        // No saved data, auto-fetch data for current tab with today's date
+        console.log("No saved data, auto-fetching data for", activeTab);
+        fetchData(activeTab);
       }
 
       // Set up beforeunload listener to detect refresh
@@ -1680,6 +1856,127 @@ const EntityReportLayer = () => {
     }));
   };
 
+  // Handle DateRangePicker change - just updates filters, doesn't auto-fetch
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    if (range && range[0] && range[1]) {
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      setFilters((prev) => ({
+        ...prev,
+        startDate: formatDate(range[0]),
+        endDate: formatDate(range[1]),
+      }));
+    }
+  };
+
+  // Handle OK button click - receives the selected date range from rsuite
+  const handleDatePickerOk = (selectedDates) => {
+    console.log("OK clicked, selectedDates:", selectedDates);
+    if (selectedDates && selectedDates[0] && selectedDates[1]) {
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const newStartDate = formatDate(selectedDates[0]);
+      const newEndDate = formatDate(selectedDates[1]);
+
+      console.log("Formatted dates:", newStartDate, newEndDate);
+
+      // Update filters state
+      setFilters((prev) => ({
+        ...prev,
+        startDate: newStartDate,
+        endDate: newEndDate,
+      }));
+
+      // Create a temporary fetchData that uses the new dates directly
+      const fetchWithNewDates = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+          let response;
+          const baseParams = {
+            startDate: newStartDate,
+            endDate: newEndDate,
+          };
+
+          switch (activeTab) {
+            case "google":
+              response = await fetchGoogleEntityReport(baseParams);
+              break;
+            case "meta":
+              response = await fetchMetaEntityReportHierarchy({
+                ...baseParams,
+                filter: "campaign",
+              });
+              break;
+            case "organic":
+              response = await fetchOrganicEntityReport(baseParams);
+              break;
+            default:
+              throw new Error("Invalid report type");
+          }
+
+          let processedData = [];
+
+          if (response.success && response.data) {
+            switch (activeTab) {
+              case "google":
+                processedData = processGoogleData(response.data);
+                console.log("Processed Google Data:", processedData);
+                break;
+              case "meta":
+                processedData = processMetaData(response.data);
+                console.log("Processed Meta Data:", processedData);
+                break;
+              case "organic":
+                processedData = processOrganicData(response.data);
+                break;
+            }
+          }
+
+          const updatedData = {
+            ...data,
+            [activeTab]: processedData,
+            ...(activeTab === "google" && response.data.summary
+              ? { googleSummary: response.data.summary }
+              : {}),
+            ...(activeTab === "organic" && response.data.summary
+              ? { organicSummary: response.data.summary }
+              : {}),
+            ...(activeTab === "meta" && response.data
+              ? {
+                  metaHierarchy: response.data,
+                  metaSummary: response.data.summary || {},
+                }
+              : {}),
+          };
+
+          setData(updatedData);
+          saveToSessionStorage(updatedData, filters, activeTab);
+          setCurrentPage(1);
+        } catch (err) {
+          setError(err.message || `Failed to fetch ${activeTab} report`);
+          console.error(`${activeTab} report error:`, err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchWithNewDates();
+    }
+  };
+
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setError(null);
@@ -1688,6 +1985,19 @@ const EntityReportLayer = () => {
     // Save active tab to sessionStorage
     if (typeof window !== "undefined") {
       sessionStorage.setItem("entityReportActiveTab", tabName);
+    }
+
+    // Auto-fetch data if the tab has no data
+    const hasTabData = () => {
+      if (tabName === "meta") {
+        return data.metaHierarchy && Object.keys(data.metaHierarchy).length > 0;
+      }
+      return data[tabName] && data[tabName].length > 0;
+    };
+
+    if (!hasTabData()) {
+      console.log(`Auto-fetching data for ${tabName} tab (no data found)`);
+      fetchData(tabName);
     }
   };
 
@@ -1843,7 +2153,11 @@ const EntityReportLayer = () => {
 
   const renderGoogleAdsTable = () => {
     const googleData = data.google || [];
-    const paginatedData = getPaginatedData(googleData);
+    // Sort by revenue in descending order (highest revenue first)
+    const sortedData = [...googleData].sort(
+      (a, b) => (b.shopify_revenue || 0) - (a.shopify_revenue || 0)
+    );
+    const paginatedData = getPaginatedData(sortedData);
 
     return (
       <>
@@ -1897,7 +2211,7 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(googleData)}
+        {renderPagination(sortedData)}
       </>
     );
   };
@@ -1913,7 +2227,40 @@ const EntityReportLayer = () => {
       })
     );
 
-    const paginatedCampaigns = getPaginatedData(campaignsArray);
+    // Sort campaigns by revenue in descending order (highest revenue first)
+    const sortedCampaigns = [...campaignsArray].sort((a, b) => {
+      // Calculate total revenue for campaign A
+      let revenueA = 0;
+      Object.values(a.adsets || {}).forEach((adset) => {
+        Object.values(adset.ads || {}).forEach((ad) => {
+          Object.values(ad.hourly_data || {}).forEach((hourData) => {
+            const shopifyData = hourData.shopify_data || [];
+            revenueA += shopifyData.reduce(
+              (sum, order) => sum + (order.total_amount || 0),
+              0
+            );
+          });
+        });
+      });
+
+      // Calculate total revenue for campaign B
+      let revenueB = 0;
+      Object.values(b.adsets || {}).forEach((adset) => {
+        Object.values(adset.ads || {}).forEach((ad) => {
+          Object.values(ad.hourly_data || {}).forEach((hourData) => {
+            const shopifyData = hourData.shopify_data || [];
+            revenueB += shopifyData.reduce(
+              (sum, order) => sum + (order.total_amount || 0),
+              0
+            );
+          });
+        });
+      });
+
+      return revenueB - revenueA; // Descending order
+    });
+
+    const paginatedCampaigns = getPaginatedData(sortedCampaigns);
 
     const calculateCampaignMetrics = (campaign) => {
       let totalImpressions = 0;
@@ -2315,14 +2662,18 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(campaignsArray)}
+        {renderPagination(sortedCampaigns)}
       </>
     );
   };
 
   const renderOrganicTable = () => {
     const organicData = data.organic || [];
-    const paginatedData = getPaginatedData(organicData);
+    // Sort by revenue in descending order (highest revenue first)
+    const sortedData = [...organicData].sort(
+      (a, b) => (b.shopify_revenue || 0) - (a.shopify_revenue || 0)
+    );
+    const paginatedData = getPaginatedData(sortedData);
 
     return (
       <>
@@ -2376,7 +2727,7 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(organicData)}
+        {renderPagination(sortedData)}
       </>
     );
   };
@@ -2416,50 +2767,59 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20">
           <div className="col-md-2">
-            <div className="card bg-primary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-primary">Total Spend</h6>
-                <h4 className="text-primary">{formatCurrency(totalSpend)}</h4>
+            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-primary mb-2">Total Spend</h6>
+                <h4 className="text-primary mb-0">
+                  {formatCurrency(totalSpend)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-success-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-success">Total Revenue</h6>
-                <h4 className="text-success">{formatCurrency(totalRevenue)}</h4>
+            <div className="card bg-success-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-success mb-2">Total Revenue</h6>
+                <h4 className="text-success mb-0">
+                  {formatCurrency(totalRevenue)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-secondary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-secondary">Total Orders</h6>
-                <h4 className="text-secondary">{totalOrders}</h4>
+            <div
+              className="card bg-secondary-subtle"
+              style={{ height: "140px" }}
+            >
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-secondary mb-2">Total Orders</h6>
+                <h4 className="text-secondary mb-0">{totalOrders}</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-info-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-info">Gross ROAS</h6>
-                <h4 className="text-info">{grossRoas.toFixed(2)}x</h4>
+            <div className="card bg-info-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-info mb-2">Gross ROAS</h6>
+                <h4 className="text-info mb-0">{grossRoas.toFixed(2)}x</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-warning-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-warning">Net ROAS</h6>
-                <h4 className="text-warning">{netRoas.toFixed(2)}x</h4>
+            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-warning mb-2">Net ROAS</h6>
+                <h4 className="text-warning mb-0">{netRoas.toFixed(2)}x</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-danger-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-danger">Net Profit</h6>
-                <h4 className="text-danger">{formatCurrency(netProfit)}</h4>
+            <div className="card bg-danger-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-danger mb-2">Net Profit</h6>
+                <h4 className="text-danger mb-0">
+                  {formatCurrency(netProfit)}
+                </h4>
               </div>
             </div>
           </div>
@@ -2484,58 +2844,63 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20">
           <div className="col-md-2">
-            <div className="card bg-primary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-primary">Total Spend</h6>
-                <h4 className="text-primary">{formatCurrency(totalSpend)}</h4>
+            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-primary mb-2">Total Spend</h6>
+                <h4 className="text-primary mb-0">
+                  {formatCurrency(totalSpend)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-success-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-success">Total Revenue</h6>
-                <h4 className="text-success">{formatCurrency(totalRevenue)}</h4>
+            <div className="card bg-success-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-success mb-2">Total Revenue</h6>
+                <h4 className="text-success mb-0">
+                  {formatCurrency(totalRevenue)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-info-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-info">Total Orders</h6>
-                <h4 className="text-info">{formatNumber(totalOrders)}</h4>
-                <small className="text-muted">
-                  Matched: {matchedOrders} | Unmatched: {unmatchedOrders}
-                </small>
+            <div className="card bg-info-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-info mb-2">Total Orders</h6>
+                <h4 className="text-info mb-0">{formatNumber(totalOrders)}</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-warning-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-warning">Net Profit</h6>
-                <h4 className={`text-${netProfit >= 0 ? "success" : "danger"}`}>
+            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-warning mb-2">Net Profit</h6>
+                <h4
+                  className={`text-${
+                    netProfit >= 0 ? "success" : "danger"
+                  } mb-0`}
+                >
                   {formatCurrency(netProfit)}
                 </h4>
-                <small className="text-muted">
-                  Attribution: {attributionRate.toFixed(1)}%
-                </small>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-info-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-info">Gross ROAS</h6>
-                <h4 className="text-info">{grossRoas.toFixed(2)}x</h4>
+            <div className="card bg-info-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-info mb-2">Gross ROAS</h6>
+                <h4 className="text-info mb-0">{grossRoas.toFixed(2)}x</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-secondary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-secondary">Net ROAS</h6>
-                <h4 className="text-secondary">{netRoas.toFixed(2)}x</h4>
+            <div
+              className="card bg-secondary-subtle"
+              style={{ height: "140px" }}
+            >
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-secondary mb-2">Net ROAS</h6>
+                <h4 className="text-secondary mb-0">{netRoas.toFixed(2)}x</h4>
               </div>
             </div>
           </div>
@@ -2565,50 +2930,59 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20">
           <div className="col-md-2">
-            <div className="card bg-success-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-success">Total Revenue</h6>
-                <h4 className="text-success">{formatCurrency(totalRevenue)}</h4>
+            <div className="card bg-success-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-success mb-2">Total Revenue</h6>
+                <h4 className="text-success mb-0">
+                  {formatCurrency(totalRevenue)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-warning-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-warning">Total COGS</h6>
-                <h4 className="text-warning">{formatCurrency(totalCogs)}</h4>
+            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-warning mb-2">Total COGS</h6>
+                <h4 className="text-warning mb-0">
+                  {formatCurrency(totalCogs)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-secondary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-secondary">Total Orders</h6>
-                <h4 className="text-secondary">{totalOrders}</h4>
+            <div
+              className="card bg-secondary-subtle"
+              style={{ height: "140px" }}
+            >
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-secondary mb-2">Total Orders</h6>
+                <h4 className="text-secondary mb-0">{totalOrders}</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-primary-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-primary">Gross Profit</h6>
-                <h4 className="text-primary">{formatCurrency(grossProfit)}</h4>
+            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-primary mb-2">Gross Profit</h6>
+                <h4 className="text-primary mb-0">
+                  {formatCurrency(grossProfit)}
+                </h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-info-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-info">Net Profit</h6>
-                <h4 className="text-info">{formatCurrency(netProfit)}</h4>
+            <div className="card bg-info-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-info mb-2">Net Profit</h6>
+                <h4 className="text-info mb-0">{formatCurrency(netProfit)}</h4>
               </div>
             </div>
           </div>
           <div className="col-md-2">
-            <div className="card bg-danger-subtle">
-              <div className="card-body text-center">
-                <h6 className="text-danger">Profit Margin</h6>
-                <h4 className="text-danger">{profitMargin.toFixed(1)}%</h4>
+            <div className="card bg-danger-subtle" style={{ height: "140px" }}>
+              <div className="card-body text-center d-flex flex-column justify-content-center">
+                <h6 className="text-danger mb-2">Profit Margin</h6>
+                <h4 className="text-danger mb-0">{profitMargin.toFixed(1)}%</h4>
               </div>
             </div>
           </div>
@@ -2620,37 +2994,41 @@ const EntityReportLayer = () => {
     return (
       <div className="row mb-20">
         <div className="col-md-3">
-          <div className="card bg-primary-subtle">
-            <div className="card-body text-center">
-              <h6 className="text-primary">Total Spend</h6>
-              <h4 className="text-primary">{formatCurrency(totalSpend)}</h4>
+          <div className="card bg-primary-subtle" style={{ height: "140px" }}>
+            <div className="card-body text-center d-flex flex-column justify-content-center">
+              <h6 className="text-primary mb-2">Total Spend</h6>
+              <h4 className="text-primary mb-0">
+                {formatCurrency(totalSpend)}
+              </h4>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card bg-success-subtle">
-            <div className="card-body text-center">
-              <h6 className="text-success">Total Revenue</h6>
-              <h4 className="text-success">{formatCurrency(totalRevenue)}</h4>
+          <div className="card bg-success-subtle" style={{ height: "140px" }}>
+            <div className="card-body text-center d-flex flex-column justify-content-center">
+              <h6 className="text-success mb-2">Total Revenue</h6>
+              <h4 className="text-success mb-0">
+                {formatCurrency(totalRevenue)}
+              </h4>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card bg-info-subtle">
-            <div className="card-body text-center">
-              <h6 className="text-info">Total Orders</h6>
-              <h4 className="text-info">{formatNumber(totalOrders)}</h4>
+          <div className="card bg-info-subtle" style={{ height: "140px" }}>
+            <div className="card-body text-center d-flex flex-column justify-content-center">
+              <h6 className="text-info mb-2">Total Orders</h6>
+              <h4 className="text-info mb-0">{formatNumber(totalOrders)}</h4>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card bg-warning-subtle">
-            <div className="card-body text-center">
-              <h6 className="text-warning">Net Profit</h6>
+          <div className="card bg-warning-subtle" style={{ height: "140px" }}>
+            <div className="card-body text-center d-flex flex-column justify-content-center">
+              <h6 className="text-warning mb-2">Net Profit</h6>
               <h4
                 className={`${
                   totalNetProfit >= 0 ? "text-success" : "text-danger"
-                }`}
+                } mb-0`}
               >
                 {formatCurrency(totalNetProfit)}
               </h4>
@@ -2662,119 +3040,121 @@ const EntityReportLayer = () => {
   };
 
   return (
-    <div className="card h-100 radius-8 border">
-      <div className="card-body p-24">
-        <div className="d-flex justify-content-between align-items-center mb-20">
-          <h6 className="fw-semibold text-lg mb-0">Entity Report</h6>
-          <Icon
-            icon="solar:chart-bold"
-            className="text-primary"
-            style={{ fontSize: "24px" }}
-          />
-        </div>
-
-        {/* Filters and Action Buttons in One Row */}
-        <div className="row mb-20 align-items-end">
-          <div className="col-md-3">
-            <label className="form-label">Start Date</label>
-            <input
-              type="date"
-              className="form-control"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange("startDate", e.target.value)}
-            />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label">End Date</label>
-            <input
-              type="date"
-              className="form-control"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange("endDate", e.target.value)}
-            />
-          </div>
-          <div className="col-md-2">
-            <button
-              className="btn btn-primary w-100"
-              onClick={() => fetchData(activeTab)}
-              disabled={loading}
-            >
-              {loading ? (
-                <Icon icon="eos-icons:loading" className="me-1" />
-              ) : (
-                <Icon icon="solar:magnifer-linear" className="me-1" />
-              )}
-              {loading ? "Loading..." : "Fetch Data"}
-            </button>
-          </div>
-          <div className="col-md-2">
-            <button
-              className="btn btn-success w-100"
-              onClick={() => handleDownload()}
-              disabled={loading || !hasData()}
-            >
-              <Icon icon="solar:download-linear" className="me-1" />
-              Download Excel
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="mb-20">
-          <ul className="nav nav-tabs" role="tablist">
-            <li className="nav-item" role="presentation">
+    <CustomProvider locale={enUS}>
+      <div className="card h-100 radius-8 border">
+        <div className="card-body p-24">
+          {/* Header with Date Picker and Download Button */}
+          <div className="d-flex justify-content-between align-items-center mb-20">
+            <h6 className="fw-semibold text-lg mb-0">Entity Report</h6>
+            <div className="d-flex align-items-center" style={{ gap: 12 }}>
+              <DateRangePicker
+                value={dateRange}
+                onChange={handleDateRangeChange}
+                format="yyyy-MM-dd"
+                showMeridian={false}
+                ranges={[]}
+                placeholder="Select date range"
+                style={{
+                  width: 300,
+                  borderRadius: 8,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                }}
+                appearance="subtle"
+                cleanable
+                menuStyle={{
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                  borderRadius: 8,
+                  padding: 8,
+                }}
+                placement="bottomEnd"
+                oneTap={false}
+                showOneCalendar={false}
+                onOk={handleDatePickerOk}
+              />
               <button
-                className={`nav-link ${activeTab === "google" ? "active" : ""}`}
-                onClick={() => handleTabChange("google")}
+                className="btn btn-success btn-icon"
+                onClick={() => handleDownload()}
+                disabled={loading || !hasData()}
+                title="Download Excel Report"
+                style={{
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 8,
+                }}
               >
-                <Icon icon="logos:google-icon" className="me-2" />
-                Google Ads
+                <Icon
+                  icon="vscode-icons:file-type-excel"
+                  width="24"
+                  height="24"
+                />
               </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button
-                className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
-                onClick={() => handleTabChange("meta")}
-              >
-                <Icon icon="logos:meta-icon" className="me-2" />
-                Meta Ads
-              </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button
-                className={`nav-link ${
-                  activeTab === "organic" ? "active" : ""
-                }`}
-                onClick={() => handleTabChange("organic")}
-              >
-                <Icon icon="solar:leaf-bold" className="me-2" />
-                Organic Attribution
-              </button>
-            </li>
-          </ul>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="alert alert-danger" role="alert">
-            <Icon icon="solar:danger-circle-bold" className="me-2" />
-            {error}
+            </div>
           </div>
-        )}
 
-        {/* Summary Cards */}
-        {((data[activeTab] && data[activeTab].length > 0) ||
-          (activeTab === "meta" && data.metaHierarchy)) &&
-          renderSummaryCards()}
+          {/* Tabs */}
+          <div className="mb-20">
+            <ul className="nav nav-tabs" role="tablist">
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${
+                    activeTab === "google" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("google")}
+                >
+                  <Icon icon="logos:google-icon" className="me-2" />
+                  Google Ads
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
+                  onClick={() => handleTabChange("meta")}
+                >
+                  <Icon icon="logos:meta-icon" className="me-2" />
+                  Meta Ads
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${
+                    activeTab === "organic" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("organic")}
+                >
+                  <Icon icon="solar:leaf-bold" className="me-2" />
+                  Organic Attribution
+                </button>
+              </li>
+            </ul>
+          </div>
 
-        {/* Data Tables */}
-        <div className="tab-content">
-          {activeTab === "google" && renderGoogleAdsTable()}
-          {activeTab === "meta" && renderMetaHierarchicalTable()}
-          {activeTab === "organic" && renderOrganicTable()}
+          {/* Error Message */}
+          {error && (
+            <div className="alert alert-danger" role="alert">
+              <Icon icon="solar:danger-circle-bold" className="me-2" />
+              {error}
+            </div>
+          )}
+
+          {/* Summary Cards */}
+          {((data[activeTab] && data[activeTab].length > 0) ||
+            (activeTab === "meta" && data.metaHierarchy)) &&
+            renderSummaryCards()}
+
+          {/* Data Tables */}
+          <div className="tab-content">
+            {activeTab === "google" && renderGoogleAdsTable()}
+            {activeTab === "meta" && renderMetaHierarchicalTable()}
+            {activeTab === "organic" && renderOrganicTable()}
+          </div>
         </div>
       </div>
-    </div>
+    </CustomProvider>
   );
 };
 

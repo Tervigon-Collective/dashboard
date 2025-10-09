@@ -36,7 +36,7 @@ export const fetchGoogleEntityReport = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
     const response = await apiClient.get(
-      `/api/google_entity_report?${queryParams}`
+      `/api/google_entity_report_aggregated?${queryParams}`
     );
     return response.data;
   } catch (error) {
