@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { Icon } from "@iconify/react";
+import ExcelJS from "exceljs";
 import { DateRangePicker, CustomProvider } from "rsuite";
 import enUS from "rsuite/locales/en_US";
 import "rsuite/dist/rsuite.min.css";
@@ -30,6 +32,108 @@ function getDefaultDateRange() {
   return [startOfDay, endOfDay];
 }
 
+// Excel Download Function
+const downloadProductSpendExcel = async (
+  products,
+  summaryData,
+  startDate,
+  endDate
+) => {
+  if (!products || products.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Product Spend Summary");
+
+  // Define headers
+  const headers = [
+    "SKU",
+    "Product Title",
+    "Ad Spend",
+    "Revenue",
+    "Quantity",
+    "COGS",
+  ];
+
+  // Add headers row
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true, size: 12 };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE6E6FA" }, // Light purple
+  };
+  headerRow.alignment = { vertical: "middle", horizontal: "center" };
+
+  // Add data rows
+  products.forEach((row) => {
+    const rowData = [
+      row.sku || "",
+      row.product_title || "",
+      `₹${Number(row.spend || 0).toFixed(2)}`,
+      `₹${Number(row.revenue || 0).toFixed(2)}`,
+      row.quantity || 0,
+      `₹${Number(row.cogs || 0).toFixed(2)}`,
+    ];
+    worksheet.addRow(rowData);
+  });
+
+  // Add total row if summary data exists
+  if (summaryData) {
+    worksheet.addRow([]); // Empty row for spacing
+
+    const totalRow = [
+      "TOTAL",
+      `${summaryData.total_products} Products`,
+      `₹${Number(summaryData.total_ad_spend || 0).toFixed(2)}`,
+      `₹${Number(summaryData.total_revenue || 0).toFixed(2)}`,
+      summaryData.total_quantity || 0,
+      `₹${Number(summaryData.total_cogs || 0).toFixed(2)}`,
+    ];
+
+    const totalRowIndex = worksheet.addRow(totalRow);
+
+    // Style total row
+    totalRowIndex.font = { bold: true, size: 12 };
+    totalRowIndex.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF0F8FF" }, // Light blue
+    };
+    totalRowIndex.alignment = { vertical: "middle", horizontal: "center" };
+  }
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column, index) => {
+    if (index === 1) {
+      // Product Title column - wider
+      column.width = 40;
+    } else if (index === 0) {
+      // SKU column
+      column.width = 20;
+    } else {
+      column.width = 18;
+    }
+  });
+
+  // Generate and download file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Product_Spend_Summary_${startDate}_to_${endDate}.xlsx`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
 const ProductSpendSummaryLayer = () => {
   const [dateRange, setDateRange] = useState(getDefaultDateRange());
   const [products, setProducts] = useState([]);
@@ -38,6 +142,7 @@ const ProductSpendSummaryLayer = () => {
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [searchSku, setSearchSku] = useState("");
 
   const fetchSummary = async (range) => {
     setLoading(true);
@@ -75,13 +180,29 @@ const ProductSpendSummaryLayer = () => {
     setCurrentPage(1); // Reset to first page on items per page change
   }, [itemsPerPage]);
 
-  // Sort products by revenue descending (or quantity sold)
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page on search change
+  }, [searchSku]);
+
+  // Sort products by revenue descending and filter by SKU search
   const sortedProducts = useMemo(() => {
     if (!products) {
       return [];
     }
-    return [...products].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
-  }, [products]);
+
+    // Filter by SKU search term
+    let filteredProducts = products;
+    if (searchSku.trim()) {
+      filteredProducts = products.filter((product) =>
+        product.sku?.toLowerCase().includes(searchSku.toLowerCase().trim())
+      );
+    }
+
+    // Sort by revenue descending
+    return [...filteredProducts].sort(
+      (a, b) => (b.revenue || 0) - (a.revenue || 0)
+    );
+  }, [products, searchSku]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
@@ -128,6 +249,24 @@ const ProductSpendSummaryLayer = () => {
   const startIdx =
     sortedProducts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endIdx = Math.min(currentPage * itemsPerPage, sortedProducts.length);
+
+  // Handle Excel Download
+  const handleDownload = async () => {
+    if (!sortedProducts || sortedProducts.length === 0) {
+      alert("No data available to download");
+      return;
+    }
+
+    const startDate = formatLocalISO(dateRange[0]).split(" ")[0]; // Get just the date part
+    const endDate = formatLocalISO(dateRange[1]).split(" ")[0];
+
+    await downloadProductSpendExcel(
+      sortedProducts,
+      summaryData,
+      startDate,
+      endDate
+    );
+  };
 
   return (
     <CustomProvider locale={enUS}>
@@ -238,23 +377,59 @@ const ProductSpendSummaryLayer = () => {
         <div className="card-body pb-2 pt-3 px-3">
           <div className="row mb-3 align-items-center">
             <div
-              className="col-md-6 d-flex align-items-center"
+              className="col-md-6 d-flex align-items-center flex-wrap"
               style={{ gap: 12 }}
             >
-              <label className="me-2 fw-semibold">Show</label>
-              <select
-                className="form-select form-select-sm"
-                style={{ width: 80, borderRadius: 6 }}
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              >
-                {PAGE_SIZE_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              <label className="ms-2">entries</label>
+              <div className="d-flex align-items-center" style={{ gap: 12 }}>
+                <label className="fw-semibold mb-0">Show</label>
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: 80, borderRadius: 6 }}
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                >
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <label className="mb-0">entries</label>
+              </div>
+              <div className="d-flex align-items-center" style={{ gap: 8 }}>
+                <Icon
+                  icon="material-symbols:search"
+                  width="20"
+                  height="20"
+                  style={{ color: "#6c757d" }}
+                />
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  placeholder="Search by SKU..."
+                  value={searchSku}
+                  onChange={(e) => setSearchSku(e.target.value)}
+                  style={{
+                    width: 180,
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                />
+                {searchSku && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setSearchSku("")}
+                    title="Clear search"
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 6,
+                      fontSize: 12,
+                    }}
+                  >
+                    <Icon icon="mdi:close" width="16" height="16" />
+                  </button>
+                )}
+              </div>
             </div>
             <div
               className="col-md-6 d-flex justify-content-end align-items-center"
@@ -298,6 +473,29 @@ const ProductSpendSummaryLayer = () => {
                 placement="bottomEnd"
                 oneTap={false}
               />
+              <button
+                className="btn btn-success btn-icon"
+                onClick={handleDownload}
+                disabled={
+                  loading || !sortedProducts || sortedProducts.length === 0
+                }
+                title="Download Excel Report"
+                style={{
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 8,
+                }}
+              >
+                <Icon
+                  icon="vscode-icons:file-type-excel"
+                  width="24"
+                  height="24"
+                />
+              </button>
             </div>
           </div>
           <div className="table-responsive">
@@ -328,7 +526,9 @@ const ProductSpendSummaryLayer = () => {
                 ) : pagedProducts.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-4">
-                      No data found for this range.
+                      {searchSku
+                        ? `No products found matching SKU: "${searchSku}"`
+                        : "No data found for this range."}
                     </td>
                   </tr>
                 ) : (
@@ -375,6 +575,11 @@ const ProductSpendSummaryLayer = () => {
           <div className="row align-items-center mt-2">
             <div className="col-md-6 text-muted" style={{ fontSize: 14 }}>
               Showing {startIdx} to {endIdx} of {sortedProducts.length} entries
+              {searchSku && (
+                <span className="ms-2 text-primary" style={{ fontSize: 13 }}>
+                  (filtered by SKU: "{searchSku}")
+                </span>
+              )}
             </div>
             <div className="col-md-6 d-flex justify-content-end align-items-center">
               {totalPages > 1 && (
