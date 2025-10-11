@@ -147,10 +147,7 @@ const ProcurementTableDataLayer = () => {
         cogs_range: cogsRange,
         variant_types: variantTypes.join("; "),
         variants: product.variants || [],
-        vendor:
-          product.vendors && product.vendors.length > 0
-            ? product.vendors[0]
-            : null,
+        vendors: product.vendors || [],
         images: product.images || [],
         created_at: product.created_at,
       });
@@ -178,11 +175,14 @@ const ProcurementTableDataLayer = () => {
           product.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (product.status &&
           product.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.vendor &&
-          product.vendor.vendor_name &&
-          product.vendor.vendor_name
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()))
+        (product.vendors &&
+          product.vendors.some(
+            (vendor) =>
+              vendor.vendor_name &&
+              vendor.vendor_name
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase())
+          ))
     );
   }, [productData, searchTerm]);
 
@@ -1017,51 +1017,62 @@ const ProcurementTableDataLayer = () => {
                     </p>
                   </div>
 
-                  {/* Vendor Information */}
-                  {selectedProduct.vendor && (
-                    <div className="mb-4">
-                      <h5 className="mb-3">Vendor Information</h5>
-                      <div className="card">
-                        <div className="card-body">
-                          <div className="row">
-                            <div className="col-md-6">
-                              <p className="mb-2">
-                                <strong>Vendor Name:</strong>{" "}
-                                {selectedProduct.vendor.vendor_name}
-                              </p>
-                              <p className="mb-2">
-                                <strong>Common Name:</strong>{" "}
-                                {selectedProduct.vendor.common_name}
-                              </p>
-                            </div>
-                            <div className="col-md-6">
-                              <p className="mb-2">
-                                <strong>Manufactured By:</strong>{" "}
-                                {selectedProduct.vendor.manufactured_by}
-                              </p>
-                              <p className="mb-2">
-                                <strong>Status:</strong>
-                                <span
-                                  className={`badge ms-2 ${
-                                    selectedProduct.vendor.vendor_status ===
-                                    "active"
-                                      ? "bg-success"
-                                      : selectedProduct.vendor.vendor_status ===
-                                        "inactive"
-                                      ? "bg-danger"
-                                      : "bg-warning"
-                                  }`}
-                                >
-                                  {selectedProduct.vendor.vendor_status ||
-                                    "N/A"}
-                                </span>
-                              </p>
+                  {/* Vendors Information */}
+                  {selectedProduct.vendors &&
+                    selectedProduct.vendors.length > 0 && (
+                      <div className="mb-4">
+                        <h5 className="mb-3">
+                          Vendor Information ({selectedProduct.vendors.length})
+                        </h5>
+                        {selectedProduct.vendors.map((vendor, index) => (
+                          <div key={index} className="card mb-3">
+                            <div className="card-body">
+                              <h6 className="mb-3">Vendor #{index + 1}</h6>
+                              <div className="row">
+                                <div className="col-md-6">
+                                  <p className="mb-2">
+                                    <strong>Vendor Name:</strong>{" "}
+                                    {vendor.vendor_name || "N/A"}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Common Name:</strong>{" "}
+                                    {vendor.common_name || "N/A"}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Manufactured By:</strong>{" "}
+                                    {vendor.manufactured_by || "N/A"}
+                                  </p>
+                                </div>
+                                <div className="col-md-6">
+                                  <p className="mb-2">
+                                    <strong>Manufacturing Date:</strong>{" "}
+                                    {vendor.manufacturing_date || "N/A"}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Imported By:</strong>{" "}
+                                    {vendor.imported_by || "N/A"}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Status:</strong>
+                                    <span
+                                      className={`badge ms-2 ${
+                                        vendor.vendor_status === "active"
+                                          ? "bg-success"
+                                          : vendor.vendor_status === "inactive"
+                                          ? "bg-danger"
+                                          : "bg-warning"
+                                      }`}
+                                    >
+                                      {vendor.vendor_status || "N/A"}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Variants Information */}
                   {selectedProduct.variants &&
