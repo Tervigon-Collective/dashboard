@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { Icon } from "@iconify/react";
 import procurementApi from "@/services/procurementApi";
 import VariantTypeManager from "./VariantTypeManager";
 
@@ -33,13 +34,17 @@ const ProductForm = ({ mode = "add", productId = null }) => {
     },
   ]);
 
-  const [vendor, setVendor] = useState({
-    vendor_name: "",
-    common_name: "",
-    manufactured_by: "",
-    manufacturing_date: "",
-    vendor_status: "",
-  });
+  const [vendors, setVendors] = useState([
+    {
+      id: 1,
+      vendor_name: "",
+      common_name: "",
+      manufactured_by: "",
+      manufacturing_date: "",
+      vendor_status: "",
+      imported_by: "",
+    },
+  ]);
 
   const [productImages, setProductImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -93,16 +98,20 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           setExistingImages(product.images);
         }
 
-        // Set vendor data for editing
+        // Set vendors data for editing
         if (product.vendors && product.vendors.length > 0) {
-          const vendor = product.vendors[0]; // Get the first vendor
-          setVendor({
-            vendor_name: vendor.vendor_name || "",
-            common_name: vendor.common_name || "",
-            manufactured_by: vendor.manufactured_by || "",
-            manufacturing_date: vendor.manufacturing_date || "",
-            vendor_status: vendor.vendor_status || "",
-          });
+          setVendors(
+            product.vendors.map((vendor, index) => ({
+              id: index + 1,
+              vendor_id: vendor.vendor_id, // Store the actual vendor_id from database
+              vendor_name: vendor.vendor_name || "",
+              common_name: vendor.common_name || "",
+              manufactured_by: vendor.manufactured_by || "",
+              manufacturing_date: vendor.manufacturing_date || "",
+              vendor_status: vendor.vendor_status || "",
+              imported_by: vendor.imported_by || "",
+            }))
+          );
         }
       }
     } catch (error) {
@@ -123,12 +132,37 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   };
 
   // Handle vendor input changes
-  const handleVendorInputChange = (e) => {
+  const handleVendorInputChange = (vendorId, e) => {
     const { name, value } = e.target;
-    setVendor((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setVendors((prevVendors) =>
+      prevVendors.map((vendor) =>
+        vendor.id === vendorId ? { ...vendor, [name]: value } : vendor
+      )
+    );
+  };
+
+  // Add new vendor
+  const addVendor = () => {
+    const newId = Math.max(...vendors.map((v) => v.id), 0) + 1;
+    setVendors([
+      ...vendors,
+      {
+        id: newId,
+        vendor_name: "",
+        common_name: "",
+        manufactured_by: "",
+        manufacturing_date: "",
+        vendor_status: "",
+        imported_by: "",
+      },
+    ]);
+  };
+
+  // Remove vendor
+  const removeVendor = (vendorId) => {
+    if (vendors.length > 1) {
+      setVendors(vendors.filter((vendor) => vendor.id !== vendorId));
+    }
   };
 
   // Calculate product_price_category based on variant MRP averages
@@ -427,15 +461,23 @@ const ProductForm = ({ mode = "add", productId = null }) => {
       // Calculate product_price_category based on variant MRP averages
       const productPriceCategory = calculateProductPriceCategory(variants);
 
-      // Prepare vendor data - only include fields with values
-      const vendorData = {};
-      if (vendor.vendor_name) vendorData.vendor_name = vendor.vendor_name;
-      if (vendor.common_name) vendorData.common_name = vendor.common_name;
-      if (vendor.manufactured_by)
-        vendorData.manufactured_by = vendor.manufactured_by;
-      if (vendor.manufacturing_date)
-        vendorData.manufacturing_date = vendor.manufacturing_date;
-      if (vendor.vendor_status) vendorData.vendor_status = vendor.vendor_status;
+      // Prepare vendors data - only include vendors with at least vendor_name
+      const vendorsData = vendors
+        .filter((vendor) => vendor.vendor_name && vendor.vendor_name.trim())
+        .map((vendor) => {
+          const vendorObj = {};
+          if (vendor.vendor_id) vendorObj.vendor_id = vendor.vendor_id; // Include vendor_id for updates
+          if (vendor.vendor_name) vendorObj.vendor_name = vendor.vendor_name;
+          if (vendor.common_name) vendorObj.common_name = vendor.common_name;
+          if (vendor.manufactured_by)
+            vendorObj.manufactured_by = vendor.manufactured_by;
+          if (vendor.manufacturing_date)
+            vendorObj.manufacturing_date = vendor.manufacturing_date;
+          if (vendor.vendor_status)
+            vendorObj.vendor_status = vendor.vendor_status;
+          if (vendor.imported_by) vendorObj.imported_by = vendor.imported_by;
+          return vendorObj;
+        });
 
       // Prepare data for API
       const productData = {
@@ -446,7 +488,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           product_price_category: productPriceCategory, // Auto-calculated
         },
         variants: variantsData,
-        vendor: vendorData,
+        vendors: vendorsData,
         imageRequests: imageRequests,
       };
 
@@ -460,7 +502,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
             product_price_category: productPriceCategory, // Auto-calculated
           },
           variants: variantsData,
-          vendor: vendorData,
+          vendors: vendorsData,
         };
 
         // Add image requests if there are new images to upload
@@ -599,85 +641,168 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                   </div>
                 </div>
 
-                {/* Vendor Information */}
+                {/* Vendors Information */}
                 <div className="mb-4">
-                  <h5 className="mb-3">Vendor Information</h5>
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="vendor_name" className="form-label">
-                        Vendor Details
-                      </label>
-                      <input
-                        type="text"
-                        id="vendor_name"
-                        name="vendor_name"
-                        className="form-control"
-                        value={vendor.vendor_name}
-                        onChange={handleVendorInputChange}
-                        placeholder="Enter vendor details"
-                      />
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h5 className="mb-0">Vendor Information</h5>
+                      <small className="text-muted">
+                        Add one or more vendors for this product
+                      </small>
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="common_name" className="form-label">
-                        Common Name
-                      </label>
-                      <input
-                        type="text"
-                        id="common_name"
-                        name="common_name"
-                        className="form-control"
-                        value={vendor.common_name}
-                        onChange={handleVendorInputChange}
-                        placeholder="Enter common name"
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="manufactured_by" className="form-label">
-                        Manufactured By
-                      </label>
-                      <input
-                        type="text"
-                        id="manufactured_by"
-                        name="manufactured_by"
-                        className="form-control"
-                        value={vendor.manufactured_by}
-                        onChange={handleVendorInputChange}
-                        placeholder="Enter manufactured by"
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label
-                        htmlFor="manufacturing_date"
-                        className="form-label"
-                      >
-                        Manufacturing Date
-                      </label>
-                      <input
-                        type="date"
-                        id="manufacturing_date"
-                        name="manufacturing_date"
-                        className="form-control"
-                        value={vendor.manufacturing_date}
-                        onChange={handleVendorInputChange}
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="vendor_status" className="form-label">
-                        Vendor Status
-                      </label>
-                      <select
-                        id="vendor_status"
-                        name="vendor_status"
-                        className="form-select"
-                        value={vendor.vendor_status}
-                        onChange={handleVendorInputChange}
-                      >
-                        <option value="">Select Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      onClick={addVendor}
+                    >
+                      <i className="fas fa-plus me-1"></i>
+                      Add Vendor
+                    </button>
                   </div>
+
+                  {vendors.map((vendor, index) => (
+                    <div
+                      key={vendor.id}
+                      className="border rounded p-3 mb-3 position-relative"
+                      style={{ backgroundColor: "#f8f9fa" }}
+                    >
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="mb-0">Vendor #{index + 1}</h6>
+                        {vendors.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => removeVendor(vendor.id)}
+                            title="Delete Vendor"
+                          >
+                            <Icon
+                              icon="lucide:trash-2"
+                              width="16"
+                              height="16"
+                            />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`vendor_name_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Vendor Name
+                          </label>
+                          <input
+                            type="text"
+                            id={`vendor_name_${vendor.id}`}
+                            name="vendor_name"
+                            className="form-control"
+                            value={vendor.vendor_name}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                            placeholder="Enter vendor name"
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`common_name_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Common Name
+                          </label>
+                          <input
+                            type="text"
+                            id={`common_name_${vendor.id}`}
+                            name="common_name"
+                            className="form-control"
+                            value={vendor.common_name}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                            placeholder="Enter common name"
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`manufactured_by_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Manufactured By
+                          </label>
+                          <input
+                            type="text"
+                            id={`manufactured_by_${vendor.id}`}
+                            name="manufactured_by"
+                            className="form-control"
+                            value={vendor.manufactured_by}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                            placeholder="Enter manufacturer"
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`manufacturing_date_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Manufacturing Date
+                          </label>
+                          <input
+                            type="date"
+                            id={`manufacturing_date_${vendor.id}`}
+                            name="manufacturing_date"
+                            className="form-control"
+                            value={vendor.manufacturing_date}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`vendor_status_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Vendor Status
+                          </label>
+                          <select
+                            id={`vendor_status_${vendor.id}`}
+                            name="vendor_status"
+                            className="form-select"
+                            value={vendor.vendor_status}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                          >
+                            <option value="">Select Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label
+                            htmlFor={`imported_by_${vendor.id}`}
+                            className="form-label"
+                          >
+                            Imported By
+                          </label>
+                          <input
+                            type="text"
+                            id={`imported_by_${vendor.id}`}
+                            name="imported_by"
+                            className="form-control"
+                            value={vendor.imported_by}
+                            onChange={(e) =>
+                              handleVendorInputChange(vendor.id, e)
+                            }
+                            placeholder="Enter importer name"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Variants Section */}
@@ -876,71 +1001,29 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                                   <div className="d-flex gap-1">
                                     <button
                                       type="button"
-                                      className="btn btn-sm"
+                                      className="btn btn-sm btn-outline-info"
                                       onClick={() => handleViewImage(image)}
                                       title="View Image"
-                                      style={{
-                                        backgroundColor: "transparent",
-                                        border: "none",
-                                        color: "#6c757d",
-                                        transition: "all 0.2s ease",
-                                        minWidth: "32px",
-                                        height: "32px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        padding: "4px",
-                                      }}
-                                      onMouseOver={(e) => {
-                                        e.target.style.color = "#495057";
-                                        e.target.style.backgroundColor =
-                                          "#f8f9fa";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.target.style.color = "#6c757d";
-                                        e.target.style.backgroundColor =
-                                          "transparent";
-                                      }}
                                     >
-                                      <i
-                                        className="icon-eye"
-                                        style={{ fontSize: "16px" }}
-                                      ></i>
+                                      <Icon
+                                        icon="lucide:eye"
+                                        width="16"
+                                        height="16"
+                                      />
                                     </button>
                                     <button
                                       type="button"
-                                      className="btn btn-sm"
+                                      className="btn btn-sm btn-outline-danger"
                                       onClick={() =>
                                         deleteExistingImage(image.image_id)
                                       }
                                       title="Delete Image"
-                                      style={{
-                                        backgroundColor: "transparent",
-                                        border: "none",
-                                        color: "#6c757d",
-                                        transition: "all 0.2s ease",
-                                        minWidth: "32px",
-                                        height: "32px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        padding: "4px",
-                                      }}
-                                      onMouseOver={(e) => {
-                                        e.target.style.color = "#495057";
-                                        e.target.style.backgroundColor =
-                                          "#f8f9fa";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.target.style.color = "#6c757d";
-                                        e.target.style.backgroundColor =
-                                          "transparent";
-                                      }}
                                     >
-                                      <i
-                                        className="icon-trash"
-                                        style={{ fontSize: "16px" }}
-                                      ></i>
+                                      <Icon
+                                        icon="lucide:trash-2"
+                                        width="16"
+                                        height="16"
+                                      />
                                     </button>
                                   </div>
                                 </div>
@@ -975,31 +1058,16 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                                 </small>
                                 <button
                                   type="button"
-                                  className="btn btn-sm btn-outline-secondary mt-1"
+                                  className="btn btn-sm btn-outline-danger mt-1 w-100"
                                   onClick={() => removeProductImage(imageIndex)}
-                                  style={{
-                                    borderColor: "#6c757d",
-                                    color: "#6c757d",
-                                    transition: "all 0.2s ease",
-                                    minWidth: "80px",
-                                    height: "32px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                  onMouseOver={(e) => {
-                                    e.target.style.borderColor = "#495057";
-                                    e.target.style.color = "#495057";
-                                  }}
-                                  onMouseOut={(e) => {
-                                    e.target.style.borderColor = "#6c757d";
-                                    e.target.style.color = "#6c757d";
-                                  }}
+                                  title="Remove Image"
                                 >
-                                  <i
-                                    className="icon-trash me-1"
-                                    style={{ fontSize: "12px" }}
-                                  ></i>
+                                  <Icon
+                                    icon="lucide:trash-2"
+                                    width="16"
+                                    height="16"
+                                    className="me-1"
+                                  />
                                   Remove
                                 </button>
                               </div>

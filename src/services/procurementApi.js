@@ -181,6 +181,60 @@ class ProcurementApiService {
       body: JSON.stringify({ status, reason }),
     });
   }
+
+  // ===== Vendor APIs =====
+
+  // Create vendor for a product
+  async createVendor(productId, vendorData) {
+    const url = `${this.baseURL}/procurement/products/${productId}/vendors`;
+    return this.makeRequest(url, {
+      method: "POST",
+      body: JSON.stringify(vendorData),
+    });
+  }
+
+  // Get all vendors for a product
+  async getVendorsByProductId(productId) {
+    const url = `${this.baseURL}/procurement/products/${productId}/vendors`;
+    return this.makeRequest(url);
+  }
+
+  // Get vendor by ID
+  async getVendorById(vendorId) {
+    const url = `${this.baseURL}/procurement/vendors/${vendorId}`;
+    return this.makeRequest(url);
+  }
+
+  // Update vendor
+  async updateVendor(vendorId, vendorData) {
+    const url = `${this.baseURL}/procurement/vendors/${vendorId}`;
+    return this.makeRequest(url, {
+      method: "PUT",
+      body: JSON.stringify(vendorData),
+    });
+  }
+
+  // Delete vendor
+  async deleteVendor(vendorId) {
+    const url = `${this.baseURL}/procurement/vendors/${vendorId}`;
+    return this.makeRequest(url, {
+      method: "DELETE",
+    });
+  }
+
+  // Search vendors
+  async searchVendors(searchTerm, params = {}) {
+    const queryParams = new URLSearchParams();
+    queryParams.append("q", searchTerm);
+
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+
+    const url = `${
+      this.baseURL
+    }/procurement/vendors/search?${queryParams.toString()}`;
+    return this.makeRequest(url);
+  }
 }
 
 export default new ProcurementApiService();
