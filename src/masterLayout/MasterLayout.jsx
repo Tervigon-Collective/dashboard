@@ -149,12 +149,15 @@ const MasterLayout = ({ children }) => {
           <ul className="sidebar-menu" id="sidebar-menu">
             {/* Dashboard Section - Only for Admin, Manager and Super Admin */}
             {(() => {
-              const { role } = useRole();
+              const { role, hasSidebarPermission } = useUser();
               const isSuperAdmin = role === "super_admin";
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              if (
+                (isSuperAdmin || isAdmin || isManager) &&
+                hasSidebarPermission("dashboard")
+              ) {
                 return (
                   <li className="dropdown">
                     <Link href="#">
@@ -277,7 +280,7 @@ const MasterLayout = ({ children }) => {
 
             {/* Application Section - Only for Admin, Manager and Super Admin */}
             {(() => {
-              const { role } = useRole();
+              const { role, hasSidebarPermission } = useUser();
               const isSuperAdmin = role === "super_admin";
               const isAdmin = role === "admin";
               const isManager = role === "manager";
@@ -286,55 +289,69 @@ const MasterLayout = ({ children }) => {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">Application</li>
-                    <li>
-                      <Link
-                        href="/Sku-List"
-                        className={
-                          pathname === "/Sku-List" ? "active-page" : ""
-                        }
-                      >
-                        <Icon icon="mage:box" className="menu-icon" />
-                        <span>Sku List</span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="/product-spend-summary"
-                        className={
-                          pathname === "/product-spend-summary"
-                            ? "active-page"
-                            : ""
-                        }
-                      >
-                        <Icon icon="mage:box" className="menu-icon" />
-                        <span>Product Spend Summary</span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="/procurement"
-                        className={
-                          pathname === "/procurement" ? "active-page" : ""
-                        }
-                      >
-                        <Icon
-                          icon="mdi:package-variant"
-                          className="menu-icon"
-                        />
-                        <span>Procurement</span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="/entity-report"
-                        className={
-                          pathname === "/entity-report" ? "active-page" : ""
-                        }
-                      >
-                        <Icon icon="solar:chart-2-bold" className="menu-icon" />
-                        <span>Entity Report</span>
-                      </Link>
-                    </li>
+                    {hasSidebarPermission("skuList") && (
+                      <li>
+                        <Link
+                          href="/Sku-List"
+                          className={
+                            pathname === "/Sku-List" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="mage:box" className="menu-icon" />
+                          <span>Sku List</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("productSpendSummary") && (
+                      <li>
+                        <Link
+                          href="/product-spend-summary"
+                          className={
+                            pathname === "/product-spend-summary"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:chart-box-outline"
+                            className="menu-icon"
+                          />
+                          <span>Product Spend Summary</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("procurement") && (
+                      <li>
+                        <Link
+                          href="/procurement"
+                          className={
+                            pathname === "/procurement" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:package-variant"
+                            className="menu-icon"
+                          />
+                          <span>Procurement</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("entityReport") && (
+                      <li>
+                        <Link
+                          href="/entity-report"
+                          className={
+                            pathname === "/entity-report" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:chart-2-bold"
+                            className="menu-icon"
+                          />
+                          <span>Entity Report</span>
+                        </Link>
+                      </li>
+                    )}
                   </>
                 );
               }
@@ -343,10 +360,10 @@ const MasterLayout = ({ children }) => {
 
             {/* Procurement - Available for User role too */}
             {(() => {
-              const { role } = useRole();
+              const { role, hasSidebarPermission } = useUser();
               const isUser = role === "user";
 
-              if (isUser) {
+              if (isUser && hasSidebarPermission("procurement")) {
                 return (
                   <li>
                     <Link
@@ -366,7 +383,7 @@ const MasterLayout = ({ children }) => {
 
             {/* Role-based Navigation */}
             {(() => {
-              const { role } = useRole();
+              const { role, hasSidebarPermission } = useUser();
               const isSuperAdmin = role === "super_admin";
               const isAdmin = role === "admin";
               const isManager = role === "manager";
@@ -375,107 +392,115 @@ const MasterLayout = ({ children }) => {
               return (
                 <>
                   {/* Customer Data - Available for all roles */}
-                  {(isSuperAdmin || isAdmin || isManager || isUser) && (
-                    <li>
-                      <Link
-                        href="/customer-data"
-                        className={
-                          pathname === "/customer-data" ? "active-page" : ""
-                        }
-                      >
-                        <Icon icon="mdi:database" className="menu-icon" />
-                        <span>Customer Data</span>
-                      </Link>
-                    </li>
-                  )}
+                  {(isSuperAdmin || isAdmin || isManager || isUser) &&
+                    hasSidebarPermission("customerData") && (
+                      <li>
+                        <Link
+                          href="/customer-data"
+                          className={
+                            pathname === "/customer-data" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="mdi:database" className="menu-icon" />
+                          <span>Customer Data</span>
+                        </Link>
+                      </li>
+                    )}
 
                   {/* Shipping - Available for all roles */}
-                  {(isSuperAdmin || isAdmin || isManager || isUser) && (
-                    <li>
-                      <Link
-                        href="/shipping"
-                        className={
-                          pathname === "/shipping" ? "active-page" : ""
-                        }
-                      >
-                        <Icon icon="lucide:package" className="menu-icon" />
-                        <span>Shipping</span>
-                      </Link>
-                    </li>
-                  )}
+                  {(isSuperAdmin || isAdmin || isManager || isUser) &&
+                    hasSidebarPermission("shipping") && (
+                      <li>
+                        <Link
+                          href="/shipping"
+                          className={
+                            pathname === "/shipping" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="lucide:package" className="menu-icon" />
+                          <span>Shipping</span>
+                        </Link>
+                      </li>
+                    )}
 
                   {/* User Management Section - Only for Admin and Super Admin */}
-                  {(isSuperAdmin || isAdmin) && (
-                    <>
-                      <li className="sidebar-menu-group-title">
-                        User Management
-                      </li>
+                  {(isSuperAdmin || isAdmin) &&
+                    hasSidebarPermission("userManagement") && (
+                      <>
+                        <li className="sidebar-menu-group-title">
+                          User Management
+                        </li>
 
-                      {/* User Management Dropdown */}
-                      <li className="dropdown">
-                        <Link href="#">
-                          <Icon
-                            icon="mdi:account-group"
-                            className="menu-icon"
-                          />
-                          <span>User Management</span>
-                        </Link>
-                        <ul className="sidebar-submenu">
-                          <li>
-                            <Link
-                              href="/user-management"
-                              className={
-                                pathname === "/user-management"
-                                  ? "active-page"
-                                  : ""
-                              }
-                            >
-                              <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
-                              All Users
-                            </Link>
-                          </li>
-                          <li>
-                            <Link
-                              href="/create-user"
-                              className={
-                                pathname === "/create-user" ? "active-page" : ""
-                              }
-                            >
-                              <i className="ri-circle-fill circle-icon text-success-main w-auto" />
-                              Create User
-                            </Link>
-                          </li>
-                          <li>
-                            <Link
-                              href="/assign-role"
-                              className={
-                                pathname === "/assign-role" ? "active-page" : ""
-                              }
-                            >
-                              <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
-                              Assign Roles
-                            </Link>
-                          </li>
-                          <li>
-                            <Link
-                              href="/user-role-info"
-                              className={
-                                pathname === "/user-role-info"
-                                  ? "active-page"
-                                  : ""
-                              }
-                            >
-                              <i className="ri-circle-fill circle-icon text-info-main w-auto" />
-                              Role Information
-                            </Link>
-                          </li>
-                        </ul>
-                      </li>
-                    </>
-                  )}
+                        {/* User Management Dropdown */}
+                        <li className="dropdown">
+                          <Link href="#">
+                            <Icon
+                              icon="mdi:account-group"
+                              className="menu-icon"
+                            />
+                            <span>User Management</span>
+                          </Link>
+                          <ul className="sidebar-submenu">
+                            <li>
+                              <Link
+                                href="/user-management"
+                                className={
+                                  pathname === "/user-management"
+                                    ? "active-page"
+                                    : ""
+                                }
+                              >
+                                <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
+                                All Users
+                              </Link>
+                            </li>
+                            <li>
+                              <Link
+                                href="/create-user"
+                                className={
+                                  pathname === "/create-user"
+                                    ? "active-page"
+                                    : ""
+                                }
+                              >
+                                <i className="ri-circle-fill circle-icon text-success-main w-auto" />
+                                Create User
+                              </Link>
+                            </li>
+                            <li>
+                              <Link
+                                href="/assign-role"
+                                className={
+                                  pathname === "/assign-role"
+                                    ? "active-page"
+                                    : ""
+                                }
+                              >
+                                <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
+                                Assign Roles
+                              </Link>
+                            </li>
+                            <li>
+                              <Link
+                                href="/user-role-info"
+                                className={
+                                  pathname === "/user-role-info"
+                                    ? "active-page"
+                                    : ""
+                                }
+                              >
+                                <i className="ri-circle-fill circle-icon text-info-main w-auto" />
+                                Role Information
+                              </Link>
+                            </li>
+                          </ul>
+                        </li>
+                      </>
+                    )}
                 </>
               );
             })()}
+
             {/* <li>
               <Link
                 href="/email"

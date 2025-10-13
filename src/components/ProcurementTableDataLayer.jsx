@@ -6,6 +6,7 @@ import Modal from "react-modal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ProcurementApiService from "../services/procurementApi";
+import { useUser } from "@/helper/UserContext";
 
 // Only set Modal app element on the client side
 if (typeof window !== "undefined") {
@@ -37,6 +38,7 @@ const handleError = (action) => {
 
 const ProcurementTableDataLayer = () => {
   const router = useRouter();
+  const { hasOperation } = useUser();
   const [productData, setProductData] = useState([]);
   const [confirmModalIsOpen, setConfirmModalIsOpen] = useState(false);
   const [deleteProductId, setDeleteProductId] = useState(null);
@@ -424,20 +426,24 @@ const ProcurementTableDataLayer = () => {
           >
             <Icon icon="lucide:eye" width="16" height="16" />
           </button>
-          <button
-            className="btn btn-sm btn-outline-primary"
-            onClick={() => onEdit(product)}
-            title="Edit Product"
-          >
-            <Icon icon="lucide:edit" width="16" height="16" />
-          </button>
-          <button
-            className="btn btn-sm btn-outline-danger"
-            onClick={() => onDelete(product)}
-            title="Delete Product"
-          >
-            <Icon icon="lucide:trash-2" width="16" height="16" />
-          </button>
+          {hasOperation("procurement", "update") && (
+            <button
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => onEdit(product)}
+              title="Edit Product"
+            >
+              <Icon icon="lucide:edit" width="16" height="16" />
+            </button>
+          )}
+          {hasOperation("procurement", "delete") && (
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={() => onDelete(product)}
+              title="Delete Product"
+            >
+              <Icon icon="lucide:trash-2" width="16" height="16" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -460,14 +466,16 @@ const ProcurementTableDataLayer = () => {
     <div className="card basic-data-table">
       <div className="card-header d-flex align-items-center justify-content-between">
         <h5 className="card-title mb-0">Procurement Products</h5>
-        <button
-          onClick={handleAddProduct}
-          className="btn btn-primary d-inline-flex align-items-center"
-          style={{ gap: "4px" }}
-        >
-          <Icon icon="lucide:plus" width="20" height="20" />
-          Add New Product
-        </button>
+        {hasOperation("procurement", "create") && (
+          <button
+            onClick={handleAddProduct}
+            className="btn btn-primary d-inline-flex align-items-center"
+            style={{ gap: "4px" }}
+          >
+            <Icon icon="lucide:plus" width="20" height="20" />
+            Add New Product
+          </button>
+        )}
       </div>
 
       <div className="card-body">

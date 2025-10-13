@@ -286,7 +286,7 @@ import { useRole } from "@/hook/useRole";
 import config from "@/config";
 
 const CreateUserLayer = () => {
-  const { user, token } = useUser();
+  const { user, token, hasOperation } = useUser();
   const { canCreateUsers, getAssignableRoles } = useRole();
   const [formData, setFormData] = useState({
     email: "",
@@ -364,7 +364,7 @@ const CreateUserLayer = () => {
     );
   }
 
-  if (!canCreateUsers()) {
+  if (!canCreateUsers() || !hasOperation("userManagement", "create")) {
     return (
       <div className="alert alert-danger">
         <Icon icon="mdi:shield-alert" className="me-2" />

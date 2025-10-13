@@ -1,6 +1,7 @@
 import Breadcrumb from "../../components/Breadcrumb";
 import EntityReportLayer from "../../components/EntityReportLayer";
 import MasterLayout from "../../masterLayout/MasterLayout";
+import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 
 export const metadata = {
   title: "Entity Report - Admin Dashboard",
@@ -11,14 +12,16 @@ export const metadata = {
 const Page = () => {
   return (
     <>
-      {/* MasterLayout */}
-      <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title="Components / Entity Report" />
+      <SidebarPermissionGuard requiredSidebar="entityReport">
+        {/* MasterLayout */}
+        <MasterLayout>
+          {/* Breadcrumb */}
+          <Breadcrumb title="Components / Entity Report" />
 
-        {/* EntityReportLayer */}
-        <EntityReportLayer />
-      </MasterLayout>
+          {/* EntityReportLayer */}
+          <EntityReportLayer />
+        </MasterLayout>
+      </SidebarPermissionGuard>
     </>
   );
 };

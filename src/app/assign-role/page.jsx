@@ -2,21 +2,19 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import AssignRoleLayer from "@/components/AssignRoleLayer";
-import RoleGuard from "@/components/RoleGuard";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const AssignRolePage = () => {
   return (
     <>
-      <RoleGuard requiredRole={["admin", "super_admin"]}>
+      <SidebarPermissionGuard requiredSidebar="userManagement">
         <MasterLayout>
-          <Breadcrumb title='Assign Roles' />
-          
+          <Breadcrumb title="Assign Roles" />
 
-              <AssignRoleLayer />
-
+          <AssignRoleLayer />
         </MasterLayout>
-      </RoleGuard>
+      </SidebarPermissionGuard>
     </>
   );
 };
