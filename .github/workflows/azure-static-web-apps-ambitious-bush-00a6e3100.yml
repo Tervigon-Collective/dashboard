@@ -49,7 +49,7 @@ jobs:
           action: upload
 
           ###### Repository/Build Configurations ######
-          app_location: "/"            # Repo root (adjust if your app lives elsewhere)
+          app_location: "/dashboard"           # Repo root (adjust if your app lives elsewhere)
           api_location: ""             # Only set if you have an Azure Functions API
           output_location: "out"       # Next.js (output: 'export') writes static site to /out
           app_build_command: "npm ci && npm run build"   # DO NOT run 'npm run export' on Next 13+
@@ -66,3 +66,4 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: close
+
