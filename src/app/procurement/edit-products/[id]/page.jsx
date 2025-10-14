@@ -5,6 +5,11 @@ import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+// Required for static export with dynamic routes
+export function generateStaticParams() {
+  return [];
+}
+
 // Dynamic route for editing products
 const EditProductPage = () => {
   const params = useParams();
