@@ -1,13 +1,15 @@
 {
+  "platform": {
+    "apiRuntime": "node:18"
+  },
   "navigationFallback": {
-    "rewrite": "/404.html",
+    "rewrite": "/index.html",
     "exclude": ["/_next/*", "/api/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
   },
-  "routes": [],
-  "platformErrorOverrides": [
+  "routes": [
     {
-      "errorType": "NotFound",
-      "serve": "/404.html"
+      "route": "/procurement/edit-products/*",
+      "allowedRoles": ["anonymous", "authenticated"]
     }
   ],
   "globalHeaders": {

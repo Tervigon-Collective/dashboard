@@ -2765,61 +2765,262 @@ const EntityReportLayer = () => {
       const netProfit = googleSummary.net_profit || 0;
 
       return (
-        <div className="row mb-20">
-          <div className="col-md-2">
-            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-primary mb-2">Total Spend</h6>
-                <h4 className="text-primary mb-0">
-                  {formatCurrency(totalSpend)}
-                </h4>
+        <div className="row mb-20 g-2">
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL SPEND
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalSpend).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#3B82F6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-success-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-success mb-2">Total Revenue</h6>
-                <h4 className="text-success mb-0">
-                  {formatCurrency(totalRevenue)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL REVENUE
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#10B981", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div
-              className="card bg-secondary-subtle"
-              style={{ height: "140px" }}
-            >
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-secondary mb-2">Total Orders</h6>
-                <h4 className="text-secondary mb-0">{totalOrders}</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL ORDERS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatNumber(totalOrders)}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#F59E0B", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-info-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-info mb-2">Gross ROAS</h6>
-                <h4 className="text-info mb-0">{grossRoas.toFixed(2)}x</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    GROSS ROAS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {grossRoas.toFixed(2)}x
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#8B5CF6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-warning mb-2">Net ROAS</h6>
-                <h4 className="text-warning mb-0">{netRoas.toFixed(2)}x</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    NET ROAS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {netRoas.toFixed(2)}x
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#06B6D4", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-danger-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-danger mb-2">Net Profit</h6>
-                <h4 className="text-danger mb-0">
-                  {formatCurrency(netProfit)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    NET PROFIT
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#EF4444", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
@@ -2842,65 +3043,262 @@ const EntityReportLayer = () => {
       const attributionRate = metaSummary.attribution_rate || 0;
 
       return (
-        <div className="row mb-20">
-          <div className="col-md-2">
-            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-primary mb-2">Total Spend</h6>
-                <h4 className="text-primary mb-0">
-                  {formatCurrency(totalSpend)}
-                </h4>
+        <div className="row mb-20 g-2">
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL SPEND
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalSpend).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#3B82F6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-success-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-success mb-2">Total Revenue</h6>
-                <h4 className="text-success mb-0">
-                  {formatCurrency(totalRevenue)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL REVENUE
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#10B981", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-info-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-info mb-2">Total Orders</h6>
-                <h4 className="text-info mb-0">{formatNumber(totalOrders)}</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL ORDERS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatNumber(totalOrders)}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#F59E0B", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-warning mb-2">Net Profit</h6>
-                <h4
-                  className={`text-${
-                    netProfit >= 0 ? "success" : "danger"
-                  } mb-0`}
-                >
-                  {formatCurrency(netProfit)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    NET PROFIT
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#EF4444", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-info-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-info mb-2">Gross ROAS</h6>
-                <h4 className="text-info mb-0">{grossRoas.toFixed(2)}x</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    GROSS ROAS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {grossRoas.toFixed(2)}x
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#8B5CF6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div
-              className="card bg-secondary-subtle"
-              style={{ height: "140px" }}
-            >
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-secondary mb-2">Net ROAS</h6>
-                <h4 className="text-secondary mb-0">{netRoas.toFixed(2)}x</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    NET ROAS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {netRoas.toFixed(2)}x
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#06B6D4", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
@@ -2928,61 +3326,262 @@ const EntityReportLayer = () => {
       const grossProfit = totalRevenue - totalCogs;
 
       return (
-        <div className="row mb-20">
-          <div className="col-md-2">
-            <div className="card bg-success-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-success mb-2">Total Revenue</h6>
-                <h4 className="text-success mb-0">
-                  {formatCurrency(totalRevenue)}
-                </h4>
+        <div className="row mb-20 g-2">
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL REVENUE
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#10B981", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-warning-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-warning mb-2">Total COGS</h6>
-                <h4 className="text-warning mb-0">
-                  {formatCurrency(totalCogs)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL COGS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(totalCogs).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#F59E0B", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div
-              className="card bg-secondary-subtle"
-              style={{ height: "140px" }}
-            >
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-secondary mb-2">Total Orders</h6>
-                <h4 className="text-secondary mb-0">{totalOrders}</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    TOTAL ORDERS
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatNumber(totalOrders)}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#3B82F6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-primary-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-primary mb-2">Gross Profit</h6>
-                <h4 className="text-primary mb-0">
-                  {formatCurrency(grossProfit)}
-                </h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    GROSS PROFIT
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(grossProfit).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#8B5CF6", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-info-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-info mb-2">Net Profit</h6>
-                <h4 className="text-info mb-0">{formatCurrency(netProfit)}</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    NET PROFIT
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#06B6D4", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-danger-subtle" style={{ height: "140px" }}>
-              <div className="card-body text-center d-flex flex-column justify-content-center">
-                <h6 className="text-danger mb-2">Profit Margin</h6>
-                <h4 className="text-danger mb-0">{profitMargin.toFixed(1)}%</h4>
+          <div className="col-md-2 col-6">
+            <div className="card" style={{ 
+              height: "90px", 
+              border: "none", 
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              borderRadius: "6px"
+            }}>
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span style={{ 
+                    fontSize: "8px", 
+                    fontWeight: "600", 
+                    color: "#6B7280", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px"
+                  }}>
+                    PROFIT MARGIN
+                  </span>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "10px", 
+                    color: "#9CA3AF" 
+                  }} />
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500", 
+                    color: "#111827", 
+                    margin: "0",
+                    lineHeight: "1"
+                  }}>
+                    {profitMargin.toFixed(1)}%
+                  </h3>
+                </div>
+                <div style={{ 
+                  height: "2px", 
+                  backgroundColor: "#EF4444", 
+                  borderRadius: "2px",
+                  width: "100%"
+                }}></div>
               </div>
             </div>
           </div>
@@ -2992,46 +3591,176 @@ const EntityReportLayer = () => {
 
     // Default summary cards for other tabs
     return (
-      <div className="row mb-20">
-        <div className="col-md-3">
-          <div className="card bg-primary-subtle" style={{ height: "140px" }}>
-            <div className="card-body text-center d-flex flex-column justify-content-center">
-              <h6 className="text-primary mb-2">Total Spend</h6>
-              <h4 className="text-primary mb-0">
-                {formatCurrency(totalSpend)}
-              </h4>
+      <div className="row mb-20" style={{ gap: "16px" }}>
+        <div className="col-md-3 col-6">
+          <div className="card" style={{ 
+            height: "160px", 
+            border: "none", 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            borderRadius: "12px"
+          }}>
+            <div className="card-body d-flex flex-column justify-content-between p-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <span style={{ 
+                  fontSize: "11px", 
+                  fontWeight: "600", 
+                  color: "#6B7280", 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  TOTAL SPEND
+                </span>
+                <Icon icon="solar:info-circle-bold" style={{ 
+                  fontSize: "14px", 
+                  color: "#9CA3AF" 
+                }} />
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontSize: "28px", 
+                  fontWeight: "700", 
+                  color: "#111827", 
+                  margin: "0",
+                  lineHeight: "1"
+                }}>
+                  {formatCurrency(totalSpend).replace('₹', '₹')}
+                </h3>
+              </div>
+              <div style={{ 
+                height: "4px", 
+                backgroundColor: "#3B82F6", 
+                borderRadius: "2px",
+                width: "100%"
+              }}></div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-success-subtle" style={{ height: "140px" }}>
-            <div className="card-body text-center d-flex flex-column justify-content-center">
-              <h6 className="text-success mb-2">Total Revenue</h6>
-              <h4 className="text-success mb-0">
-                {formatCurrency(totalRevenue)}
-              </h4>
+        <div className="col-md-3 col-6">
+          <div className="card" style={{ 
+            height: "160px", 
+            border: "none", 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            borderRadius: "12px"
+          }}>
+            <div className="card-body d-flex flex-column justify-content-between p-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <span style={{ 
+                  fontSize: "11px", 
+                  fontWeight: "600", 
+                  color: "#6B7280", 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  TOTAL REVENUE
+                </span>
+                <Icon icon="solar:info-circle-bold" style={{ 
+                  fontSize: "14px", 
+                  color: "#9CA3AF" 
+                }} />
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontSize: "28px", 
+                  fontWeight: "700", 
+                  color: "#111827", 
+                  margin: "0",
+                  lineHeight: "1"
+                }}>
+                  {formatCurrency(totalRevenue).replace('₹', '₹')}
+                </h3>
+              </div>
+              <div style={{ 
+                height: "4px", 
+                backgroundColor: "#10B981", 
+                borderRadius: "2px",
+                width: "100%"
+              }}></div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-info-subtle" style={{ height: "140px" }}>
-            <div className="card-body text-center d-flex flex-column justify-content-center">
-              <h6 className="text-info mb-2">Total Orders</h6>
-              <h4 className="text-info mb-0">{formatNumber(totalOrders)}</h4>
+        <div className="col-md-3 col-6">
+          <div className="card" style={{ 
+            height: "160px", 
+            border: "none", 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            borderRadius: "12px"
+          }}>
+            <div className="card-body d-flex flex-column justify-content-between p-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <span style={{ 
+                  fontSize: "11px", 
+                  fontWeight: "600", 
+                  color: "#6B7280", 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  TOTAL ORDERS
+                </span>
+                <Icon icon="solar:info-circle-bold" style={{ 
+                  fontSize: "14px", 
+                  color: "#9CA3AF" 
+                }} />
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontSize: "28px", 
+                  fontWeight: "700", 
+                  color: "#111827", 
+                  margin: "0",
+                  lineHeight: "1"
+                }}>
+                  {formatNumber(totalOrders)}
+                </h3>
+              </div>
+              <div style={{ 
+                height: "4px", 
+                backgroundColor: "#F59E0B", 
+                borderRadius: "2px",
+                width: "100%"
+              }}></div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-warning-subtle" style={{ height: "140px" }}>
-            <div className="card-body text-center d-flex flex-column justify-content-center">
-              <h6 className="text-warning mb-2">Net Profit</h6>
-              <h4
-                className={`${
-                  totalNetProfit >= 0 ? "text-success" : "text-danger"
-                } mb-0`}
-              >
-                {formatCurrency(totalNetProfit)}
-              </h4>
+        <div className="col-md-3 col-6">
+          <div className="card" style={{ 
+            height: "160px", 
+            border: "none", 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            borderRadius: "12px"
+          }}>
+            <div className="card-body d-flex flex-column justify-content-between p-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <span style={{ 
+                  fontSize: "11px", 
+                  fontWeight: "600", 
+                  color: "#6B7280", 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  NET PROFIT
+                </span>
+                <Icon icon="solar:info-circle-bold" style={{ 
+                  fontSize: "14px", 
+                  color: "#9CA3AF" 
+                }} />
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontSize: "28px", 
+                  fontWeight: "700", 
+                  color: "#111827", 
+                  margin: "0",
+                  lineHeight: "1"
+                }}>
+                  {formatCurrency(totalNetProfit).replace('₹', '₹')}
+                </h3>
+              </div>
+              <div style={{ 
+                height: "4px", 
+                backgroundColor: "#EF4444", 
+                borderRadius: "2px",
+                width: "100%"
+              }}></div>
             </div>
           </div>
         </div>

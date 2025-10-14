@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  output: "export", // static export → writes to out/
+  // Removed output: "export" to support dynamic routes with Azure Static Web Apps
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
