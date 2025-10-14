@@ -2777,7 +2777,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -2785,7 +2785,7 @@ const EntityReportLayer = () => {
                     TOTAL SPEND
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -2820,7 +2820,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -2828,7 +2828,7 @@ const EntityReportLayer = () => {
                     TOTAL REVENUE
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -2863,7 +2863,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -2871,7 +2871,7 @@ const EntityReportLayer = () => {
                     TOTAL ORDERS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -2906,7 +2906,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -2914,7 +2914,7 @@ const EntityReportLayer = () => {
                     GROSS ROAS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -2949,7 +2949,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -2957,7 +2957,7 @@ const EntityReportLayer = () => {
                     NET ROAS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -2992,7 +2992,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3000,7 +3000,7 @@ const EntityReportLayer = () => {
                     NET PROFIT
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3055,7 +3055,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3063,7 +3063,7 @@ const EntityReportLayer = () => {
                     TOTAL SPEND
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3098,7 +3098,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3106,7 +3106,7 @@ const EntityReportLayer = () => {
                     TOTAL REVENUE
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3141,7 +3141,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3149,7 +3149,7 @@ const EntityReportLayer = () => {
                     TOTAL ORDERS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3184,7 +3184,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3192,7 +3192,7 @@ const EntityReportLayer = () => {
                     NET PROFIT
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3227,7 +3227,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3235,7 +3235,7 @@ const EntityReportLayer = () => {
                     GROSS ROAS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3270,7 +3270,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3278,7 +3278,7 @@ const EntityReportLayer = () => {
                     NET ROAS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3338,7 +3338,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3346,7 +3346,7 @@ const EntityReportLayer = () => {
                     TOTAL REVENUE
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3381,7 +3381,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3389,7 +3389,7 @@ const EntityReportLayer = () => {
                     TOTAL COGS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3424,7 +3424,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3432,7 +3432,7 @@ const EntityReportLayer = () => {
                     TOTAL ORDERS
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3467,7 +3467,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3475,7 +3475,7 @@ const EntityReportLayer = () => {
                     GROSS PROFIT
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3510,7 +3510,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3518,7 +3518,7 @@ const EntityReportLayer = () => {
                     NET PROFIT
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
@@ -3553,7 +3553,7 @@ const EntityReportLayer = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
                     fontSize: "8px", 
-                    fontWeight: "600", 
+                    fontWeight: "500", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
                     letterSpacing: "0.3px"
@@ -3561,7 +3561,7 @@ const EntityReportLayer = () => {
                     PROFIT MARGIN
                   </span>
                   <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "10px", 
+                    fontSize: "9px", 
                     color: "#9CA3AF" 
                   }} />
                 </div>
