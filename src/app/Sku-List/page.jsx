@@ -1,6 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import SkuTableDataLayer from "@/components/SkuTableDataLayer";
 import MasterLayout from "@/masterLayout/MasterLayout";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 
 export const metadata = {
   title: "NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
@@ -11,14 +12,16 @@ export const metadata = {
 const Page = () => {
   return (
     <>
-      {/* MasterLayout */}
-      <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title='Components / Sku' />
+      <SidebarPermissionGuard requiredSidebar="skuList">
+        {/* MasterLayout */}
+        <MasterLayout>
+          {/* Breadcrumb */}
+          <Breadcrumb title="Components / Sku" />
 
-        {/* StarRatingLayer */}
-        <SkuTableDataLayer />
-      </MasterLayout>
+          {/* StarRatingLayer */}
+          <SkuTableDataLayer />
+        </MasterLayout>
+      </SidebarPermissionGuard>
     </>
   );
 };

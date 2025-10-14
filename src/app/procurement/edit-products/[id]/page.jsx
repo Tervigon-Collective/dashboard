@@ -4,14 +4,18 @@ import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Add Product - Procurement",
-  description: "Add new product to procurement system",
+  title: "Edit Product - Procurement",
+  description: "Edit product in procurement system",
 };
 
-const AddProductPage = () => {
+// Dynamic route for editing products
+
+const EditProductPage = async ({ params }) => {
+  const { id } = await params;
+
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
-      <Breadcrumb title="Procurement / Add Product" />
+      <Breadcrumb title="Procurement / Edit Product" />
 
       {/* Back Button */}
       <div className="mb-3 d-flex justify-content-end">
@@ -21,9 +25,9 @@ const AddProductPage = () => {
         </Link>
       </div>
 
-      <ProductForm mode="add" />
+      <ProductForm mode="edit" productId={id} />
     </SidebarPermissionGuard>
   );
 };
 
-export default AddProductPage;
+export default EditProductPage;

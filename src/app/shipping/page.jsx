@@ -2,23 +2,20 @@
 import MasterLayout from "@/masterLayout/MasterLayout";
 import { Breadcrumb } from "react-bootstrap";
 import ShippingDashboard from "@/components/ShippingDashboard";
-import RoleGuard from "@/components/RoleGuard";
-import { useRole } from "@/hook/useRole";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 
 const ShippingPage = () => {
-  const { canAccessCustomerData } = useRole();
-
   return (
     <>
-      <RoleGuard requiredRole={["user", "manager", "admin", "super_admin"]}>
+      <SidebarPermissionGuard requiredSidebar="shipping">
         <MasterLayout>
           {/* Breadcrumb */}
-          <Breadcrumb title='Shipping Management' />
+          <Breadcrumb title="Shipping Management" />
           <ShippingDashboard />
         </MasterLayout>
-      </RoleGuard>
+      </SidebarPermissionGuard>
     </>
   );
 };
 
-export default ShippingPage; 
+export default ShippingPage;

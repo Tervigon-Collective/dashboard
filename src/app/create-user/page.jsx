@@ -2,28 +2,25 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import CreateUserLayer from "@/components/CreateUserLayer";
-import RoleGuard from "@/components/RoleGuard";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const CreateUserPage = () => {
   return (
     <>
-      <RoleGuard requiredRole={["admin", "super_admin"]}>
+      <SidebarPermissionGuard requiredSidebar="userManagement">
         <MasterLayout>
-          <Breadcrumb title='Create New User' />
-          
+          <Breadcrumb title="Create New User" />
+
           <div className="row">
             <div className="col-12">
               <CreateUserLayer />
             </div>
           </div>
-
-         
-
         </MasterLayout>
-      </RoleGuard>
+      </SidebarPermissionGuard>
     </>
   );
 };
 
-export default CreateUserPage; 
+export default CreateUserPage;

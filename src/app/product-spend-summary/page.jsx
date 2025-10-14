@@ -1,6 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import ProductSpendSummaryLayer from "@/components/ProductSpendSummaryLayer";
 import MasterLayout from "@/masterLayout/MasterLayout";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 
 export const metadata = {
   title: "NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
@@ -11,10 +12,12 @@ export const metadata = {
 const Page = () => {
   return (
     <>
-      <MasterLayout>
-        <Breadcrumb title="Components / Product Spend Summary" />
-        <ProductSpendSummaryLayer />
-      </MasterLayout>
+      <SidebarPermissionGuard requiredSidebar="productSpendSummary">
+        <MasterLayout>
+          <Breadcrumb title="Components / Product Spend Summary" />
+          <ProductSpendSummaryLayer />
+        </MasterLayout>
+      </SidebarPermissionGuard>
     </>
   );
 };

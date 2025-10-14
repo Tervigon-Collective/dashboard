@@ -5,6 +5,7 @@ import Modal from "react-modal";
 import config from "../config";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useUser } from "@/helper/UserContext";
 
 // Only set Modal app element on the client side
 if (typeof window !== "undefined") {
@@ -35,6 +36,7 @@ const handleError = (action) => {
 };
 
 const SkuTableDataLayer = () => {
+  const { hasOperation } = useUser();
   const [skuData, setSkuData] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [confirmModalIsOpen, setConfirmModalIsOpen] = useState(false);
@@ -58,7 +60,7 @@ const SkuTableDataLayer = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({
     key: null,
-    direction: 'asc'
+    direction: "asc",
   });
 
   // Create a map to store counters for each SKU-variant combination
@@ -68,11 +70,11 @@ const SkuTableDataLayer = () => {
   const getUniqueKey = (sku) => {
     const baseKey = `${sku.sku_name}-${sku.variant_title}`;
     if (!keyCounters[baseKey]) {
-      setKeyCounters(prev => ({ ...prev, [baseKey]: 1 }));
+      setKeyCounters((prev) => ({ ...prev, [baseKey]: 1 }));
       return `${baseKey}-1`;
     }
     const newCount = keyCounters[baseKey] + 1;
-    setKeyCounters(prev => ({ ...prev, [baseKey]: newCount }));
+    setKeyCounters((prev) => ({ ...prev, [baseKey]: newCount }));
     return `${baseKey}-${newCount}`;
   };
 
@@ -117,10 +119,10 @@ const SkuTableDataLayer = () => {
     if (sortConfig.key) {
       filtered.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+          return sortConfig.direction === "asc" ? -1 : 1;
         }
         if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+          return sortConfig.direction === "asc" ? 1 : -1;
         }
         return 0;
       });
@@ -137,9 +139,9 @@ const SkuTableDataLayer = () => {
 
   // Handle sorting
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
     setSortConfig({ key, direction });
   };
@@ -168,17 +170,18 @@ const SkuTableDataLayer = () => {
     const { name, value } = e.target;
     setNewSku((prev) => {
       const updatedSku = { ...prev, [name]: value };
-      
+
       // Automatically calculate margin when selling price or cogs changes
-      if (name === 'selling_price' || name === 'cogs') {
-        const sellingPrice = name === 'selling_price' ? Number(value) : Number(prev.selling_price);
-        const cogs = name === 'cogs' ? Number(value) : Number(prev.cogs);
-        
+      if (name === "selling_price" || name === "cogs") {
+        const sellingPrice =
+          name === "selling_price" ? Number(value) : Number(prev.selling_price);
+        const cogs = name === "cogs" ? Number(value) : Number(prev.cogs);
+
         if (sellingPrice && cogs) {
           updatedSku.margin = (sellingPrice - cogs).toFixed(2);
         }
       }
-      
+
       return updatedSku;
     });
   };
@@ -189,7 +192,14 @@ const SkuTableDataLayer = () => {
     setIsSubmitting(true);
     setErrorMsg("");
 
-    const { product_name, sku_name, variant_title, selling_price, cogs, margin } = newSku;
+    const {
+      product_name,
+      sku_name,
+      variant_title,
+      selling_price,
+      cogs,
+      margin,
+    } = newSku;
 
     // Basic validation
     if (!product_name || !sku_name || !selling_price || !cogs || !margin) {
@@ -205,7 +215,7 @@ const SkuTableDataLayer = () => {
       // Optimistic update
       if (editSku) {
         // Update existing SKU
-        const updatedData = skuData.map(sku => 
+        const updatedData = skuData.map((sku) =>
           sku.sku_name === editSku.sku_name ? { ...sku, ...newSku } : sku
         );
         updateSkuDataOptimistically(updatedData);
@@ -218,35 +228,43 @@ const SkuTableDataLayer = () => {
       closeModal();
 
       // Make API call
-      const url = editSku 
+      const url = editSku
         ? `${config.api.baseURL}/product_metrics/${editSku.sku_name}`
         : `${config.api.baseURL}/product_metrics`;
-      
+
       const response = await fetch(url, {
         method: editSku ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSku),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to ${editSku ? 'update' : 'create'} SKU`);
+        throw new Error(`Failed to ${editSku ? "update" : "create"} SKU`);
       }
-      
+
       const savedSku = await response.json();
-      
+
       // Update with server data to ensure consistency
       if (editSku) {
-        setSkuData(prevData => 
-          prevData.map(sku => sku.sku_name === editSku.sku_name ? savedSku : sku)
+        setSkuData((prevData) =>
+          prevData.map((sku) =>
+            sku.sku_name === editSku.sku_name ? savedSku : sku
+          )
         );
       } else {
-        setSkuData(prevData => [savedSku, ...prevData.filter(sku => sku.sku_name !== savedSku.sku_name)]);
+        setSkuData((prevData) => [
+          savedSku,
+          ...prevData.filter((sku) => sku.sku_name !== savedSku.sku_name),
+        ]);
       }
-      
+
       handleSuccess(editSku ? "Update SKU" : "Create SKU");
       setCurrentPage(1); // Go to first page to see the new/updated SKU
     } catch (err) {
-      console.error(`Error ${editSku ? 'updating' : 'creating'} product metric:`, err);
+      console.error(
+        `Error ${editSku ? "updating" : "creating"} product metric:`,
+        err
+      );
       // Rollback on error
       updateSkuDataOptimistically(previousData);
       handleError(editSku ? "Update SKU" : "Create SKU");
@@ -261,7 +279,7 @@ const SkuTableDataLayer = () => {
     if (!sku) {
       return;
     }
-    
+
     setEditSku(sku);
     setNewSku({
       product_name: sku.product_name || "",
@@ -281,12 +299,17 @@ const SkuTableDataLayer = () => {
 
     try {
       // Optimistic update
-      setSkuData(prevData => prevData.filter(sku => sku.sku_name !== deleteSkuName));
+      setSkuData((prevData) =>
+        prevData.filter((sku) => sku.sku_name !== deleteSkuName)
+      );
       setConfirmModalIsOpen(false);
 
-      const response = await fetch(`${config.api.baseURL}/product_metrics/${deleteSkuName}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${config.api.baseURL}/product_metrics/${deleteSkuName}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete SKU");
@@ -339,25 +362,32 @@ const SkuTableDataLayer = () => {
       <td>{sku.cogs}</td>
       <td>{sku.margin}</td>
       <td>
-        <div className="d-flex flex-row flex-md-row table-actions-mobile gap-2">
-          <button
-            className="btn btn-sm btn-success"
-            onClick={() => onEdit(sku)}
-            title="Edit"
-          >
-            <Icon icon="lucide:edit" width="16" height="16" />
-          </button>
-          <button
-            className="btn btn-sm btn-danger"
-            onClick={() => {
-              setDeleteSkuName(sku.sku_name);
-              setConfirmModalIsOpen(true);
-            }}
-            title="Delete"
-          >
-            <Icon icon="lucide:trash" width="16" height="16" />
-          </button>
-        </div>
+        {(hasOperation("skuList", "update") ||
+          hasOperation("skuList", "delete")) && (
+          <div className="d-flex flex-row flex-md-row table-actions-mobile gap-2">
+            {hasOperation("skuList", "update") && (
+              <button
+                className="btn btn-sm btn-success"
+                onClick={() => onEdit(sku)}
+                title="Edit"
+              >
+                <Icon icon="lucide:edit" width="16" height="16" />
+              </button>
+            )}
+            {hasOperation("skuList", "delete") && (
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => {
+                  setDeleteSkuName(sku.sku_name);
+                  setConfirmModalIsOpen(true);
+                }}
+                title="Delete"
+              >
+                <Icon icon="lucide:trash" width="16" height="16" />
+              </button>
+            )}
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -382,7 +412,7 @@ const SkuTableDataLayer = () => {
     }
 
     if (currentPage - delta > 2) {
-      rangeWithDots.push(1, '...');
+      rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
@@ -390,7 +420,7 @@ const SkuTableDataLayer = () => {
     rangeWithDots.push(...range);
 
     if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push('...', totalPages);
+      rangeWithDots.push("...", totalPages);
     } else {
       rangeWithDots.push(totalPages);
     }
@@ -443,14 +473,16 @@ const SkuTableDataLayer = () => {
     <div className="card basic-data-table">
       <div className="card-header d-flex align-items-center justify-content-between">
         <h5 className="card-title mb-0">SKU Data Table</h5>
-        <button
-          onClick={openModal}
-          className="btn btn-primary d-inline-flex align-items-center"
-          style={{ gap: "4px" }}
-        >
-          <Icon icon="lucide:plus" width="20" height="20" />
-          Add New SKU
-        </button>
+        {hasOperation("skuList", "create") && (
+          <button
+            onClick={openModal}
+            className="btn btn-primary d-inline-flex align-items-center"
+            style={{ gap: "4px" }}
+          >
+            <Icon icon="lucide:plus" width="20" height="20" />
+            Add New SKU
+          </button>
+        )}
       </div>
 
       <div className="card-body">
@@ -504,86 +536,110 @@ const SkuTableDataLayer = () => {
           <table className="table table-striped table-bordered">
             <thead>
               <tr>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('sku_name')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("sku_name")}
                 >
                   SKU Name
-                  {sortConfig.key === 'sku_name' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "sku_name" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('product_name')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("product_name")}
                 >
                   Product Name
-                  {sortConfig.key === 'product_name' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "product_name" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('variant_title')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("variant_title")}
                 >
                   Variant
-                  {sortConfig.key === 'variant_title' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "variant_title" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('selling_price')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("selling_price")}
                 >
                   Selling Price
-                  {sortConfig.key === 'selling_price' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "selling_price" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('cogs')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("cogs")}
                 >
                   COGS
-                  {sortConfig.key === 'cogs' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "cogs" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('margin')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("margin")}
                 >
                   Margin
-                  {sortConfig.key === 'margin' && (
-                    <Icon 
-                      icon={sortConfig.direction === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'} 
-                      width="14" 
-                      height="14" 
+                  {sortConfig.key === "margin" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "lucide:arrow-up"
+                          : "lucide:arrow-down"
+                      }
+                      width="14"
+                      height="14"
                       className="ms-1"
                     />
                   )}
@@ -601,7 +657,9 @@ const SkuTableDataLayer = () => {
               ) : currentData.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center">
-                    {searchTerm ? 'No matching records found' : 'No data available'}
+                    {searchTerm
+                      ? "No matching records found"
+                      : "No data available"}
                   </td>
                 </tr>
               ) : (
@@ -630,22 +688,38 @@ const SkuTableDataLayer = () => {
           <div className="row mt-3">
             <div className="col-md-6">
               <div className="text-muted">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedData.length)} of {filteredAndSortedData.length} entries
-                {searchTerm && ` (filtered from ${skuData.length} total entries)`} 
+                Showing {startIndex + 1} to{" "}
+                {Math.min(endIndex, filteredAndSortedData.length)} of{" "}
+                {filteredAndSortedData.length} entries
+                {searchTerm &&
+                  ` (filtered from ${skuData.length} total entries)`}
               </div>
             </div>
             <div className="col-md-6">
               <nav className="d-flex justify-content-end">
                 <ul className="pagination pagination-sm mb-0">
-                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                    <button className="page-link" onClick={goToPrevious} disabled={currentPage === 1}>
+                  <li
+                    className={`page-item ${
+                      currentPage === 1 ? "disabled" : ""
+                    }`}
+                  >
+                    <button
+                      className="page-link"
+                      onClick={goToPrevious}
+                      disabled={currentPage === 1}
+                    >
                       Previous
                     </button>
                   </li>
-                  
+
                   {getPaginationNumbers().map((number, index) => (
-                    <li key={index} className={`page-item ${number === currentPage ? 'active' : ''} ${number === '...' ? 'disabled' : ''}`}>
-                      {number === '...' ? (
+                    <li
+                      key={index}
+                      className={`page-item ${
+                        number === currentPage ? "active" : ""
+                      } ${number === "..." ? "disabled" : ""}`}
+                    >
+                      {number === "..." ? (
                         <span className="page-link">...</span>
                       ) : (
                         <button
@@ -657,9 +731,17 @@ const SkuTableDataLayer = () => {
                       )}
                     </li>
                   ))}
-                  
-                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                    <button className="page-link" onClick={goToNext} disabled={currentPage === totalPages}>
+
+                  <li
+                    className={`page-item ${
+                      currentPage === totalPages ? "disabled" : ""
+                    }`}
+                  >
+                    <button
+                      className="page-link"
+                      onClick={goToNext}
+                      disabled={currentPage === totalPages}
+                    >
                       Next
                     </button>
                   </li>
@@ -680,7 +762,9 @@ const SkuTableDataLayer = () => {
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">{editSku ? "Edit SKU" : "Add New SKU"}</h5>
+            <h5 className="modal-title">
+              {editSku ? "Edit SKU" : "Add New SKU"}
+            </h5>
             <button type="button" className="btn-close" onClick={closeModal} />
           </div>
           <form onSubmit={handleSubmit}>
@@ -783,7 +867,11 @@ const SkuTableDataLayer = () => {
                 className="btn btn-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Saving..." : editSku ? "Update SKU" : "Save SKU"}
+                {isSubmitting
+                  ? "Saving..."
+                  : editSku
+                  ? "Update SKU"
+                  : "Save SKU"}
               </button>
             </div>
           </form>
@@ -807,7 +895,10 @@ const SkuTableDataLayer = () => {
           />
         </div>
         <div className="modal-body">
-          <p>Are you sure you want to delete this SKU? This action cannot be undone.</p>
+          <p>
+            Are you sure you want to delete this SKU? This action cannot be
+            undone.
+          </p>
         </div>
         <div className="modal-footer">
           <button
@@ -817,7 +908,11 @@ const SkuTableDataLayer = () => {
           >
             No
           </button>
-          <button type="button" className="btn btn-danger" onClick={handleDelete}>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={handleDelete}
+          >
             Yes, Delete
           </button>
         </div>

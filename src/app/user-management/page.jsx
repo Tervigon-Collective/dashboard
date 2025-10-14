@@ -1,7 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import UserRoleManager from "@/components/UserRoleManager";
-import RoleGuard from "@/components/RoleGuard";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 export const metadata = {
@@ -12,22 +12,19 @@ export const metadata = {
 const UserManagementPage = () => {
   return (
     <>
-      <RoleGuard requiredRole={["admin", "super_admin"]}>
+      <SidebarPermissionGuard requiredSidebar="userManagement">
         <MasterLayout>
-          <Breadcrumb title='User Management' />
-          
+          <Breadcrumb title="User Management" />
+
           <div className="row">
             <div className="col-12">
               <UserRoleManager />
             </div>
           </div>
-
-         
-
         </MasterLayout>
-      </RoleGuard>
+      </SidebarPermissionGuard>
     </>
   );
 };
 
-export default UserManagementPage; 
+export default UserManagementPage;

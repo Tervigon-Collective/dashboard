@@ -2,21 +2,18 @@
 import MasterLayout from "@/masterLayout/MasterLayout";
 import { Breadcrumb } from "react-bootstrap";
 import CustomerLayer from "@/components/CustomerLayer";
-import RoleGuard from "@/components/RoleGuard";
-import { useRole } from "@/hook/useRole";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 
 const CustomerDataPage = () => {
-  const { canAccessCustomerData } = useRole();
-
   return (
     <>
-      <RoleGuard requiredRole={["user", "manager", "admin", "super_admin"]}>
+      <SidebarPermissionGuard requiredSidebar="customerData">
         <MasterLayout>
           {/* Breadcrumb */}
-          <Breadcrumb title='Customer Data' />
+          <Breadcrumb title="Customer Data" />
           <CustomerLayer />
         </MasterLayout>
-      </RoleGuard>
+      </SidebarPermissionGuard>
     </>
   );
 };
