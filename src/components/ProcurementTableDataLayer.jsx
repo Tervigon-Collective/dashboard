@@ -62,6 +62,10 @@ const ProcurementTableDataLayer = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
   // Fetch data from API
   const fetchData = async () => {
     try {
@@ -163,12 +167,20 @@ const ProcurementTableDataLayer = () => {
     fetchData();
   }, []);
 
-  // Filter data based on search term
-  const filteredData = useMemo(() => {
-    if (!searchTerm) return productData;
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter]);
 
-    return productData.filter(
-      (product) =>
+  // Define all possible Product Price Categories
+  const allCategories = ["A", "B", "C"];
+
+  // Filter data based on search term, status, and category
+  const filteredData = useMemo(() => {
+    return productData.filter((product) => {
+      // Search filter
+      const matchesSearch =
+        !searchTerm ||
         product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.product_category
           .toLowerCase()
@@ -184,9 +196,21 @@ const ProcurementTableDataLayer = () => {
               vendor.vendor_name
                 .toLowerCase()
                 .includes(searchTerm.toLowerCase())
-          ))
-    );
-  }, [productData, searchTerm]);
+          ));
+
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" ||
+        product.status?.toLowerCase() === statusFilter.toLowerCase();
+
+      // Category filter (Product Price Category)
+      const matchesCategory =
+        categoryFilter === "all" ||
+        product.product_price_category === categoryFilter;
+
+      return matchesSearch && matchesStatus && matchesCategory;
+    });
+  }, [productData, searchTerm, statusFilter, categoryFilter]);
 
   // Pagination calculations
   const totalItems = filteredData.length;
@@ -201,6 +225,15 @@ const ProcurementTableDataLayer = () => {
   const goToNext = () =>
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const goToLast = () => setCurrentPage(totalPages);
+
+  // Reset all filters and search
+  const handleReset = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setCurrentPage(1);
+    fetchData(); // Refresh data
+  };
 
   // Navigate to add product page
   const handleAddProduct = () => {
@@ -294,12 +327,10 @@ const ProcurementTableDataLayer = () => {
     }
   };
 
-  // Handle status update click
+  // Handle status update click (triggered by gear icon)
   const handleStatusClick = (product) => {
-    if (product.status === "pending") {
-      setSelectedProductForStatus(product);
-      setStatusModalIsOpen(true);
-    }
+    setSelectedProductForStatus(product);
+    setStatusModalIsOpen(true);
   };
 
   // Handle status update
@@ -342,106 +373,218 @@ const ProcurementTableDataLayer = () => {
   // Format status badge
   const getStatusBadge = (status, product = null) => {
     const statusConfig = {
-      pending: { class: "bg-warning", text: "Pending" },
-      approved: { class: "bg-success", text: "Approved" },
-      rejected: { class: "bg-danger", text: "Rejected" },
-      active: { class: "bg-success", text: "Active" },
-      inactive: { class: "bg-warning", text: "Inactive" },
-      discontinued: { class: "bg-danger", text: "Discontinued" },
+      pending: {
+        bg: "#fef3c7",
+        color: "#92400e",
+        text: "Pending",
+        icon: "mdi:clock-outline",
+      },
+      approved: {
+        bg: "#d1fae5",
+        color: "#065f46",
+        text: "Approved",
+        icon: "mdi:check-circle",
+      },
+      rejected: {
+        bg: "#fee2e2",
+        color: "#991b1b",
+        text: "Rejected",
+        icon: "mdi:close-circle",
+      },
+      active: {
+        bg: "#d1fae5",
+        color: "#065f46",
+        text: "Active",
+        icon: "mdi:check-circle",
+      },
+      inactive: {
+        bg: "#fef3c7",
+        color: "#92400e",
+        text: "Inactive",
+        icon: "mdi:clock-outline",
+      },
+      discontinued: {
+        bg: "#fee2e2",
+        color: "#991b1b",
+        text: "Discontinued",
+        icon: "mdi:close-circle",
+      },
     };
 
     const config = statusConfig[status] || {
-      class: "bg-secondary",
+      bg: "#f3f4f6",
+      color: "#374151",
       text: status || "N/A",
+      icon: "mdi:help-circle",
     };
 
-    // Make pending status clickable
-    if (status === "pending" && product) {
-      return (
-        <span
-          className={`badge ${config.class} cursor-pointer`}
-          onClick={() => handleStatusClick(product)}
-          style={{ cursor: "pointer" }}
-          title="Click to approve or reject"
-        >
-          {config.text}
-        </span>
-      );
-    }
-
-    return <span className={`badge ${config.class}`}>{config.text}</span>;
+    // Status badge is NOT clickable - use gear icon in Actions column to approve/reject
+    return (
+      <span
+        className="badge d-inline-flex align-items-center gap-1"
+        style={{
+          backgroundColor: config.bg,
+          color: config.color,
+          fontSize: "13px",
+          fontWeight: "500",
+          padding: "6px 12px",
+        }}
+      >
+        <Icon icon={config.icon} width="14" height="14" />
+        {config.text}
+      </span>
+    );
   };
 
   // Simple table row component
   const TableRow = ({ product, onEdit, onDelete, onView, uniqueKey }) => (
-    <tr key={uniqueKey}>
-      <td>
-        <div className="fw-medium">{product.product_name}</div>
-        <small className="text-muted">ID: {product.product_id}</small>
+    <tr key={uniqueKey} style={{ borderBottom: "1px solid #e5e7eb" }}>
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <div className="fw-medium" style={{ fontSize: "14px" }}>
+          {product.product_name}
+        </div>
+        <small className="text-muted" style={{ fontSize: "12px" }}>
+          ID: {product.product_id}
+        </small>
       </td>
-      <td>
-        <span className="badge bg-light text-dark">
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span
+          className="badge"
+          style={{
+            backgroundColor: "#f1f1f1",
+            color: "#333",
+            fontWeight: "500",
+            fontSize: "13px",
+          }}
+        >
           {product.product_category}
         </span>
       </td>
-      <td>{getStatusBadge(product.status, product)}</td>
-      <td>
-        <span
-          className={`badge ${
-            product.product_price_category === "A"
-              ? "bg-success"
-              : product.product_price_category === "B"
-              ? "bg-warning"
-              : "bg-info"
-          }`}
-        >
-          Category {product.product_price_category}
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        {getStatusBadge(product.status, product)}
+      </td>
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span style={{ fontSize: "14px", fontWeight: "500" }}>
+          {product.product_price_category}
         </span>
       </td>
-      <td>
-        <div className="d-flex align-items-center">
-          <span className="badge bg-primary me-1">
-            {product.total_variants} variants
-          </span>
-          {product.variant_types && (
-            <small className="text-muted" title={product.variant_types}>
-              <Icon icon="lucide:info" width="14" height="14" />
-            </small>
-          )}
-        </div>
-      </td>
-      <td>₹{product.mrp_range}</td>
-      <td>₹{product.cogs_range}</td>
-      <td>
-        <span className="badge bg-light text-dark">
-          {product.total_quantity} units
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span style={{ fontSize: "14px", color: "#666" }}>
+          {product.total_variants} variant
+          {product.total_variants !== 1 ? "s" : ""}
         </span>
       </td>
-      <td>
-        <div className="d-flex gap-1">
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span style={{ fontSize: "14px", color: "#16a34a", fontWeight: "500" }}>
+          ₹{product.mrp_range}
+        </span>
+      </td>
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span style={{ fontSize: "14px", color: "#666" }}>
+          ₹{product.cogs_range}
+        </span>
+      </td>
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <span style={{ fontSize: "14px", color: "#2563eb", fontWeight: "500" }}>
+          {product.total_quantity} unit{product.total_quantity !== 1 ? "s" : ""}
+        </span>
+      </td>
+      <td style={{ padding: "12px", verticalAlign: "middle" }}>
+        <div className="d-flex gap-2">
           <button
-            className="btn btn-sm btn-outline-info"
+            className="btn btn-sm"
             onClick={() => onView(product)}
             title="View Product Details"
+            style={{
+              width: "32px",
+              height: "32px",
+              padding: "0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              backgroundColor: "white",
+            }}
           >
-            <Icon icon="lucide:eye" width="16" height="16" />
+            <Icon
+              icon="lucide:eye"
+              width="16"
+              height="16"
+              style={{ color: "#3b82f6" }}
+            />
           </button>
           {hasOperation("procurement", "update") && (
             <button
-              className="btn btn-sm btn-outline-primary"
+              className="btn btn-sm"
               onClick={() => onEdit(product)}
               title="Edit Product"
+              style={{
+                width: "32px",
+                height: "32px",
+                padding: "0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                backgroundColor: "white",
+              }}
             >
-              <Icon icon="lucide:edit" width="16" height="16" />
+              <Icon
+                icon="lucide:edit"
+                width="16"
+                height="16"
+                style={{ color: "#3b82f6" }}
+              />
             </button>
           )}
+          <button
+            className="btn btn-sm"
+            onClick={() => handleStatusClick(product)}
+            title="Update Status"
+            style={{
+              width: "32px",
+              height: "32px",
+              padding: "0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              backgroundColor: "white",
+            }}
+          >
+            <Icon
+              icon="lucide:settings"
+              width="16"
+              height="16"
+              style={{ color: "#f59e0b" }}
+            />
+          </button>
           {hasOperation("procurement", "delete") && (
             <button
-              className="btn btn-sm btn-outline-danger"
+              className="btn btn-sm"
               onClick={() => onDelete(product)}
               title="Delete Product"
+              style={{
+                width: "32px",
+                height: "32px",
+                padding: "0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                backgroundColor: "white",
+              }}
             >
-              <Icon icon="lucide:trash-2" width="16" height="16" />
+              <Icon
+                icon="lucide:trash-2"
+                width="16"
+                height="16"
+                style={{ color: "#ef4444" }}
+              />
             </button>
           )}
         </div>
@@ -470,9 +613,9 @@ const ProcurementTableDataLayer = () => {
           <button
             onClick={handleAddProduct}
             className="btn btn-primary d-inline-flex align-items-center"
-            style={{ gap: "4px" }}
+            style={{ gap: "6px", padding: "8px 16px" }}
           >
-            <Icon icon="lucide:plus" width="20" height="20" />
+            <Icon icon="lucide:plus" width="18" height="18" />
             Add New Product
           </button>
         )}
@@ -480,10 +623,10 @@ const ProcurementTableDataLayer = () => {
 
       <div className="card-body">
         {/* Search and Filter Controls */}
-        <div className="row mb-3">
-          <div className="col-md-6">
+        <div className="row g-3 mb-4">
+          <div className="col-md-3">
             <div className="input-group">
-              <span className="input-group-text">
+              <span className="input-group-text bg-white">
                 <Icon icon="lucide:search" width="16" height="16" />
               </span>
               <input
@@ -495,41 +638,165 @@ const ProcurementTableDataLayer = () => {
               />
             </div>
           </div>
-          <div className="col-md-6">
-            <div className="d-flex justify-content-end align-items-center gap-2">
-              <label htmlFor="itemsPerPage" className="form-label mb-0">
-                Show:
-              </label>
-              <select
-                id="itemsPerPage"
-                className="form-select"
-                style={{ width: "auto" }}
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+          <div className="col-md-2">
+            <select
+              className="form-select"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1); // Reset to first page when filtering
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
           </div>
+          <div className="col-md-2">
+            <select
+              className="form-select"
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setCurrentPage(1); // Reset to first page when filtering
+              }}
+            >
+              <option value="all">All Categories</option>
+              {allCategories.map((category) => (
+                <option key={category} value={category}>
+                  Category {category}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-2">
+            <select
+              className="form-select"
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            >
+              <option value={5}>5 Items</option>
+              <option value={10}>10 Items</option>
+              <option value={25}>25 Items</option>
+              <option value={50}>50 Items</option>
+            </select>
+          </div>
+          <div className="col-md-3">
+            <button
+              className="btn btn-outline-secondary w-100"
+              onClick={handleReset}
+            >
+              <Icon
+                icon="lucide:rotate-ccw"
+                width="16"
+                height="16"
+                className="me-2"
+              />
+              Reset
+            </button>
+          </div>
+        </div>
+
+        {/* Showing entries count */}
+        <div className="mb-3">
+          <small className="text-muted">
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
+            {totalItems} entries
+          </small>
         </div>
 
         {/* Table */}
         <div className="table-responsive">
-          <table className="table table-hover">
-            <thead>
+          <table className="table table-hover" style={{ fontSize: "14px" }}>
+            <thead
+              style={{
+                backgroundColor: "#f9fafb",
+                borderBottom: "2px solid #e5e7eb",
+              }}
+            >
               <tr>
-                <th>Product Name</th>
-                <th>Product Category</th>
-                <th>Status</th>
-                <th>Product Price Category</th>
-                <th>Variants</th>
-                <th>Selling Price Range</th>
-                <th>COGS Range</th>
-                <th>Total Quantity</th>
-                <th>Action</th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Product Name
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Product Category
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Status
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Product Price Category
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Variants
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Selling Price Range
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  COGS Range
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Total Quantity
+                </th>
+                <th
+                  style={{
+                    fontWeight: "600",
+                    color: "#374151",
+                    padding: "12px",
+                  }}
+                >
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -892,337 +1159,305 @@ const ProcurementTableDataLayer = () => {
         </div>
       </Modal>
 
-      {/* View Product Details Modal */}
-      <Modal
-        isOpen={viewModalIsOpen}
-        onRequestClose={() => setViewModalIsOpen(false)}
-        className="view-product-modal"
-        overlayClassName="view-product-overlay"
-        contentLabel="View Product Details"
-        style={{
-          overlay: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-          content: {
-            position: "relative",
-            top: "auto",
-            left: "auto",
-            right: "auto",
-            bottom: "auto",
-            border: "none",
-            background: "transparent",
-            overflow: "auto",
-            borderRadius: "0",
-            outline: "none",
-            padding: "0",
-            width: "100%",
-            height: "100%",
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-        }}
-      >
+      {/* Product View Modal */}
+      {viewModalIsOpen && (
         <div
-          className="view-product-container"
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <div
-            className="view-product-card"
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              maxWidth: "1000px",
-              width: "100%",
-              maxHeight: "90vh",
-              overflow: "hidden",
-              animation: "slideIn 0.3s ease-out",
-              position: "relative",
-            }}
-          >
-            {/* Close Button */}
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setViewModalIsOpen(false)}
-              style={{
-                position: "absolute",
-                top: "20px",
-                right: "20px",
-                fontSize: "18px",
-                background: "none",
-                border: "none",
-                color: "#6c757d",
-                zIndex: 1,
-                width: "30px",
-                height: "30px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                transition: "all 0.2s ease",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = "#f8f9fa";
-                e.target.style.color = "#dc3545";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = "none";
-                e.target.style.color = "#6c757d";
-              }}
-            >
-              ×
-            </button>
-
-            {/* Modal Content */}
-            <div
-              style={{ padding: "40px", maxHeight: "90vh", overflowY: "auto" }}
-            >
-              {selectedProduct && (
-                <>
-                  {/* Product Header */}
-                  <div className="mb-4">
-                    <h3 className="mb-2">{selectedProduct.product_name}</h3>
-                    <div className="d-flex gap-2 mb-3">
-                      <span className="badge bg-light text-dark">
-                        {selectedProduct.product_category}
-                      </span>
-                      {getStatusBadge(selectedProduct.status)}
-                      <span
-                        className={`badge ${
-                          selectedProduct.product_price_category === "A"
-                            ? "bg-success"
-                            : selectedProduct.product_price_category === "B"
-                            ? "bg-warning"
-                            : "bg-info"
-                        }`}
-                      >
-                        Category {selectedProduct.product_price_category}
-                      </span>
-                    </div>
-                    <p className="text-muted mb-0">
-                      Product ID: {selectedProduct.product_id}
-                    </p>
-                  </div>
-
-                  {/* Vendors Information */}
-                  {selectedProduct.vendors &&
-                    selectedProduct.vendors.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="mb-3">
-                          Vendor Information ({selectedProduct.vendors.length})
-                        </h5>
-                        {selectedProduct.vendors.map((vendor, index) => (
-                          <div key={index} className="card mb-3">
-                            <div className="card-body">
-                              <h6 className="mb-3">Vendor #{index + 1}</h6>
-                              <div className="row">
-                                <div className="col-md-6">
-                                  <p className="mb-2">
-                                    <strong>Vendor Name:</strong>{" "}
-                                    {vendor.vendor_name || "N/A"}
-                                  </p>
-                                  <p className="mb-2">
-                                    <strong>Common Name:</strong>{" "}
-                                    {vendor.common_name || "N/A"}
-                                  </p>
-                                  <p className="mb-2">
-                                    <strong>Manufactured By:</strong>{" "}
-                                    {vendor.manufactured_by || "N/A"}
-                                  </p>
-                                </div>
-                                <div className="col-md-6">
-                                  <p className="mb-2">
-                                    <strong>Manufacturing Date:</strong>{" "}
-                                    {vendor.manufacturing_date || "N/A"}
-                                  </p>
-                                  <p className="mb-2">
-                                    <strong>Imported By:</strong>{" "}
-                                    {vendor.imported_by || "N/A"}
-                                  </p>
-                                  <p className="mb-2">
-                                    <strong>Status:</strong>
-                                    <span
-                                      className={`badge ms-2 ${
-                                        vendor.vendor_status === "active"
-                                          ? "bg-success"
-                                          : vendor.vendor_status === "inactive"
-                                          ? "bg-danger"
-                                          : "bg-warning"
-                                      }`}
-                                    >
-                                      {vendor.vendor_status || "N/A"}
-                                    </span>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <Icon icon="mdi:package-variant" className="me-2" />
+                  Product Information - {selectedProduct?.product_name}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setViewModalIsOpen(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {selectedProduct && (
+                  <>
+                    {/* Product Info Summary - Two Column Layout */}
+                    <div className="row mb-4">
+                      <div className="col-md-6">
+                        <h6 className="text-muted mb-3">Product Information</h6>
+                        <div className="d-flex flex-column gap-2">
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Product Name:</span>
+                            <span className="fw-medium">
+                              {selectedProduct.product_name}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                  {/* Variants Information */}
-                  {selectedProduct.variants &&
-                    selectedProduct.variants.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="mb-3">
-                          Product Variants ({selectedProduct.variants.length})
-                        </h5>
-                        <div className="table-responsive">
-                          <table className="table table-sm">
-                            <thead>
-                              <tr>
-                                <th>SKU</th>
-                                <th>Variant Type</th>
-                                <th>MRP</th>
-                                <th>COGS</th>
-                                <th>Margin</th>
-                                <th>Quantity</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedProduct.variants.map(
-                                (variant, index) => (
-                                  <tr key={index}>
-                                    <td>{variant.sku || "N/A"}</td>
-                                    <td>
-                                      <small className="text-muted">
-                                        {formatVariantType(
-                                          variant.variant_type
-                                        )}
-                                      </small>
-                                    </td>
-                                    <td>₹{variant.mrp}</td>
-                                    <td>₹{variant.cogs}</td>
-                                    <td>
-                                      ₹{(variant.mrp - variant.cogs).toFixed(2)}
-                                    </td>
-                                    <td>{variant.quantity}</td>
-                                  </tr>
-                                )
-                              )}
-                            </tbody>
-                          </table>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Product ID:</span>
+                            <span className="fw-medium">
+                              {selectedProduct.product_id}
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Category:</span>
+                            <span className="fw-medium">
+                              {selectedProduct.product_category}
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Price Category:</span>
+                            <span
+                              className={`badge ${
+                                selectedProduct.product_price_category === "A"
+                                  ? "bg-success"
+                                  : selectedProduct.product_price_category ===
+                                    "B"
+                                  ? "bg-warning"
+                                  : "bg-info"
+                              }`}
+                            >
+                              Category {selectedProduct.product_price_category}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    )}
+                      <div className="col-md-6">
+                        <h6 className="text-muted mb-3">Summary</h6>
+                        <div className="d-flex flex-column gap-2">
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Status:</span>
+                            {getStatusBadge(selectedProduct.status)}
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Total Variants:</span>
+                            <span className="fw-medium">
+                              {selectedProduct.total_variants}
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">Total Quantity:</span>
+                            <span className="fw-medium">
+                              {selectedProduct.total_quantity}
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span className="text-muted">COGS Range:</span>
+                            <span className="fw-medium">
+                              ₹{selectedProduct.cogs_range}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* Images Section */}
-                  {selectedProduct.images &&
-                    selectedProduct.images.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="mb-3">
-                          Product Images ({selectedProduct.images.length})
-                        </h5>
-                        <div className="row">
-                          {selectedProduct.images.map((image, index) => (
-                            <div key={index} className="col-md-4 mb-3">
-                              <div className="card">
-                                <div className="card-body p-2">
-                                  <div className="d-flex justify-content-between align-items-center">
-                                    <div>
-                                      <small className="text-muted d-block">
-                                        {image.alt_text || `Image ${index + 1}`}
-                                      </small>
-                                      <small className="text-muted">
-                                        {image.is_primary && (
-                                          <span className="badge bg-primary me-1">
-                                            Primary
-                                          </span>
-                                        )}
-                                        Sort: {image.sort_order}
-                                      </small>
-                                    </div>
-                                    <button
-                                      className="btn btn-sm btn-outline-info"
-                                      onClick={() => handleImageView(image)}
-                                      title="View Image"
-                                      disabled={isLoadingImage}
-                                    >
-                                      {isLoadingImage ? (
+                    {/* Vendors Table */}
+                    {selectedProduct.vendors &&
+                      selectedProduct.vendors.length > 0 && (
+                        <div className="mb-3">
+                          <h6 className="text-muted mb-3">Vendors</h6>
+                          <div className="table-responsive">
+                            <table className="table table-sm table-bordered">
+                              <thead className="table-light">
+                                <tr>
+                                  <th className="small">Vendor Name</th>
+                                  <th className="small">Common Name</th>
+                                  <th className="small">Manufactured By</th>
+                                  <th className="small d-none d-md-table-cell">
+                                    Mfg Date
+                                  </th>
+                                  <th className="small d-none d-lg-table-cell">
+                                    Imported By
+                                  </th>
+                                  <th className="small text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedProduct.vendors.map(
+                                  (vendor, index) => (
+                                    <tr key={index}>
+                                      <td className="small fw-medium">
+                                        {vendor.vendor_name || "N/A"}
+                                      </td>
+                                      <td className="small">
+                                        {vendor.common_name || "N/A"}
+                                      </td>
+                                      <td className="small">
+                                        {vendor.manufactured_by || "N/A"}
+                                      </td>
+                                      <td className="small d-none d-md-table-cell">
+                                        {vendor.manufacturing_date || "N/A"}
+                                      </td>
+                                      <td className="small d-none d-lg-table-cell">
+                                        {vendor.imported_by || "N/A"}
+                                      </td>
+                                      <td className="small text-center">
+                                        <span
+                                          className={`badge ${
+                                            vendor.vendor_status === "active"
+                                              ? "bg-success"
+                                              : "bg-secondary"
+                                          }`}
+                                        >
+                                          {vendor.vendor_status || "N/A"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  )
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Variants Table */}
+                    {selectedProduct.variants &&
+                      selectedProduct.variants.length > 0 && (
+                        <div className="mb-3">
+                          <h6 className="text-muted mb-3">Product Variants</h6>
+                          <div className="table-responsive">
+                            <table className="table table-sm table-bordered">
+                              <thead className="table-light">
+                                <tr>
+                                  <th className="small">Variant</th>
+                                  <th className="small text-center d-none d-md-table-cell">
+                                    SKU
+                                  </th>
+                                  <th className="small text-end">MRP</th>
+                                  <th className="small text-end">COGS</th>
+                                  <th className="small text-end">Margin</th>
+                                  <th className="small text-center">Qty</th>
+                                  <th className="small">Vendor</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedProduct.variants.map(
+                                  (variant, index) => (
+                                    <tr key={index}>
+                                      <td className="small">
+                                        <div className="fw-medium">
+                                          {formatVariantType(
+                                            variant.variant_type
+                                          )}
+                                        </div>
                                         <div
-                                          className="spinner-border spinner-border-sm"
-                                          role="status"
-                                          aria-hidden="true"
-                                        ></div>
-                                      ) : (
-                                        <Icon
-                                          icon="lucide:eye"
-                                          width="16"
-                                          height="16"
-                                        />
-                                      )}
-                                    </button>
+                                          className="text-muted d-md-none"
+                                          style={{ fontSize: "11px" }}
+                                        >
+                                          SKU: {variant.sku || "N/A"}
+                                        </div>
+                                      </td>
+                                      <td className="small text-center d-none d-md-table-cell">
+                                        <span className="badge bg-light text-dark">
+                                          {variant.sku || "N/A"}
+                                        </span>
+                                      </td>
+                                      <td className="small text-end">
+                                        ₹{variant.mrp}
+                                      </td>
+                                      <td className="small text-end">
+                                        ₹{variant.cogs}
+                                      </td>
+                                      <td className="small text-end fw-medium">
+                                        ₹
+                                        {(variant.mrp - variant.cogs).toFixed(
+                                          2
+                                        )}
+                                      </td>
+                                      <td className="small text-center">
+                                        <span className="badge bg-primary rounded-pill">
+                                          {variant.quantity}
+                                        </span>
+                                      </td>
+                                      <td className="small">
+                                        {variant.vendor_pricing &&
+                                        variant.vendor_pricing.length > 0
+                                          ? variant.vendor_pricing
+                                              .map(
+                                                (vp) => vp.vendor_name || "N/A"
+                                              )
+                                              .join(", ")
+                                          : "Not Assigned"}
+                                      </td>
+                                    </tr>
+                                  )
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Product Images */}
+                    {selectedProduct.images &&
+                      selectedProduct.images.length > 0 && (
+                        <div className="mb-3">
+                          <h6 className="text-muted mb-3">Product Images</h6>
+                          <div className="row g-2">
+                            {selectedProduct.images.map((image, index) => (
+                              <div key={index} className="col-md-4 col-6">
+                                <div className="card bg-light border-0">
+                                  <div className="card-body p-2">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                      <div className="flex-grow-1">
+                                        <div className="fw-medium small">
+                                          {image.alt_text ||
+                                            `Image ${index + 1}`}
+                                        </div>
+                                        <div
+                                          className="text-muted"
+                                          style={{ fontSize: "11px" }}
+                                        >
+                                          {image.is_primary && (
+                                            <span
+                                              className="badge bg-primary me-1"
+                                              style={{ fontSize: "9px" }}
+                                            >
+                                              Primary
+                                            </span>
+                                          )}
+                                          Sort: {image.sort_order}
+                                        </div>
+                                      </div>
+                                      <button
+                                        className="btn btn-sm btn-outline-primary rounded-pill px-2"
+                                        onClick={() => handleImageView(image)}
+                                        title="View Image"
+                                        disabled={isLoadingImage}
+                                      >
+                                        {isLoadingImage ? (
+                                          <div
+                                            className="spinner-border spinner-border-sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                            style={{
+                                              width: "12px",
+                                              height: "12px",
+                                            }}
+                                          ></div>
+                                        ) : (
+                                          <Icon
+                                            icon="lucide:eye"
+                                            width="14"
+                                            height="14"
+                                          />
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-
-                  {/* Summary Stats */}
-                  <div className="row">
-                    <div className="col-md-3">
-                      <div className="card text-center">
-                        <div className="card-body">
-                          <h6 className="card-title">Total Variants</h6>
-                          <h4 className="text-primary">
-                            {selectedProduct.total_variants}
-                          </h4>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="card text-center">
-                        <div className="card-body">
-                          <h6 className="card-title">Total Quantity</h6>
-                          <h4 className="text-success">
-                            {selectedProduct.total_quantity}
-                          </h4>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="card text-center">
-                        <div className="card-body">
-                          <h6 className="card-title">COGS Range</h6>
-                          <h4 className="text-warning">
-                            ₹{selectedProduct.cogs_range}
-                          </h4>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-2"></div>
-                  </div>
-                </>
-              )}
+                      )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </Modal>
+      )}
 
       {/* Image View Modal */}
       <Modal
@@ -1397,11 +1632,12 @@ const ProcurementTableDataLayer = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
             zIndex: 10000,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            backdropFilter: "blur(4px)",
           },
           content: {
             position: "relative",
@@ -1410,91 +1646,209 @@ const ProcurementTableDataLayer = () => {
             right: "auto",
             bottom: "auto",
             border: "none",
-            borderRadius: "12px",
+            borderRadius: "16px",
             padding: "0",
-            maxWidth: "400px",
+            maxWidth: "480px",
             width: "90%",
-            maxHeight: "80vh",
-            overflow: "auto",
+            maxHeight: "90vh",
+            overflow: "hidden",
             background: "white",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             animation: "slideIn 0.3s ease-out",
           },
         }}
       >
-        <div className="p-4">
-          <div className="text-center mb-4">
-            <h5 className="mb-2">Update Product Status</h5>
-            <p className="text-muted mb-0">
-              Product: <strong>{selectedProductForStatus?.product_name}</strong>
-            </p>
+        {/* Close button */}
+        <button
+          onClick={() => setStatusModalIsOpen(false)}
+          disabled={isUpdatingStatus}
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            width: "32px",
+            height: "32px",
+            border: "none",
+            borderRadius: "8px",
+            background: "transparent",
+            color: "#6b7280",
+            cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all 0.2s",
+            fontSize: "20px",
+            zIndex: 1,
+          }}
+          onMouseEnter={(e) => {
+            if (!isUpdatingStatus) {
+              e.target.style.background = "#f3f4f6";
+              e.target.style.color = "#374151";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = "transparent";
+            e.target.style.color = "#6b7280";
+          }}
+        >
+          ×
+        </button>
+
+        {/* Modal content */}
+        <div style={{ padding: "32px" }}>
+          {/* Icon */}
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+              boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
+            }}
+          >
+            <Icon
+              icon="mdi:check-circle"
+              width="36"
+              height="36"
+              style={{ color: "white" }}
+            />
           </div>
 
-          <div className="d-grid gap-2">
-            <button
-              className="btn btn-success btn-lg"
-              onClick={() => handleStatusUpdate("approved")}
-              disabled={isUpdatingStatus}
+          {/* Title */}
+          <h4
+            style={{
+              textAlign: "center",
+              marginBottom: "12px",
+              fontSize: "24px",
+              fontWeight: "600",
+              color: "#111827",
+            }}
+          >
+            Approve Product?
+          </h4>
+
+          {/* Description */}
+          <p
+            style={{
+              textAlign: "center",
+              color: "#6b7280",
+              fontSize: "15px",
+              marginBottom: "8px",
+              lineHeight: "1.6",
+            }}
+          >
+            You are about to approve this product
+          </p>
+
+          {/* Product name */}
+          <div
+            style={{
+              textAlign: "center",
+              background: "#f9fafb",
+              padding: "12px 16px",
+              borderRadius: "10px",
+              marginBottom: "32px",
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <span
               style={{
-                padding: "12px 24px",
-                fontSize: "16px",
-                fontWeight: "500",
+                fontSize: "15px",
+                fontWeight: "600",
+                color: "#111827",
               }}
             >
-              {isUpdatingStatus ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  Approving...
-                </>
-              ) : (
-                <>
-                  <i className="icon-check me-2"></i>
-                  Approve Product
-                </>
-              )}
-            </button>
+              {selectedProductForStatus?.product_name}
+            </span>
+          </div>
 
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: "12px" }}>
             <button
-              className="btn btn-danger btn-lg"
-              onClick={() => handleStatusUpdate("rejected")}
-              disabled={isUpdatingStatus}
-              style={{
-                padding: "12px 24px",
-                fontSize: "16px",
-                fontWeight: "500",
-              }}
-            >
-              {isUpdatingStatus ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  Rejecting...
-                </>
-              ) : (
-                <>
-                  <i className="icon-x me-2"></i>
-                  Reject Product
-                </>
-              )}
-            </button>
-
-            <button
-              className="btn btn-outline-secondary"
               onClick={() => setStatusModalIsOpen(false)}
               disabled={isUpdatingStatus}
               style={{
-                padding: "8px 16px",
-                fontSize: "14px",
+                flex: 1,
+                padding: "14px 24px",
+                fontSize: "15px",
+                fontWeight: "600",
+                border: "1px solid #e5e7eb",
+                borderRadius: "10px",
+                background: "white",
+                color: "#374151",
+                cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+                opacity: isUpdatingStatus ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isUpdatingStatus) {
+                  e.target.style.background = "#f9fafb";
+                  e.target.style.borderColor = "#d1d5db";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "white";
+                e.target.style.borderColor = "#e5e7eb";
               }}
             >
               Cancel
+            </button>
+            <button
+              onClick={() => handleStatusUpdate("approved")}
+              disabled={isUpdatingStatus}
+              style={{
+                flex: 1,
+                padding: "14px 24px",
+                fontSize: "15px",
+                fontWeight: "600",
+                border: "none",
+                borderRadius: "10px",
+                background: isUpdatingStatus
+                  ? "#9ca3af"
+                  : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+                boxShadow: isUpdatingStatus
+                  ? "none"
+                  : "0 4px 12px rgba(16, 185, 129, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+              onMouseEnter={(e) => {
+                if (!isUpdatingStatus) {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow =
+                    "0 6px 16px rgba(16, 185, 129, 0.4)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.3)";
+              }}
+            >
+              {isUpdatingStatus ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                    style={{ width: "16px", height: "16px" }}
+                  ></span>
+                  <span>Approving...</span>
+                </>
+              ) : (
+                <>
+                  <Icon icon="mdi:check" width="20" height="20" />
+                  <span>Approve Product</span>
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Icon } from "@iconify/react";
 import procurementApi from "@/services/procurementApi";
-import VariantTypeManager from "./VariantTypeManager";
+import VendorMasterList from "./VendorMasterList";
+import VariantOptionsManager from "./VariantOptionsManager";
+import VariantGroupDisplay from "./VariantGroupDisplay";
+import {
+  generateVariantCombinations,
+  groupVariants,
+} from "@/utils/variantCombinationGenerator";
+import "@/styles/shopify-style.css";
 
 const ProductForm = ({ mode = "add", productId = null }) => {
   const router = useRouter();
@@ -19,32 +26,13 @@ const ProductForm = ({ mode = "add", productId = null }) => {
     product_category: "",
   });
 
-  const [variants, setVariants] = useState([
-    {
-      id: 1,
-      mrp: "",
-      cogs: "",
-      margin: "",
-      variant_type: {},
-      quantity: "",
-      dimension_with_packing: "",
-      dimension_without_packing: "",
-      sku: "",
-      images: [],
-    },
-  ]);
+  // NEW: Variant options (Color, Size, etc.) and their values
+  const [variantOptions, setVariantOptions] = useState([]);
 
-  const [vendors, setVendors] = useState([
-    {
-      id: 1,
-      vendor_name: "",
-      common_name: "",
-      manufactured_by: "",
-      manufacturing_date: "",
-      vendor_status: "",
-      imported_by: "",
-    },
-  ]);
+  // NEW: Generated variants from combinations
+  const [variants, setVariants] = useState([]);
+
+  const [vendors, setVendors] = useState([]);
 
   const [productImages, setProductImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -88,6 +76,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
               dimension_without_packing:
                 variant.dimension_without_packing || "",
               sku: variant.sku || "",
+              vendor_pricing: variant.vendor_pricing || [], // NEW: Load vendor pricing
             }))
           );
         }
@@ -131,38 +120,36 @@ const ProductForm = ({ mode = "add", productId = null }) => {
     }));
   };
 
-  // Handle vendor input changes
-  const handleVendorInputChange = (vendorId, e) => {
-    const { name, value } = e.target;
-    setVendors((prevVendors) =>
-      prevVendors.map((vendor) =>
-        vendor.id === vendorId ? { ...vendor, [name]: value } : vendor
+  // Vendor Management (for VendorMasterList)
+  const handleAddVendor = (newVendor) => {
+    setVendors((prev) => [...prev, newVendor]);
+    toast.success("Vendor added successfully");
+  };
+
+  const handleUpdateVendor = (vendorId, updatedData) => {
+    setVendors((prev) =>
+      prev.map((vendor) =>
+        vendor.id === vendorId ? { ...vendor, ...updatedData } : vendor
       )
     );
+    toast.success("Vendor updated successfully");
   };
 
-  // Add new vendor
-  const addVendor = () => {
-    const newId = Math.max(...vendors.map((v) => v.id), 0) + 1;
-    setVendors([
-      ...vendors,
-      {
-        id: newId,
-        vendor_name: "",
-        common_name: "",
-        manufactured_by: "",
-        manufacturing_date: "",
-        vendor_status: "",
-        imported_by: "",
-      },
-    ]);
-  };
+  const handleRemoveVendor = (vendorId) => {
+    // Check if vendor is used in any variant
+    const isUsed = variants.some((variant) =>
+      variant.vendor_pricing?.some((vp) => vp.vendor_id == vendorId)
+    );
 
-  // Remove vendor
-  const removeVendor = (vendorId) => {
-    if (vendors.length > 1) {
-      setVendors(vendors.filter((vendor) => vendor.id !== vendorId));
+    if (isUsed) {
+      toast.error(
+        "This vendor is assigned to one or more variants. Please remove the assignments first."
+      );
+      return;
     }
+
+    setVendors((prev) => prev.filter((vendor) => vendor.id !== vendorId));
+    toast.success("Vendor removed successfully");
   };
 
   // Calculate product_price_category based on variant MRP averages
@@ -187,51 +174,29 @@ const ProductForm = ({ mode = "add", productId = null }) => {
     }
   };
 
-  // Handle variant input changes
-  const handleVariantInputChange = (variantIndex, e) => {
-    const { name, value } = e.target;
+  // Handle variant options change (when user selects types and values)
+  const handleVariantOptionsChange = (options) => {
+    setVariantOptions(options);
+
+    // Auto-generate variants from combinations
+    const generatedVariants = generateVariantCombinations(options);
+    setVariants(generatedVariants);
+  };
+
+  // Handle single variant change
+  const handleVariantChange = (updatedVariant) => {
+    setVariants((prev) =>
+      prev.map((v) => (v.id === updatedVariant.id ? updatedVariant : v))
+    );
+  };
+
+  // Handle multiple variants change (bulk update)
+  const handleVariantsChange = (updatedVariants) => {
     setVariants((prev) => {
-      const updatedVariants = [...prev];
-      const variant = { ...updatedVariants[variantIndex] };
-
-      if (name === "mrp" || name === "cogs") {
-        variant[name] = value;
-        if (variant.mrp && variant.cogs) {
-          variant.margin = (Number(variant.mrp) - Number(variant.cogs)).toFixed(
-            2
-          );
-        }
-      } else {
-        variant[name] = value;
-      }
-
-      updatedVariants[variantIndex] = variant;
-      return updatedVariants;
+      const updatedIds = updatedVariants.map((v) => v.id);
+      const unchanged = prev.filter((v) => !updatedIds.includes(v.id));
+      return [...unchanged, ...updatedVariants];
     });
-  };
-
-  // Add new variant
-  const addVariant = () => {
-    const newVariant = {
-      id: Date.now(),
-      mrp: "",
-      cogs: "",
-      margin: "",
-      variant_type: {},
-      quantity: "",
-      dimension_with_packing: "",
-      dimension_without_packing: "",
-      sku: "",
-      images: [],
-    };
-    setVariants((prev) => [...prev, newVariant]);
-  };
-
-  // Remove variant
-  const removeVariant = (variantIndex) => {
-    if (variants.length > 1) {
-      setVariants((prev) => prev.filter((_, index) => index !== variantIndex));
-    }
   };
 
   // Handle product image upload
@@ -438,6 +403,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
         dimension_with_packing: variant.dimension_with_packing,
         dimension_without_packing: variant.dimension_without_packing,
         sku: variant.sku,
+        vendor_pricing: variant.vendor_pricing || [], // Include vendor assignments
       }));
 
       // Prepare image requests from selected product images
@@ -580,630 +546,366 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   }
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-header">
-              <h4 className="card-title mb-0">
-                {mode === "edit" ? "Edit Product" : "Add New Product"}
-              </h4>
+    <div className="shopify-product-form">
+      <div className="form-container">
+        {/* Page Header */}
+        <div className="shopify-page-header">
+          <h4 className="shopify-heading-2">
+            {mode === "edit" ? "Edit Product" : "Add New Product"}
+          </h4>
+        </div>
+
+        {errorMsg && (
+          <div className="shopify-banner shopify-banner-warning">
+            <Icon icon="mdi:alert-circle" width="18" />
+            {errorMsg}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            opacity: isSubmitting ? 0.7 : 1,
+            pointerEvents: isSubmitting ? "none" : "auto",
+          }}
+        >
+          {/* Product Information Card */}
+          <div className="shopify-card">
+            <div className="shopify-card-header">
+              <h5 className="shopify-heading-3">Product Information</h5>
             </div>
-            <div className="card-body">
-              {errorMsg && (
-                <div className="alert alert-danger" role="alert">
-                  {errorMsg}
+            <div className="shopify-card-body">
+              <div className="shopify-form-grid shopify-form-grid-2">
+                <div>
+                  <label htmlFor="product_name" className="shopify-label">
+                    Product Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="product_name"
+                    name="product_name"
+                    className="shopify-input"
+                    value={newProduct.product_name}
+                    onChange={handleProductInputChange}
+                    required
+                    placeholder="Enter product name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="product_category" className="shopify-label">
+                    Product Category *
+                  </label>
+                  <input
+                    type="text"
+                    id="product_category"
+                    name="product_category"
+                    className="shopify-input"
+                    value={newProduct.product_category}
+                    onChange={handleProductInputChange}
+                    required
+                    placeholder="Enter product category"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Vendors Information - NEW: VendorMasterList */}
+          <VendorMasterList
+            vendors={vendors}
+            onAddVendor={handleAddVendor}
+            onUpdateVendor={handleUpdateVendor}
+            onRemoveVendor={handleRemoveVendor}
+          />
+
+          {/* Variant Options Manager - NEW: Auto-generate variants */}
+          <VariantOptionsManager
+            onOptionsChange={handleVariantOptionsChange}
+            initialOptions={variantOptions}
+          />
+
+          {/* Display Generated Variants in Collapsible Groups */}
+          {variants.length > 0 && (
+            <VariantGroupDisplay
+              groupedVariants={groupVariants(variants)}
+              vendors={vendors}
+              onVariantChange={handleVariantChange}
+              onVariantsChange={handleVariantsChange}
+            />
+          )}
+
+          {/* Product Images Section */}
+          <div className="shopify-card">
+            <div className="shopify-card-header">
+              <h5 className="shopify-heading-3">Product Images</h5>
+              <p className="shopify-text-muted mb-0">
+                Upload product images to showcase your product
+              </p>
+            </div>
+            <div className="shopify-card-body">
+              <div
+                className="border border-2 border-dashed rounded p-4 text-center"
+                style={{
+                  borderColor: "#c9cccf",
+                  backgroundColor: "#f6f6f7",
+                }}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => handleProductImageUpload(e)}
+                  className="d-none"
+                  id="product-image-upload"
+                />
+                <label
+                  htmlFor="product-image-upload"
+                  className="shopify-btn shopify-btn-secondary mb-2"
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon icon="mdi:cloud-upload" className="me-2" width="18" />
+                  Choose Product Images
+                </label>
+                <p className="mb-0 shopify-text-small">
+                  Supports: JPG, JPEG, PNG, WebP, GIF
+                </p>
+              </div>
+
+              {/* Display existing images (edit mode) */}
+              {mode === "edit" && existingImages.length > 0 && (
+                <div className="mt-3">
+                  <h6 className="shopify-text-muted mb-2">Existing Images:</h6>
+                  <div className="row">
+                    {existingImages.map((image) => (
+                      <div key={image.image_id} className="col-md-3 mb-2">
+                        <div
+                          className="border rounded p-2"
+                          style={{ borderColor: "#c9cccf" }}
+                        >
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div className="flex-grow-1">
+                              <small className="shopify-text-small d-block">
+                                {image.alt_text || `Image ${image.image_id}`}
+                              </small>
+                              <small className="shopify-text-small">
+                                {image.is_primary && (
+                                  <span className="shopify-badge me-1">
+                                    Primary
+                                  </span>
+                                )}
+                                ID: {image.image_id}
+                              </small>
+                            </div>
+                            <div className="d-flex gap-1">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-info"
+                                onClick={() => handleViewImage(image)}
+                                title="View Image"
+                              >
+                                <Icon
+                                  icon="lucide:eye"
+                                  width="16"
+                                  height="16"
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() =>
+                                  deleteExistingImage(image.image_id)
+                                }
+                                title="Delete Image"
+                              >
+                                <Icon
+                                  icon="lucide:trash-2"
+                                  width="16"
+                                  height="16"
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <form
-                onSubmit={handleSubmit}
-                style={{
-                  opacity: isSubmitting ? 0.7 : 1,
-                  pointerEvents: isSubmitting ? "none" : "auto",
-                }}
-              >
-                {/* Product Information */}
-                <div className="mb-4">
-                  <h5 className="mb-3">Product Information</h5>
-
+              {/* Display selected images (new uploads) */}
+              {productImages.length > 0 && (
+                <div className="mt-3">
+                  <h6 className="shopify-text-muted mb-2">
+                    New Images to Upload:
+                  </h6>
                   <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="product_name" className="form-label">
-                        Product Name *
-                      </label>
-                      <input
-                        type="text"
-                        id="product_name"
-                        name="product_name"
-                        className="form-control"
-                        value={newProduct.product_name}
-                        onChange={handleProductInputChange}
-                        required
-                        placeholder="Enter product name"
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="product_category" className="form-label">
-                        Product Category *
-                      </label>
-                      <input
-                        type="text"
-                        id="product_category"
-                        name="product_category"
-                        className="form-control"
-                        value={newProduct.product_category}
-                        onChange={handleProductInputChange}
-                        required
-                        placeholder="Enter product category"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vendors Information */}
-                <div className="mb-4">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                      <h5 className="mb-0">Vendor Information</h5>
-                      <small className="text-muted">
-                        Add one or more vendors for this product
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary"
-                      onClick={addVendor}
-                    >
-                      <i className="fas fa-plus me-1"></i>
-                      Add Vendor
-                    </button>
-                  </div>
-
-                  {vendors.map((vendor, index) => (
-                    <div
-                      key={vendor.id}
-                      className="border rounded p-3 mb-3 position-relative"
-                      style={{ backgroundColor: "#f8f9fa" }}
-                    >
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h6 className="mb-0">Vendor #{index + 1}</h6>
-                        {vendors.length > 1 && (
+                    {productImages.map((image, imageIndex) => (
+                      <div key={imageIndex} className="col-md-3 mb-2">
+                        <div
+                          className="border rounded p-2"
+                          style={{ borderColor: "#c9cccf" }}
+                        >
+                          <small className="shopify-text-small d-block">
+                            {image.name}
+                          </small>
+                          <small className="shopify-text-small">
+                            {(image.size / 1024 / 1024).toFixed(2)} MB
+                            {image.size > 10 * 1024 * 1024 && (
+                              <span className="text-warning ms-1">
+                                <i className="icon-alert-triangle"></i> Large
+                              </span>
+                            )}
+                          </small>
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => removeVendor(vendor.id)}
-                            title="Delete Vendor"
+                            className="shopify-btn shopify-btn-danger mt-1 w-100"
+                            onClick={() => removeProductImage(imageIndex)}
+                            title="Remove Image"
+                            style={{ fontSize: "12px", padding: "4px 8px" }}
                           >
                             <Icon
                               icon="lucide:trash-2"
-                              width="16"
-                              height="16"
+                              width="14"
+                              height="14"
+                              className="me-1"
                             />
+                            Remove
                           </button>
-                        )}
-                      </div>
-
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`vendor_name_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Vendor Name
-                          </label>
-                          <input
-                            type="text"
-                            id={`vendor_name_${vendor.id}`}
-                            name="vendor_name"
-                            className="form-control"
-                            value={vendor.vendor_name}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                            placeholder="Enter vendor name"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`common_name_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Common Name
-                          </label>
-                          <input
-                            type="text"
-                            id={`common_name_${vendor.id}`}
-                            name="common_name"
-                            className="form-control"
-                            value={vendor.common_name}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                            placeholder="Enter common name"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`manufactured_by_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Manufactured By
-                          </label>
-                          <input
-                            type="text"
-                            id={`manufactured_by_${vendor.id}`}
-                            name="manufactured_by"
-                            className="form-control"
-                            value={vendor.manufactured_by}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                            placeholder="Enter manufacturer"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`manufacturing_date_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Manufacturing Date
-                          </label>
-                          <input
-                            type="date"
-                            id={`manufacturing_date_${vendor.id}`}
-                            name="manufacturing_date"
-                            className="form-control"
-                            value={vendor.manufacturing_date}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`vendor_status_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Vendor Status
-                          </label>
-                          <select
-                            id={`vendor_status_${vendor.id}`}
-                            name="vendor_status"
-                            className="form-select"
-                            value={vendor.vendor_status}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                          >
-                            <option value="">Select Status</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label
-                            htmlFor={`imported_by_${vendor.id}`}
-                            className="form-label"
-                          >
-                            Imported By
-                          </label>
-                          <input
-                            type="text"
-                            id={`imported_by_${vendor.id}`}
-                            name="imported_by"
-                            className="form-control"
-                            value={vendor.imported_by}
-                            onChange={(e) =>
-                              handleVendorInputChange(vendor.id, e)
-                            }
-                            placeholder="Enter importer name"
-                          />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
+          </div>
 
-                {/* Variants Section */}
-                <div className="mb-4">
-                  <div className="mb-3">
-                    <h5 className="mb-0">Product Variants</h5>
-                    <small className="text-muted">
-                      Add different variants of this product (e.g., different
-                      colors, sizes)
+          {/* Upload Progress */}
+          {uploadProgress && (
+            <div className="shopify-banner shopify-banner-info">
+              <div className="d-flex align-items-center">
+                <div
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                >
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                {uploadProgress}
+              </div>
+              <div className="mt-2">
+                <small className="shopify-text-small">
+                  Large images may take several seconds to upload. Please do not
+                  close this page.
+                </small>
+              </div>
+            </div>
+          )}
+
+          {/* Form Actions */}
+          <div className="shopify-actions-footer">
+            <button
+              type="button"
+              className="shopify-btn shopify-btn-secondary"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="shopify-btn shopify-btn-primary"
+              disabled={isSubmitting}
+              style={{
+                position: "relative",
+                minWidth: "150px",
+              }}
+            >
+              {isSubmitting ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  {mode === "edit"
+                    ? "Updating..."
+                    : productImages.length > 0
+                    ? "Creating & Uploading..."
+                    : "Creating..."}
+                </>
+              ) : mode === "edit" ? (
+                "Update Product"
+              ) : (
+                "Create Product"
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Image View Modal */}
+        {imageModalIsOpen && (
+          <div className="modal fade show d-block" tabIndex="-1">
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">View Image</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setImageModalIsOpen(false)}
+                  ></button>
+                </div>
+                <div className="modal-body text-center">
+                  {selectedImageUrl ? (
+                    <img
+                      src={selectedImageUrl}
+                      alt="Product Image"
+                      className="img-fluid"
+                      style={{ maxHeight: "70vh", maxWidth: "100%" }}
+                      onError={(e) => {
+                        console.error(
+                          "Image failed to load:",
+                          selectedImageUrl
+                        );
+                        e.target.style.display = "none";
+                        const errorDiv = e.target.nextSibling;
+                        if (errorDiv) errorDiv.style.display = "block";
+                      }}
+                    />
+                  ) : (
+                    <div className="alert alert-info">
+                      <i className="icon-info me-2"></i>
+                      No image available
+                    </div>
+                  )}
+                  <div
+                    style={{ display: "none" }}
+                    className="alert alert-warning mt-3"
+                  >
+                    <i className="icon-alert-triangle me-2"></i>
+                    This image failed to load. It might be too large or
+                    corrupted.
+                    <br />
+                    <small>
+                      Try refreshing the page or contact support if the issue
+                      persists.
                     </small>
                   </div>
-
-                  {variants.map((variant, index) => (
-                    <div key={variant.id} className="border rounded p-3 mb-3">
-                      <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h6 className="mb-0">Variant {index + 1}</h6>
-                        {variants.length > 1 && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => removeVariant(index)}
-                          >
-                            Remove Variant
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">MRP *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            name="mrp"
-                            className="form-control"
-                            value={variant.mrp}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            required
-                            placeholder="Enter MRP"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">COGS *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            name="cogs"
-                            className="form-control"
-                            value={variant.cogs}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            required
-                            placeholder="Enter COGS"
-                          />
-                        </div>
-                        {/* Dynamic Variant Type Manager */}
-                        <div className="col-12 mb-3">
-                          <VariantTypeManager
-                            variantIndex={index}
-                            variant={variant}
-                            onVariantChange={handleVariantInputChange}
-                          />
-                        </div>
-
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Quantity</label>
-                          <input
-                            type="number"
-                            name="quantity"
-                            className="form-control"
-                            value={variant.quantity}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            placeholder="Enter quantity"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">SKU</label>
-                          <input
-                            type="text"
-                            name="sku"
-                            className="form-control"
-                            value={variant.sku}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            placeholder="Enter variant SKU"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">
-                            Dimension (with packing)
-                          </label>
-                          <input
-                            type="text"
-                            name="dimension_with_packing"
-                            className="form-control"
-                            value={variant.dimension_with_packing}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            placeholder="Enter dimensions with packing"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">
-                            Dimension (without packing)
-                          </label>
-                          <input
-                            type="text"
-                            name="dimension_without_packing"
-                            className="form-control"
-                            value={variant.dimension_without_packing}
-                            onChange={(e) => handleVariantInputChange(index, e)}
-                            placeholder="Enter dimensions without packing"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Margin</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            name="margin"
-                            className="form-control"
-                            value={variant.margin}
-                            readOnly
-                            placeholder="Auto-calculated"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Add Another Variant Button */}
-                      {index === variants.length - 1 && (
-                        <div className="text-end mb-3">
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary"
-                            onClick={addVariant}
-                          >
-                            Add Another Variant
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
                 </div>
-
-                {/* Product Images Section */}
-                <div className="mb-4">
-                  <h5 className="mb-3">Product Images</h5>
-                  <div
-                    className="border border-2 border-dashed rounded p-4 text-center"
-                    style={{
-                      borderColor: "#dee2e6",
-                      backgroundColor: "#f8f9fa",
-                    }}
-                  >
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => handleProductImageUpload(e)}
-                      className="d-none"
-                      id="product-image-upload"
-                    />
-                    <label
-                      htmlFor="product-image-upload"
-                      className="btn btn-outline-primary mb-2"
-                      style={{ cursor: "pointer" }}
-                    >
-                      Choose Product Images
-                    </label>
-                    <p className="mb-0 text-muted">
-                      Supports: JPG, JPEG, PNG, WebP, GIF
-                    </p>
-                  </div>
-
-                  {/* Display existing images (edit mode) */}
-                  {mode === "edit" && existingImages.length > 0 && (
-                    <div className="mt-3">
-                      <h6>Existing Images:</h6>
-                      <div className="row">
-                        {existingImages.map((image) => (
-                          <div key={image.image_id} className="col-md-3 mb-2">
-                            <div className="card">
-                              <div className="card-body p-2">
-                                <div className="d-flex justify-content-between align-items-start">
-                                  <div className="flex-grow-1">
-                                    <small className="text-muted d-block">
-                                      {image.alt_text ||
-                                        `Image ${image.image_id}`}
-                                    </small>
-                                    <small className="text-muted">
-                                      {image.is_primary && (
-                                        <span className="badge bg-primary me-1">
-                                          Primary
-                                        </span>
-                                      )}
-                                      ID: {image.image_id}
-                                    </small>
-                                  </div>
-                                  <div className="d-flex gap-1">
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-outline-info"
-                                      onClick={() => handleViewImage(image)}
-                                      title="View Image"
-                                    >
-                                      <Icon
-                                        icon="lucide:eye"
-                                        width="16"
-                                        height="16"
-                                      />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-outline-danger"
-                                      onClick={() =>
-                                        deleteExistingImage(image.image_id)
-                                      }
-                                      title="Delete Image"
-                                    >
-                                      <Icon
-                                        icon="lucide:trash-2"
-                                        width="16"
-                                        height="16"
-                                      />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Display selected images (new uploads) */}
-                  {productImages.length > 0 && (
-                    <div className="mt-3">
-                      <h6>New Images to Upload:</h6>
-                      <div className="row">
-                        {productImages.map((image, imageIndex) => (
-                          <div key={imageIndex} className="col-md-3 mb-2">
-                            <div className="card">
-                              <div className="card-body p-2">
-                                <small className="text-muted d-block">
-                                  {image.name}
-                                </small>
-                                <small className="text-muted">
-                                  {(image.size / 1024 / 1024).toFixed(2)} MB
-                                  {image.size > 10 * 1024 * 1024 && (
-                                    <span className="text-warning ms-1">
-                                      <i className="icon-alert-triangle"></i>{" "}
-                                      Large
-                                    </span>
-                                  )}
-                                </small>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-danger mt-1 w-100"
-                                  onClick={() => removeProductImage(imageIndex)}
-                                  title="Remove Image"
-                                >
-                                  <Icon
-                                    icon="lucide:trash-2"
-                                    width="16"
-                                    height="16"
-                                    className="me-1"
-                                  />
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upload Progress */}
-                {uploadProgress && (
-                  <div className="alert alert-info">
-                    <div className="d-flex align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      {uploadProgress}
-                    </div>
-                    <div className="mt-2">
-                      <small className="text-muted">
-                        Large images may take several seconds to upload. Please
-                        do not close this page.
-                      </small>
-                    </div>
-                  </div>
-                )}
-
-                {/* Form Actions */}
-                <div className="d-flex justify-content-end gap-2">
+                <div className="modal-footer">
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={handleCancel}
-                    disabled={isSubmitting}
+                    onClick={() => setImageModalIsOpen(false)}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={isSubmitting}
-                    style={{
-                      position: "relative",
-                      minWidth: "150px",
-                    }}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                          aria-hidden="true"
-                        ></span>
-                        {mode === "edit"
-                          ? "Updating..."
-                          : productImages.length > 0
-                          ? "Creating & Uploading..."
-                          : "Creating..."}
-                      </>
-                    ) : mode === "edit" ? (
-                      "Update Product"
-                    ) : (
-                      "Create Product"
-                    )}
+                    Close
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Image View Modal */}
-      {imageModalIsOpen && (
-        <div className="modal fade show d-block" tabIndex="-1">
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">View Image</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setImageModalIsOpen(false)}
-                ></button>
-              </div>
-              <div className="modal-body text-center">
-                {selectedImageUrl ? (
-                  <img
-                    src={selectedImageUrl}
-                    alt="Product Image"
-                    className="img-fluid"
-                    style={{ maxHeight: "70vh", maxWidth: "100%" }}
-                    onError={(e) => {
-                      console.error("Image failed to load:", selectedImageUrl);
-                      e.target.style.display = "none";
-                      const errorDiv = e.target.nextSibling;
-                      if (errorDiv) errorDiv.style.display = "block";
-                    }}
-                  />
-                ) : (
-                  <div className="alert alert-info">
-                    <i className="icon-info me-2"></i>
-                    No image available
-                  </div>
-                )}
-                <div
-                  style={{ display: "none" }}
-                  className="alert alert-warning mt-3"
-                >
-                  <i className="icon-alert-triangle me-2"></i>
-                  This image failed to load. It might be too large or corrupted.
-                  <br />
-                  <small>
-                    Try refreshing the page or contact support if the issue
-                    persists.
-                  </small>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setImageModalIsOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
