@@ -1,22 +1,14 @@
+'use client';
 import Breadcrumb from "@/components/Breadcrumb";
 import ProductForm from "@/components/ProductForm";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import Link from "next/link";
-
-export const metadata = {
-  title: "Edit Product - Procurement",
-  description: "Edit product in procurement system",
-};
-
-// Generate static params for static export
-// Returns empty array since products are loaded dynamically from API
-export async function generateStaticParams() {
-  return [];
-}
+import { useParams } from "next/navigation";
 
 // Dynamic route for editing products
-const EditProductPage = async ({ params }) => {
-  const { id } = await params;
+const EditProductPage = () => {
+  const params = useParams();
+  const id = params?.id;
 
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
