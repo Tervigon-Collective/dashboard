@@ -1,0 +1,22 @@
+{
+  "navigationFallback": {
+    "rewrite": "/404.html",
+    "exclude": ["/_next/*", "/api/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
+  },
+  "routes": [],
+  "platformErrorOverrides": [
+    {
+      "errorType": "NotFound",
+      "serve": "/404.html"
+    }
+  ],
+  "globalHeaders": {
+    "cache-control": "must-revalidate, max-age=3600"
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".js": "text/javascript",
+    ".css": "text/css"
+  }
+}
+

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  trailingSlash: false, // ok for export (creates about.html instead of about/index.html)
+  trailingSlash: true,
   output: "export", // static export → writes to out/
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
