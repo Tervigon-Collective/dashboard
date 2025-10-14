@@ -8,8 +8,13 @@ export const metadata = {
   description: "Edit product in procurement system",
 };
 
-// Dynamic route for editing products
+// Generate static params for static export
+// Returns empty array since products are loaded dynamically from API
+export async function generateStaticParams() {
+  return [];
+}
 
+// Dynamic route for editing products
 const EditProductPage = async ({ params }) => {
   const { id } = await params;
 
