@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  output: "standalone", // Use standalone mode for Azure Static Web Apps with dynamic routes
+  output: "export", // Enable static export for Azure Static Web Apps
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {

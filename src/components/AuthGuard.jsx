@@ -18,8 +18,6 @@ export default function AuthGuard({ children }) {
   const publicRoutes = [
     "/sign-in",
     "/sign-in/",
-    "/sign-in-bypass",
-    "/sign-in-bypass/",
     "/sign-up", 
     "/sign-up/",
     "/privacy-policy",
@@ -32,7 +30,7 @@ export default function AuthGuard({ children }) {
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Check if user is authenticated (either through Firebase or localStorage bypass)
+  // Check if user is authenticated through Firebase
   const isAuthenticated = user || (role && role !== "none");
 
   useEffect(() => {

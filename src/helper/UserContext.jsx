@@ -234,7 +234,7 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Check localStorage on mount for bypass mode
+  // Check localStorage on mount for cached authentication
   useEffect(() => {
     const checkLocalStorage = () => {
       const cachedRole = localStorageUtils.getRole();

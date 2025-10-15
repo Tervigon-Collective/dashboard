@@ -4,16 +4,20 @@
   },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/_next/*", "/api/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
+    "exclude": ["/_next/*", "/api/*", "/assets/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
   },
   "routes": [
     {
-      "route": "/procurement/edit-products/*",
+      "route": "/procurement/edit-product",
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/procurement/edit-products",
       "allowedRoles": ["anonymous", "authenticated"]
     }
   ],
   "globalHeaders": {
-    "cache-control": "must-revalidate, max-age=3600"
+    "cache-control": "public, max-age=3600"
   },
   "mimeTypes": {
     ".json": "application/json",

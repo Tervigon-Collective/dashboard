@@ -45,22 +45,42 @@ class ProcurementApiService {
     console.log("Making API request to:", url);
     console.log("Request headers:", requestOptions.headers);
 
-    const response = await fetch(url, requestOptions);
+    try {
+      const response = await fetch(url, requestOptions);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API Error Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        url: url,
-        response: errorText,
-      });
-      throw new Error(
-        `HTTP error! status: ${response.status} - ${response.statusText}. URL: ${url}`
-      );
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response Details:");
+        console.error("  Status:", response.status);
+        console.error("  Status Text:", response.statusText);
+        console.error("  URL:", url);
+        console.error("  Response Body:", errorText);
+        
+        // Handle 401 Unauthorized specifically
+        if (response.status === 401) {
+          throw new Error('AUTHENTICATION_ERROR: Your session has expired. Please sign in again.');
+        }
+        
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${response.statusText}. URL: ${url}. Response: ${errorText}`
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      // Network error or fetch failed
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error("Network Error - Cannot reach server:");
+        console.error("  URL:", url);
+        console.error("  Error:", error.message);
+        throw new Error(`Network error: Cannot reach server at ${url}. Please check if the backend is running.`);
+      }
+      // Re-throw other errors
+      throw error;
     }
-
-    return response.json();
   }
 
   // Get all products

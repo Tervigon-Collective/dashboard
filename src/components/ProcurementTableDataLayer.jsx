@@ -44,6 +44,7 @@ const ProcurementTableDataLayer = () => {
   const [deleteProductId, setDeleteProductId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
   const [viewModalIsOpen, setViewModalIsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
@@ -70,6 +71,7 @@ const ProcurementTableDataLayer = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      setAuthError(null); // Clear any previous auth errors
       const response = await ProcurementApiService.getAllProducts();
 
       if (response.success) {
@@ -81,7 +83,13 @@ const ProcurementTableDataLayer = () => {
       }
     } catch (error) {
       console.error("Error fetching products:", error);
-      handleError("load products");
+      
+      // Handle authentication errors specifically
+      if (error.message.includes('AUTHENTICATION_ERROR')) {
+        setAuthError(error.message.replace('AUTHENTICATION_ERROR: ', ''));
+      } else {
+        handleError("load products");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -600,6 +608,65 @@ const ProcurementTableDataLayer = () => {
       >
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication error if present
+  if (authError) {
+    return (
+      <div className="card">
+        <div className="card-body">
+          <div className="text-center py-5">
+            <div
+              className="mb-4"
+              style={{
+                fontSize: "64px",
+                color: "#f59e0b",
+              }}
+            >
+              <Icon icon="mdi:lock-alert" width="64" height="64" />
+            </div>
+            <h4 className="mb-3" style={{ color: "#dc2626" }}>
+              Authentication Required
+            </h4>
+            <p className="text-muted mb-4" style={{ maxWidth: "500px", margin: "0 auto" }}>
+              {authError}
+            </p>
+            <div className="d-flex gap-3 justify-content-center">
+              <button
+                className="btn btn-primary"
+                onClick={() => router.push("/sign-in")}
+                style={{
+                  padding: "12px 32px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                }}
+              >
+                <Icon icon="mdi:login" width="20" height="20" className="me-2" />
+                Sign In with Real Account
+              </button>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={() => router.push("/")}
+                style={{
+                  padding: "12px 32px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                }}
+              >
+                <Icon icon="mdi:home" width="20" height="20" className="me-2" />
+                Go to Dashboard
+              </button>
+            </div>
+            <div className="mt-4">
+              <small className="text-muted">
+                <Icon icon="mdi:information" width="16" height="16" className="me-1" />
+                The procurement API requires Firebase authentication. Please sign in with your account.
+              </small>
+            </div>
+          </div>
         </div>
       </div>
     );
