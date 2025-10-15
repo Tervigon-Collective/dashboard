@@ -1,18 +1,23 @@
 "use client";
 import { useUser } from "@/helper/UserContext";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Loader } from "./child/GeneratedContent";
+import { isUserAuthenticated, clearAuthData, logAuthEvent } from "@/utils/authUtils";
 
 /**
  * AuthGuard protects routes from unauthenticated access.
- * Redirects to /sign-in if user is not authenticated and not loading.
- * Allows access to public pages without authentication.
+ * Follows company security standards:
+ * - Validates both Firebase user and valid token
+ * - Redirects to /sign-in if authentication fails
+ * - Prevents access to protected routes without proper authentication
+ * - Clears invalid authentication data automatically
  */
 export default function AuthGuard({ children }) {
-  const { user, loading, role } = useUser();
+  const { user, loading, role, token } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [isValidating, setIsValidating] = useState(true);
 
   // Define public routes that don't require authentication
   const publicRoutes = [
@@ -30,16 +35,52 @@ export default function AuthGuard({ children }) {
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Check if user is authenticated through Firebase
-  const isAuthenticated = user || (role && role !== "none");
+  // Enhanced authentication check following company standards
+  const isAuthenticated = isUserAuthenticated(user, token, role);
 
+  // Validate authentication on route changes
   useEffect(() => {
-    if (!loading && !isAuthenticated && !isPublicRoute) {
-      router.replace("/sign-in");
-    }
-  }, [isAuthenticated, loading, pathname, router, isPublicRoute, user, role]);
+    const validateAuth = async () => {
+      setIsValidating(true);
+      
+      // If it's a public route, allow access
+      if (isPublicRoute) {
+        setIsValidating(false);
+        return;
+      }
 
-  if (loading) {
+      // If still loading, wait
+      if (loading) {
+        return;
+      }
+
+      // Check authentication status
+      if (!isAuthenticated) {
+        logAuthEvent('AUTH_GUARD_FAILED', { 
+          pathname, 
+          hasUser: !!user, 
+          hasToken: !!token, 
+          role 
+        });
+        
+        // Clear any invalid authentication data
+        clearAuthData();
+        
+        // Redirect to sign-in
+        router.replace("/sign-in");
+        return;
+      }
+
+      logAuthEvent('AUTH_GUARD_SUCCESS', { pathname });
+
+      setIsValidating(false);
+    };
+
+    validateAuth();
+  }, [isAuthenticated, loading, pathname, router, isPublicRoute, user, role, token]);
+
+  // Show loading while validating authentication
+  if (loading || isValidating) {
     return <Loader />;
   }
   
@@ -48,9 +89,11 @@ export default function AuthGuard({ children }) {
     return children;
   }
   
-  if (!isAuthenticated && !isPublicRoute) {
+  // If not authenticated and not a public route, show loading (redirect will happen)
+  if (!isAuthenticated) {
     return <Loader />;
   }
   
+  // User is authenticated, render protected content
   return children;
 } 

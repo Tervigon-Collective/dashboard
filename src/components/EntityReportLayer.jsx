@@ -1710,6 +1710,13 @@ const EntityReportLayer = () => {
   const [itemsPerPage] = useState(20);
   const [filters, setFilters] = useState(initialState.filters);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  
+  // Filter and search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterConfig, setFilterConfig] = useState({});
 
   // DateRangePicker state - synced with filters
   const [dateRange, setDateRange] = useState(() => {
@@ -1721,13 +1728,62 @@ const EntityReportLayer = () => {
     return null;
   });
 
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Search and filter function
+  const getFilteredAndSortedData = (dataArray) => {
+    if (!dataArray || dataArray.length === 0) return [];
+
+    let filtered = dataArray;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(row => 
+        Object.values(row).some(value => 
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig.key) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal = a[sortConfig.key];
+        let bVal = b[sortConfig.key];
+
+        // Handle numeric values
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+
+        // Handle string values
+        aVal = aVal ? aVal.toString().toLowerCase() : '';
+        bVal = bVal ? bVal.toString().toLowerCase() : '';
+        
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  };
+
   // Restore data from sessionStorage on component mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedData = sessionStorage.getItem("entityReportData");
       if (savedData && Object.keys(JSON.parse(savedData)).length > 0) {
-        // Data is already loaded from getInitialData, no need to fetch again
-        console.log("Restored data from sessionStorage");
+        // Data is compressed, need to fetch fresh data for current tab
+        console.log("Compressed data found, fetching fresh data for", activeTab);
+        fetchData(activeTab);
       } else {
         // No saved data, auto-fetch data for current tab with today's date
         console.log("No saved data, auto-fetching data for", activeTab);
@@ -1748,13 +1804,102 @@ const EntityReportLayer = () => {
     }
   }, []);
 
-  // Save data to sessionStorage
+  // Save data to sessionStorage with compression
   const saveToSessionStorage = (data, filters, activeTab) => {
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("entityReportData", JSON.stringify(data));
-      sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
-      sessionStorage.setItem("entityReportActiveTab", activeTab);
+      try {
+        // Compress the data by removing unnecessary fields and optimizing structure
+        const compressedData = compressDataForStorage(data);
+        const dataString = JSON.stringify(compressedData);
+        
+        // Check if data is too large (localStorage limit is ~5-10MB)
+        if (dataString.length > 4 * 1024 * 1024) { // 4MB limit
+          console.warn("Data too large for sessionStorage, skipping save");
+          return;
+        }
+        
+        sessionStorage.setItem("entityReportData", dataString);
+        sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
+        sessionStorage.setItem("entityReportActiveTab", activeTab);
+      } catch (error) {
+        console.error("Failed to save to sessionStorage:", error);
+        // If storage fails due to quota, clear old data
+        if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+          handleStorageQuotaExceeded();
+        } else {
+          // For other errors, just clear data and save minimal info
+          sessionStorage.removeItem("entityReportData");
+          sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
+          sessionStorage.setItem("entityReportActiveTab", activeTab);
+        }
+      }
     }
+  };
+
+  // Compress data for storage by removing unnecessary fields
+  const compressDataForStorage = (data) => {
+    const compressed = {};
+    
+    Object.keys(data).forEach(key => {
+      if (key === 'google' && Array.isArray(data[key])) {
+        // Compress Google data - keep only essential fields
+        compressed[key] = data[key].map(item => ({
+          campaign_name: item.campaign_name,
+          impressions: item.impressions,
+          clicks: item.clicks,
+          ctr: item.ctr,
+          spend: item.spend,
+          cpc: item.cpc,
+          shopify_orders: item.shopify_orders,
+          shopify_revenue: item.shopify_revenue,
+          net_profit: item.net_profit,
+          gross_roas: item.gross_roas,
+          product_details: item.product_details
+        }));
+      } else if (key === 'organic' && Array.isArray(data[key])) {
+        // Compress Organic data
+        compressed[key] = data[key].map(item => ({
+          campaign_name: item.campaign_name,
+          shopify_revenue: item.shopify_revenue,
+          shopify_cogs: item.shopify_cogs,
+          net_profit: item.net_profit,
+          total_sku_quantity: item.total_sku_quantity,
+          product_details: item.product_details
+        }));
+      } else if (key === 'metaHierarchy' && typeof data[key] === 'object') {
+        // Compress Meta hierarchy data - keep only essential structure
+        compressed[key] = {};
+        Object.keys(data[key]).forEach(campaignId => {
+          const campaign = data[key][campaignId];
+          compressed[key][campaignId] = {
+            campaign_name: campaign.campaign_name,
+            adsets: {}
+          };
+          
+          // Only keep adset names and basic structure, not full hourly data
+          Object.keys(campaign.adsets || {}).forEach(adsetId => {
+            const adset = campaign.adsets[adsetId];
+            compressed[key][campaignId].adsets[adsetId] = {
+              adset_name: adset.adset_name,
+              ads: {}
+            };
+            
+            // Only keep ad names
+            Object.keys(adset.ads || {}).forEach(adId => {
+              const ad = adset.ads[adId];
+              compressed[key][campaignId].adsets[adsetId].ads[adId] = {
+                ad_name: ad.ad_name
+              };
+            });
+          });
+        });
+      } else {
+        // Keep summary data as is
+        compressed[key] = data[key];
+      }
+    });
+    
+    return compressed;
   };
 
   // Clear sessionStorage
@@ -1764,6 +1909,14 @@ const EntityReportLayer = () => {
       sessionStorage.removeItem("entityReportFilters");
       sessionStorage.removeItem("entityReportActiveTab");
     }
+  };
+
+  // Clear storage if quota exceeded
+  const handleStorageQuotaExceeded = () => {
+    console.warn("Storage quota exceeded, clearing old data");
+    clearSessionStorage();
+    // Show user notification
+    setError("Data cache cleared due to storage limits. Please refresh the page.");
   };
 
   const fetchData = async (reportType) => {
@@ -2109,7 +2262,18 @@ const EntityReportLayer = () => {
           key={i}
           className={`page-item ${currentPage === i ? "active" : ""}`}
         >
-          <button className="page-link" onClick={() => handlePageChange(i)}>
+          <button 
+            className="page-link" 
+            onClick={() => handlePageChange(i)}
+            style={{
+              backgroundColor: currentPage === i ? '#007bff' : '#fff',
+              color: currentPage === i ? '#fff' : '#007bff',
+              border: '1px solid #dee2e6',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              marginRight: '2px'
+            }}
+          >
             {i}
           </button>
         </li>
@@ -2118,17 +2282,77 @@ const EntityReportLayer = () => {
 
     return (
       <nav aria-label="Table pagination">
-        <ul className="pagination justify-content-center">
+        <ul className="pagination justify-content-end">
+          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+              style={{
+                backgroundColor: currentPage === 1 ? '#f8f9fa' : '#fff',
+                color: currentPage === 1 ? '#6c757d' : '#007bff',
+                border: '1px solid #dee2e6',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                marginRight: '2px'
+              }}
+            >
+              «
+            </button>
+          </li>
           <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
             <button
               className="page-link"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
+              style={{
+                backgroundColor: currentPage === 1 ? '#f8f9fa' : '#fff',
+                color: currentPage === 1 ? '#6c757d' : '#007bff',
+                border: '1px solid #dee2e6',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                marginRight: '2px'
+              }}
             >
-              <Icon icon="solar:arrow-left-bold" />
+              ‹
             </button>
           </li>
           {pages}
+          {endPage < totalPages && (
+            <li className="page-item disabled">
+              <span 
+                className="page-link"
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  color: '#6c757d',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  marginRight: '2px'
+                }}
+              >
+                ...
+              </span>
+            </li>
+          )}
+          {endPage < totalPages && (
+            <li className="page-item">
+              <button
+                className="page-link"
+                onClick={() => handlePageChange(totalPages)}
+                style={{
+                  backgroundColor: '#fff',
+                  color: '#007bff',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  marginRight: '2px'
+                }}
+              >
+                {totalPages}
+              </button>
+            </li>
+          )}
           <li
             className={`page-item ${
               currentPage === totalPages ? "disabled" : ""
@@ -2138,27 +2362,61 @@ const EntityReportLayer = () => {
               className="page-link"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
+              style={{
+                backgroundColor: currentPage === totalPages ? '#f8f9fa' : '#fff',
+                color: currentPage === totalPages ? '#6c757d' : '#007bff',
+                border: '1px solid #dee2e6',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                marginRight: '2px'
+              }}
             >
-              <Icon icon="solar:arrow-right-bold" />
+              ›
+            </button>
+          </li>
+          <li
+            className={`page-item ${
+              currentPage === totalPages ? "disabled" : ""
+            }`}
+          >
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+              style={{
+                backgroundColor: currentPage === totalPages ? '#f8f9fa' : '#fff',
+                color: currentPage === totalPages ? '#6c757d' : '#007bff',
+                border: '1px solid #dee2e6',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                marginRight: '2px'
+              }}
+            >
+              »
             </button>
           </li>
         </ul>
-        <div className="text-center text-muted">
-          Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-          {Math.min(currentPage * itemsPerPage, dataArray.length)} of{" "}
-          {dataArray.length} entries
-        </div>
       </nav>
     );
   };
 
   const renderGoogleAdsTable = () => {
     const googleData = data.google || [];
-    // Sort by revenue in descending order (highest revenue first)
-    const sortedData = [...googleData].sort(
-      (a, b) => (b.shopify_revenue || 0) - (a.shopify_revenue || 0)
-    );
-    const paginatedData = getPaginatedData(sortedData);
+    const filteredAndSortedData = getFilteredAndSortedData(googleData);
+    const paginatedData = getPaginatedData(filteredAndSortedData);
+
+    // Helper functions for color styling
+    const getProfitColor = (profit) => {
+      if (profit > 0) return '#dcfce7';
+      if (profit < 0) return '#fee2e2';
+      return 'transparent';
+    };
+
+    const getProfitTextColor = (profit) => {
+      if (profit > 0) return '#166534';
+      if (profit < 0) return '#991b1b';
+      return '#374151';
+    };
 
     return (
       <>
@@ -2166,40 +2424,130 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th>Campaign</th>
-                <th>Impressions</th>
-                <th>Clicks</th>
-                <th>CTR</th>
-                <th>Spend</th>
-                <th>CPC</th>
-                <th>Orders</th>
-                <th>Revenue</th>
-                <th>Net Profit</th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('campaign_name')}
+                >
+                  Campaign
+                  {sortConfig.key === 'campaign_name' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('impressions')}
+                >
+                  Impressions
+                  {sortConfig.key === 'impressions' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('clicks')}
+                >
+                  Clicks
+                  {sortConfig.key === 'clicks' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('ctr')}
+                >
+                  CTR
+                  {sortConfig.key === 'ctr' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('spend')}
+                >
+                  Spend
+                  {sortConfig.key === 'spend' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('cpc')}
+                >
+                  CPC
+                  {sortConfig.key === 'cpc' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('shopify_orders')}
+                >
+                  Orders
+                  {sortConfig.key === 'shopify_orders' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('shopify_revenue')}
+                >
+                  Revenue
+                  {sortConfig.key === 'shopify_revenue' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('gross_roas')}
+                >
+                  Gross ROAS
+                  {sortConfig.key === 'gross_roas' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('net_profit')}
+                >
+                  Net Profit
+                  {sortConfig.key === 'net_profit' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
                 <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((row, index) => (
                 <tr key={index}>
-                  <td>
-                    <span className="badge bg-primary-subtle text-primary">
-                      {row.campaign_name}
-                    </span>
-                  </td>
+                  <td>{row.campaign_name}</td>
                   <td>{formatNumber(row.impressions)}</td>
                   <td>{formatNumber(row.clicks)}</td>
                   <td>{formatPercentage(row.ctr)}</td>
-                  <td className="fw-semibold">{formatCurrency(row.spend)}</td>
+                  <td style={{ 
+                    color: '#ca8a04',
+                    fontWeight: '600'
+                  }}>
+                    {formatCurrency(row.spend)}
+                  </td>
                   <td>{formatCurrency(row.cpc)}</td>
                   <td>{formatNumber(row.shopify_orders)}</td>
-                  <td className="fw-semibold text-success">
+                  <td style={{ 
+                    color: '#16a34a',
+                    fontWeight: '600'
+                  }}>
                     {formatCurrency(row.shopify_revenue)}
                   </td>
-                  <td
-                    className={`fw-semibold ${
-                      row.net_profit >= 0 ? "text-success" : "text-danger"
-                    }`}
-                  >
+                  <td style={{ 
+                    color: '#7c3aed',
+                    fontWeight: '600'
+                  }}>
+                    {(row.gross_roas || 0).toFixed(2)}x
+                  </td>
+                  <td style={{ 
+                    color: row.net_profit >= 0 ? '#16a34a' : '#dc2626',
+                    fontWeight: '600'
+                  }}>
                     {formatCurrency(row.net_profit)}
                   </td>
                   <td>
@@ -2212,7 +2560,7 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(sortedData)}
+        {renderPagination(filteredAndSortedData)}
       </>
     );
   };
@@ -2220,49 +2568,7 @@ const EntityReportLayer = () => {
   const renderMetaHierarchicalTable = () => {
     const metaHierarchyData = data.metaHierarchy || {};
 
-    // Convert object to array for pagination
-    const campaignsArray = Object.entries(metaHierarchyData).map(
-      ([campaignId, campaign]) => ({
-        campaignId,
-        ...campaign,
-      })
-    );
-
-    // Sort campaigns by revenue in descending order (highest revenue first)
-    const sortedCampaigns = [...campaignsArray].sort((a, b) => {
-      // Calculate total revenue for campaign A
-      let revenueA = 0;
-      Object.values(a.adsets || {}).forEach((adset) => {
-        Object.values(adset.ads || {}).forEach((ad) => {
-          Object.values(ad.hourly_data || {}).forEach((hourData) => {
-            const shopifyData = hourData.shopify_data || [];
-            revenueA += shopifyData.reduce(
-              (sum, order) => sum + (order.total_amount || 0),
-              0
-            );
-          });
-        });
-      });
-
-      // Calculate total revenue for campaign B
-      let revenueB = 0;
-      Object.values(b.adsets || {}).forEach((adset) => {
-        Object.values(adset.ads || {}).forEach((ad) => {
-          Object.values(ad.hourly_data || {}).forEach((hourData) => {
-            const shopifyData = hourData.shopify_data || [];
-            revenueB += shopifyData.reduce(
-              (sum, order) => sum + (order.total_amount || 0),
-              0
-            );
-          });
-        });
-      });
-
-      return revenueB - revenueA; // Descending order
-    });
-
-    const paginatedCampaigns = getPaginatedData(sortedCampaigns);
-
+    // Function to calculate campaign metrics (defined first so we can use it below)
     const calculateCampaignMetrics = (campaign) => {
       let totalImpressions = 0;
       let totalClicks = 0;
@@ -2367,6 +2673,36 @@ const EntityReportLayer = () => {
         productDetails: skuString,
       };
     };
+
+    // Convert object to array and pre-calculate metrics for sorting
+    const campaignsArray = Object.entries(metaHierarchyData).map(
+      ([campaignId, campaign]) => {
+        const metrics = calculateCampaignMetrics(campaign);
+        return {
+          campaignId,
+          ...campaign,
+          // Add calculated metrics as direct properties for sorting
+          impressions: metrics.totalImpressions,
+          clicks: metrics.totalClicks,
+          spend: metrics.totalSpend,
+          orders: metrics.totalOrders,
+          revenue: metrics.totalRevenue,
+          cogs: metrics.totalCogs,
+          netProfit: metrics.netProfit,
+          grossRoas: metrics.grossRoas,
+          netRoas: metrics.netRoas,
+          ctr: metrics.ctr,
+          cpc: metrics.cpc,
+          cpm: metrics.cpm,
+          addToCart: metrics.totalActions?.onsite_web_add_to_cart || 0,
+          checkoutInitiated: metrics.totalActions?.onsite_web_initiate_checkout || 0,
+        };
+      }
+    );
+
+    // Apply filtering and sorting using the user's preferences
+    const filteredAndSortedData = getFilteredAndSortedData(campaignsArray);
+    const paginatedCampaigns = getPaginatedData(filteredAndSortedData);
 
     // Calculate metrics for an adset (used in download function)
     const calculateAdsetMetrics = (adset) => {
@@ -2564,27 +2900,142 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th style={{ width: "30px" }}></th>
-                <th>Type</th>
-                <th>Name</th>
-                <th>Impressions</th>
-                <th>Clicks</th>
-                <th>CTR</th>
-                <th>Spend</th>
-                <th>CPC</th>
-                <th>CPM</th>
-                <th>Orders</th>
-                <th>Revenue</th>
-                <th>Gross ROAS</th>
-                <th>Net Profit</th>
-                <th>Add to Cart</th>
-                <th>Checkout Initiated</th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('campaign_name')}
+                >
+                  Name
+                  {sortConfig.key === 'campaign_name' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('impressions')}
+                >
+                  Impressions
+                  {sortConfig.key === 'impressions' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('clicks')}
+                >
+                  Clicks
+                  {sortConfig.key === 'clicks' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('ctr')}
+                >
+                  CTR
+                  {sortConfig.key === 'ctr' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('spend')}
+                >
+                  Spend
+                  {sortConfig.key === 'spend' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('cpc')}
+                >
+                  CPC
+                  {sortConfig.key === 'cpc' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('cpm')}
+                >
+                  CPM
+                  {sortConfig.key === 'cpm' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('orders')}
+                >
+                  Orders
+                  {sortConfig.key === 'orders' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('revenue')}
+                >
+                  Revenue
+                  {sortConfig.key === 'revenue' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('grossRoas')}
+                >
+                  Gross ROAS
+                  {sortConfig.key === 'grossRoas' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('netProfit')}
+                >
+                  Net Profit
+                  {sortConfig.key === 'netProfit' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('addToCart')}
+                >
+                  Add to Cart
+                  {sortConfig.key === 'addToCart' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('checkoutInitiated')}
+                >
+                  Checkout Initiated
+                  {sortConfig.key === 'checkoutInitiated' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
                 <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
               {paginatedCampaigns.map((campaign) => {
                 const campaignMetrics = calculateCampaignMetrics(campaign);
+
+                // Helper functions for color styling
+                const getProfitColor = (profit) => {
+                  if (profit > 0) return '#dcfce7';
+                  if (profit < 0) return '#fee2e2';
+                  return 'transparent';
+                };
+
+                const getProfitTextColor = (profit) => {
+                  if (profit > 0) return '#166534';
+                  if (profit < 0) return '#991b1b';
+                  return '#374151';
+                };
 
                 return (
                   <tr
@@ -2601,43 +3052,35 @@ const EntityReportLayer = () => {
                       router.push(`/campaign-details?${params.toString()}`);
                     }}
                   >
-                    <td>
-                      <Icon icon="solar:arrow-right-bold" />
-                    </td>
-                    <td>
-                      <span className="badge bg-primary">Campaign</span>
-                    </td>
-                    <td className="fw-bold">{campaign.campaign_name}</td>
+                    <td>{campaign.campaign_name}</td>
                     <td>{formatNumber(campaignMetrics.totalImpressions)}</td>
                     <td>{formatNumber(campaignMetrics.totalClicks)}</td>
                     <td>{formatPercentage(campaignMetrics.ctr)}</td>
-                    <td className="fw-semibold">
+                    <td style={{ 
+                      color: '#ca8a04',
+                      fontWeight: '600'
+                    }}>
                       {formatCurrency(campaignMetrics.totalSpend)}
                     </td>
                     <td>{formatCurrency(campaignMetrics.cpc)}</td>
                     <td>{formatCurrency(campaignMetrics.cpm)}</td>
                     <td>{formatNumber(campaignMetrics.totalOrders)}</td>
-                    <td className="fw-semibold text-success">
+                    <td style={{ 
+                      color: '#16a34a',
+                      fontWeight: '600'
+                    }}>
                       {formatCurrency(campaignMetrics.totalRevenue)}
                     </td>
-                    <td className="fw-semibold">
-                      <span
-                        className={`badge ${
-                          campaignMetrics.grossRoas >= 2
-                            ? "bg-success-subtle text-success"
-                            : "bg-warning-subtle text-warning"
-                        }`}
-                      >
-                        {campaignMetrics.grossRoas?.toFixed(2)}x
-                      </span>
+                    <td style={{ 
+                      color: '#7c3aed',
+                      fontWeight: '600'
+                    }}>
+                      {campaignMetrics.grossRoas?.toFixed(2)}x
                     </td>
-                    <td
-                      className={`fw-semibold ${
-                        campaignMetrics.netProfit >= 0
-                          ? "text-success"
-                          : "text-danger"
-                      }`}
-                    >
+                    <td style={{ 
+                      color: campaignMetrics.netProfit >= 0 ? '#16a34a' : '#dc2626',
+                      fontWeight: '600'
+                    }}>
                       {formatCurrency(campaignMetrics.netProfit)}
                     </td>
                     <td>
@@ -2663,18 +3106,28 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(sortedCampaigns)}
+        {renderPagination(filteredAndSortedData)}
       </>
     );
   };
 
   const renderOrganicTable = () => {
     const organicData = data.organic || [];
-    // Sort by revenue in descending order (highest revenue first)
-    const sortedData = [...organicData].sort(
-      (a, b) => (b.shopify_revenue || 0) - (a.shopify_revenue || 0)
-    );
-    const paginatedData = getPaginatedData(sortedData);
+    const filteredAndSortedData = getFilteredAndSortedData(organicData);
+    const paginatedData = getPaginatedData(filteredAndSortedData);
+
+    // Helper functions for color styling
+    const getProfitColor = (profit) => {
+      if (profit > 0) return '#dcfce7';
+      if (profit < 0) return '#fee2e2';
+      return 'transparent';
+    };
+
+    const getProfitTextColor = (profit) => {
+      if (profit > 0) return '#166534';
+      if (profit < 0) return '#991b1b';
+      return '#374151';
+    };
 
     return (
       <>
@@ -2682,39 +3135,69 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th>Channel</th>
-                <th>Campaign</th>
-                <th>Revenue</th>
-                <th>COGS</th>
-                <th>Net Profit</th>
-                <th>Quantity</th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('campaign_name')}
+                >
+                  Campaign
+                  {sortConfig.key === 'campaign_name' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('shopify_revenue')}
+                >
+                  Revenue
+                  {sortConfig.key === 'shopify_revenue' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('shopify_cogs')}
+                >
+                  COGS
+                  {sortConfig.key === 'shopify_cogs' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('net_profit')}
+                >
+                  Net Profit
+                  {sortConfig.key === 'net_profit' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSort('total_sku_quantity')}
+                >
+                  Quantity
+                  {sortConfig.key === 'total_sku_quantity' && (
+                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  )}
+                </th>
                 <th>Product Details</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((row, index) => (
                 <tr key={index}>
-                  <td>
-                    <span className="badge bg-success-subtle text-success">
-                      {row.channel}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="badge bg-primary-subtle text-primary">
-                      {row.campaign_name}
-                    </span>
-                  </td>
-                  <td className="fw-semibold text-success">
+                  <td>{row.campaign_name}</td>
+                  <td style={{ 
+                    color: '#16a34a',
+                    fontWeight: '600'
+                  }}>
                     {formatCurrency(row.shopify_revenue)}
                   </td>
-                  <td className="fw-semibold">
-                    {formatCurrency(row.shopify_cogs)}
-                  </td>
-                  <td
-                    className={`fw-semibold ${
-                      row.net_profit >= 0 ? "text-success" : "text-danger"
-                    }`}
-                  >
+                  <td>{formatCurrency(row.shopify_cogs)}</td>
+                  <td style={{ 
+                    color: row.net_profit >= 0 ? '#16a34a' : '#dc2626',
+                    fontWeight: '600'
+                  }}>
                     {formatCurrency(row.net_profit)}
                   </td>
                   <td>{formatNumber(row.total_sku_quantity)}</td>
@@ -2728,7 +3211,7 @@ const EntityReportLayer = () => {
             </tbody>
           </table>
         </div>
-        {renderPagination(sortedData)}
+        {renderPagination(filteredAndSortedData)}
       </>
     );
   };
@@ -2801,21 +3284,21 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-spend" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -2880,21 +3363,21 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-revenue" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -2959,21 +3442,21 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-orders" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -3038,25 +3521,25 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-gross-roas" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross ROAS</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue per rupee spent (before COGS): Revenue ÷ Spend
+                            Revenue per rupee (before COGS): Rev ÷ Spend
                           </div>
                         </div>
                       )}
@@ -3117,25 +3600,25 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-net-roas" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net ROAS</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit per rupee spent (after COGS): Net Profit ÷ Spend
+                            Profit per rupee (after COGS): Net Profit ÷ Spend
                           </div>
                         </div>
                       )}
@@ -3196,25 +3679,25 @@ const EntityReportLayer = () => {
                       {activeTooltip === "google-net-profit" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Actual profit after all costs: Revenue - COGS - Ad Spend
+                            Profit after costs: Rev - COGS - Ad Spend
                           </div>
                         </div>
                       )}
@@ -3295,25 +3778,25 @@ const EntityReportLayer = () => {
                       {activeTooltip === "meta-spend" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Meta (Facebook & Instagram) advertising expenditure across all campaigns
+                            Meta (Facebook & Instagram) ad spend across all campaigns
                           </div>
                         </div>
                       )}
@@ -3374,21 +3857,21 @@ const EntityReportLayer = () => {
                       {activeTooltip === "meta-revenue" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -3453,21 +3936,21 @@ const EntityReportLayer = () => {
                       {activeTooltip === "meta-orders" && (
                         <div style={{
                           position: "absolute",
-                          background: "#1f2937",
-                          color: "white",
+                          background: "#f3f4f6",
+                          color: "#374151",
                           padding: "10px 14px",
                           borderRadius: "6px",
                           fontSize: "12px",
                           lineHeight: "1.3",
                           zIndex: 9999,
                           top: "-40px",
-                          left: "50%",
-                          transform: "translateX(-50%)",
+                          right: "0",
+                          transform: "translateX(0)",
                           pointerEvents: "none",
-                          maxWidth: "220px",
+                          maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #374151"
+                          border: "1px solid #d1d5db"
                         }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -3516,12 +3999,45 @@ const EntityReportLayer = () => {
                   }}>
                     NET PROFIT
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-profit")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "meta-profit" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Profit after costs: Rev - COGS - Ad Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3562,12 +4078,45 @@ const EntityReportLayer = () => {
                   }}>
                     GROSS ROAS
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-gross-roas")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "meta-gross-roas" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross ROAS</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue per rupee (before COGS): Rev ÷ Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3608,12 +4157,45 @@ const EntityReportLayer = () => {
                   }}>
                     NET ROAS
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-net-roas")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "meta-net-roas" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net ROAS</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Profit per rupee (after COGS): Net Profit ÷ Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3679,12 +4261,45 @@ const EntityReportLayer = () => {
                   }}>
                     TOTAL REVENUE
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-revenue")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-revenue" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue from organic traffic and direct visits
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3725,12 +4340,45 @@ const EntityReportLayer = () => {
                   }}>
                     TOTAL COGS
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-cogs")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-cogs" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total COGS</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Cost of goods sold for organic orders
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3771,12 +4419,45 @@ const EntityReportLayer = () => {
                   }}>
                     TOTAL ORDERS
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-orders")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-orders" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Orders from organic traffic and direct visits
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3817,12 +4498,45 @@ const EntityReportLayer = () => {
                   }}>
                     GROSS PROFIT
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-gross-profit")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-gross-profit" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross Profit</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue minus COGS: Revenue - COGS
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3863,12 +4577,45 @@ const EntityReportLayer = () => {
                   }}>
                     NET PROFIT
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-net-profit")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-net-profit" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Profit after all costs: Revenue - COGS
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -3909,12 +4656,45 @@ const EntityReportLayer = () => {
                   }}>
                     PROFIT MARGIN
                   </span>
-                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("organic-profit-margin")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
                       <Icon icon="solar:info-circle-bold" style={{ 
                         fontSize: "10px", 
                         color: "#9CA3AF"
                       }} />
-                    </span>
+                      {activeTooltip === "organic-profit-margin" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          right: "0",
+                          transform: "translateX(0)",
+                          pointerEvents: "none",
+                          maxWidth: "700px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #d1d5db"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Profit Margin</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Net profit as % of revenue: (Net Profit ÷ Revenue) × 100
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
                   <span style={{ 
@@ -4135,7 +4915,7 @@ const EntityReportLayer = () => {
           {/* Header with Date Picker and Download Button */}
           <div className="d-flex justify-content-between align-items-center mb-20">
             <div className="d-flex align-items-center">
-              <h6 className="fw-semibold text-lg mb-0 me-2">Entity Report</h6>
+              <h6 className="mb-0 me-2">Entity Report</h6>
               <div 
                 style={{ 
                   cursor: "pointer", 
@@ -4149,21 +4929,21 @@ const EntityReportLayer = () => {
                 {activeTooltip === "header" && (
                   <div style={{
                     position: "absolute",
-                    background: "#1f2937",
-                    color: "white",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    lineHeight: "1.4",
+                    background: "#f3f4f6",
+                    color: "#374151",
+                    padding: "10px 14px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    lineHeight: "1.3",
                     zIndex: 9999,
-                    top: "-45px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
+                    top: "-40px",
+                    right: "0",
+                    transform: "translateX(0)",
                     pointerEvents: "none",
-                    maxWidth: "280px",
-                    whiteSpace: "normal",
+                    maxWidth: "700px",
+                    whiteSpace: "nowrap",
                     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                    border: "1px solid #374151"
+                    border: "1px solid #d1d5db"
                   }}>
                           <div style={{ fontWeight: "600", marginBottom: "2px" }}>Entity Report</div>
                           <div style={{ fontSize: "11px", opacity: "0.9" }}>
@@ -4338,6 +5118,36 @@ const EntityReportLayer = () => {
           {((data[activeTab] && data[activeTab].length > 0) ||
             (activeTab === "meta" && data.metaHierarchy)) &&
             renderSummaryCards()}
+
+          {/* Search and Filter Controls */}
+          {((data[activeTab] && data[activeTab].length > 0) ||
+            (activeTab === "meta" && data.metaHierarchy)) && (
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <Icon icon="solar:magnifer-linear" />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search all columns..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6 text-end">
+                <small className="text-muted">
+                  {getFilteredAndSortedData(
+                    activeTab === "meta" 
+                      ? (data.metaHierarchy ? Object.values(data.metaHierarchy).flat() : [])
+                      : (data[activeTab] || [])
+                  ).length} results
+                </small>
+              </div>
+            </div>
+          )}
 
           {/* Data Tables */}
           <div className="tab-content">

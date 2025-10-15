@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import config from "@/config";
 import { sidebarPermissionsManager } from "@/utils/sidebarPermissions";
 import { migrateExistingUsers } from "@/utils/migrationUtils";
+import { clearAuthData, isUserAuthenticated, securityCheck, logAuthEvent } from "@/utils/authUtils";
 
 // Create the context with a default value
 const UserContext = createContext({
@@ -27,6 +28,8 @@ const UserContext = createContext({
   hasOperation: () => false,
   getAllowedOperations: () => [],
   getPermissionLevel: () => "none",
+  // Logout function
+  logout: () => {},
 });
 
 // Export the context for use in other files
@@ -81,10 +84,7 @@ const localStorageUtils = {
   },
 
   clearAll: () => {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem(STORAGE_KEYS.USER_ROLE);
-    localStorage.removeItem(STORAGE_KEYS.USER_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+    clearAuthData();
   },
 };
 
@@ -234,14 +234,28 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Check localStorage on mount for cached authentication
+  // Check localStorage on mount for cached authentication with security validation
   useEffect(() => {
     const checkLocalStorage = () => {
+      // Perform security check first
+      if (!securityCheck()) {
+        setLoading(false);
+        return false;
+      }
+      
       const cachedRole = localStorageUtils.getRole();
       const cachedToken = localStorageUtils.getToken();
       const cachedUserData = localStorageUtils.getUserData();
       
       if (cachedRole && cachedRole !== "none" && cachedToken) {
+        // Validate token format
+        if (!cachedToken.startsWith('eyJ')) {
+          console.warn('Invalid cached token format, clearing authentication');
+          localStorageUtils.clearAll();
+          setLoading(false);
+          return false;
+        }
+        
         setRole(cachedRole);
         setToken(cachedToken);
         if (cachedUserData) {
@@ -253,7 +267,7 @@ export const UserProvider = ({ children }) => {
           });
         }
         setLoading(false);
-        return true; // Found cached data
+        return true; // Found valid cached data
       }
       return false; // No cached data
     };
@@ -303,6 +317,7 @@ export const UserProvider = ({ children }) => {
           setRole("none");
           setToken(null);
           localStorageUtils.clearAll();
+          logAuthEvent('AUTH_STATE_CHANGED', { state: 'signed_out' });
           setLoading(false);
         }
       });
@@ -344,6 +359,41 @@ export const UserProvider = ({ children }) => {
     return sidebarPermissionsManager.getPermissionLevel(sidebarKey, role);
   };
 
+  // Comprehensive logout function following security standards
+  const logout = async () => {
+    try {
+      logAuthEvent('LOGOUT_ATTEMPT', { userId: user?.uid });
+      
+      // Clear all authentication data
+      localStorageUtils.clearAll();
+      sidebarPermissionsManager.clearAll();
+      
+      // Sign out from Firebase
+      await auth.signOut();
+      
+      // Reset all state
+      setUser(null);
+      setToken(null);
+      setRole("none");
+      
+      logAuthEvent('LOGOUT_SUCCESS', { userId: user?.uid });
+      
+      // Force page reload to ensure all components reset
+      window.location.href = "/sign-in";
+    } catch (error) {
+      console.error("Error during logout:", error);
+      logAuthEvent('LOGOUT_ERROR', { error: error.message });
+      
+      // Even if Firebase signOut fails, clear local data
+      localStorageUtils.clearAll();
+      sidebarPermissionsManager.clearAll();
+      setUser(null);
+      setToken(null);
+      setRole("none");
+      window.location.href = "/sign-in";
+    }
+  };
+
   const value = {
     user,
     token,
@@ -365,6 +415,8 @@ export const UserProvider = ({ children }) => {
     hasOperation,
     getAllowedOperations,
     getPermissionLevel,
+    // Logout function
+    logout,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

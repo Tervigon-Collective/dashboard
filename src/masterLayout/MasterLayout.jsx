@@ -15,7 +15,7 @@ const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = usePathname(); // Hook to get the current route
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const router = useRouter();
 
   useEffect(() => {
@@ -103,8 +103,21 @@ const MasterLayout = ({ children }) => {
 
   const handleLogout = async (e) => {
     e.preventDefault();
-    await signOut(auth);
-    router.push("/sign-in");
+    try {
+      // Show loading state
+      const logoutButton = e.target.closest('a');
+      if (logoutButton) {
+        logoutButton.style.opacity = '0.5';
+        logoutButton.style.pointerEvents = 'none';
+      }
+      
+      // Use the comprehensive logout function from UserContext
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect even if logout fails
+      window.location.href = "/sign-in";
+    }
   };
 
   return (
