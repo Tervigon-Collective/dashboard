@@ -61,23 +61,44 @@ const ProductForm = ({ mode = "add", productId = null }) => {
         // Set variant data for editing
         if (product.variants && product.variants.length > 0) {
           setVariants(
-            product.variants.map((variant, index) => ({
-              id: index + 1,
-              variant_id: variant.variant_id, // Store the actual variant_id from database
-              mrp: variant.mrp || "",
-              cogs: variant.cogs || "",
-              margin:
-                variant.mrp && variant.cogs
-                  ? (variant.mrp - variant.cogs).toFixed(2)
-                  : "",
-              variant_type: variant.variant_type || {},
-              quantity: variant.quantity || "",
-              dimension_with_packing: variant.dimension_with_packing || "",
-              dimension_without_packing:
-                variant.dimension_without_packing || "",
-              sku: variant.sku || "",
-              vendor_pricing: variant.vendor_pricing || [], // NEW: Load vendor pricing
-            }))
+            product.variants.map((variant, index) => {
+              const variantType = variant.variant_type || {};
+              const variantTypeKeys = Object.keys(variantType);
+
+              // Create groupBy key for existing variants
+              let groupBy = "Existing Variants";
+              if (variantTypeKeys.length > 0) {
+                // Use first variant type value as group key
+                groupBy =
+                  variantType[variantTypeKeys[0]] || "Existing Variants";
+              } else {
+                // If no variant type, group by variant ID or index
+                groupBy = `Variant ${index + 1}`;
+              }
+
+              return {
+                id: index + 1,
+                variant_id: variant.variant_id, // Store the actual variant_id from database
+                mrp: variant.mrp || "",
+                cogs: variant.cogs || "",
+                margin:
+                  variant.mrp && variant.cogs
+                    ? (variant.mrp - variant.cogs).toFixed(2)
+                    : "",
+                variant_type: variantType,
+                quantity: variant.quantity || "",
+                dimension_with_packing: variant.dimension_with_packing || "",
+                dimension_without_packing:
+                  variant.dimension_without_packing || "",
+                sku: variant.sku || "",
+                vendor_pricing: variant.vendor_pricing || [], // NEW: Load vendor pricing
+                groupBy: groupBy, // Add groupBy for proper grouping
+                displayName:
+                  variantTypeKeys.length > 0
+                    ? Object.values(variantType).join(" × ")
+                    : `Variant ${index + 1}`, // Fallback display name
+              };
+            })
           );
         }
 
@@ -178,9 +199,71 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   const handleVariantOptionsChange = (options) => {
     setVariantOptions(options);
 
-    // Auto-generate variants from combinations
-    const generatedVariants = generateVariantCombinations(options);
-    setVariants(generatedVariants);
+    // In edit mode, preserve existing variants and add new combinations
+    if (mode === "edit") {
+      // If no options are selected, keep existing variants as they are
+      if (!options || options.length === 0) {
+        return; // Don't change existing variants
+      }
+
+      // Only generate variants if ALL selected options have values
+      const allOptionsHaveValues = options.every(
+        (opt) => opt.values && opt.values.length > 0
+      );
+
+      if (!allOptionsHaveValues) {
+        console.log(
+          "DEBUG: Not all options have values, skipping variant generation"
+        );
+        return; // Don't generate variants until all options have values
+      }
+
+      // Generate new variants from combinations
+      console.log(
+        "DEBUG: Options passed to generateVariantCombinations:",
+        options
+      );
+      const generatedVariants = generateVariantCombinations(options);
+      console.log("DEBUG: Generated variants:", generatedVariants);
+
+      // Keep existing variants and add new ones
+      console.log("DEBUG: Current variants before adding new ones:", variants);
+      console.log("DEBUG: Generated variants:", generatedVariants);
+
+      // Filter out duplicates - only add variants that don't already exist
+      const newVariants = generatedVariants.filter((newVariant) => {
+        return !variants.some((existingVariant) => {
+          // Compare variant_type objects
+          const existingType = existingVariant.variant_type || {};
+          const newType = newVariant.variant_type || {};
+
+          // Check if all keys and values match
+          const existingKeys = Object.keys(existingType).sort();
+          const newKeys = Object.keys(newType).sort();
+
+          if (existingKeys.length !== newKeys.length) return false;
+
+          return existingKeys.every(
+            (key) => existingType[key] === newType[key]
+          );
+        });
+      });
+
+      console.log(
+        "DEBUG: New variants after filtering duplicates:",
+        newVariants
+      );
+      console.log("DEBUG: Final variants to set:", [
+        ...variants,
+        ...newVariants,
+      ]);
+
+      setVariants([...variants, ...newVariants]);
+    } else {
+      // In add mode, just generate new variants
+      const generatedVariants = generateVariantCombinations(options);
+      setVariants(generatedVariants);
+    }
   };
 
   // Handle single variant change

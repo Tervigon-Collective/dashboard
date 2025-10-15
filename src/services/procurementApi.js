@@ -9,10 +9,10 @@ class ProcurementApiService {
     );
   }
 
-  // Helper method to get auth token (using userToken like existing dashboard)
+  // Helper method to get auth token (using idToken like Entity Report API)
   getAuthToken() {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("userToken");
+    return localStorage.getItem("idToken");
   }
 
   // Helper method for making authenticated requests
@@ -58,12 +58,14 @@ class ProcurementApiService {
         console.error("  Status Text:", response.statusText);
         console.error("  URL:", url);
         console.error("  Response Body:", errorText);
-        
+
         // Handle 401 Unauthorized specifically
         if (response.status === 401) {
-          throw new Error('AUTHENTICATION_ERROR: Your session has expired. Please sign in again.');
+          throw new Error(
+            "AUTHENTICATION_ERROR: Your session has expired. Please sign in again."
+          );
         }
-        
+
         throw new Error(
           `HTTP error! status: ${response.status} - ${response.statusText}. URL: ${url}. Response: ${errorText}`
         );
@@ -72,11 +74,13 @@ class ProcurementApiService {
       return response.json();
     } catch (error) {
       // Network error or fetch failed
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
         console.error("Network Error - Cannot reach server:");
         console.error("  URL:", url);
         console.error("  Error:", error.message);
-        throw new Error(`Network error: Cannot reach server at ${url}. Please check if the backend is running.`);
+        throw new Error(
+          `Network error: Cannot reach server at ${url}. Please check if the backend is running.`
+        );
       }
       // Re-throw other errors
       throw error;
