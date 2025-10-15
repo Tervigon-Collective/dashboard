@@ -136,3 +136,4 @@ const AvailableTreatments = () => {
 };
 
 export default AvailableTreatments;
+

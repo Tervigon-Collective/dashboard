@@ -35,7 +35,7 @@ const DefaultBadgesFive = () => {
                         <div className="d-flex flex-wrap align-items-center gap-3">
                             <button type="button" className="position-relative">
                                 <img
-                                    src="assets/images/lang-flag.png"
+                                    src="/assets/images/lang-flag.png"
                                     alt="image_icon"
                                     className="w-32-px h-32-px object-fit-cover rounded-circle"
                                 />

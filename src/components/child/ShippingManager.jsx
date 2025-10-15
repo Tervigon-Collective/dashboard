@@ -396,3 +396,4 @@ const ShippingManager = ({ order, onShippingUpdate }) => {
 };
 
 export default ShippingManager;
+

@@ -279,3 +279,4 @@ const SimplePricingPlan = () => {
 };
 
 export default SimplePricingPlan;
+

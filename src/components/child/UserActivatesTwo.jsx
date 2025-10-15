@@ -56,3 +56,4 @@ const UserActivatesTwo = () => {
 };
 
 export default UserActivatesTwo;
+

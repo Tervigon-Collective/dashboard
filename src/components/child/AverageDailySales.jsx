@@ -37,3 +37,4 @@ const AverageDailySales = () => {
 };
 
 export default AverageDailySales;
+

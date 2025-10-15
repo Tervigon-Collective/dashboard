@@ -154,3 +154,4 @@ const CoursesOne = () => {
 };
 
 export default CoursesOne;
+

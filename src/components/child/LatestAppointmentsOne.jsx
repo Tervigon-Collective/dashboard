@@ -114,3 +114,4 @@ const LatestAppointmentsOne = () => {
 };
 
 export default LatestAppointmentsOne;
+

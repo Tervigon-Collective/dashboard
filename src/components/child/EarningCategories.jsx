@@ -177,3 +177,4 @@ const EarningCategories = () => {
 };
 
 export default EarningCategories;
+

@@ -29,3 +29,4 @@ const GradientLineChart = () => {
 };
 
 export default GradientLineChart;
+

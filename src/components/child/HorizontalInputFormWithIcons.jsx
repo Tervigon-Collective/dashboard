@@ -98,3 +98,4 @@ const HorizontalInputFormWithIcons = () => {
 };
 
 export default HorizontalInputFormWithIcons;
+

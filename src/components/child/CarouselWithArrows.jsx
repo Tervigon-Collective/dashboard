@@ -106,3 +106,4 @@ const CarouselWithArrows = () => {
 };
 
 export default CarouselWithArrows;
+

@@ -54,3 +54,4 @@ const BalanceStatistic = () => {
 };
 
 export default BalanceStatistic;
+

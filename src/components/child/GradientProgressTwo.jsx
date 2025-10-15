@@ -72,3 +72,4 @@ const GradientProgressTwo = () => {
 };
 
 export default GradientProgressTwo;
+

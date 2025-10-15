@@ -29,3 +29,4 @@ const RadarChart = () => {
 };
 
 export default RadarChart;
+

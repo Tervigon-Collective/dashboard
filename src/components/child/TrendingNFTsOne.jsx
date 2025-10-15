@@ -1162,3 +1162,4 @@ const TrendingNFTsOne = () => {
 };
 
 export default TrendingNFTsOne;
+

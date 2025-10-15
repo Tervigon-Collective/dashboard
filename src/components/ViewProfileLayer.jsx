@@ -9,7 +9,7 @@ import { updatePassword } from "firebase/auth";
 const ViewProfileLayer = () => {
   const { user } = useUser();
   const [imagePreview, setImagePreview] = useState(
-    "assets/images/make/dashborad-05.jpg"
+    "/assets/images/make/dashborad-05.jpg"
   );
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
@@ -167,7 +167,7 @@ const ViewProfileLayer = () => {
       <div className='col-lg-4'>
         <div className='user-grid-card position-relative border radius-16 overflow-hidden bg-base h-100'>
           <img
-                            src='assets/images/make/dashborad-02.jpg'
+                            src='/assets/images/make/dashborad-02.jpg'
             alt=''
             className='w-100 object-fit-cover'
           />
@@ -182,7 +182,7 @@ const ViewProfileLayer = () => {
               )}
               {!user?.photoURL && !uploadedImage && (
                 <img
-                  src="assets/images/make/dashborad-03.jpg"
+                  src="/assets/images/make/dashborad-03.jpg"
                   alt=""
                   className="border br-white border-width-2-px w-200-px h-200-px rounded-circle object-fit-cover"
                 />

@@ -38,7 +38,7 @@ const DefaultInputs = () => {
                             <label className="form-label">Input with Payment</label>
                             <div className="input-group">
                                 <span className="input-group-text bg-base">
-                                    <img src="assets/images/card/payment-icon.png" alt="image_icon" />
+                                    <img src="/assets/images/card/payment-icon.png" alt="image_icon" />
                                 </span>
                                 <input
                                     type="text"

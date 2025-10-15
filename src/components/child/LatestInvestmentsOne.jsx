@@ -190,3 +190,4 @@ const LatestInvestmentsOne = () => {
 };
 
 export default LatestInvestmentsOne;
+

@@ -106,3 +106,4 @@ const BorderedTables = () => {
 };
 
 export default BorderedTables;
+

@@ -10,17 +10,17 @@ const AvatarShapeStyle = () => {
                 <div className="card-body p-24">
                     <div className="d-flex align-items-center flex-wrap justify-content-between gap-3">
                         <img
-                            src="assets/images/avatar/avatar-shape1.png"
+                            src="/assets/images/avatar/avatar-shape1.png"
                             alt=""
                             className="w-120-px h-120-px radius-8 object-fit-cover"
                         />
                         <img
-                            src="assets/images/avatar/avatar-shape2.png"
+                            src="/assets/images/avatar/avatar-shape2.png"
                             alt=""
                             className="w-120-px h-120-px rounded-circle object-fit-cover"
                         />
                         <img
-                            src="assets/images/avatar/avatar-shape3.png"
+                            src="/assets/images/avatar/avatar-shape3.png"
                             alt=""
                             className="w-auto h-120-px  object-fit-cover"
                         />

@@ -10,26 +10,36 @@ import { Loader } from "./child/GeneratedContent";
  * Allows access to public pages without authentication.
  */
 export default function AuthGuard({ children }) {
-  const { user, loading } = useUser();
+  const { user, loading, role } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
   // Define public routes that don't require authentication
   const publicRoutes = [
     "/sign-in",
+    "/sign-in/",
+    "/sign-in-bypass",
+    "/sign-in-bypass/",
     "/sign-up", 
+    "/sign-up/",
     "/privacy-policy",
+    "/privacy-policy/",
     "/terms-of-service",
-    "/terms-condition"
+    "/terms-of-service/",
+    "/terms-condition",
+    "/terms-condition/"
   ];
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
+  // Check if user is authenticated (either through Firebase or localStorage bypass)
+  const isAuthenticated = user || (role && role !== "none");
+
   useEffect(() => {
-    if (!loading && !user && !isPublicRoute) {
+    if (!loading && !isAuthenticated && !isPublicRoute) {
       router.replace("/sign-in");
     }
-  }, [user, loading, pathname, router, isPublicRoute]);
+  }, [isAuthenticated, loading, pathname, router, isPublicRoute, user, role]);
 
   if (loading) {
     return <Loader />;
@@ -40,7 +50,7 @@ export default function AuthGuard({ children }) {
     return children;
   }
   
-  if (!user && !isPublicRoute) {
+  if (!isAuthenticated && !isPublicRoute) {
     return <Loader />;
   }
   

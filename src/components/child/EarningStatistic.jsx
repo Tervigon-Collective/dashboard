@@ -56,3 +56,4 @@ const EarningStatistic = () => {
 };
 
 export default EarningStatistic;
+

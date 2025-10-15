@@ -23,7 +23,7 @@ const GeneratedContent = () => {
 
   // Prepare chart data from context
   const { chartSeries, chartOptions } = useMemo(() => {
-    if (!data || !data[timeframe]) {
+    if (!data || !data[timeframe] || !Array.isArray(data[timeframe]) || data[timeframe].length === 0) {
       return { chartSeries: [], chartOptions: {} };
     }
     const raw = data[timeframe];
@@ -33,8 +33,8 @@ const GeneratedContent = () => {
     } else {
       categories = raw.map((item) => item.month || item.day || item.date || "");
     }
-    const adSpend = raw.map((item) => item.spend);
-    const totalRevenue = raw.map((item) => item.totalSales - item.cancelledAmount);
+    const adSpend = raw.map((item) => item.spend || 0);
+    const totalRevenue = raw.map((item) => (item.totalSales || 0) - (item.cancelledAmount || 0));
     const isMonth = timeframe === "Month";
     return {
       chartSeries: [
@@ -121,13 +121,17 @@ const GeneratedContent = () => {
             <div className='margin-16-minus'>
               {loading ? (
                 <Loader />
-              ) : (
+              ) : chartSeries.length > 0 && chartOptions.xaxis ? (
                 <ReactApexChart
                   options={chartOptions}
                   series={chartSeries}
                   type='bar'
                   height={350}
                 />
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 350 }}>
+                  <p className="text-secondary-light">No data available</p>
+                </div>
               )}
             </div>
           </div>
@@ -138,3 +142,4 @@ const GeneratedContent = () => {
 };
 
 export default GeneratedContent;
+

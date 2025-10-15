@@ -74,3 +74,4 @@ const DefaultCarousel = () => {
 };
 
 export default DefaultCarousel;
+

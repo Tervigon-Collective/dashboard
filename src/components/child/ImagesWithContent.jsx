@@ -12,7 +12,7 @@ const ImagesWithContent = () => {
                         <div className="col-sm-6">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/avatar/avatar1.png"
+                                    src="/assets/images/avatar/avatar1.png"
                                     alt=""
                                     className="w-32-px h-32-px rounded-circle object-fit-cover flex-shrink-0"
                                 />
@@ -27,7 +27,7 @@ const ImagesWithContent = () => {
                         <div className="col-sm-6">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/avatar/avatar1.png"
+                                    src="/assets/images/avatar/avatar1.png"
                                     alt=""
                                     className="w-32-px h-32-px rounded-circle object-fit-cover flex-shrink-0"
                                 />
@@ -42,7 +42,7 @@ const ImagesWithContent = () => {
                         <div className="col-sm-6">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/avatar/avatar2.png"
+                                    src="/assets/images/avatar/avatar2.png"
                                     alt=""
                                     className="w-32-px h-32-px rounded-circle object-fit-cover flex-shrink-0"
                                 />
@@ -57,7 +57,7 @@ const ImagesWithContent = () => {
                         <div className="col-sm-6">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/avatar/avatar2.png"
+                                    src="/assets/images/avatar/avatar2.png"
                                     alt=""
                                     className="w-32-px h-32-px rounded-circle object-fit-cover flex-shrink-0"
                                 />

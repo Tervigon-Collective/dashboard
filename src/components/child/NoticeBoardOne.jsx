@@ -75,3 +75,4 @@ const NoticeBoardOne = () => {
 };
 
 export default NoticeBoardOne;
+

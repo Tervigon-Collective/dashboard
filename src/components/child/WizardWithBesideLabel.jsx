@@ -350,3 +350,4 @@ const WizardWithBesideLabel = () => {
 };
 
 export default WizardWithBesideLabel;
+

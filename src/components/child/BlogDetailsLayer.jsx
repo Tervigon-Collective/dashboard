@@ -593,3 +593,4 @@ const BlogDetailsLayer = () => {
 };
 
 export default BlogDetailsLayer;
+

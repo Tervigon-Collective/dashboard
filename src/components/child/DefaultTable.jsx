@@ -86,3 +86,4 @@ const DefaultTable = () => {
 };
 
 export default DefaultTable;
+

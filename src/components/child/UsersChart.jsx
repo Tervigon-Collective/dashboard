@@ -119,3 +119,4 @@ const UsersChart = () => {
 };
 
 export default UsersChart;
+

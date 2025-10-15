@@ -406,3 +406,4 @@ const RecentBidOne = () => {
 };
 
 export default RecentBidOne;
+

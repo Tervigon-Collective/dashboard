@@ -170,3 +170,4 @@ const StockReportOne = () => {
 };
 
 export default StockReportOne;
+

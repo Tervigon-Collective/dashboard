@@ -109,3 +109,4 @@ const CarouselWithProgress = () => {
 };
 
 export default CarouselWithProgress;
+

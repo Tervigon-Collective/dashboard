@@ -12,7 +12,7 @@ const TagsWithImage = () => {
                     <ul className="d-flex flex-wrap align-items-center gap-20 mt-20">
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />
@@ -20,7 +20,7 @@ const TagsWithImage = () => {
                         </li>
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />
@@ -28,7 +28,7 @@ const TagsWithImage = () => {
                         </li>
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />
@@ -38,7 +38,7 @@ const TagsWithImage = () => {
                     <ul className="tag-list d-flex flex-wrap align-items-center gap-20 mt-20">
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />
@@ -55,7 +55,7 @@ const TagsWithImage = () => {
                         </li>
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />
@@ -72,7 +72,7 @@ const TagsWithImage = () => {
                         </li>
                         <li className="text-secondary-light border radius-4 px-8 py-4 text-sm line-height-1 fw-medium d-flex align-items-center gap-1">
                             <img
-                                src="assets/images/flags/flag-tag.png"
+                                src="/assets/images/flags/flag-tag.png"
                                 className="w-16-px h-16-px rounded-circle"
                                 alt=""
                             />

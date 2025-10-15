@@ -591,3 +591,4 @@ const GalleryHoverLayer = () => {
 };
 
 export default GalleryHoverLayer;
+

@@ -76,3 +76,4 @@ const TaskCard = ({ task, index, onEdit, onDelete, onDuplicate }) => {
 };
 
 export default TaskCard;
+

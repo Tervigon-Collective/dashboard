@@ -64,3 +64,4 @@ const UserActivatesOne = () => {
 };
 
 export default UserActivatesOne;
+

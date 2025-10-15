@@ -12,7 +12,7 @@ const ColoredLists = () => {
                         <li className="list-group-item border text-secondary-light p-16 bg-success-100 text-success-600 border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img1.png"
+                                    src="/assets/images/lists/list-img1.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -22,7 +22,7 @@ const ColoredLists = () => {
                         <li className="list-group-item border text-secondary-light p-16 bg-info-100 text-info-600 border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img2.png"
+                                    src="/assets/images/lists/list-img2.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -32,7 +32,7 @@ const ColoredLists = () => {
                         <li className="list-group-item border text-secondary-light p-16 bg-lilac-100 text-lilac-600 border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img3.png"
+                                    src="/assets/images/lists/list-img3.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -42,7 +42,7 @@ const ColoredLists = () => {
                         <li className="list-group-item border text-secondary-light p-16 bg-warning-100 text-warning-600 border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img4.png"
+                                    src="/assets/images/lists/list-img4.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -52,7 +52,7 @@ const ColoredLists = () => {
                         <li className="list-group-item border text-secondary-light p-16 bg-danger-100 text-danger-600">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img5.png"
+                                    src="/assets/images/lists/list-img5.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />

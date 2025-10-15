@@ -95,3 +95,4 @@ const TrendingBidsOne = () => {
 };
 
 export default TrendingBidsOne;
+

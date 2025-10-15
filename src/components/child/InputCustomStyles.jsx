@@ -43,7 +43,7 @@ const InputCustomStyles = () => {
                             <label className="form-label">Input with Payment </label>
                             <div className="input-group has-validation">
                                 <span className="input-group-text bg-base">
-                                    <img src="assets/images/card/payment-icon.png" alt="image_icon" />
+                                    <img src="/assets/images/card/payment-icon.png" alt="image_icon" />
                                 </span>
                                 <input
                                     type="text"

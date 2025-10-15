@@ -162,3 +162,4 @@ const LatestRegisteredOne = () => {
 };
 
 export default LatestRegisteredOne;
+

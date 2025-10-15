@@ -11,7 +11,7 @@ const StatusIndicator = () => {
                     <div className="d-flex align-items-center flex-wrap gap-3">
                         <div className="position-relative">
                             <img
-                                src="assets/images/avatar/status-avatar.png"
+                                src="/assets/images/avatar/status-avatar.png"
                                 className="w-24-px h-24-px rounded-circle object-fit-cover"
                                 alt="Avatar"
                             />
@@ -19,7 +19,7 @@ const StatusIndicator = () => {
                         </div>
                         <div className="position-relative">
                             <img
-                                src="assets/images/avatar/status-avatar.png"
+                                src="/assets/images/avatar/status-avatar.png"
                                 className="w-32-px h-32-px rounded-circle object-fit-cover"
                                 alt="Avatar"
                             />
@@ -27,7 +27,7 @@ const StatusIndicator = () => {
                         </div>
                         <div className="position-relative">
                             <img
-                                src="assets/images/avatar/status-avatar.png"
+                                src="/assets/images/avatar/status-avatar.png"
                                 className="w-40-px h-40-px rounded-circle object-fit-cover"
                                 alt="Avatar"
                             />
@@ -35,7 +35,7 @@ const StatusIndicator = () => {
                         </div>
                         <div className="position-relative">
                             <img
-                                src="assets/images/avatar/status-avatar.png"
+                                src="/assets/images/avatar/status-avatar.png"
                                 className="w-44-px h-44-px rounded-circle object-fit-cover"
                                 alt="Avatar"
                             />

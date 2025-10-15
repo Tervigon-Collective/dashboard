@@ -55,3 +55,4 @@ const PatientVisitedDepartment = () => {
 };
 
 export default PatientVisitedDepartment;
+

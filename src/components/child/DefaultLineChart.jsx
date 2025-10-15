@@ -29,3 +29,4 @@ const DefaultLineChart = () => {
 };
 
 export default DefaultLineChart;
+

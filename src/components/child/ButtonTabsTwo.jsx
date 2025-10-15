@@ -93,7 +93,7 @@ const ButtonTabsTwo = () => {
                             <div className="d-flex align-items-center gap-3">
                                 <div className="flex-shrink-0">
                                     <img
-                                        src="assets/images/tabs/tabs-image2.png"
+                                        src="/assets/images/tabs/tabs-image2.png"
                                         className="radius-8"
                                         alt=""
                                     />
@@ -124,7 +124,7 @@ const ButtonTabsTwo = () => {
                             <div className="d-flex align-items-center gap-3">
                                 <div className="flex-shrink-0">
                                     <img
-                                        src="assets/images/tabs/tabs-image1.png"
+                                        src="/assets/images/tabs/tabs-image1.png"
                                         className="radius-8"
                                         alt=""
                                     />
@@ -155,7 +155,7 @@ const ButtonTabsTwo = () => {
                             <div className="d-flex align-items-center gap-3">
                                 <div className="flex-shrink-0">
                                     <img
-                                        src="assets/images/tabs/tabs-image2.png"
+                                        src="/assets/images/tabs/tabs-image2.png"
                                         className="radius-8"
                                         alt=""
                                     />
@@ -186,7 +186,7 @@ const ButtonTabsTwo = () => {
                             <div className="d-flex align-items-center gap-3">
                                 <div className="flex-shrink-0">
                                     <img
-                                        src="assets/images/tabs/tabs-image1.png"
+                                        src="/assets/images/tabs/tabs-image1.png"
                                         className="radius-8"
                                         alt=""
                                     />

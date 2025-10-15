@@ -12,7 +12,7 @@ const ListIconsLabelTwo = () => {
                         <li className="list-group-item d-flex align-items-center justify-content-between border text-secondary-light p-16 bg-base border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img1.png"
+                                    src="/assets/images/lists/list-img1.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -25,7 +25,7 @@ const ListIconsLabelTwo = () => {
                         <li className="list-group-item d-flex align-items-center justify-content-between border text-secondary-light p-16 bg-base border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img2.png"
+                                    src="/assets/images/lists/list-img2.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -38,7 +38,7 @@ const ListIconsLabelTwo = () => {
                         <li className="list-group-item d-flex align-items-center justify-content-between border text-secondary-light p-16 bg-base border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img3.png"
+                                    src="/assets/images/lists/list-img3.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -51,7 +51,7 @@ const ListIconsLabelTwo = () => {
                         <li className="list-group-item d-flex align-items-center justify-content-between border text-secondary-light p-16 bg-base border-bottom-0">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img4.png"
+                                    src="/assets/images/lists/list-img4.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />
@@ -64,7 +64,7 @@ const ListIconsLabelTwo = () => {
                         <li className="list-group-item d-flex align-items-center justify-content-between border text-secondary-light p-16 bg-base">
                             <div className="d-flex align-items-center gap-2">
                                 <img
-                                    src="assets/images/lists/list-img5.png"
+                                    src="/assets/images/lists/list-img5.png"
                                     className="w-32-px h-32-px rounded-circle"
                                     alt=""
                                 />

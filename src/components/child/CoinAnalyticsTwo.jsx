@@ -157,3 +157,4 @@ const CoinAnalyticsTwo = () => {
 };
 
 export default CoinAnalyticsTwo;
+

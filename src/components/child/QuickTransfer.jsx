@@ -191,3 +191,4 @@ const QuickTransfer = () => {
 };
 
 export default QuickTransfer;
+

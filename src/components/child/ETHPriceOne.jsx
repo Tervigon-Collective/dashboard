@@ -43,3 +43,4 @@ const ETHPriceOne = () => {
 };
 
 export default ETHPriceOne;
+

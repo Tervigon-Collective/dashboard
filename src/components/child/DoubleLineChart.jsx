@@ -28,3 +28,4 @@ const DoubleLineChart = () => {
 };
 
 export default DoubleLineChart;
+

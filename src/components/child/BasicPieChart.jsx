@@ -30,3 +30,4 @@ const BasicPieChart = () => {
 };
 
 export default BasicPieChart;
+

@@ -111,8 +111,8 @@ export const useUser = () => {
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorageUtils.getToken());
-  const [role, setRole] = useState(localStorageUtils.getRole());
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState("none");
   const [loading, setLoading] = useState(true);
 
   // Role hierarchy for permission checking
@@ -170,17 +170,24 @@ export const UserProvider = ({ children }) => {
       setToken(idToken);
       localStorageUtils.setToken(idToken);
 
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(`${config.api.baseURL}/api/user/role`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${idToken}`,
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
-        const userRole = data.role || "none";
+        const userRole = data.role || "user"; // Default to "user" instead of "none"
         setRole(userRole);
         localStorageUtils.setRole(userRole);
 
@@ -204,7 +211,7 @@ export const UserProvider = ({ children }) => {
         // Run migration for existing users if needed
         migrateExistingUsers();
       } else {
-        const defaultRole = "none";
+        const defaultRole = config.fallback?.defaultRole || "user";
         setRole(defaultRole);
         localStorageUtils.setRole(defaultRole);
 
@@ -215,7 +222,7 @@ export const UserProvider = ({ children }) => {
         migrateExistingUsers();
       }
     } catch (error) {
-      const defaultRole = "none";
+      const defaultRole = config.fallback?.defaultRole || "user";
       setRole(defaultRole);
       localStorageUtils.setRole(defaultRole);
 
@@ -227,9 +234,42 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Check localStorage on mount for bypass mode
   useEffect(() => {
+    const checkLocalStorage = () => {
+      const cachedRole = localStorageUtils.getRole();
+      const cachedToken = localStorageUtils.getToken();
+      const cachedUserData = localStorageUtils.getUserData();
+      
+      if (cachedRole && cachedRole !== "none" && cachedToken) {
+        setRole(cachedRole);
+        setToken(cachedToken);
+        if (cachedUserData) {
+          setUser({
+            uid: cachedUserData.uid,
+            email: cachedUserData.email,
+            displayName: cachedUserData.displayName,
+            emailVerified: cachedUserData.emailVerified
+          });
+        }
+        setLoading(false);
+        return true; // Found cached data
+      }
+      return false; // No cached data
+    };
+
+    // Check localStorage first
+    if (checkLocalStorage()) {
+      return; // If we found cached data, don't set up Firebase listener
+    }
+
+    // If no cached data, set up Firebase listener
+    let mounted = true;
+    
     try {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (!mounted) return;
+        
         setUser(user);
 
         if (user) {
@@ -239,22 +279,42 @@ export const UserProvider = ({ children }) => {
           // If we have a valid cached role, use it immediately
           if (cachedRole && cachedRole !== "none") {
             setRole(cachedRole);
+            setLoading(false); // Set loading to false immediately if we have cached data
+          } else {
+            // No cached role, set a default and stop loading
+            const defaultRole = config.fallback?.defaultRole || "user";
+            setRole(defaultRole);
+            localStorageUtils.setRole(defaultRole);
+            setLoading(false);
           }
 
-          // Then fetch the latest role from backend
-          await fetchUserRole(user);
+          // Then fetch the latest role from backend (but don't block UI)
+          // This runs in the background
+          setTimeout(async () => {
+            if (mounted) {
+              try {
+                await fetchUserRole(user);
+              } catch (error) {
+                // Silently handle fetch errors
+              }
+            }
+          }, 100); // Small delay to let UI render first
         } else {
           setRole("none");
           setToken(null);
           localStorageUtils.clearAll();
+          setLoading(false);
         }
-
-        setLoading(false);
       });
 
-      return () => unsubscribe();
+      return () => {
+        mounted = false;
+        unsubscribe();
+      };
     } catch (error) {
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }
   }, []);
 

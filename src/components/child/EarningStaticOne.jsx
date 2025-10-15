@@ -84,3 +84,4 @@ const EarningStaticOne = () => {
 };
 
 export default EarningStaticOne;
+

@@ -116,3 +116,4 @@ const HistoricalSalesStatisticOne = () => {
 };
 
 export default HistoricalSalesStatisticOne;
+

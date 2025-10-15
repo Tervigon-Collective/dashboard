@@ -11,37 +11,37 @@ const AvatarGroup = () => {
                 <div className="card-body p-24">
                     <div className="d-flex align-items-center flex-wrap">
                         <img
-                            src="assets/images/avatar/avatar-group1.png"
+                            src="/assets/images/avatar/avatar-group1.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group2.png"
+                            src="/assets/images/avatar/avatar-group2.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group3.png"
+                            src="/assets/images/avatar/avatar-group3.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group4.png"
+                            src="/assets/images/avatar/avatar-group4.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group5.png"
+                            src="/assets/images/avatar/avatar-group5.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group6.png"
+                            src="/assets/images/avatar/avatar-group6.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group6.png"
+                            src="/assets/images/avatar/avatar-group6.png"
                             alt=""
                             className="w-24-px h-24-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
@@ -57,37 +57,37 @@ const AvatarGroup = () => {
                     </div>
                     <div className="d-flex align-items-center flex-wrap mt-24">
                         <img
-                            src="assets/images/avatar/avatar-group1.png"
+                            src="/assets/images/avatar/avatar-group1.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group2.png"
+                            src="/assets/images/avatar/avatar-group2.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group3.png"
+                            src="/assets/images/avatar/avatar-group3.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group4.png"
+                            src="/assets/images/avatar/avatar-group4.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group5.png"
+                            src="/assets/images/avatar/avatar-group5.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group6.png"
+                            src="/assets/images/avatar/avatar-group6.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />
                         <img
-                            src="assets/images/avatar/avatar-group6.png"
+                            src="/assets/images/avatar/avatar-group6.png"
                             alt=""
                             className="w-32-px h-32-px rounded-circle object-fit-cover position-relative ms--10px"
                         />

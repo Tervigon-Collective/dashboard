@@ -52,3 +52,4 @@ const PurchaseAndSales = () => {
 };
 
 export default PurchaseAndSales;
+

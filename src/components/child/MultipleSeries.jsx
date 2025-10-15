@@ -30,3 +30,4 @@ const MultipleSeries = () => {
 };
 
 export default MultipleSeries;
+

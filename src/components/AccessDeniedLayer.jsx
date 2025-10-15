@@ -7,7 +7,7 @@ const AccessDeniedLayer = () => {
       <div className="container container--xl">
         <div className="d-flex align-items-center justify-content-between py-24">
           <Link href="/" className="">
-            <img src="assets/images/logo.png" alt="" />
+            <img src="/assets/images/logo.png" alt="" />
           </Link>
           <Link href="/" className="btn btn-outline-primary-600 text-sm">
             {" "}
@@ -17,7 +17,7 @@ const AccessDeniedLayer = () => {
         {/* <div class="py-res-120 text-center"> */}
         <div className="pt-48 pb-40 text-center">
           <div className="max-w-500-px mx-auto">
-            <img src="assets/images/dog/sd.jpg" alt="Access Denied Dog" />
+            <img src="/assets/images/dog/sd.jpg" alt="Access Denied Dog" />
           </div>
           <div className="max-w-700-px mx-auto mt-40">
             <h3 className="mb-24 max-w-1000-px">Access Denied</h3>

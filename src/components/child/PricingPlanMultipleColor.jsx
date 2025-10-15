@@ -65,7 +65,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon1.png"
+                                                        src="/assets/images/pricing/price-icon1.png"
                                                         alt=""
                                                     />
                                                 </span>
@@ -150,7 +150,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon2.png"
+                                                        src="/assets/images/pricing/price-icon2.png"
                                                         alt=""
                                                     />
                                                 </span>
@@ -232,7 +232,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon3.png"
+                                                        src="/assets/images/pricing/price-icon3.png"
                                                         alt=""
                                                     />
                                                 </span>
@@ -324,7 +324,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon1.png"
+                                                        src="/assets/images/pricing/price-icon1.png"
                                                         alt=""
                                                     />
                                                 </span>
@@ -409,7 +409,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon2.png"
+                                                        src="/assets/images/pricing/price-icon2.png"
                                                         alt=""
                                                     />
                                                 </span>
@@ -491,7 +491,7 @@ const PricingPlanMultipleColor = () => {
                                             <div className="d-flex align-items-center gap-16">
                                                 <span className="w-72-px h-72-px d-flex justify-content-center align-items-center radius-16 bg-base">
                                                     <img
-                                                        src="assets/images/pricing/price-icon3.png"
+                                                        src="/assets/images/pricing/price-icon3.png"
                                                         alt=""
                                                     />
                                                 </span>

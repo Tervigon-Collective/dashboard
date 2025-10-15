@@ -223,3 +223,4 @@ const CampaignStaticOne = () => {
 };
 
 export default CampaignStaticOne;
+

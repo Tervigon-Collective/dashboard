@@ -124,3 +124,4 @@ const HorizontalCard = () => {
 };
 
 export default HorizontalCard;
+

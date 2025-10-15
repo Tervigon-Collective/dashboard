@@ -30,3 +30,4 @@ const ZoomAbleLineChart = () => {
 };
 
 export default ZoomAbleLineChart;
+

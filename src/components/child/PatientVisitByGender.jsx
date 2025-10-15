@@ -56,3 +56,4 @@ const PatientVisitByGender = () => {
 };
 
 export default PatientVisitByGender;
+

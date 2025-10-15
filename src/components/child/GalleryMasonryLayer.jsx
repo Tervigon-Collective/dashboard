@@ -298,3 +298,4 @@ const GalleryMasonryLayer = () => {
 };
 
 export default GalleryMasonryLayer;
+
