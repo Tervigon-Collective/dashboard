@@ -1709,6 +1709,7 @@ const EntityReportLayer = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [filters, setFilters] = useState(initialState.filters);
+  const [activeTooltip, setActiveTooltip] = useState(null);
 
   // DateRangePicker state - synced with filters
   const [dateRange, setDateRange] = useState(() => {
@@ -2753,7 +2754,7 @@ const EntityReportLayer = () => {
       0
     );
 
-    // For Google tab, use API summary data directly
+      // For Google tab, use API summary data directly
     if (activeTab === "google" && data.google && data.google.length > 0) {
       // Get the summary data from the API response
       const googleSummary = data.googleSummary || {};
@@ -2776,29 +2777,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL SPEND
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-spend")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-spend" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Total Google Ads expenditure across Search, Display, Shopping, and Video campaigns
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalSpend).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -2819,29 +2856,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL REVENUE
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-revenue")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-revenue" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue from Shopify orders attributed to Google Ads campaigns
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalRevenue).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -2862,29 +2935,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL ORDERS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-orders")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-orders" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Shopify orders attributed to Google Ads via UTM tracking
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatNumber(totalOrders)}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -2905,29 +3014,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     GROSS ROAS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-gross-roas")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-gross-roas" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross ROAS</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue per rupee spent (before COGS): Revenue ÷ Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {grossRoas.toFixed(2)}x
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -2948,29 +3093,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     NET ROAS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-net-roas")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-net-roas" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net ROAS</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Profit per rupee spent (after COGS): Net Profit ÷ Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {netRoas.toFixed(2)}x
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -2991,29 +3172,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     NET PROFIT
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("google-net-profit")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "google-net-profit" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Actual profit after all costs: Revenue - COGS - Ad Spend
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(netProfit).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3054,29 +3271,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL SPEND
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-spend")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "meta-spend" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Meta (Facebook & Instagram) advertising expenditure across all campaigns
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalSpend).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3097,29 +3350,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL REVENUE
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-revenue")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "meta-revenue" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Revenue from Shopify orders attributed to Meta Ads campaigns
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalRevenue).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3140,29 +3429,65 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL ORDERS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <div 
+                      style={{ 
+                        cursor: "pointer",
+                        display: "inline-block",
+                        position: "relative"
+                      }}
+                      onMouseEnter={() => setActiveTooltip("meta-orders")}
+                      onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                      {activeTooltip === "meta-orders" && (
+                        <div style={{
+                          position: "absolute",
+                          background: "#1f2937",
+                          color: "white",
+                          padding: "10px 14px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          lineHeight: "1.3",
+                          zIndex: 9999,
+                          top: "-40px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          pointerEvents: "none",
+                          maxWidth: "220px",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          border: "1px solid #374151"
+                        }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Shopify orders attributed to Meta Ads via UTM tracking
+                          </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatNumber(totalOrders)}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3183,29 +3508,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     NET PROFIT
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(netProfit).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3226,29 +3554,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     GROSS ROAS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {grossRoas.toFixed(2)}x
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3269,29 +3600,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     NET ROAS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {netRoas.toFixed(2)}x
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3337,29 +3671,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL REVENUE
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalRevenue).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3380,29 +3717,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL COGS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(totalCogs).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3423,29 +3763,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     TOTAL ORDERS
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatNumber(totalOrders)}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3466,29 +3809,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     GROSS PROFIT
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(grossProfit).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3509,29 +3855,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     NET PROFIT
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {formatCurrency(netProfit).replace('₹', '₹')}
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3552,29 +3901,32 @@ const EntityReportLayer = () => {
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
                   <span style={{ 
-                    fontSize: "8px", 
-                    fontWeight: "500", 
+                    fontSize: "9px", 
+                    fontWeight: "600", 
                     color: "#6B7280", 
                     textTransform: "uppercase",
-                    letterSpacing: "0.3px"
+                    letterSpacing: "0.4px"
                   }}>
                     PROFIT MARGIN
                   </span>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "9px", 
-                    color: "#9CA3AF" 
-                  }} />
+                    <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                      <Icon icon="solar:info-circle-bold" style={{ 
+                        fontSize: "10px", 
+                        color: "#9CA3AF"
+                      }} />
+                    </span>
                 </div>
                 <div>
-                  <h3 style={{ 
-                    fontSize: "11px", 
-                    fontWeight: "500", 
+                  <span style={{ 
+                    fontSize: "x-large", 
+                    fontWeight: "600", 
                     color: "#111827", 
                     margin: "0",
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    display: "block"
                   }}>
                     {profitMargin.toFixed(1)}%
-                  </h3>
+                  </span>
                 </div>
                 <div style={{ 
                   height: "2px", 
@@ -3610,10 +3962,12 @@ const EntityReportLayer = () => {
                 }}>
                   TOTAL SPEND
                 </span>
-                <Icon icon="solar:info-circle-bold" style={{ 
-                  fontSize: "14px", 
-                  color: "#9CA3AF" 
-                }} />
+                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "14px", 
+                    color: "#9CA3AF"
+                  }} />
+                </span>
               </div>
               <div>
                 <h3 style={{ 
@@ -3653,10 +4007,12 @@ const EntityReportLayer = () => {
                 }}>
                   TOTAL REVENUE
                 </span>
-                <Icon icon="solar:info-circle-bold" style={{ 
-                  fontSize: "14px", 
-                  color: "#9CA3AF" 
-                }} />
+                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "14px", 
+                    color: "#9CA3AF"
+                  }} />
+                </span>
               </div>
               <div>
                 <h3 style={{ 
@@ -3696,10 +4052,12 @@ const EntityReportLayer = () => {
                 }}>
                   TOTAL ORDERS
                 </span>
-                <Icon icon="solar:info-circle-bold" style={{ 
-                  fontSize: "14px", 
-                  color: "#9CA3AF" 
-                }} />
+                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "14px", 
+                    color: "#9CA3AF"
+                  }} />
+                </span>
               </div>
               <div>
                 <h3 style={{ 
@@ -3739,10 +4097,12 @@ const EntityReportLayer = () => {
                 }}>
                   NET PROFIT
                 </span>
-                <Icon icon="solar:info-circle-bold" style={{ 
-                  fontSize: "14px", 
-                  color: "#9CA3AF" 
-                }} />
+                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
+                  <Icon icon="solar:info-circle-bold" style={{ 
+                    fontSize: "14px", 
+                    color: "#9CA3AF"
+                  }} />
+                </span>
               </div>
               <div>
                 <h3 style={{ 
@@ -3774,7 +4134,45 @@ const EntityReportLayer = () => {
         <div className="card-body p-24">
           {/* Header with Date Picker and Download Button */}
           <div className="d-flex justify-content-between align-items-center mb-20">
-            <h6 className="fw-semibold text-lg mb-0">Entity Report</h6>
+            <div className="d-flex align-items-center">
+              <h6 className="fw-semibold text-lg mb-0 me-2">Entity Report</h6>
+              <div 
+                style={{ 
+                  cursor: "pointer", 
+                  display: "inline-block",
+                  position: "relative"
+                }}
+                onMouseEnter={() => setActiveTooltip("header")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <Icon icon="solar:info-circle-bold" style={{ fontSize: "14px", color: "#9CA3AF" }} />
+                {activeTooltip === "header" && (
+                  <div style={{
+                    position: "absolute",
+                    background: "#1f2937",
+                    color: "white",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    lineHeight: "1.4",
+                    zIndex: 9999,
+                    top: "-45px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    pointerEvents: "none",
+                    maxWidth: "280px",
+                    whiteSpace: "normal",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    border: "1px solid #374151"
+                  }}>
+                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Entity Report</div>
+                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                            Analytics dashboard for Google Ads, Meta Ads, and Organic performance tracking
+                          </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="d-flex align-items-center" style={{ gap: 12 }}>
               <DateRangePicker
                 value={dateRange}
@@ -3827,13 +4225,35 @@ const EntityReportLayer = () => {
 
           {/* Tabs */}
           <div className="mb-20">
-            <ul className="nav nav-tabs" role="tablist">
+            <ul className="nav nav-tabs" role="tablist" style={{ borderBottom: "1px solid #e5e7eb" }}>
               <li className="nav-item" role="presentation">
                 <button
                   className={`nav-link ${
                     activeTab === "google" ? "active" : ""
                   }`}
                   onClick={() => handleTabChange("google")}
+                  style={{
+                    backgroundColor: activeTab === "google" ? "#f8fafc" : "transparent",
+                    border: "none",
+                    borderBottom: activeTab === "google" ? "2px solid #6b7280" : "2px solid transparent",
+                    color: activeTab === "google" ? "#374151" : "#6b7280",
+                    fontWeight: activeTab === "google" ? "500" : "400",
+                    borderRadius: "0",
+                    padding: "12px 16px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "google") {
+                      e.target.style.backgroundColor = "#f9fafb";
+                      e.target.style.color = "#4b5563";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "google") {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#6b7280";
+                    }
+                  }}
                 >
                   <Icon icon="logos:google-icon" className="me-2" />
                   Google Ads
@@ -3843,6 +4263,28 @@ const EntityReportLayer = () => {
                 <button
                   className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
                   onClick={() => handleTabChange("meta")}
+                  style={{
+                    backgroundColor: activeTab === "meta" ? "#f8fafc" : "transparent",
+                    border: "none",
+                    borderBottom: activeTab === "meta" ? "2px solid #6b7280" : "2px solid transparent",
+                    color: activeTab === "meta" ? "#374151" : "#6b7280",
+                    fontWeight: activeTab === "meta" ? "500" : "400",
+                    borderRadius: "0",
+                    padding: "12px 16px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "meta") {
+                      e.target.style.backgroundColor = "#f9fafb";
+                      e.target.style.color = "#4b5563";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "meta") {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#6b7280";
+                    }
+                  }}
                 >
                   <Icon icon="logos:meta-icon" className="me-2" />
                   Meta Ads
@@ -3854,6 +4296,28 @@ const EntityReportLayer = () => {
                     activeTab === "organic" ? "active" : ""
                   }`}
                   onClick={() => handleTabChange("organic")}
+                  style={{
+                    backgroundColor: activeTab === "organic" ? "#f8fafc" : "transparent",
+                    border: "none",
+                    borderBottom: activeTab === "organic" ? "2px solid #6b7280" : "2px solid transparent",
+                    color: activeTab === "organic" ? "#374151" : "#6b7280",
+                    fontWeight: activeTab === "organic" ? "500" : "400",
+                    borderRadius: "0",
+                    padding: "12px 16px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "organic") {
+                      e.target.style.backgroundColor = "#f9fafb";
+                      e.target.style.color = "#4b5563";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "organic") {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#6b7280";
+                    }
+                  }}
                 >
                   <Icon icon="solar:leaf-bold" className="me-2" />
                   Organic Attribution
