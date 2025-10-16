@@ -5,7 +5,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import config from "@/config";
 import { sidebarPermissionsManager } from "@/utils/sidebarPermissions";
 import { migrateExistingUsers } from "@/utils/migrationUtils";
-import { clearAuthData, isUserAuthenticated, securityCheck, logAuthEvent } from "@/utils/authUtils";
+import {
+  clearAuthData,
+  isUserAuthenticated,
+  securityCheck,
+  logAuthEvent,
+} from "@/utils/authUtils";
 
 // Create the context with a default value
 const UserContext = createContext({
@@ -243,20 +248,20 @@ export const UserProvider = ({ children }) => {
         setLoading(false);
         return false;
       }
-      
+
       const cachedRole = localStorageUtils.getRole();
       const cachedToken = localStorageUtils.getToken();
       const cachedUserData = localStorageUtils.getUserData();
 
       if (cachedRole && cachedRole !== "none" && cachedToken) {
         // Validate token format
-        if (!cachedToken.startsWith('eyJ')) {
-          console.warn('Invalid cached token format, clearing authentication');
+        if (!cachedToken.startsWith("eyJ")) {
+          console.warn("Invalid cached token format, clearing authentication");
           localStorageUtils.clearAll();
           setLoading(false);
           return false;
         }
-        
+
         setRole(cachedRole);
         setToken(cachedToken);
         setUser({
@@ -316,7 +321,7 @@ export const UserProvider = ({ children }) => {
           setRole("none");
           setToken(null);
           localStorageUtils.clearAll();
-          logAuthEvent('AUTH_STATE_CHANGED', { state: 'signed_out' });
+          logAuthEvent("AUTH_STATE_CHANGED", { state: "signed_out" });
           setLoading(false);
         }
       });
@@ -381,28 +386,28 @@ export const UserProvider = ({ children }) => {
   // Comprehensive logout function following security standards
   const logout = async () => {
     try {
-      logAuthEvent('LOGOUT_ATTEMPT', { userId: user?.uid });
-      
+      logAuthEvent("LOGOUT_ATTEMPT", { userId: user?.uid });
+
       // Clear all authentication data
       localStorageUtils.clearAll();
       sidebarPermissionsManager.clearAll();
-      
+
       // Sign out from Firebase
       await auth.signOut();
-      
+
       // Reset all state
       setUser(null);
       setToken(null);
       setRole("none");
-      
-      logAuthEvent('LOGOUT_SUCCESS', { userId: user?.uid });
-      
+
+      logAuthEvent("LOGOUT_SUCCESS", { userId: user?.uid });
+
       // Force page reload to ensure all components reset
       window.location.href = "/sign-in";
     } catch (error) {
       console.error("Error during logout:", error);
-      logAuthEvent('LOGOUT_ERROR', { error: error.message });
-      
+      logAuthEvent("LOGOUT_ERROR", { error: error.message });
+
       // Even if Firebase signOut fails, clear local data
       localStorageUtils.clearAll();
       sidebarPermissionsManager.clearAll();
