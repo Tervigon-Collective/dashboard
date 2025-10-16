@@ -150,7 +150,7 @@ const UserManagement = () => {
       }
       
       newPermissions[permissionKey] = {
-        enabled: newOperations.length > 0,
+        enabled: currentPermission.enabled, // Keep the enabled state from the main toggle
         operations: newOperations,
       };
       
