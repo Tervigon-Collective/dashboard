@@ -375,6 +375,9 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       console.error("Error refreshing token:", error);
       return null;
+    }
+  };
+
   // Comprehensive logout function following security standards
   const logout = async () => {
     try {
