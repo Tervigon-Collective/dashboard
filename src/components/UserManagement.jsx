@@ -50,51 +50,84 @@ const UserManagement = () => {
   // Load sidebar permissions when a user is selected for editing
   useEffect(() => {
     if (selectedUser) {
+      setNewRole(selectedUser.role || "user");
+
+      // Fetch current permissions from server for this user
+      fetchUserCurrentPermissions(selectedUser.uid);
+    }
+  }, [selectedUser]);
+
+  // Function to fetch current user permissions from server
+  const fetchUserCurrentPermissions = async (userId) => {
+    try {
+      const response = await fetch(
+        `${config.api.baseURL}/api/users/uid/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Check if user has sidebarPermissions in the response
+        const userData = data.user;
+        const serverPermissions = userData.sidebarPermissions || {};
+
+        if (Object.keys(serverPermissions).length > 0) {
+          // Use the actual permissions from the server
+          const actualPermissions = {};
+          const allSidebarKeys = Object.keys(AVAILABLE_SIDEBAR_ITEMS);
+
+          allSidebarKeys.forEach((key) => {
+            const serverPermission = serverPermissions[key];
+
+            if (serverPermission !== undefined) {
+              // Use server permission data
+              actualPermissions[key] = {
+                enabled: serverPermission.enabled || false,
+                operations: serverPermission.operations || [],
+              };
+            } else {
+              // Fallback to default for this role
+              const defaultPermissions =
+                DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+                DEFAULT_SIDEBAR_PERMISSIONS.none;
+              actualPermissions[key] = defaultPermissions[key] || {
+                enabled: false,
+                operations: [],
+              };
+            }
+          });
+
+          setSidebarPermissions(actualPermissions);
+        } else {
+          // User has no custom permissions, use role defaults
+          const defaultPermissions =
+            DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+            DEFAULT_SIDEBAR_PERMISSIONS.none;
+          setSidebarPermissions(defaultPermissions);
+        }
+      } else {
+        // Fallback to default permissions
+        const defaultPermissions =
+          DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+          DEFAULT_SIDEBAR_PERMISSIONS.none;
+        setSidebarPermissions(defaultPermissions);
+      }
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      // Fallback to default permissions
       const defaultPermissions =
         DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
         DEFAULT_SIDEBAR_PERMISSIONS.none;
-
-      setNewRole(selectedUser.role || "user");
-
-      if (
-        selectedUser.sidebarPermissions &&
-        Object.keys(selectedUser.sidebarPermissions).length > 0
-      ) {
-        const actualPermissions = {};
-        const allSidebarKeys = Object.keys(AVAILABLE_SIDEBAR_ITEMS);
-
-        allSidebarKeys.forEach((key) => {
-          const customPermission = selectedUser.sidebarPermissions[key];
-
-          if (customPermission !== undefined) {
-            if (
-              typeof customPermission === "object" &&
-              customPermission !== null
-            ) {
-              actualPermissions[key] = customPermission;
-            } else if (typeof customPermission === "boolean") {
-              const sidebarItem = AVAILABLE_SIDEBAR_ITEMS[key];
-              actualPermissions[key] = {
-                enabled: customPermission,
-                operations: customPermission
-                  ? sidebarItem?.availableOperations || ["read"]
-                  : [],
-              };
-            }
-          } else {
-            actualPermissions[key] = defaultPermissions[key] || {
-              enabled: false,
-              operations: [],
-            };
-          }
-        });
-
-        setSidebarPermissions(actualPermissions);
-      } else {
-        setSidebarPermissions(defaultPermissions);
-      }
+      setSidebarPermissions(defaultPermissions);
     }
-  }, [selectedUser]);
+  };
 
   const getAvailableSidebarItems = (userRole) => {
     return sidebarPermissionsManager.getAvailableSidebarItemsForRole(userRole);
@@ -122,10 +155,12 @@ const UserManagement = () => {
       if (isEnabled) {
         // If enabling and no operations exist, add read permission by default
         // Otherwise, preserve existing operations
-        const operations = currentPermission.operations.length > 0 
-          ? currentPermission.operations 
-          : ["read"];
-        
+        const currentOperations = Array.isArray(currentPermission.operations)
+          ? currentPermission.operations
+          : [];
+        const operations =
+          currentOperations.length > 0 ? currentOperations : ["read"];
+
         newPermissions[permissionKey] = {
           enabled: true,
           operations: operations,
@@ -149,7 +184,11 @@ const UserManagement = () => {
         operations: [],
       };
 
-      let newOperations = [...currentPermission.operations];
+      // Ensure operations is always an array
+      const currentOperations = Array.isArray(currentPermission.operations)
+        ? currentPermission.operations
+        : [];
+      let newOperations = [...currentOperations];
 
       if (isChecked) {
         // Add operation if not already present
@@ -1344,9 +1383,18 @@ const UserManagement = () => {
                                 e.currentTarget.style.boxShadow =
                                   "0 1px 3px rgba(0, 0, 0, 0.1)";
                               }}
-                              onClick={() =>
-                                handleSidebarPermissionChange(key, !isEnabled)
-                              }
+                              onClick={(e) => {
+                                // Only toggle if clicking on the main container, not on checkboxes
+                                if (
+                                  e.target.type !== "checkbox" &&
+                                  !e.target.closest(".form-check")
+                                ) {
+                                  handleSidebarPermissionChange(
+                                    key,
+                                    !isEnabled
+                                  );
+                                }
+                              }}
                             >
                               {/* Main Permission Toggle */}
                               <div className="d-flex align-items-center justify-content-between">
