@@ -25,7 +25,7 @@ import {
 import config from "@/config";
 
 const UserRoleManager = () => {
-  const { user, token, role, hasOperation } = useUser();
+  const { user, token, role, hasOperation, refreshToken } = useUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState("all");
@@ -211,6 +211,17 @@ const UserRoleManager = () => {
 
     setUpdating(true);
     try {
+      // Get fresh token
+      const currentToken = await refreshToken();
+      if (!currentToken) {
+        setMessage({
+          type: "error",
+          text: "Failed to refresh authentication token. Please sign out and sign back in.",
+        });
+        setUpdating(false);
+        return;
+      }
+
       // Prepare request body based on permissions
       const requestBody = {
         sidebarPermissions: sidebarPermissions,
@@ -227,7 +238,7 @@ const UserRoleManager = () => {
         {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
@@ -275,13 +286,24 @@ const UserRoleManager = () => {
 
     setDeleting(true);
     try {
+      // Get fresh token
+      const currentToken = await refreshToken();
+      if (!currentToken) {
+        setMessage({
+          type: "error",
+          text: "Failed to refresh authentication token. Please sign out and sign back in.",
+        });
+        setDeleting(false);
+        return;
+      }
+
       // First delete from backend API
       const response = await fetch(
         `${config.api.baseURL}/api/users/${userId}`,
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
         }

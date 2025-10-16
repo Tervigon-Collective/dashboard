@@ -259,14 +259,12 @@ export const UserProvider = ({ children }) => {
         
         setRole(cachedRole);
         setToken(cachedToken);
-        if (cachedUserData) {
-          setUser({
-            uid: cachedUserData.uid,
-            email: cachedUserData.email,
-            displayName: cachedUserData.displayName,
-            emailVerified: cachedUserData.emailVerified,
-          });
-        }
+        setUser({
+          uid: cachedUserData.uid,
+          email: cachedUserData.email,
+          displayName: cachedUserData.displayName,
+          emailVerified: cachedUserData.emailVerified,
+        });
         setLoading(false);
         return true; // Found valid cached data
       }
@@ -360,6 +358,23 @@ export const UserProvider = ({ children }) => {
     return sidebarPermissionsManager.getPermissionLevel(sidebarKey, role);
   };
 
+  // Function to refresh the current user's token
+  const refreshToken = async () => {
+    try {
+      // Get the current Firebase user from auth
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.error("No authenticated user found");
+        return null;
+      }
+
+      const newToken = await currentUser.getIdToken(true); // Force refresh
+      setToken(newToken);
+      localStorageUtils.setToken(newToken);
+      return newToken;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      return null;
   // Comprehensive logout function following security standards
   const logout = async () => {
     try {
@@ -407,6 +422,7 @@ export const UserProvider = ({ children }) => {
     roleHierarchy,
     roleDisplayNames,
     fetchUserRole,
+    refreshToken,
     localStorageUtils,
     // Sidebar permission functions
     hasSidebarPermission,

@@ -23,20 +23,20 @@ export default function AuthGuard({ children }) {
   const publicRoutes = [
     "/sign-in",
     "/sign-in/",
-    "/sign-up", 
+    "/sign-up",
     "/sign-up/",
     "/privacy-policy",
     "/privacy-policy/",
     "/terms-of-service",
     "/terms-of-service/",
     "/terms-condition",
-    "/terms-condition/"
+    "/terms-condition/",
   ];
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Enhanced authentication check following company standards
-  const isAuthenticated = isUserAuthenticated(user, token, role);
+  // Check if user is authenticated through Firebase (regardless of role)
+  const isAuthenticated = !!user;
 
   // Validate authentication on route changes
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function AuthGuard({ children }) {
   if (loading || isValidating) {
     return <Loader />;
   }
-  
+
   // Allow access to public routes without authentication
   if (isPublicRoute) {
     return children;
@@ -96,4 +96,4 @@ export default function AuthGuard({ children }) {
   
   // User is authenticated, render protected content
   return children;
-} 
+}
