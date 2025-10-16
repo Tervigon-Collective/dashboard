@@ -38,7 +38,8 @@ export { UserContext };
 // LocalStorage keys
 const STORAGE_KEYS = {
   USER_ROLE: "userRole",
-  USER_TOKEN: "userToken",
+  // USER_TOKEN: "userToken",
+  USER_TOKEN: "idToken",
   USER_DATA: "userData",
 };
 
@@ -246,7 +247,7 @@ export const UserProvider = ({ children }) => {
       const cachedRole = localStorageUtils.getRole();
       const cachedToken = localStorageUtils.getToken();
       const cachedUserData = localStorageUtils.getUserData();
-      
+
       if (cachedRole && cachedRole !== "none" && cachedToken) {
         // Validate token format
         if (!cachedToken.startsWith('eyJ')) {
@@ -263,7 +264,7 @@ export const UserProvider = ({ children }) => {
             uid: cachedUserData.uid,
             email: cachedUserData.email,
             displayName: cachedUserData.displayName,
-            emailVerified: cachedUserData.emailVerified
+            emailVerified: cachedUserData.emailVerified,
           });
         }
         setLoading(false);
@@ -279,11 +280,11 @@ export const UserProvider = ({ children }) => {
 
     // If no cached data, set up Firebase listener
     let mounted = true;
-    
+
     try {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (!mounted) return;
-        
+
         setUser(user);
 
         if (user) {
