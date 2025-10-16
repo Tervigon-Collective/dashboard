@@ -3,21 +3,166 @@ import config from "../config";
 class ProcurementApiService {
   constructor() {
     this.baseURL = config.api.baseURL + "/api"; // Add /api prefix here
+    this.tokenRefreshInterval = null;
     console.log(
       "ProcurementApiService initialized with baseURL:",
       this.baseURL
     );
+    
+    // Start periodic token refresh
+    this.startTokenRefresh();
+  }
+
+  // Start periodic token refresh every 45 minutes (tokens expire in 1 hour)
+  startTokenRefresh() {
+    if (this.tokenRefreshInterval) {
+      clearInterval(this.tokenRefreshInterval);
+    }
+    
+    this.tokenRefreshInterval = setInterval(async () => {
+      try {
+        const { auth } = await import("../helper/firebase");
+        const currentUser = auth.currentUser;
+        
+        if (currentUser) {
+          console.log("Performing periodic token refresh...");
+          const newToken = await currentUser.getIdToken(true);
+          localStorage.setItem("idToken", newToken);
+          console.log("Periodic token refresh completed");
+        }
+      } catch (error) {
+        console.error("Periodic token refresh failed:", error);
+      }
+    }, 45 * 60 * 1000); // 45 minutes
+  }
+
+  // Stop token refresh interval
+  stopTokenRefresh() {
+    if (this.tokenRefreshInterval) {
+      clearInterval(this.tokenRefreshInterval);
+      this.tokenRefreshInterval = null;
+    }
   }
 
   // Helper method to get auth token (using idToken like Entity Report API)
   getAuthToken() {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("idToken");
+    const token = localStorage.getItem("idToken");
+    
+    // Basic token validation
+    if (token && !token.startsWith("eyJ")) {
+      console.warn("Invalid token format detected, clearing token");
+      localStorage.removeItem("idToken");
+      return null;
+    }
+    
+    return token;
+  }
+
+  // Helper method to check if user is authenticated and get fresh token
+  async isAuthenticated() {
+    try {
+      const { auth } = await import("../helper/firebase");
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.log("No authenticated user found");
+        return false;
+      }
+
+      // Try to get a fresh token to ensure it's valid
+      try {
+        const freshToken = await currentUser.getIdToken(false); // Don't force refresh initially
+        console.log("User is authenticated with valid token");
+        return true;
+      } catch (tokenError) {
+        console.error("Token validation failed:", tokenError);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      return false;
+    }
+  }
+
+  // Helper method to clear authentication data
+  clearAuthData() {
+    try {
+      localStorage.removeItem("idToken");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userData");
+      console.log("Authentication data cleared");
+    } catch (error) {
+      console.error("Error clearing auth data:", error);
+    }
+  }
+
+  // Helper method to get fresh token
+  async getFreshToken() {
+    try {
+      const { auth } = await import("../helper/firebase");
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.error("No authenticated user found");
+        return null;
+      }
+
+      // Get fresh token
+      const token = await currentUser.getIdToken(false);
+      
+      // Update localStorage with fresh token
+      localStorage.setItem("idToken", token);
+      
+      return token;
+    } catch (error) {
+      console.error("Error getting fresh token:", error);
+      return null;
+    }
+  }
+
+  // Helper method to refresh Firebase token
+  async refreshToken() {
+    try {
+      // Import Firebase auth dynamically to avoid circular dependencies
+      const { auth } = await import("../helper/firebase");
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.error("No authenticated user found for token refresh");
+        return null;
+      }
+
+      console.log("Refreshing Firebase token...");
+      
+      // Force refresh the token
+      const newToken = await currentUser.getIdToken(true);
+      
+      // Update localStorage with new token
+      localStorage.setItem("idToken", newToken);
+      
+      console.log("Token refreshed successfully");
+      return newToken;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      // Clear invalid auth data
+      this.clearAuthData();
+      return null;
+    }
   }
 
   // Helper method for making authenticated requests
   async makeRequest(url, options = {}) {
-    const token = this.getAuthToken();
+    // Check if user is authenticated first
+    const isAuth = await this.isAuthenticated();
+    if (!isAuth) {
+      throw new Error(
+        "AUTHENTICATION_ERROR: No authenticated user found. Please sign in again."
+      );
+    }
+
+    // Get fresh token before making request
+    let token = await this.getFreshToken();
 
     console.log("Auth token available:", !!token);
     console.log(
