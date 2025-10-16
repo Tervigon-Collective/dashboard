@@ -12,12 +12,79 @@ class ProcurementApiService {
   // Helper method to get auth token (using idToken like Entity Report API)
   getAuthToken() {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("idToken");
+    const token = localStorage.getItem("idToken");
+    
+    // Basic token validation
+    if (token && !token.startsWith("eyJ")) {
+      console.warn("Invalid token format detected, clearing token");
+      localStorage.removeItem("idToken");
+      return null;
+    }
+    
+    return token;
+  }
+
+  // Helper method to check if user is authenticated
+  async isAuthenticated() {
+    try {
+      const { auth } = await import("../helper/firebase");
+      const currentUser = auth.currentUser;
+      return !!currentUser;
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      return false;
+    }
+  }
+
+  // Helper method to clear authentication data
+  clearAuthData() {
+    try {
+      localStorage.removeItem("idToken");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userData");
+      console.log("Authentication data cleared");
+    } catch (error) {
+      console.error("Error clearing auth data:", error);
+    }
+  }
+
+  // Helper method to refresh Firebase token
+  async refreshToken() {
+    try {
+      // Import Firebase auth dynamically to avoid circular dependencies
+      const { auth } = await import("../helper/firebase");
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.error("No authenticated user found for token refresh");
+        return null;
+      }
+
+      console.log("Refreshing Firebase token...");
+      const newToken = await currentUser.getIdToken(true); // Force refresh
+      
+      // Update localStorage with new token
+      localStorage.setItem("idToken", newToken);
+      
+      console.log("Token refreshed successfully");
+      return newToken;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      return null;
+    }
   }
 
   // Helper method for making authenticated requests
   async makeRequest(url, options = {}) {
-    const token = this.getAuthToken();
+    // Check if user is authenticated first
+    const isAuth = await this.isAuthenticated();
+    if (!isAuth) {
+      throw new Error(
+        "AUTHENTICATION_ERROR: No authenticated user found. Please sign in again."
+      );
+    }
+
+    let token = this.getAuthToken();
 
     console.log("Auth token available:", !!token);
     console.log(
@@ -59,8 +126,42 @@ class ProcurementApiService {
         console.error("  URL:", url);
         console.error("  Response Body:", errorText);
 
-        // Handle 401 Unauthorized specifically
+        // Handle 401 Unauthorized - try to refresh token and retry once
         if (response.status === 401) {
+          console.log("401 Unauthorized - attempting token refresh...");
+          
+          const newToken = await this.refreshToken();
+          if (newToken) {
+            console.log("Token refreshed, retrying request...");
+            
+            // Retry the request with the new token
+            const retryOptions = {
+              ...requestOptions,
+              headers: {
+                ...requestOptions.headers,
+                Authorization: `Bearer ${newToken}`,
+              },
+            };
+            
+            const retryResponse = await fetch(url, retryOptions);
+            
+            if (retryResponse.ok) {
+              console.log("Request succeeded after token refresh");
+              return retryResponse.json();
+            } else {
+              console.error("Request still failed after token refresh");
+              const retryErrorText = await retryResponse.text();
+              console.error("Retry error response:", retryErrorText);
+              
+              // Clear auth data if retry also fails
+              this.clearAuthData();
+            }
+          } else {
+            // Token refresh failed, clear auth data
+            console.error("Token refresh failed, clearing auth data");
+            this.clearAuthData();
+          }
+          
           throw new Error(
             "AUTHENTICATION_ERROR: Your session has expired. Please sign in again."
           );

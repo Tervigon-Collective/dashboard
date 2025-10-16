@@ -1,6 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import ProcurementTableDataLayer from "@/components/ProcurementTableDataLayer";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
+import AuthDebugger from "@/components/AuthDebugger";
 
 export const metadata = {
   title: "Procurement - Admin Dashboard",
@@ -16,6 +17,9 @@ const Page = () => {
 
       {/* ProcurementTableDataLayer */}
       <ProcurementTableDataLayer />
+      
+      {/* Auth Debugger - Remove this after fixing the issue */}
+      <AuthDebugger />
     </SidebarPermissionGuard>
   );
 };

@@ -15,11 +15,15 @@ function EditProductContent() {
     return (
       <SidebarPermissionGuard requiredSidebar="procurement">
         <Breadcrumb title="Procurement / Edit Product" />
-        <div className="alert alert-warning" role="alert">
-          <h4 className="alert-heading">Invalid Product ID</h4>
-          <p>No product ID provided. Please select a product from the procurement page.</p>
-          <hr />
-          <Link href="/procurement" className="btn btn-primary">
+        <div className="alert alert-warning p-2 d-flex align-items-center justify-content-between" role="alert">
+          <div className="d-flex align-items-center">
+            <i className="icon-alert-triangle me-2"></i>
+            <div>
+              <strong>Invalid Product ID</strong>
+              <span className="ms-2 text-muted">No product ID provided. Please select a product from the procurement page.</span>
+            </div>
+          </div>
+          <Link href="/procurement" className="btn btn-primary btn-sm">
             Go to Procurement
           </Link>
         </div>
@@ -29,11 +33,10 @@ function EditProductContent() {
 
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
-      <Breadcrumb title="Procurement / Edit Product" />
-
-      {/* Back Button */}
-      <div className="mb-3 d-flex justify-content-end">
-        <Link href="/procurement" className="btn btn-outline-secondary">
+      {/* Header with Breadcrumb and Back Button in one line */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <Breadcrumb title="Procurement / Edit Product" />
+        <Link href="/procurement" className="btn btn-outline-secondary btn-sm">
           <i className="icon-arrow-left me-2"></i>
           Back to Procurement
         </Link>
