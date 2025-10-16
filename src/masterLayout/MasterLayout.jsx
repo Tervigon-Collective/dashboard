@@ -15,7 +15,7 @@ const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = usePathname(); // Hook to get the current route
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const router = useRouter();
 
   useEffect(() => {
@@ -103,8 +103,21 @@ const MasterLayout = ({ children }) => {
 
   const handleLogout = async (e) => {
     e.preventDefault();
-    await signOut(auth);
-    router.push("/sign-in");
+    try {
+      // Show loading state
+      const logoutButton = e.target.closest('a');
+      if (logoutButton) {
+        logoutButton.style.opacity = '0.5';
+        logoutButton.style.pointerEvents = 'none';
+      }
+      
+      // Use the comprehensive logout function from UserContext
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect even if logout fails
+      window.location.href = "/sign-in";
+    }
   };
 
   return (
@@ -352,6 +365,22 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
+                    {hasSidebarPermission("userManagement") && (
+                      <li>
+                        <Link
+                          href="/user-management"
+                          className={
+                            pathname === "/user-management" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:account-group"
+                            className="menu-icon"
+                          />
+                          <span>User Management</span>
+                        </Link>
+                      </li>
+                    )}
                   </>
                 );
               }
@@ -423,80 +452,6 @@ const MasterLayout = ({ children }) => {
                       </li>
                     )}
 
-                  {/* User Management Section - Only for Admin and Super Admin */}
-                  {(isSuperAdmin || isAdmin) &&
-                    hasSidebarPermission("userManagement") && (
-                      <>
-                        <li className="sidebar-menu-group-title">
-                          User Management
-                        </li>
-
-                        {/* User Management Dropdown */}
-                        <li className="dropdown">
-                          <Link href="#">
-                            <Icon
-                              icon="mdi:account-group"
-                              className="menu-icon"
-                            />
-                            <span>User Management</span>
-                          </Link>
-                          <ul className="sidebar-submenu">
-                            <li>
-                              <Link
-                                href="/user-management"
-                                className={
-                                  pathname === "/user-management"
-                                    ? "active-page"
-                                    : ""
-                                }
-                              >
-                                <i className="ri-circle-fill circle-icon text-primary-600 w-auto" />
-                                All Users
-                              </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href="/create-user"
-                                className={
-                                  pathname === "/create-user"
-                                    ? "active-page"
-                                    : ""
-                                }
-                              >
-                                <i className="ri-circle-fill circle-icon text-success-main w-auto" />
-                                Create User
-                              </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href="/assign-role"
-                                className={
-                                  pathname === "/assign-role"
-                                    ? "active-page"
-                                    : ""
-                                }
-                              >
-                                <i className="ri-circle-fill circle-icon text-warning-main w-auto" />
-                                Assign Roles
-                              </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href="/user-role-info"
-                                className={
-                                  pathname === "/user-role-info"
-                                    ? "active-page"
-                                    : ""
-                                }
-                              >
-                                <i className="ri-circle-fill circle-icon text-info-main w-auto" />
-                                Role Information
-                              </Link>
-                            </li>
-                          </ul>
-                        </li>
-                      </>
-                    )}
                 </>
               );
             })()}

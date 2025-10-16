@@ -80,20 +80,6 @@ const RoleBasedDashboard = () => {
                 </div>
               )}
 
-              {/* Admin and above */}
-              {canManageUsers() && (
-                <div className="col-md-3 mb-3">
-                  <Link href="/assign-role" className="text-decoration-none">
-                    <div className="card border h-100">
-                      <div className="card-body text-center">
-                        <Icon icon="mdi:account-multiple" className="text-warning fs-1 mb-2" />
-                        <h6>Manage Users</h6>
-                        <small className="text-muted">Assign roles and permissions</small>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              )}
 
               {/* Super Admin only */}
               {canManageRoles() && (

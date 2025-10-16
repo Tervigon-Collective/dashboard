@@ -39,7 +39,6 @@ export default function SidebarPermissionGuard({
     "/shipping": "shipping",
     "/user-management": "userManagement",
     "/create-user": "userManagement",
-    "/assign-role": "userManagement",
   };
 
   // Get the required sidebar from props or auto-detect from route

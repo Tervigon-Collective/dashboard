@@ -222,52 +222,46 @@ const AdsetDetailsLayer = () => {
           </thead>
           <tbody>
             {data.map((row, index) => (
-              <tr key={index} className="table-light">
-                <td className="fw-semibold">{row.ad_name}</td>
-                <td>{formatNumber(row.totalImpressions)}</td>
-                <td>{formatNumber(row.totalClicks)}</td>
-                <td>{formatPercentage(row.ctr)}</td>
-                <td className="fw-semibold">
+              <tr key={index}>
+                <td style={{ fontWeight: '600' }}>{row.ad_name}</td>
+                <td style={{ fontWeight: '500' }}>{formatNumber(row.totalImpressions)}</td>
+                <td style={{ fontWeight: '500' }}>{formatNumber(row.totalClicks)}</td>
+                <td style={{ fontWeight: '500' }}>{formatPercentage(row.ctr)}</td>
+                <td style={{ 
+                  color: '#ca8a04',
+                  fontWeight: '600'
+                }}>
                   {formatCurrency(row.totalSpend)}
                 </td>
-                <td>{formatCurrency(row.cpc)}</td>
-                <td>{formatCurrency(row.cpm)}</td>
-                <td>{formatNumber(row.totalOrders)}</td>
-                <td className="fw-semibold text-success">
+                <td style={{ fontWeight: '500' }}>{formatCurrency(row.cpc)}</td>
+                <td style={{ fontWeight: '500' }}>{formatCurrency(row.cpm)}</td>
+                <td style={{ fontWeight: '500' }}>{formatNumber(row.totalOrders)}</td>
+                <td style={{ 
+                  color: '#16a34a',
+                  fontWeight: '600'
+                }}>
                   {formatCurrency(row.totalRevenue)}
                 </td>
-                <td className="fw-semibold">
-                  <span
-                    className={`badge ${
-                      row.grossRoas >= 2
-                        ? "bg-success-subtle text-success"
-                        : "bg-warning-subtle text-warning"
-                    }`}
-                  >
-                    {row.grossRoas?.toFixed(2)}x
-                  </span>
+                <td style={{ 
+                  color: '#7c3aed',
+                  fontWeight: '600'
+                }}>
+                  {row.grossRoas?.toFixed(2)}x
                 </td>
-                <td
-                  className={`fw-semibold ${
-                    row.netProfit >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
+                <td style={{ 
+                  color: row.netProfit >= 0 ? '#16a34a' : '#dc2626',
+                  fontWeight: '600'
+                }}>
                   {formatCurrency(row.netProfit)}
                 </td>
-                <td>
-                  <small className="text-muted">
-                    {row.totalActions.onsite_web_add_to_cart || 0}
-                  </small>
+                <td style={{ fontWeight: '500' }}>
+                  {row.totalActions.onsite_web_add_to_cart || 0}
                 </td>
-                <td>
-                  <small className="text-muted">
-                    {row.totalActions.onsite_web_initiate_checkout || 0}
-                  </small>
+                <td style={{ fontWeight: '500' }}>
+                  {row.totalActions.onsite_web_initiate_checkout || 0}
                 </td>
-                <td>
-                  <small className="text-muted">
-                    {row.productDetails || "-"}
-                  </small>
+                <td style={{ fontWeight: '500', color: '#6b7280' }}>
+                  {row.productDetails || "-"}
                 </td>
               </tr>
             ))}
@@ -401,8 +395,6 @@ const AdsetDetailsLayer = () => {
           </div>
         )}
 
-        {/* Summary Cards */}
-        {data.length > 0 && renderSummaryCards()}
 
         {/* Data Table */}
         {data.length > 0 && renderAdTable()}
