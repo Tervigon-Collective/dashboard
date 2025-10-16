@@ -32,7 +32,7 @@ const SignUpLayer = () => {
       uid: user.uid,
       email: user.email || "N/A",
       username: finalUsername,
-      role: "user",
+      role: "none",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),

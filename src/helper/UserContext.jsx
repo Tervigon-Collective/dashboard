@@ -242,17 +242,16 @@ export const UserProvider = ({ children }) => {
       const cachedToken = localStorageUtils.getToken();
       const cachedUserData = localStorageUtils.getUserData();
 
-      if (cachedRole && cachedRole !== "none" && cachedToken) {
+      // Allow cached data for ANY role (including "none") if we have token and user data
+      if (cachedToken && cachedUserData && cachedRole) {
         setRole(cachedRole);
         setToken(cachedToken);
-        if (cachedUserData) {
-          setUser({
-            uid: cachedUserData.uid,
-            email: cachedUserData.email,
-            displayName: cachedUserData.displayName,
-            emailVerified: cachedUserData.emailVerified,
-          });
-        }
+        setUser({
+          uid: cachedUserData.uid,
+          email: cachedUserData.email,
+          displayName: cachedUserData.displayName,
+          emailVerified: cachedUserData.emailVerified,
+        });
         setLoading(false);
         return true; // Found cached data
       }
@@ -345,6 +344,26 @@ export const UserProvider = ({ children }) => {
     return sidebarPermissionsManager.getPermissionLevel(sidebarKey, role);
   };
 
+  // Function to refresh the current user's token
+  const refreshToken = async () => {
+    try {
+      // Get the current Firebase user from auth
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.error("No authenticated user found");
+        return null;
+      }
+
+      const newToken = await currentUser.getIdToken(true); // Force refresh
+      setToken(newToken);
+      localStorageUtils.setToken(newToken);
+      return newToken;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      return null;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -357,6 +376,7 @@ export const UserProvider = ({ children }) => {
     roleHierarchy,
     roleDisplayNames,
     fetchUserRole,
+    refreshToken,
     localStorageUtils,
     // Sidebar permission functions
     hasSidebarPermission,

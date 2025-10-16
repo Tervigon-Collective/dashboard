@@ -28,7 +28,7 @@ const SignInLayer = () => {
         uid: user.uid,
         email: user.email,
         username: user.displayName || email.split("@")[0], // Fallback (no username input in sign-in)
-        role: "user",
+        role: "none",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
