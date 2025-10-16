@@ -204,42 +204,8 @@ class ProcurementApiService {
         console.error("  URL:", url);
         console.error("  Response Body:", errorText);
 
-        // Handle 401 Unauthorized - try to refresh token and retry once
+        // Handle 401 Unauthorized specifically
         if (response.status === 401) {
-          console.log("401 Unauthorized - attempting token refresh...");
-          
-          const newToken = await this.refreshToken();
-          if (newToken) {
-            console.log("Token refreshed, retrying request...");
-            
-            // Retry the request with the new token
-            const retryOptions = {
-              ...requestOptions,
-              headers: {
-                ...requestOptions.headers,
-                Authorization: `Bearer ${newToken}`,
-              },
-            };
-            
-            const retryResponse = await fetch(url, retryOptions);
-            
-            if (retryResponse.ok) {
-              console.log("Request succeeded after token refresh");
-              return retryResponse.json();
-            } else {
-              console.error("Request still failed after token refresh");
-              const retryErrorText = await retryResponse.text();
-              console.error("Retry error response:", retryErrorText);
-              
-              // Clear auth data if retry also fails
-              this.clearAuthData();
-            }
-          } else {
-            // Token refresh failed, clear auth data
-            console.error("Token refresh failed, clearing auth data");
-            this.clearAuthData();
-          }
-          
           throw new Error(
             "AUTHENTICATION_ERROR: Your session has expired. Please sign in again."
           );

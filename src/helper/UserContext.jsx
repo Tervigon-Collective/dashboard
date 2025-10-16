@@ -270,19 +270,47 @@ export const UserProvider = ({ children }) => {
           displayName: cachedUserData.displayName,
           emailVerified: cachedUserData.emailVerified,
         });
+
+        // Don't load cached sidebar permissions - always fetch fresh from server
+
         setLoading(false);
         return true; // Found valid cached data
       }
       return false; // No cached data
     };
 
-    // Check localStorage first
-    if (checkLocalStorage()) {
-      return; // If we found cached data, don't set up Firebase listener
+    // Always fetch fresh data from server for sidebar permissions
+    // This ensures sidebar always shows correct permissions
+    let mounted = true;
+
+    const fetchFreshData = async () => {
+      try {
+        const currentUser = auth.currentUser;
+
+        if (currentUser && mounted) {
+          await fetchUserRole(currentUser);
+        }
+      } catch (error) {
+        console.error("❌ Failed to fetch fresh permissions:", error);
+      }
+    };
+
+    // Check if we have basic cached data for fast initial load
+    const hasCachedData = checkLocalStorage();
+
+    if (hasCachedData) {
+      // Use cached data for fast initial load, but always fetch fresh permissions
+      setTimeout(fetchFreshData, 100);
+
+      // Fallback: try again after 1 second if first attempt fails
+      setTimeout(fetchFreshData, 1000);
+
+      return () => {
+        mounted = false;
+      };
     }
 
     // If no cached data, set up Firebase listener
-    let mounted = true;
 
     try {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {

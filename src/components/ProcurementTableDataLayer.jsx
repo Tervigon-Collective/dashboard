@@ -1717,7 +1717,7 @@ const ProcurementTableDataLayer = () => {
             padding: "0",
             maxWidth: "480px",
             width: "90%",
-            maxHeight: "70vh",
+            maxHeight: "90vh",
             overflow: "hidden",
             background: "white",
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
@@ -1762,7 +1762,7 @@ const ProcurementTableDataLayer = () => {
         </button>
 
         {/* Modal content */}
-        <div style={{ padding: "24px" }}>
+        <div style={{ padding: "32px" }}>
           {/* Icon */}
           <div
             style={{
@@ -1773,7 +1773,7 @@ const ProcurementTableDataLayer = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 16px",
+              margin: "0 auto 24px",
               boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
             }}
           >
@@ -1789,13 +1789,13 @@ const ProcurementTableDataLayer = () => {
           <h4
             style={{
               textAlign: "center",
-              marginBottom: "8px",
+              marginBottom: "12px",
               fontSize: "24px",
               fontWeight: "600",
               color: "#111827",
             }}
           >
-            Update Product Status
+            Approve Product?
           </h4>
 
           {/* Description */}
@@ -1808,7 +1808,7 @@ const ProcurementTableDataLayer = () => {
               lineHeight: "1.6",
             }}
           >
-            Choose the new status for this product
+            You are about to approve this product
           </p>
 
           {/* Product name */}
@@ -1818,7 +1818,7 @@ const ProcurementTableDataLayer = () => {
               background: "#f9fafb",
               padding: "12px 16px",
               borderRadius: "10px",
-              marginBottom: "24px",
+              marginBottom: "32px",
               border: "1px solid #e5e7eb",
             }}
           >
@@ -1835,59 +1835,34 @@ const ProcurementTableDataLayer = () => {
 
           {/* Buttons */}
           <div style={{ display: "flex", gap: "12px" }}>
-           
             <button
-              onClick={() => handleStatusUpdate("rejected")}
+              onClick={() => setStatusModalIsOpen(false)}
               disabled={isUpdatingStatus}
               style={{
                 flex: 1,
                 padding: "14px 24px",
                 fontSize: "15px",
                 fontWeight: "600",
-                border: "none",
+                border: "1px solid #e5e7eb",
                 borderRadius: "10px",
-                background: isUpdatingStatus
-                  ? "#9ca3af"
-                  : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-                color: "white",
+                background: "white",
+                color: "#374151",
                 cursor: isUpdatingStatus ? "not-allowed" : "pointer",
                 transition: "all 0.2s",
-                boxShadow: isUpdatingStatus
-                  ? "none"
-                  : "0 4px 12px rgba(239, 68, 68, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
+                opacity: isUpdatingStatus ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!isUpdatingStatus) {
-                  e.target.style.transform = "translateY(-1px)";
-                  e.target.style.boxShadow =
-                    "0 6px 16px rgba(239, 68, 68, 0.4)";
+                  e.target.style.background = "#f9fafb";
+                  e.target.style.borderColor = "#d1d5db";
                 }
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 4px 12px rgba(239, 68, 68, 0.3)";
+                e.target.style.background = "white";
+                e.target.style.borderColor = "#e5e7eb";
               }}
             >
-              {isUpdatingStatus ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    aria-hidden="true"
-                    style={{ width: "16px", height: "16px" }}
-                  ></span>
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <Icon icon="mdi:close" width="20" height="20" />
-                  <span>Reject Product</span>
-                </>
-              )}
+              Cancel
             </button>
             <button
               onClick={() => handleStatusUpdate("approved")}
@@ -1933,7 +1908,7 @@ const ProcurementTableDataLayer = () => {
                     aria-hidden="true"
                     style={{ width: "16px", height: "16px" }}
                   ></span>
-                  <span>Updating...</span>
+                  <span>Approving...</span>
                 </>
               ) : (
                 <>

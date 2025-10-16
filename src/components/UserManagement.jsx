@@ -50,51 +50,84 @@ const UserManagement = () => {
   // Load sidebar permissions when a user is selected for editing
   useEffect(() => {
     if (selectedUser) {
+      setNewRole(selectedUser.role || "user");
+
+      // Fetch current permissions from server for this user
+      fetchUserCurrentPermissions(selectedUser.uid);
+    }
+  }, [selectedUser]);
+
+  // Function to fetch current user permissions from server
+  const fetchUserCurrentPermissions = async (userId) => {
+    try {
+      const response = await fetch(
+        `${config.api.baseURL}/api/users/uid/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Check if user has sidebarPermissions in the response
+        const userData = data.user;
+        const serverPermissions = userData.sidebarPermissions || {};
+
+        if (Object.keys(serverPermissions).length > 0) {
+          // Use the actual permissions from the server
+          const actualPermissions = {};
+          const allSidebarKeys = Object.keys(AVAILABLE_SIDEBAR_ITEMS);
+
+          allSidebarKeys.forEach((key) => {
+            const serverPermission = serverPermissions[key];
+
+            if (serverPermission !== undefined) {
+              // Use server permission data
+              actualPermissions[key] = {
+                enabled: serverPermission.enabled || false,
+                operations: serverPermission.operations || [],
+              };
+            } else {
+              // Fallback to default for this role
+              const defaultPermissions =
+                DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+                DEFAULT_SIDEBAR_PERMISSIONS.none;
+              actualPermissions[key] = defaultPermissions[key] || {
+                enabled: false,
+                operations: [],
+              };
+            }
+          });
+
+          setSidebarPermissions(actualPermissions);
+        } else {
+          // User has no custom permissions, use role defaults
+          const defaultPermissions =
+            DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+            DEFAULT_SIDEBAR_PERMISSIONS.none;
+          setSidebarPermissions(defaultPermissions);
+        }
+      } else {
+        // Fallback to default permissions
+        const defaultPermissions =
+          DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
+          DEFAULT_SIDEBAR_PERMISSIONS.none;
+        setSidebarPermissions(defaultPermissions);
+      }
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      // Fallback to default permissions
       const defaultPermissions =
         DEFAULT_SIDEBAR_PERMISSIONS[selectedUser.role] ||
         DEFAULT_SIDEBAR_PERMISSIONS.none;
-
-      setNewRole(selectedUser.role || "user");
-
-      if (
-        selectedUser.sidebarPermissions &&
-        Object.keys(selectedUser.sidebarPermissions).length > 0
-      ) {
-        const actualPermissions = {};
-        const allSidebarKeys = Object.keys(AVAILABLE_SIDEBAR_ITEMS);
-
-        allSidebarKeys.forEach((key) => {
-          const customPermission = selectedUser.sidebarPermissions[key];
-
-          if (customPermission !== undefined) {
-            if (
-              typeof customPermission === "object" &&
-              customPermission !== null
-            ) {
-              actualPermissions[key] = customPermission;
-            } else if (typeof customPermission === "boolean") {
-              const sidebarItem = AVAILABLE_SIDEBAR_ITEMS[key];
-              actualPermissions[key] = {
-                enabled: customPermission,
-                operations: customPermission
-                  ? sidebarItem?.availableOperations || ["read"]
-                  : [],
-              };
-            }
-          } else {
-            actualPermissions[key] = defaultPermissions[key] || {
-              enabled: false,
-              operations: [],
-            };
-          }
-        });
-
-        setSidebarPermissions(actualPermissions);
-      } else {
-        setSidebarPermissions(defaultPermissions);
-      }
+      setSidebarPermissions(defaultPermissions);
     }
-  }, [selectedUser]);
+  };
 
   const getAvailableSidebarItems = (userRole) => {
     return sidebarPermissionsManager.getAvailableSidebarItemsForRole(userRole);
@@ -114,12 +147,23 @@ const UserManagement = () => {
   const handleSidebarPermissionChange = (permissionKey, isEnabled) => {
     setSidebarPermissions((prev) => {
       const newPermissions = { ...prev };
+      const currentPermission = newPermissions[permissionKey] || {
+        enabled: false,
+        operations: [],
+      };
 
       if (isEnabled) {
-        // Enable with basic read permission by default
+        // If enabling and no operations exist, add read permission by default
+        // Otherwise, preserve existing operations
+        const currentOperations = Array.isArray(currentPermission.operations)
+          ? currentPermission.operations
+          : [];
+        const operations =
+          currentOperations.length > 0 ? currentOperations : ["read"];
+
         newPermissions[permissionKey] = {
           enabled: true,
-          operations: ["read"],
+          operations: operations,
         };
       } else {
         newPermissions[permissionKey] = {
@@ -135,10 +179,17 @@ const UserManagement = () => {
   const handleCrudPermissionChange = (permissionKey, operation, isChecked) => {
     setSidebarPermissions((prev) => {
       const newPermissions = { ...prev };
-      const currentPermission = newPermissions[permissionKey] || { enabled: false, operations: [] };
-      
-      let newOperations = [...currentPermission.operations];
-      
+      const currentPermission = newPermissions[permissionKey] || {
+        enabled: false,
+        operations: [],
+      };
+
+      // Ensure operations is always an array
+      const currentOperations = Array.isArray(currentPermission.operations)
+        ? currentPermission.operations
+        : [];
+      let newOperations = [...currentOperations];
+
       if (isChecked) {
         // Add operation if not already present
         if (!newOperations.includes(operation)) {
@@ -146,14 +197,14 @@ const UserManagement = () => {
         }
       } else {
         // Remove operation
-        newOperations = newOperations.filter(op => op !== operation);
+        newOperations = newOperations.filter((op) => op !== operation);
       }
-      
+
       newPermissions[permissionKey] = {
-        enabled: currentPermission.enabled, // Keep the enabled state from the main toggle
+        enabled: newOperations.length > 0,
         operations: newOperations,
       };
-      
+
       return newPermissions;
     });
   };
@@ -336,9 +387,12 @@ const UserManagement = () => {
   const getStatusBadge = (userData) => {
     // Determine status based on user data
     if (userData.disabled) return { text: "Inactive", color: "bg-secondary" };
-    if (userData.role === "super_admin") return { text: "Active", color: "bg-success" };
-    if (userData.role === "admin") return { text: "Active", color: "bg-success" };
-    if (userData.role === "manager") return { text: "Active", color: "bg-success" };
+    if (userData.role === "super_admin")
+      return { text: "Active", color: "bg-success" };
+    if (userData.role === "admin")
+      return { text: "Active", color: "bg-success" };
+    if (userData.role === "manager")
+      return { text: "Active", color: "bg-success" };
     return { text: "Active", color: "bg-success" };
   };
 
@@ -353,23 +407,28 @@ const UserManagement = () => {
   };
 
   const filteredUsers = users.filter((userData) => {
-    const matchesSearch = 
+    const matchesSearch =
       userData.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       userData.displayName?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     switch (sortBy) {
       case "name":
-        return (a.displayName || a.email || "").localeCompare(b.displayName || b.email || "");
+        return (a.displayName || a.email || "").localeCompare(
+          b.displayName || b.email || ""
+        );
       case "email":
         return (a.email || "").localeCompare(b.email || "");
       case "role":
         return (a.role || "").localeCompare(b.role || "");
       case "date":
-        return new Date(b.updatedAt?.toDate?.() || 0) - new Date(a.updatedAt?.toDate?.() || 0);
+        return (
+          new Date(b.updatedAt?.toDate?.() || 0) -
+          new Date(a.updatedAt?.toDate?.() || 0)
+        );
       default:
         return 0;
     }
@@ -403,8 +462,8 @@ const UserManagement = () => {
             </div>
             <div className="d-flex align-items-center gap-3">
               <div className="position-relative" style={{ width: "280px" }}>
-                <Icon 
-                  icon="mdi:magnify" 
+                <Icon
+                  icon="mdi:magnify"
                   className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
                   style={{ zIndex: 10, fontSize: "1rem" }}
                 />
@@ -414,11 +473,11 @@ const UserManagement = () => {
                   placeholder="Search by email, phone, name"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ 
+                  style={{
                     fontSize: "0.9rem",
                     padding: "10px 16px 10px 40px",
                     height: "40px",
-                    border: "1px solid #d1d5db"
+                    border: "1px solid #d1d5db",
                   }}
                 />
               </div>
@@ -427,45 +486,65 @@ const UserManagement = () => {
                   className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
                   type="button"
                   data-bs-toggle="dropdown"
-                  style={{ 
+                  style={{
                     fontSize: "0.9rem",
                     padding: "10px 16px",
                     height: "40px",
-                    border: "1px solid #d1d5db"
+                    border: "1px solid #d1d5db",
                   }}
                 >
                   <Icon icon="mdi:sort" style={{ fontSize: "1rem" }} />
                   Sort
                 </button>
                 <ul className="dropdown-menu border-0 shadow-sm">
-                  <li><button className="dropdown-item" onClick={() => setSortBy("name")}>
-                    <Icon icon="mdi:account" className="me-2" />
-                    Name
-                  </button></li>
-                  <li><button className="dropdown-item" onClick={() => setSortBy("email")}>
-                    <Icon icon="mdi:email" className="me-2" />
-                    Email
-                  </button></li>
-                  <li><button className="dropdown-item" onClick={() => setSortBy("role")}>
-                    <Icon icon="mdi:shield-account" className="me-2" />
-                    Role
-                  </button></li>
-                  <li><button className="dropdown-item" onClick={() => setSortBy("date")}>
-                    <Icon icon="mdi:calendar" className="me-2" />
-                    Date added
-                  </button></li>
+                  <li>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => setSortBy("name")}
+                    >
+                      <Icon icon="mdi:account" className="me-2" />
+                      Name
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => setSortBy("email")}
+                    >
+                      <Icon icon="mdi:email" className="me-2" />
+                      Email
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => setSortBy("role")}
+                    >
+                      <Icon icon="mdi:shield-account" className="me-2" />
+                      Role
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => setSortBy("date")}
+                    >
+                      <Icon icon="mdi:calendar" className="me-2" />
+                      Date added
+                    </button>
+                  </li>
                 </ul>
               </div>
               <button
                 className="btn btn-primary d-flex align-items-center gap-2"
                 onClick={() => {
                   // Navigate to create user page or open modal
-                  window.location.href = '/create-user';
+                  window.location.href = "/create-user";
                 }}
-                style={{ 
+                style={{
                   fontSize: "0.9rem",
                   padding: "10px 16px",
-                  height: "40px"
+                  height: "40px",
                 }}
               >
                 <Icon icon="mdi:plus" style={{ fontSize: "1rem" }} />
@@ -478,12 +557,18 @@ const UserManagement = () => {
 
       {/* Message Display */}
       {message.text && (
-        <div 
-          className={`alert alert-${message.type === "success" ? "success" : "danger"} d-flex align-items-center mb-4 mx-auto border-0 shadow-sm`} 
+        <div
+          className={`alert alert-${
+            message.type === "success" ? "success" : "danger"
+          } d-flex align-items-center mb-4 mx-auto border-0 shadow-sm`}
           style={{ maxWidth: "800px" }}
         >
           <Icon
-            icon={message.type === "success" ? "mdi:check-circle" : "mdi:alert-circle"}
+            icon={
+              message.type === "success"
+                ? "mdi:check-circle"
+                : "mdi:alert-circle"
+            }
             className="me-2"
             style={{ fontSize: "1.25rem" }}
           />
@@ -493,20 +578,34 @@ const UserManagement = () => {
 
       <div className="row justify-content-center">
         {/* Left Panel - User Groups List */}
-        <div className={`${showPermissionsPanel ? 'col-lg-7' : 'col-lg-10'} col-12`}>
+        <div
+          className={`${
+            showPermissionsPanel ? "col-lg-7" : "col-lg-10"
+          } col-12`}
+        >
           <div className="card border-0 shadow-sm">
             <div className="card-body p-4">
               {/* User Group Filters */}
               <div className="mb-4">
-                <ul className="nav nav-tabs" role="tablist" style={{ borderBottom: "1px solid #e5e7eb" }}>
+                <ul
+                  className="nav nav-tabs"
+                  role="tablist"
+                  style={{ borderBottom: "1px solid #e5e7eb" }}
+                >
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "all" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "all" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("all")}
                       style={{
-                        backgroundColor: selectedRole === "all" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "all" ? "#f8fafc" : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "all" ? "2px solid #6b7280" : "2px solid transparent",
+                        borderBottom:
+                          selectedRole === "all"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
                         color: selectedRole === "all" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "all" ? "500" : "400",
                         borderRadius: "0",
@@ -533,12 +632,18 @@ const UserManagement = () => {
                   {/* No Access */}
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "none" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "none" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("none")}
                       style={{
-                        backgroundColor: selectedRole === "none" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "none" ? "#f8fafc" : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "none" ? "2px solid #6b7280" : "2px solid transparent",
+                        borderBottom:
+                          selectedRole === "none"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
                         color: selectedRole === "none" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "none" ? "500" : "400",
                         borderRadius: "0",
@@ -562,16 +667,22 @@ const UserManagement = () => {
                       No Access
                     </button>
                   </li>
-                  
+
                   {/* User */}
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "user" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "user" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("user")}
                       style={{
-                        backgroundColor: selectedRole === "user" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "user" ? "#f8fafc" : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "user" ? "2px solid #6b7280" : "2px solid transparent",
+                        borderBottom:
+                          selectedRole === "user"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
                         color: selectedRole === "user" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "user" ? "500" : "400",
                         borderRadius: "0",
@@ -595,17 +706,26 @@ const UserManagement = () => {
                       User
                     </button>
                   </li>
-                  
+
                   {/* Manager */}
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "manager" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "manager" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("manager")}
                       style={{
-                        backgroundColor: selectedRole === "manager" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "manager"
+                            ? "#f8fafc"
+                            : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "manager" ? "2px solid #6b7280" : "2px solid transparent",
-                        color: selectedRole === "manager" ? "#374151" : "#6b7280",
+                        borderBottom:
+                          selectedRole === "manager"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
+                        color:
+                          selectedRole === "manager" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "manager" ? "500" : "400",
                         borderRadius: "0",
                         padding: "12px 16px",
@@ -628,16 +748,22 @@ const UserManagement = () => {
                       Manager
                     </button>
                   </li>
-                  
+
                   {/* Admin */}
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "admin" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "admin" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("admin")}
                       style={{
-                        backgroundColor: selectedRole === "admin" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "admin" ? "#f8fafc" : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "admin" ? "2px solid #6b7280" : "2px solid transparent",
+                        borderBottom:
+                          selectedRole === "admin"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
                         color: selectedRole === "admin" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "admin" ? "500" : "400",
                         borderRadius: "0",
@@ -661,18 +787,30 @@ const UserManagement = () => {
                       Admin
                     </button>
                   </li>
-                  
+
                   {/* Super Admin */}
                   <li className="nav-item" role="presentation">
                     <button
-                      className={`nav-link ${selectedRole === "super_admin" ? "active" : ""}`}
+                      className={`nav-link ${
+                        selectedRole === "super_admin" ? "active" : ""
+                      }`}
                       onClick={() => setSelectedRole("super_admin")}
                       style={{
-                        backgroundColor: selectedRole === "super_admin" ? "#f8fafc" : "transparent",
+                        backgroundColor:
+                          selectedRole === "super_admin"
+                            ? "#f8fafc"
+                            : "transparent",
                         border: "none",
-                        borderBottom: selectedRole === "super_admin" ? "2px solid #6b7280" : "2px solid transparent",
-                        color: selectedRole === "super_admin" ? "#374151" : "#6b7280",
-                        fontWeight: selectedRole === "super_admin" ? "500" : "400",
+                        borderBottom:
+                          selectedRole === "super_admin"
+                            ? "2px solid #6b7280"
+                            : "2px solid transparent",
+                        color:
+                          selectedRole === "super_admin"
+                            ? "#374151"
+                            : "#6b7280",
+                        fontWeight:
+                          selectedRole === "super_admin" ? "500" : "400",
                         borderRadius: "0",
                         padding: "12px 16px",
                         transition: "all 0.2s ease",
@@ -697,7 +835,6 @@ const UserManagement = () => {
                 </ul>
               </div>
 
-
               {/* Users Table */}
               {loading ? (
                 <div className="text-center py-5">
@@ -707,22 +844,60 @@ const UserManagement = () => {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0" style={{ fontSize: "0.9rem" }}>
+                  <table
+                    className="table table-hover align-middle mb-0"
+                    style={{ fontSize: "0.9rem" }}
+                  >
                     <thead style={{ backgroundColor: "#f9fafb" }}>
                       <tr>
-                        <th className="border-0 fw-semibold text-muted py-4 px-3" style={{ fontSize: "0.8rem", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        <th
+                          className="border-0 fw-semibold text-muted py-4 px-3"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Name
                         </th>
-                        <th className="border-0 fw-semibold text-muted py-4 px-3" style={{ fontSize: "0.8rem", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        <th
+                          className="border-0 fw-semibold text-muted py-4 px-3"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Status
                         </th>
-                        <th className="border-0 fw-semibold text-muted py-4 px-3" style={{ fontSize: "0.8rem", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        <th
+                          className="border-0 fw-semibold text-muted py-4 px-3"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Role
                         </th>
-                        <th className="border-0 fw-semibold text-muted py-4 px-3" style={{ fontSize: "0.8rem", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        <th
+                          className="border-0 fw-semibold text-muted py-4 px-3"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Date Added
                         </th>
-                        <th className="border-0 fw-semibold text-muted py-4 px-3 text-center" style={{ fontSize: "0.8rem", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        <th
+                          className="border-0 fw-semibold text-muted py-4 px-3 text-center"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Actions
                         </th>
                       </tr>
@@ -731,7 +906,10 @@ const UserManagement = () => {
                       {currentUsers.map((userData) => {
                         const status = getStatusBadge(userData);
                         return (
-                          <tr key={userData.uid} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                          <tr
+                            key={userData.uid}
+                            style={{ borderBottom: "1px solid #f0f0f0" }}
+                          >
                             <td className="py-4 px-3">
                               <div className="d-flex align-items-center gap-3">
                                 {userData.photoURL ? (
@@ -739,55 +917,77 @@ const UserManagement = () => {
                                     src={userData.photoURL}
                                     alt=""
                                     className="rounded-circle"
-                                    style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                                    style={{
+                                      width: "40px",
+                                      height: "40px",
+                                      objectFit: "cover",
+                                    }}
                                   />
                                 ) : (
                                   <div
                                     className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold"
-                                    style={{ 
-                                      width: "40px", 
-                                      height: "40px", 
+                                    style={{
+                                      width: "40px",
+                                      height: "40px",
                                       backgroundColor: "#3b82f6",
-                                      fontSize: "0.8rem"
+                                      fontSize: "0.8rem",
                                     }}
                                   >
-                                    {getInitials(userData.displayName || userData.email)}
+                                    {getInitials(
+                                      userData.displayName || userData.email
+                                    )}
                                   </div>
                                 )}
                                 <div>
-                                  <div className="fw-medium mb-1" style={{ color: "#1f2937", fontSize: "0.9rem" }}>
+                                  <div
+                                    className="fw-medium mb-1"
+                                    style={{
+                                      color: "#1f2937",
+                                      fontSize: "0.9rem",
+                                    }}
+                                  >
                                     {userData.displayName || userData.email}
                                   </div>
-                                  <small className="text-muted" style={{ fontSize: "0.8rem" }}>
+                                  <small
+                                    className="text-muted"
+                                    style={{ fontSize: "0.8rem" }}
+                                  >
                                     {userData.email}
                                   </small>
                                 </div>
                               </div>
                             </td>
                             <td className="py-4 px-3">
-                              <span 
+                              <span
                                 className={`badge ${status.color} rounded-pill`}
-                                style={{ 
+                                style={{
                                   padding: "6px 12px",
                                   fontSize: "0.75rem",
-                                  fontWeight: "500"
+                                  fontWeight: "500",
                                 }}
                               >
                                 {status.text}
                               </span>
                             </td>
                             <td className="py-4 px-3">
-                              <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>
+                              <span
+                                style={{ color: "#6b7280", fontSize: "0.9rem" }}
+                              >
                                 {getRoleDisplayName(userData.role || "user")}
                               </span>
                             </td>
                             <td className="py-4 px-3">
-                              <span className="text-muted" style={{ fontSize: "0.85rem" }}>
+                              <span
+                                className="text-muted"
+                                style={{ fontSize: "0.85rem" }}
+                              >
                                 {userData.updatedAt
-                                  ? new Date(userData.updatedAt.toDate()).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
+                                  ? new Date(
+                                      userData.updatedAt.toDate()
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
                                     })
                                   : "N/A"}
                               </span>
@@ -799,40 +999,59 @@ const UserManagement = () => {
                                     className="btn btn-light border-0 shadow-sm btn-sm d-flex align-items-center gap-2"
                                     type="button"
                                     data-bs-toggle="dropdown"
-                                    style={{ 
+                                    style={{
                                       padding: "8px 16px",
                                       fontSize: "0.85rem",
                                       backgroundColor: "#f9fafb",
-                                      height: "36px"
+                                      height: "36px",
                                     }}
                                   >
-                                    <Icon icon="mdi:dots-horizontal" style={{ fontSize: "1rem" }} />
+                                    <Icon
+                                      icon="mdi:dots-horizontal"
+                                      style={{ fontSize: "1rem" }}
+                                    />
                                     Manage
                                   </button>
-                                  <ul className="dropdown-menu border-0 shadow-sm" style={{ minWidth: "200px" }}>
+                                  <ul
+                                    className="dropdown-menu border-0 shadow-sm"
+                                    style={{ minWidth: "200px" }}
+                                  >
                                     <li>
-                                      <button 
+                                      <button
                                         className="dropdown-item py-2"
-                                        onClick={() => handleUserSelect(userData)}
+                                        onClick={() =>
+                                          handleUserSelect(userData)
+                                        }
                                         style={{ fontSize: "0.9rem" }}
                                       >
-                                        <Icon icon="mdi:shield-key" className="me-2" />
+                                        <Icon
+                                          icon="mdi:shield-key"
+                                          className="me-2"
+                                        />
                                         Setup permissions
                                       </button>
                                     </li>
                                     {hasOperation("userManagement", "delete") &&
-                                      (role === "admin" || role === "super_admin") &&
+                                      (role === "admin" ||
+                                        role === "super_admin") &&
                                       userData.uid !== user?.uid && (
                                         <>
-                                          <li><hr className="dropdown-divider my-1" /></li>
                                           <li>
-                                            <button 
+                                            <hr className="dropdown-divider my-1" />
+                                          </li>
+                                          <li>
+                                            <button
                                               className="dropdown-item py-2 text-danger"
-                                              onClick={() => handleDeleteUser(userData.uid)}
+                                              onClick={() =>
+                                                handleDeleteUser(userData.uid)
+                                              }
                                               disabled={deleting}
                                               style={{ fontSize: "0.9rem" }}
                                             >
-                                              <Icon icon="mdi:delete" className="me-2" />
+                                              <Icon
+                                                icon="mdi:delete"
+                                                className="me-2"
+                                              />
                                               Remove user
                                             </button>
                                           </li>
@@ -851,54 +1070,89 @@ const UserManagement = () => {
                   {/* Pagination */}
                   {!loading && sortedUsers.length > 0 && (
                     <div className="d-flex justify-content-between align-items-center mt-4 px-3 pb-3">
-                      <div className="text-muted" style={{ fontSize: "0.85rem" }}>
-                        Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, sortedUsers.length)} of {sortedUsers.length} users
+                      <div
+                        className="text-muted"
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        Showing {indexOfFirstUser + 1} to{" "}
+                        {Math.min(indexOfLastUser, sortedUsers.length)} of{" "}
+                        {sortedUsers.length} users
                       </div>
                       <nav>
                         <ul className="pagination pagination-sm mb-0">
-                          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                            <button 
-                              className="page-link border-0 shadow-sm" 
+                          <li
+                            className={`page-item ${
+                              currentPage === 1 ? "disabled" : ""
+                            }`}
+                          >
+                            <button
+                              className="page-link border-0 shadow-sm"
                               onClick={() => setCurrentPage(currentPage - 1)}
                               disabled={currentPage === 1}
-                              style={{ 
-                                backgroundColor: currentPage === 1 ? '#f9fafb' : '#fff',
-                                color: '#6b7280',
-                                padding: "8px 12px"
+                              style={{
+                                backgroundColor:
+                                  currentPage === 1 ? "#f9fafb" : "#fff",
+                                color: "#6b7280",
+                                padding: "8px 12px",
                               }}
                             >
-                              <Icon icon="mdi:chevron-left" style={{ fontSize: "1rem" }} />
+                              <Icon
+                                icon="mdi:chevron-left"
+                                style={{ fontSize: "1rem" }}
+                              />
                             </button>
                           </li>
                           {[...Array(totalPages)].map((_, index) => (
-                            <li key={index} className={`page-item ${currentPage === index + 1 ? 'active' : ''}`}>
-                              <button 
-                                className="page-link border-0 shadow-sm mx-1" 
+                            <li
+                              key={index}
+                              className={`page-item ${
+                                currentPage === index + 1 ? "active" : ""
+                              }`}
+                            >
+                              <button
+                                className="page-link border-0 shadow-sm mx-1"
                                 onClick={() => setCurrentPage(index + 1)}
-                                style={{ 
-                                  backgroundColor: currentPage === index + 1 ? '#3b82f6' : '#fff',
-                                  color: currentPage === index + 1 ? '#fff' : '#6b7280',
-                                  fontWeight: currentPage === index + 1 ? '500' : '400',
+                                style={{
+                                  backgroundColor:
+                                    currentPage === index + 1
+                                      ? "#3b82f6"
+                                      : "#fff",
+                                  color:
+                                    currentPage === index + 1
+                                      ? "#fff"
+                                      : "#6b7280",
+                                  fontWeight:
+                                    currentPage === index + 1 ? "500" : "400",
                                   padding: "8px 12px",
-                                  minWidth: "36px"
+                                  minWidth: "36px",
                                 }}
                               >
                                 {index + 1}
                               </button>
                             </li>
                           ))}
-                          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                            <button 
-                              className="page-link border-0 shadow-sm" 
+                          <li
+                            className={`page-item ${
+                              currentPage === totalPages ? "disabled" : ""
+                            }`}
+                          >
+                            <button
+                              className="page-link border-0 shadow-sm"
                               onClick={() => setCurrentPage(currentPage + 1)}
                               disabled={currentPage === totalPages}
-                              style={{ 
-                                backgroundColor: currentPage === totalPages ? '#f9fafb' : '#fff',
-                                color: '#6b7280',
-                                padding: "8px 12px"
+                              style={{
+                                backgroundColor:
+                                  currentPage === totalPages
+                                    ? "#f9fafb"
+                                    : "#fff",
+                                color: "#6b7280",
+                                padding: "8px 12px",
                               }}
                             >
-                              <Icon icon="mdi:chevron-right" style={{ fontSize: "1rem" }} />
+                              <Icon
+                                icon="mdi:chevron-right"
+                                style={{ fontSize: "1rem" }}
+                              />
                             </button>
                           </li>
                         </ul>
@@ -911,12 +1165,12 @@ const UserManagement = () => {
               {/* No Users Message */}
               {!loading && sortedUsers.length === 0 && (
                 <div className="text-center py-5">
-                  <div 
+                  <div
                     className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                    style={{ 
-                      width: "64px", 
-                      height: "64px", 
-                      backgroundColor: "#f9fafb" 
+                    style={{
+                      width: "64px",
+                      height: "64px",
+                      backgroundColor: "#f9fafb",
                     }}
                   >
                     <Icon
@@ -937,10 +1191,16 @@ const UserManagement = () => {
         {/* Right Panel - User Permissions */}
         {showPermissionsPanel && selectedUser && (
           <div className="col-lg-5">
-            <div className="card border-0 shadow-sm" style={{ height: "fit-content", minHeight: "600px" }}>
+            <div
+              className="card border-0 shadow-sm"
+              style={{ height: "fit-content", minHeight: "600px" }}
+            >
               <div className="card-header bg-white border-bottom p-4">
                 <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0 mx-auto fw-semibold" style={{ color: "#1f2937", fontSize: "1.1rem" }}>
+                  <h5
+                    className="mb-0 mx-auto fw-semibold"
+                    style={{ color: "#1f2937", fontSize: "1.1rem" }}
+                  >
                     User Permissions
                   </h5>
                   <button
@@ -957,50 +1217,88 @@ const UserManagement = () => {
                   </button>
                 </div>
               </div>
-              <div className="card-body p-4" style={{ maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
+              <div
+                className="card-body p-4"
+                style={{ maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}
+              >
                 {/* Selected User Details */}
-                <div className="d-flex align-items-center gap-3 p-4 mb-4 rounded-3" style={{ backgroundColor: "#f9fafb" }}>
+                <div
+                  className="d-flex align-items-center gap-3 p-4 mb-4 rounded-3"
+                  style={{ backgroundColor: "#f9fafb" }}
+                >
                   {selectedUser.photoURL ? (
                     <img
                       src={selectedUser.photoURL}
                       alt=""
                       className="rounded-circle"
-                      style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                      style={{
+                        width: "50px",
+                        height: "50px",
+                        objectFit: "cover",
+                      }}
                     />
                   ) : (
                     <div
                       className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold"
-                      style={{ 
-                        width: "50px", 
-                        height: "50px", 
+                      style={{
+                        width: "50px",
+                        height: "50px",
                         backgroundColor: "#3b82f6",
-                        fontSize: "0.9rem"
+                        fontSize: "0.9rem",
                       }}
                     >
-                      {getInitials(selectedUser.displayName || selectedUser.email)}
+                      {getInitials(
+                        selectedUser.displayName || selectedUser.email
+                      )}
                     </div>
                   )}
                   <div>
-                    <div className="fw-medium mb-1" style={{ color: "#1f2937", fontSize: "1rem" }}>
+                    <div
+                      className="fw-medium mb-1"
+                      style={{ color: "#1f2937", fontSize: "1rem" }}
+                    >
                       {selectedUser.displayName || selectedUser.email}
                     </div>
-                    <small className="text-muted" style={{ fontSize: "0.85rem" }}>
+                    <small
+                      className="text-muted"
+                      style={{ fontSize: "0.85rem" }}
+                    >
                       {selectedUser.email}
                     </small>
                   </div>
                 </div>
 
                 {/* Information Banner */}
-                <div className="d-flex align-items-start gap-2 p-3 mb-4 rounded-3" style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                  <Icon icon="mdi:information-outline" className="text-primary mt-1" style={{ fontSize: "1.1rem" }} />
-                  <small style={{ color: "#1e40af", fontSize: "0.85rem", lineHeight: "1.5" }}>
-                    Permission list will update when you select a different user group
+                <div
+                  className="d-flex align-items-start gap-2 p-3 mb-4 rounded-3"
+                  style={{
+                    backgroundColor: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                  }}
+                >
+                  <Icon
+                    icon="mdi:information-outline"
+                    className="text-primary mt-1"
+                    style={{ fontSize: "1.1rem" }}
+                  />
+                  <small
+                    style={{
+                      color: "#1e40af",
+                      fontSize: "0.85rem",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Permission list will update when you select a different user
+                    group
                   </small>
                 </div>
 
                 {/* User Group Dropdown */}
                 <div className="mb-4 p-6">
-                  <label className="form-label fw-medium mb-2" style={{ color: "#374151", fontSize: "0.9rem" }}>
+                  <label
+                    className="form-label fw-medium mb-2"
+                    style={{ color: "#374151", fontSize: "0.9rem" }}
+                  >
                     Role
                   </label>
                   <select
@@ -1012,11 +1310,11 @@ const UserManagement = () => {
                         initializeSidebarPermissions(e.target.value);
                       }
                     }}
-                    style={{ 
+                    style={{
                       backgroundColor: "#f9fafb",
                       fontSize: "0.9rem",
                       padding: "12px 16px",
-                      height: "44px"
+                      height: "44px",
                     }}
                   >
                     <option value="">Select a role</option>
@@ -1032,7 +1330,9 @@ const UserManagement = () => {
                           disabled={isSelfPromotion}
                         >
                           {getRoleDisplayName(roleOption)}
-                          {isSelfPromotion ? " (Self-promotion not allowed)" : ""}
+                          {isSelfPromotion
+                            ? " (Self-promotion not allowed)"
+                            : ""}
                         </option>
                       );
                     })}
@@ -1042,214 +1342,329 @@ const UserManagement = () => {
                 {/* Permissions List */}
                 {newRole && newRole !== "none" && (
                   <div className="mb-4 px-4">
-                    <label className="form-label fw-medium mb-3" style={{ color: "#374151", fontSize: "0.9rem" }}>
+                    <label
+                      className="form-label fw-medium mb-3"
+                      style={{ color: "#374151", fontSize: "0.9rem" }}
+                    >
                       Permissions
                     </label>
                     <div className="permissions-list">
                       {Object.keys(getAvailableSidebarItems(newRole))
-                        .filter(key => {
+                        .filter((key) => {
                           // Only show permissions that are required for the selected role
                           const sidebarItem = AVAILABLE_SIDEBAR_ITEMS[key];
                           return sidebarItem.requiredRoles.includes(newRole);
                         })
                         .map((key) => {
-                        const sidebarItem = AVAILABLE_SIDEBAR_ITEMS[key];
-                        const permission = sidebarPermissions[key];
-                        const isEnabled = permission?.enabled || permission === true;
-                        const operations = permission?.operations || [];
+                          const sidebarItem = AVAILABLE_SIDEBAR_ITEMS[key];
+                          const permission = sidebarPermissions[key];
+                          const isEnabled =
+                            permission?.enabled || permission === true;
+                          const operations = permission?.operations || [];
 
-                        return (
-                          <div 
-                            key={key} 
-                            className="mb-4 p-5 border rounded-3 position-relative"
-                            style={{ 
-                              backgroundColor: "#ffffff", 
-                              borderColor: "#e5e7eb",
-                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                              transition: "all 0.2s ease",
-                              cursor: "pointer"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#3b82f6";
-                              e.currentTarget.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = "#e5e7eb";
-                              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
-                            }}
-                            onClick={() => handleSidebarPermissionChange(key, !isEnabled)}
-                          >
-                            {/* Main Permission Toggle */}
-                            <div className="d-flex align-items-center justify-content-between">
-                              <div className="d-flex align-items-center gap-4 flex-grow-1">
-                                <div 
-                                  className="d-flex align-items-center justify-content-center rounded-2"
-                                  style={{ 
-                                    width: "48px", 
-                                    height: "48px", 
-                                    backgroundColor: isEnabled ? "#dbeafe" : "#f3f4f6",
-                                    transition: "all 0.2s ease"
-                                  }}
-                                >
-                                  <Icon 
-                                    icon={sidebarItem.icon} 
-                                    style={{ 
-                                      fontSize: "1.25rem",
-                                      color: isEnabled ? "#3b82f6" : "#6b7280"
-                                    }} 
-                                  />
-                                </div>
-                                <div className="flex-grow-1">
-                                  <div className="fw-semibold mb-1" style={{ color: "#111827", fontSize: "1rem" }}>
-                                    {sidebarItem.label}
+                          return (
+                            <div
+                              key={key}
+                              className="mb-4 p-5 border rounded-3 position-relative"
+                              style={{
+                                backgroundColor: "#ffffff",
+                                borderColor: "#e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                                transition: "all 0.2s ease",
+                                cursor: "pointer",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = "#3b82f6";
+                                e.currentTarget.style.boxShadow =
+                                  "0 4px 12px rgba(59, 130, 246, 0.15)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = "#e5e7eb";
+                                e.currentTarget.style.boxShadow =
+                                  "0 1px 3px rgba(0, 0, 0, 0.1)";
+                              }}
+                              onClick={(e) => {
+                                // Only toggle if clicking on the main container, not on checkboxes
+                                if (
+                                  e.target.type !== "checkbox" &&
+                                  !e.target.closest(".form-check")
+                                ) {
+                                  handleSidebarPermissionChange(
+                                    key,
+                                    !isEnabled
+                                  );
+                                }
+                              }}
+                            >
+                              {/* Main Permission Toggle */}
+                              <div className="d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center gap-4 flex-grow-1">
+                                  <div
+                                    className="d-flex align-items-center justify-content-center rounded-2"
+                                    style={{
+                                      width: "48px",
+                                      height: "48px",
+                                      backgroundColor: isEnabled
+                                        ? "#dbeafe"
+                                        : "#f3f4f6",
+                                      transition: "all 0.2s ease",
+                                    }}
+                                  >
+                                    <Icon
+                                      icon={sidebarItem.icon}
+                                      style={{
+                                        fontSize: "1.25rem",
+                                        color: isEnabled
+                                          ? "#3b82f6"
+                                          : "#6b7280",
+                                      }}
+                                    />
                                   </div>
-                                  <div className="text-muted" style={{ fontSize: "0.875rem", lineHeight: "1.5" }}>
-                                    {sidebarItem.description}
+                                  <div className="flex-grow-1">
+                                    <div
+                                      className="fw-semibold mb-1"
+                                      style={{
+                                        color: "#111827",
+                                        fontSize: "1rem",
+                                      }}
+                                    >
+                                      {sidebarItem.label}
+                                    </div>
+                                    <div
+                                      className="text-muted"
+                                      style={{
+                                        fontSize: "0.875rem",
+                                        lineHeight: "1.5",
+                                      }}
+                                    >
+                                      {sidebarItem.description}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                              
-                              {/* Minimal Toggle Switch */}
-                              <div 
-                                className="position-relative"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+
+                                {/* Minimal Toggle Switch */}
                                 <div
-                                  style={{
-                                    width: "2.5rem",
-                                    height: "1.25rem",
-                                    backgroundColor: isEnabled ? "#3b82f6" : "#d1d5db",
-                                    borderRadius: "0.625rem",
-                                    position: "relative",
-                                    transition: "all 0.2s ease",
-                                    cursor: "pointer",
-                                  }}
-                                  onClick={() => handleSidebarPermissionChange(key, !isEnabled)}
+                                  className="position-relative"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <div
                                     style={{
-                                      position: 'absolute',
-                                      top: '2px',
-                                      left: isEnabled ? 'calc(100% - 1rem)' : '2px',
-                                      width: '1rem',
-                                      height: '1rem',
-                                      backgroundColor: 'white',
-                                      borderRadius: '50%',
-                                      transition: 'all 0.2s ease',
-                                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                                      width: "2.5rem",
+                                      height: "1.25rem",
+                                      backgroundColor: isEnabled
+                                        ? "#3b82f6"
+                                        : "#d1d5db",
+                                      borderRadius: "0.625rem",
+                                      position: "relative",
+                                      transition: "all 0.2s ease",
+                                      cursor: "pointer",
                                     }}
-                                  />
+                                    onClick={() =>
+                                      handleSidebarPermissionChange(
+                                        key,
+                                        !isEnabled
+                                      )
+                                    }
+                                  >
+                                    <div
+                                      style={{
+                                        position: "absolute",
+                                        top: "2px",
+                                        left: isEnabled
+                                          ? "calc(100% - 1rem)"
+                                          : "2px",
+                                        width: "1rem",
+                                        height: "1rem",
+                                        backgroundColor: "white",
+                                        borderRadius: "50%",
+                                        transition: "all 0.2s ease",
+                                        boxShadow:
+                                          "0 1px 2px rgba(0, 0, 0, 0.1)",
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* CRUD Permissions - Only show if the sidebar item supports CRUD */}
-                            {isEnabled && sidebarItem.supportsCRUD && (
-                              <div className="mt-4 pt-4" style={{ borderTop: "1px solid #f3f4f6" }}>
-                                <div className="d-flex align-items-center mb-3">
-                                  <span className="fw-medium text-muted" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                    Access Level
-                                  </span>
+                              {/* CRUD Permissions - Only show if the sidebar item supports CRUD */}
+                              {isEnabled && sidebarItem.supportsCRUD && (
+                                <div
+                                  className="mt-4 pt-4"
+                                  style={{ borderTop: "1px solid #f3f4f6" }}
+                                >
+                                  <div className="d-flex align-items-center mb-3">
+                                    <span
+                                      className="fw-medium text-muted"
+                                      style={{
+                                        fontSize: "0.75rem",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                      }}
+                                    >
+                                      Access Level
+                                    </span>
+                                  </div>
+                                  <div className="d-flex flex-wrap gap-6">
+                                    {sidebarItem.availableOperations?.includes(
+                                      "create"
+                                    ) && (
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          id={`${key}-create`}
+                                          checked={operations.includes(
+                                            "create"
+                                          )}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            handleCrudPermissionChange(
+                                              key,
+                                              "create",
+                                              e.target.checked
+                                            );
+                                          }}
+                                          style={{
+                                            cursor: "pointer",
+                                            marginTop: "2px",
+                                            width: "1rem",
+                                            height: "1rem",
+                                          }}
+                                        />
+                                        <label
+                                          className="form-check-label ms-2"
+                                          htmlFor={`${key}-create`}
+                                          style={{
+                                            fontSize: "0.875rem",
+                                            cursor: "pointer",
+                                            color: "#374151",
+                                          }}
+                                        >
+                                          Create
+                                        </label>
+                                      </div>
+                                    )}
+                                    {sidebarItem.availableOperations?.includes(
+                                      "read"
+                                    ) && (
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          id={`${key}-read`}
+                                          checked={operations.includes("read")}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            handleCrudPermissionChange(
+                                              key,
+                                              "read",
+                                              e.target.checked
+                                            );
+                                          }}
+                                          style={{
+                                            cursor: "pointer",
+                                            marginTop: "2px",
+                                            width: "1rem",
+                                            height: "1rem",
+                                          }}
+                                        />
+                                        <label
+                                          className="form-check-label ms-2"
+                                          htmlFor={`${key}-read`}
+                                          style={{
+                                            fontSize: "0.875rem",
+                                            cursor: "pointer",
+                                            color: "#374151",
+                                          }}
+                                        >
+                                          Read
+                                        </label>
+                                      </div>
+                                    )}
+                                    {sidebarItem.availableOperations?.includes(
+                                      "update"
+                                    ) && (
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          id={`${key}-update`}
+                                          checked={operations.includes(
+                                            "update"
+                                          )}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            handleCrudPermissionChange(
+                                              key,
+                                              "update",
+                                              e.target.checked
+                                            );
+                                          }}
+                                          style={{
+                                            cursor: "pointer",
+                                            marginTop: "2px",
+                                            width: "1rem",
+                                            height: "1rem",
+                                          }}
+                                        />
+                                        <label
+                                          className="form-check-label ms-2"
+                                          htmlFor={`${key}-update`}
+                                          style={{
+                                            fontSize: "0.875rem",
+                                            cursor: "pointer",
+                                            color: "#374151",
+                                          }}
+                                        >
+                                          Update
+                                        </label>
+                                      </div>
+                                    )}
+                                    {sidebarItem.availableOperations?.includes(
+                                      "delete"
+                                    ) && (
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          id={`${key}-delete`}
+                                          checked={operations.includes(
+                                            "delete"
+                                          )}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            handleCrudPermissionChange(
+                                              key,
+                                              "delete",
+                                              e.target.checked
+                                            );
+                                          }}
+                                          style={{
+                                            cursor: "pointer",
+                                            marginTop: "2px",
+                                            width: "1rem",
+                                            height: "1rem",
+                                          }}
+                                        />
+                                        <label
+                                          className="form-check-label ms-2"
+                                          htmlFor={`${key}-delete`}
+                                          style={{
+                                            fontSize: "0.875rem",
+                                            cursor: "pointer",
+                                            color: "#374151",
+                                          }}
+                                        >
+                                          Delete
+                                        </label>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="d-flex flex-wrap gap-6">
-                                  {sidebarItem.availableOperations?.includes('create') && (
-                                    <div className="form-check">
-                                      <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`${key}-create`}
-                                        checked={operations.includes('create')}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          handleCrudPermissionChange(key, 'create', e.target.checked);
-                                        }}
-                                        style={{ 
-                                          cursor: "pointer", 
-                                          marginTop: "2px",
-                                          width: "1rem",
-                                          height: "1rem"
-                                        }}
-                                      />
-                                      <label className="form-check-label ms-2" htmlFor={`${key}-create`} style={{ fontSize: "0.875rem", cursor: "pointer", color: "#374151" }}>
-                                        Create
-                                      </label>
-                                    </div>
-                                  )}
-                                  {sidebarItem.availableOperations?.includes('read') && (
-                                    <div className="form-check">
-                                      <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`${key}-read`}
-                                        checked={operations.includes('read')}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          handleCrudPermissionChange(key, 'read', e.target.checked);
-                                        }}
-                                        style={{ 
-                                          cursor: "pointer", 
-                                          marginTop: "2px",
-                                          width: "1rem",
-                                          height: "1rem"
-                                        }}
-                                      />
-                                      <label className="form-check-label ms-2" htmlFor={`${key}-read`} style={{ fontSize: "0.875rem", cursor: "pointer", color: "#374151" }}>
-                                        Read
-                                      </label>
-                                    </div>
-                                  )}
-                                  {sidebarItem.availableOperations?.includes('update') && (
-                                    <div className="form-check">
-                                      <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`${key}-update`}
-                                        checked={operations.includes('update')}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          handleCrudPermissionChange(key, 'update', e.target.checked);
-                                        }}
-                                        style={{ 
-                                          cursor: "pointer", 
-                                          marginTop: "2px",
-                                          width: "1rem",
-                                          height: "1rem"
-                                        }}
-                                      />
-                                      <label className="form-check-label ms-2" htmlFor={`${key}-update`} style={{ fontSize: "0.875rem", cursor: "pointer", color: "#374151" }}>
-                                        Update
-                                      </label>
-                                    </div>
-                                  )}
-                                  {sidebarItem.availableOperations?.includes('delete') && (
-                                    <div className="form-check">
-                                      <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`${key}-delete`}
-                                        checked={operations.includes('delete')}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          handleCrudPermissionChange(key, 'delete', e.target.checked);
-                                        }}
-                                        style={{ 
-                                          cursor: "pointer", 
-                                          marginTop: "2px",
-                                          width: "1rem",
-                                          height: "1rem"
-                                        }}
-                                      />
-                                      <label className="form-check-label ms-2" htmlFor={`${key}-delete`} style={{ fontSize: "0.875rem", cursor: "pointer", color: "#374151" }}>
-                                        Delete
-                                      </label>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 )}
@@ -1265,11 +1680,11 @@ const UserManagement = () => {
                       setSidebarPermissions({});
                     }}
                     disabled={updating}
-                    style={{ 
+                    style={{
                       backgroundColor: "#f9fafb",
                       fontSize: "0.9rem",
                       padding: "12px 24px",
-                      height: "44px"
+                      height: "44px",
                     }}
                   >
                     Cancel
@@ -1278,10 +1693,10 @@ const UserManagement = () => {
                     className="btn btn-primary shadow-sm px-4"
                     onClick={handleRoleUpdate}
                     disabled={updating}
-                    style={{ 
+                    style={{
                       fontSize: "0.9rem",
                       padding: "12px 24px",
-                      height: "44px"
+                      height: "44px",
                     }}
                   >
                     {updating ? (
