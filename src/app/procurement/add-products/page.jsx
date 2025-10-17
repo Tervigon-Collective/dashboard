@@ -11,16 +11,10 @@ export const metadata = {
 const AddProductPage = () => {
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
+      {/* Minimal spacing - just the breadcrumb */}
       <Breadcrumb title="Procurement / Add Product" />
 
-      {/* Back Button */}
-      <div className="mb-3 d-flex justify-content-end">
-        <Link href="/procurement" className="btn btn-outline-secondary">
-          <i className="icon-arrow-left me-2"></i>
-          Back to Procurement
-        </Link>
-      </div>
-
+      {/* Form with Back button now inside */}
       <ProductForm mode="add" />
     </SidebarPermissionGuard>
   );
