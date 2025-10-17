@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "react-toastify";
 import { Icon } from "@iconify/react";
 import procurementApi from "@/services/procurementApi";
@@ -631,11 +632,18 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   return (
     <div className="shopify-product-form">
       <div className="form-container">
-        {/* Page Header */}
-        <div className="shopify-page-header">
-          <h4 className="shopify-heading-2">
+        {/* Page Header with Back Button */}
+        <div className="shopify-page-header d-flex justify-content-between align-items-center">
+          <h4 className="shopify-heading-2 mb-0">
             {mode === "edit" ? "Edit Product" : "Add New Product"}
           </h4>
+          <Link
+            href="/procurement"
+            className="btn btn-outline-secondary btn-sm"
+          >
+            <i className="icon-arrow-left me-2"></i>
+            Back to Procurement
+          </Link>
         </div>
 
         {errorMsg && (
