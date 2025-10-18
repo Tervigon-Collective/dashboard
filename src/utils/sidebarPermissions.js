@@ -330,6 +330,15 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     ],
     supportsCRUD: true,
   },
+  createContent: {
+    key: "createContent",
+    label: "Create Content",
+    description: "AI-powered content generation for video and graphics",
+    icon: "solar:magic-stick-3-bold",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [OPERATION_TYPES.READ, OPERATION_TYPES.CREATE],
+    supportsCRUD: true,
+  },
 };
 
 class SidebarPermissionsManager {

@@ -105,12 +105,12 @@ const MasterLayout = ({ children }) => {
     e.preventDefault();
     try {
       // Show loading state
-      const logoutButton = e.target.closest('a');
+      const logoutButton = e.target.closest("a");
       if (logoutButton) {
-        logoutButton.style.opacity = '0.5';
-        logoutButton.style.pointerEvents = 'none';
+        logoutButton.style.opacity = "0.5";
+        logoutButton.style.pointerEvents = "none";
       }
-      
+
       // Use the comprehensive logout function from UserContext
       await logout();
     } catch (error) {
@@ -365,6 +365,22 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
+                    {hasSidebarPermission("createContent") && (
+                      <li>
+                        <Link
+                          href="/create-content"
+                          className={
+                            pathname === "/create-content" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:magic-stick-3-bold"
+                            className="menu-icon"
+                          />
+                          <span>Create Content</span>
+                        </Link>
+                      </li>
+                    )}
                     {hasSidebarPermission("userManagement") && (
                       <li>
                         <Link
@@ -451,7 +467,6 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-
                 </>
               );
             })()}
