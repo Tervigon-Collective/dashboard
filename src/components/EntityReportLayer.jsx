@@ -10,6 +10,7 @@ import {
   fetchGoogleEntityReport,
   fetchMetaEntityReportHierarchy,
   fetchOrganicEntityReport,
+  fetchAmazonEntityReport,
 } from "../api/api";
 
 // ExcelJS Download Functions
@@ -481,6 +482,144 @@ const downloadOrganicReportExcel = async (
   const link = document.createElement("a");
   link.href = url;
   link.download = `Organic_Entity_Report_${startDate}_to_${endDate}.xlsx`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+const downloadAmazonReportExcel = async (
+  data,
+  startDate,
+  endDate,
+  summary = null
+) => {
+  if (!data || data.length === 0) {
+    alert("No data available to download");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Amazon Entity Report");
+
+  // Calculate aggregated totals
+  const totalSpend = data.reduce((sum, row) => sum + (row.spend || 0), 0);
+  const totalRevenue = data.reduce((sum, row) => sum + (row.revenue || 0), 0);
+  const totalOrders = data.reduce((sum, row) => sum + (row.orders || 0), 0);
+  const totalImpressions = data.reduce(
+    (sum, row) => sum + (row.impressions || 0),
+    0
+  );
+  const totalClicks = data.reduce((sum, row) => sum + (row.clicks || 0), 0);
+
+  const aggregatedRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const aggregatedAcos =
+    totalRevenue > 0 ? (totalSpend / totalRevenue) * 100 : 0;
+
+  // Define headers
+  const headers = [
+    "Campaign ID",
+    "Campaign Name",
+    "Campaign Status",
+    "Campaign Type",
+    "Budget Amount",
+    "Budget Type",
+    "Impressions",
+    "Clicks",
+    "CTR (%)",
+    "CPC",
+    "Spend",
+    "Orders",
+    "Revenue",
+    "ROAS",
+    "ACOS (%)",
+    "Adgroups Count",
+    "Product Details",
+  ];
+
+  // Add headers row
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE6E6FA" },
+  };
+
+  // Add data rows
+  data.forEach((row, index) => {
+    const rowData = [
+      row.campaign_id || "",
+      row.campaign_name || "",
+      row.campaign_status || "",
+      row.campaign_type || "",
+      row.campaign_budget_amount || 0,
+      row.campaign_budget_type || "",
+      row.impressions || 0,
+      row.clicks || 0,
+      row.ctr ? `${row.ctr.toFixed(2)}%` : "0.00%",
+      row.cpc ? `₹${row.cpc.toFixed(2)}` : "₹0.00",
+      `₹${(row.spend || 0).toFixed(2)}`,
+      row.orders || 0,
+      `₹${(row.revenue || 0).toFixed(2)}`,
+      row.roas ? `${row.roas.toFixed(2)}x` : "0.00x",
+      row.acos ? `${row.acos.toFixed(2)}%` : "0.00%",
+      row.adgroups_count || 0,
+      row.product_details || "-",
+    ];
+
+    worksheet.addRow(rowData);
+  });
+
+  // Add total row
+  const totalRow = [
+    "TOTAL",
+    "",
+    "",
+    "",
+    "",
+    "",
+    totalImpressions,
+    totalClicks,
+    totalImpressions > 0
+      ? `${((totalClicks / totalImpressions) * 100).toFixed(2)}%`
+      : "0.00%",
+    totalClicks > 0 ? `₹${(totalSpend / totalClicks).toFixed(2)}` : "₹0.00",
+    `₹${totalSpend.toFixed(2)}`,
+    totalOrders,
+    `₹${totalRevenue.toFixed(2)}`,
+    `${aggregatedRoas.toFixed(2)}x`,
+    `${aggregatedAcos.toFixed(2)}%`,
+    "",
+    "All Products",
+  ];
+
+  const totalRowIndex = worksheet.addRow(totalRow);
+
+  // Style total row
+  const totalRowStyle = worksheet.getRow(totalRowIndex.number);
+  totalRowStyle.font = { bold: true };
+  totalRowStyle.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF0F8FF" },
+  };
+
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    column.width = 15;
+  });
+
+  // Generate and download file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Amazon_Entity_Report_${startDate}_to_${endDate}.xlsx`;
   link.click();
   window.URL.revokeObjectURL(url);
 };
@@ -1653,6 +1792,85 @@ const processOrganicData = (data) => {
   return processedData;
 };
 
+const processAmazonData = (data) => {
+  const processedData = [];
+
+  // Process Amazon campaign data from the API response structure
+  Object.keys(data).forEach((campaignId) => {
+    // Skip summary object
+    if (campaignId === "summary") return;
+
+    const campaign = data[campaignId];
+
+    // Calculate totals from daily records
+    const totalSpend = campaign.total_spend || 0;
+    const totalImpressions = campaign.total_impressions || 0;
+    const totalClicks = campaign.total_clicks || 0;
+    const totalOrders = campaign.total_orders || 0;
+    const totalRevenue = campaign.total_revenue || 0;
+    const averageRoas = campaign.average_roas || 0;
+    const averageAcos = campaign.average_acos || 0;
+
+    // Calculate CTR and CPC
+    const ctr =
+      totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+    const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+
+    // Process product details from adgroups
+    let productDetails = [];
+    if (campaign.adgroups) {
+      Object.keys(campaign.adgroups).forEach((adgroupId) => {
+        const adgroup = campaign.adgroups[adgroupId];
+        if (adgroup.products) {
+          Object.keys(adgroup.products).forEach((asin) => {
+            const product = adgroup.products[asin];
+            productDetails.push({
+              asin: product.asin,
+              sku: product.sku,
+              impressions: product.total_impressions || 0,
+              clicks: product.total_clicks || 0,
+              spend: product.total_spend || 0,
+              orders: product.total_orders || 0,
+              revenue: product.total_revenue || 0,
+              roas: product.roas || 0,
+              acos: product.acos || 0,
+            });
+          });
+        }
+      });
+    }
+
+    // Create product details string
+    const productDetailsString = productDetails
+      .map((p) => `${p.sku} (ASIN: ${p.asin})`)
+      .join(", ");
+
+    processedData.push({
+      campaign_id: campaignId,
+      campaign_name: campaign.campaign_name || "Unknown Campaign",
+      campaign_status: campaign.campaign_status || "Unknown",
+      campaign_type: campaign.campaign_type || "Unknown",
+      campaign_budget_amount: campaign.campaign_budget_amount || 0,
+      campaign_budget_type: campaign.campaign_budget_type || "Unknown",
+      impressions: totalImpressions,
+      clicks: totalClicks,
+      ctr: ctr,
+      cpc: cpc,
+      spend: totalSpend,
+      orders: totalOrders,
+      revenue: totalRevenue,
+      roas: averageRoas,
+      acos: averageAcos,
+      product_details: productDetailsString || "No products",
+      adgroups_count: campaign.adgroups
+        ? Object.keys(campaign.adgroups).length
+        : 0,
+    });
+  });
+
+  return processedData;
+};
+
 const EntityReportLayer = () => {
   const router = useRouter();
   // Date filters - set default to current date
@@ -1710,12 +1928,12 @@ const EntityReportLayer = () => {
   const [itemsPerPage] = useState(20);
   const [filters, setFilters] = useState(initialState.filters);
   const [activeTooltip, setActiveTooltip] = useState(null);
-  
+
   // Sorting state
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+
   // Filter and search state
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterConfig, setFilterConfig] = useState({});
 
   // DateRangePicker state - synced with filters
@@ -1730,9 +1948,9 @@ const EntityReportLayer = () => {
 
   // Sorting function
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
     setSortConfig({ key, direction });
   };
@@ -1745,9 +1963,11 @@ const EntityReportLayer = () => {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(row => 
-        Object.values(row).some(value => 
-          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter((row) =>
+        Object.values(row).some(
+          (value) =>
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
     }
@@ -1759,16 +1979,16 @@ const EntityReportLayer = () => {
         let bVal = b[sortConfig.key];
 
         // Handle numeric values
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
         }
 
         // Handle string values
-        aVal = aVal ? aVal.toString().toLowerCase() : '';
-        bVal = bVal ? bVal.toString().toLowerCase() : '';
-        
-        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        aVal = aVal ? aVal.toString().toLowerCase() : "";
+        bVal = bVal ? bVal.toString().toLowerCase() : "";
+
+        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -1782,7 +2002,10 @@ const EntityReportLayer = () => {
       const savedData = sessionStorage.getItem("entityReportData");
       if (savedData && Object.keys(JSON.parse(savedData)).length > 0) {
         // Data is compressed, need to fetch fresh data for current tab
-        console.log("Compressed data found, fetching fresh data for", activeTab);
+        console.log(
+          "Compressed data found, fetching fresh data for",
+          activeTab
+        );
         fetchData(activeTab);
       } else {
         // No saved data, auto-fetch data for current tab with today's date
@@ -1811,25 +2034,32 @@ const EntityReportLayer = () => {
         // Compress the data by removing unnecessary fields and optimizing structure
         const compressedData = compressDataForStorage(data);
         const dataString = JSON.stringify(compressedData);
-        
+
         // Check if data is too large (localStorage limit is ~5-10MB)
-        if (dataString.length > 4 * 1024 * 1024) { // 4MB limit
+        if (dataString.length > 4 * 1024 * 1024) {
+          // 4MB limit
           console.warn("Data too large for sessionStorage, skipping save");
           return;
         }
-        
+
         sessionStorage.setItem("entityReportData", dataString);
         sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
         sessionStorage.setItem("entityReportActiveTab", activeTab);
       } catch (error) {
         console.error("Failed to save to sessionStorage:", error);
         // If storage fails due to quota, clear old data
-        if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+        if (
+          error.name === "QuotaExceededError" ||
+          error.message.includes("quota")
+        ) {
           handleStorageQuotaExceeded();
         } else {
           // For other errors, just clear data and save minimal info
           sessionStorage.removeItem("entityReportData");
-          sessionStorage.setItem("entityReportFilters", JSON.stringify(filters));
+          sessionStorage.setItem(
+            "entityReportFilters",
+            JSON.stringify(filters)
+          );
           sessionStorage.setItem("entityReportActiveTab", activeTab);
         }
       }
@@ -1839,11 +2069,11 @@ const EntityReportLayer = () => {
   // Compress data for storage by removing unnecessary fields
   const compressDataForStorage = (data) => {
     const compressed = {};
-    
-    Object.keys(data).forEach(key => {
-      if (key === 'google' && Array.isArray(data[key])) {
+
+    Object.keys(data).forEach((key) => {
+      if (key === "google" && Array.isArray(data[key])) {
         // Compress Google data - keep only essential fields
-        compressed[key] = data[key].map(item => ({
+        compressed[key] = data[key].map((item) => ({
           campaign_name: item.campaign_name,
           impressions: item.impressions,
           clicks: item.clicks,
@@ -1854,41 +2084,41 @@ const EntityReportLayer = () => {
           shopify_revenue: item.shopify_revenue,
           net_profit: item.net_profit,
           gross_roas: item.gross_roas,
-          product_details: item.product_details
+          product_details: item.product_details,
         }));
-      } else if (key === 'organic' && Array.isArray(data[key])) {
+      } else if (key === "organic" && Array.isArray(data[key])) {
         // Compress Organic data
-        compressed[key] = data[key].map(item => ({
+        compressed[key] = data[key].map((item) => ({
           campaign_name: item.campaign_name,
           shopify_revenue: item.shopify_revenue,
           shopify_cogs: item.shopify_cogs,
           net_profit: item.net_profit,
           total_sku_quantity: item.total_sku_quantity,
-          product_details: item.product_details
+          product_details: item.product_details,
         }));
-      } else if (key === 'metaHierarchy' && typeof data[key] === 'object') {
+      } else if (key === "metaHierarchy" && typeof data[key] === "object") {
         // Compress Meta hierarchy data - keep only essential structure
         compressed[key] = {};
-        Object.keys(data[key]).forEach(campaignId => {
+        Object.keys(data[key]).forEach((campaignId) => {
           const campaign = data[key][campaignId];
           compressed[key][campaignId] = {
             campaign_name: campaign.campaign_name,
-            adsets: {}
+            adsets: {},
           };
-          
+
           // Only keep adset names and basic structure, not full hourly data
-          Object.keys(campaign.adsets || {}).forEach(adsetId => {
+          Object.keys(campaign.adsets || {}).forEach((adsetId) => {
             const adset = campaign.adsets[adsetId];
             compressed[key][campaignId].adsets[adsetId] = {
               adset_name: adset.adset_name,
-              ads: {}
+              ads: {},
             };
-            
+
             // Only keep ad names
-            Object.keys(adset.ads || {}).forEach(adId => {
+            Object.keys(adset.ads || {}).forEach((adId) => {
               const ad = adset.ads[adId];
               compressed[key][campaignId].adsets[adsetId].ads[adId] = {
-                ad_name: ad.ad_name
+                ad_name: ad.ad_name,
               };
             });
           });
@@ -1898,7 +2128,7 @@ const EntityReportLayer = () => {
         compressed[key] = data[key];
       }
     });
-    
+
     return compressed;
   };
 
@@ -1916,7 +2146,9 @@ const EntityReportLayer = () => {
     console.warn("Storage quota exceeded, clearing old data");
     clearSessionStorage();
     // Show user notification
-    setError("Data cache cleared due to storage limits. Please refresh the page.");
+    setError(
+      "Data cache cleared due to storage limits. Please refresh the page."
+    );
   };
 
   const fetchData = async (reportType) => {
@@ -1948,6 +2180,9 @@ const EntityReportLayer = () => {
         case "organic":
           response = await fetchOrganicEntityReport(baseParams);
           break;
+        case "amazon":
+          response = await fetchAmazonEntityReport(baseParams);
+          break;
         default:
           throw new Error("Invalid report type");
       }
@@ -1968,6 +2203,10 @@ const EntityReportLayer = () => {
           case "organic":
             processedData = processOrganicData(response.data);
             break;
+          case "amazon":
+            processedData = processAmazonData(response.data);
+            console.log("Processed Amazon Data:", processedData);
+            break;
         }
       }
 
@@ -1979,6 +2218,9 @@ const EntityReportLayer = () => {
           : {}),
         ...(reportType === "organic" && response.data.summary
           ? { organicSummary: response.data.summary }
+          : {}),
+        ...(reportType === "amazon" && response.data.summary
+          ? { amazonSummary: response.data.summary }
           : {}),
         ...(reportType === "meta" && response.data
           ? {
@@ -2077,6 +2319,9 @@ const EntityReportLayer = () => {
             case "organic":
               response = await fetchOrganicEntityReport(baseParams);
               break;
+            case "amazon":
+              response = await fetchAmazonEntityReport(baseParams);
+              break;
             default:
               throw new Error("Invalid report type");
           }
@@ -2096,6 +2341,10 @@ const EntityReportLayer = () => {
               case "organic":
                 processedData = processOrganicData(response.data);
                 break;
+              case "amazon":
+                processedData = processAmazonData(response.data);
+                console.log("Processed Amazon Data:", processedData);
+                break;
             }
           }
 
@@ -2107,6 +2356,9 @@ const EntityReportLayer = () => {
               : {}),
             ...(activeTab === "organic" && response.data.summary
               ? { organicSummary: response.data.summary }
+              : {}),
+            ...(activeTab === "amazon" && response.data.summary
+              ? { amazonSummary: response.data.summary }
               : {}),
             ...(activeTab === "meta" && response.data
               ? {
@@ -2199,6 +2451,14 @@ const EntityReportLayer = () => {
             data.organicSummary
           );
           break;
+        case "amazon":
+          await downloadAmazonReportExcel(
+            data.amazon,
+            startDate,
+            endDate,
+            data.amazonSummary
+          );
+          break;
         default:
           alert("Invalid tab selected");
       }
@@ -2262,16 +2522,16 @@ const EntityReportLayer = () => {
           key={i}
           className={`page-item ${currentPage === i ? "active" : ""}`}
         >
-          <button 
-            className="page-link" 
+          <button
+            className="page-link"
             onClick={() => handlePageChange(i)}
             style={{
-              backgroundColor: currentPage === i ? '#007bff' : '#fff',
-              color: currentPage === i ? '#fff' : '#007bff',
-              border: '1px solid #dee2e6',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              marginRight: '2px'
+              backgroundColor: currentPage === i ? "#007bff" : "#fff",
+              color: currentPage === i ? "#fff" : "#007bff",
+              border: "1px solid #dee2e6",
+              borderRadius: "6px",
+              padding: "6px 12px",
+              marginRight: "2px",
             }}
           >
             {i}
@@ -2289,12 +2549,12 @@ const EntityReportLayer = () => {
               onClick={() => handlePageChange(1)}
               disabled={currentPage === 1}
               style={{
-                backgroundColor: currentPage === 1 ? '#f8f9fa' : '#fff',
-                color: currentPage === 1 ? '#6c757d' : '#007bff',
-                border: '1px solid #dee2e6',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                marginRight: '2px'
+                backgroundColor: currentPage === 1 ? "#f8f9fa" : "#fff",
+                color: currentPage === 1 ? "#6c757d" : "#007bff",
+                border: "1px solid #dee2e6",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                marginRight: "2px",
               }}
             >
               «
@@ -2306,12 +2566,12 @@ const EntityReportLayer = () => {
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
               style={{
-                backgroundColor: currentPage === 1 ? '#f8f9fa' : '#fff',
-                color: currentPage === 1 ? '#6c757d' : '#007bff',
-                border: '1px solid #dee2e6',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                marginRight: '2px'
+                backgroundColor: currentPage === 1 ? "#f8f9fa" : "#fff",
+                color: currentPage === 1 ? "#6c757d" : "#007bff",
+                border: "1px solid #dee2e6",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                marginRight: "2px",
               }}
             >
               ‹
@@ -2320,15 +2580,15 @@ const EntityReportLayer = () => {
           {pages}
           {endPage < totalPages && (
             <li className="page-item disabled">
-              <span 
+              <span
                 className="page-link"
                 style={{
-                  backgroundColor: '#f8f9fa',
-                  color: '#6c757d',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  marginRight: '2px'
+                  backgroundColor: "#f8f9fa",
+                  color: "#6c757d",
+                  border: "1px solid #dee2e6",
+                  borderRadius: "6px",
+                  padding: "6px 12px",
+                  marginRight: "2px",
                 }}
               >
                 ...
@@ -2341,12 +2601,12 @@ const EntityReportLayer = () => {
                 className="page-link"
                 onClick={() => handlePageChange(totalPages)}
                 style={{
-                  backgroundColor: '#fff',
-                  color: '#007bff',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  marginRight: '2px'
+                  backgroundColor: "#fff",
+                  color: "#007bff",
+                  border: "1px solid #dee2e6",
+                  borderRadius: "6px",
+                  padding: "6px 12px",
+                  marginRight: "2px",
                 }}
               >
                 {totalPages}
@@ -2363,12 +2623,13 @@ const EntityReportLayer = () => {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               style={{
-                backgroundColor: currentPage === totalPages ? '#f8f9fa' : '#fff',
-                color: currentPage === totalPages ? '#6c757d' : '#007bff',
-                border: '1px solid #dee2e6',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                marginRight: '2px'
+                backgroundColor:
+                  currentPage === totalPages ? "#f8f9fa" : "#fff",
+                color: currentPage === totalPages ? "#6c757d" : "#007bff",
+                border: "1px solid #dee2e6",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                marginRight: "2px",
               }}
             >
               ›
@@ -2384,12 +2645,13 @@ const EntityReportLayer = () => {
               onClick={() => handlePageChange(totalPages)}
               disabled={currentPage === totalPages}
               style={{
-                backgroundColor: currentPage === totalPages ? '#f8f9fa' : '#fff',
-                color: currentPage === totalPages ? '#6c757d' : '#007bff',
-                border: '1px solid #dee2e6',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                marginRight: '2px'
+                backgroundColor:
+                  currentPage === totalPages ? "#f8f9fa" : "#fff",
+                color: currentPage === totalPages ? "#6c757d" : "#007bff",
+                border: "1px solid #dee2e6",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                marginRight: "2px",
               }}
             >
               »
@@ -2407,15 +2669,15 @@ const EntityReportLayer = () => {
 
     // Helper functions for color styling
     const getProfitColor = (profit) => {
-      if (profit > 0) return '#dcfce7';
-      if (profit < 0) return '#fee2e2';
-      return 'transparent';
+      if (profit > 0) return "#dcfce7";
+      if (profit < 0) return "#fee2e2";
+      return "transparent";
     };
 
     const getProfitTextColor = (profit) => {
-      if (profit > 0) return '#166534';
-      if (profit < 0) return '#991b1b';
-      return '#374151';
+      if (profit > 0) return "#166534";
+      if (profit < 0) return "#991b1b";
+      return "#374151";
     };
 
     return (
@@ -2424,94 +2686,164 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('campaign_name')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("campaign_name")}
                 >
                   Campaign
-                  {sortConfig.key === 'campaign_name' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "campaign_name" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('impressions')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("impressions")}
                 >
                   Impressions
-                  {sortConfig.key === 'impressions' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "impressions" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('clicks')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("clicks")}
                 >
                   Clicks
-                  {sortConfig.key === 'clicks' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "clicks" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('ctr')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("ctr")}
                 >
                   CTR
-                  {sortConfig.key === 'ctr' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "ctr" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('spend')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("spend")}
                 >
                   Spend
-                  {sortConfig.key === 'spend' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "spend" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('cpc')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("cpc")}
                 >
                   CPC
-                  {sortConfig.key === 'cpc' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "cpc" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('shopify_orders')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("shopify_orders")}
                 >
                   Orders
-                  {sortConfig.key === 'shopify_orders' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "shopify_orders" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('shopify_revenue')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("shopify_revenue")}
                 >
                   Revenue
-                  {sortConfig.key === 'shopify_revenue' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "shopify_revenue" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('gross_roas')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("gross_roas")}
                 >
                   Gross ROAS
-                  {sortConfig.key === 'gross_roas' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "gross_roas" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('net_profit')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("net_profit")}
                 >
                   Net Profit
-                  {sortConfig.key === 'net_profit' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "net_profit" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
                 <th>Product Details</th>
@@ -2524,30 +2856,38 @@ const EntityReportLayer = () => {
                   <td>{formatNumber(row.impressions)}</td>
                   <td>{formatNumber(row.clicks)}</td>
                   <td>{formatPercentage(row.ctr)}</td>
-                  <td style={{ 
-                    color: '#ca8a04',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: "#ca8a04",
+                      fontWeight: "600",
+                    }}
+                  >
                     {formatCurrency(row.spend)}
                   </td>
                   <td>{formatCurrency(row.cpc)}</td>
                   <td>{formatNumber(row.shopify_orders)}</td>
-                  <td style={{ 
-                    color: '#16a34a',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: "#16a34a",
+                      fontWeight: "600",
+                    }}
+                  >
                     {formatCurrency(row.shopify_revenue)}
                   </td>
-                  <td style={{ 
-                    color: '#7c3aed',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: "#7c3aed",
+                      fontWeight: "600",
+                    }}
+                  >
                     {(row.gross_roas || 0).toFixed(2)}x
                   </td>
-                  <td style={{ 
-                    color: row.net_profit >= 0 ? '#16a34a' : '#dc2626',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: row.net_profit >= 0 ? "#16a34a" : "#dc2626",
+                      fontWeight: "600",
+                    }}
+                  >
                     {formatCurrency(row.net_profit)}
                   </td>
                   <td>
@@ -2695,7 +3035,8 @@ const EntityReportLayer = () => {
           cpc: metrics.cpc,
           cpm: metrics.cpm,
           addToCart: metrics.totalActions?.onsite_web_add_to_cart || 0,
-          checkoutInitiated: metrics.totalActions?.onsite_web_initiate_checkout || 0,
+          checkoutInitiated:
+            metrics.totalActions?.onsite_web_initiate_checkout || 0,
         };
       }
     );
@@ -2900,121 +3241,212 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('campaign_name')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("campaign_name")}
                 >
                   Name
-                  {sortConfig.key === 'campaign_name' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "campaign_name" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('impressions')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("impressions")}
                 >
                   Impressions
-                  {sortConfig.key === 'impressions' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "impressions" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('clicks')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("clicks")}
                 >
                   Clicks
-                  {sortConfig.key === 'clicks' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "clicks" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('ctr')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("ctr")}
                 >
                   CTR
-                  {sortConfig.key === 'ctr' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "ctr" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('spend')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("spend")}
                 >
                   Spend
-                  {sortConfig.key === 'spend' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "spend" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('cpc')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("cpc")}
                 >
                   CPC
-                  {sortConfig.key === 'cpc' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "cpc" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('cpm')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("cpm")}
                 >
                   CPM
-                  {sortConfig.key === 'cpm' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "cpm" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('orders')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("orders")}
                 >
                   Orders
-                  {sortConfig.key === 'orders' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "orders" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('revenue')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("revenue")}
                 >
                   Revenue
-                  {sortConfig.key === 'revenue' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "revenue" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('grossRoas')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("grossRoas")}
                 >
                   Gross ROAS
-                  {sortConfig.key === 'grossRoas' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "grossRoas" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('netProfit')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("netProfit")}
                 >
                   Net Profit
-                  {sortConfig.key === 'netProfit' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "netProfit" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('addToCart')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("addToCart")}
                 >
                   Add to Cart
-                  {sortConfig.key === 'addToCart' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "addToCart" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('checkoutInitiated')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("checkoutInitiated")}
                 >
                   Checkout Initiated
-                  {sortConfig.key === 'checkoutInitiated' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "checkoutInitiated" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
                 <th>Product Details</th>
@@ -3026,15 +3458,15 @@ const EntityReportLayer = () => {
 
                 // Helper functions for color styling
                 const getProfitColor = (profit) => {
-                  if (profit > 0) return '#dcfce7';
-                  if (profit < 0) return '#fee2e2';
-                  return 'transparent';
+                  if (profit > 0) return "#dcfce7";
+                  if (profit < 0) return "#fee2e2";
+                  return "transparent";
                 };
 
                 const getProfitTextColor = (profit) => {
-                  if (profit > 0) return '#166534';
-                  if (profit < 0) return '#991b1b';
-                  return '#374151';
+                  if (profit > 0) return "#166534";
+                  if (profit < 0) return "#991b1b";
+                  return "#374151";
                 };
 
                 return (
@@ -3056,31 +3488,42 @@ const EntityReportLayer = () => {
                     <td>{formatNumber(campaignMetrics.totalImpressions)}</td>
                     <td>{formatNumber(campaignMetrics.totalClicks)}</td>
                     <td>{formatPercentage(campaignMetrics.ctr)}</td>
-                    <td style={{ 
-                      color: '#ca8a04',
-                      fontWeight: '600'
-                    }}>
+                    <td
+                      style={{
+                        color: "#ca8a04",
+                        fontWeight: "600",
+                      }}
+                    >
                       {formatCurrency(campaignMetrics.totalSpend)}
                     </td>
                     <td>{formatCurrency(campaignMetrics.cpc)}</td>
                     <td>{formatCurrency(campaignMetrics.cpm)}</td>
                     <td>{formatNumber(campaignMetrics.totalOrders)}</td>
-                    <td style={{ 
-                      color: '#16a34a',
-                      fontWeight: '600'
-                    }}>
+                    <td
+                      style={{
+                        color: "#16a34a",
+                        fontWeight: "600",
+                      }}
+                    >
                       {formatCurrency(campaignMetrics.totalRevenue)}
                     </td>
-                    <td style={{ 
-                      color: '#7c3aed',
-                      fontWeight: '600'
-                    }}>
+                    <td
+                      style={{
+                        color: "#7c3aed",
+                        fontWeight: "600",
+                      }}
+                    >
                       {campaignMetrics.grossRoas?.toFixed(2)}x
                     </td>
-                    <td style={{ 
-                      color: campaignMetrics.netProfit >= 0 ? '#16a34a' : '#dc2626',
-                      fontWeight: '600'
-                    }}>
+                    <td
+                      style={{
+                        color:
+                          campaignMetrics.netProfit >= 0
+                            ? "#16a34a"
+                            : "#dc2626",
+                        fontWeight: "600",
+                      }}
+                    >
                       {formatCurrency(campaignMetrics.netProfit)}
                     </td>
                     <td>
@@ -3118,15 +3561,15 @@ const EntityReportLayer = () => {
 
     // Helper functions for color styling
     const getProfitColor = (profit) => {
-      if (profit > 0) return '#dcfce7';
-      if (profit < 0) return '#fee2e2';
-      return 'transparent';
+      if (profit > 0) return "#dcfce7";
+      if (profit < 0) return "#fee2e2";
+      return "transparent";
     };
 
     const getProfitTextColor = (profit) => {
-      if (profit > 0) return '#166534';
-      if (profit < 0) return '#991b1b';
-      return '#374151';
+      if (profit > 0) return "#166534";
+      if (profit < 0) return "#991b1b";
+      return "#374151";
     };
 
     return (
@@ -3135,49 +3578,84 @@ const EntityReportLayer = () => {
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('campaign_name')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("campaign_name")}
                 >
                   Campaign
-                  {sortConfig.key === 'campaign_name' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "campaign_name" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('shopify_revenue')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("shopify_revenue")}
                 >
                   Revenue
-                  {sortConfig.key === 'shopify_revenue' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "shopify_revenue" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('shopify_cogs')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("shopify_cogs")}
                 >
                   COGS
-                  {sortConfig.key === 'shopify_cogs' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "shopify_cogs" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('net_profit')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("net_profit")}
                 >
                   Net Profit
-                  {sortConfig.key === 'net_profit' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "net_profit" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
-                <th 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('total_sku_quantity')}
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("total_sku_quantity")}
                 >
                   Quantity
-                  {sortConfig.key === 'total_sku_quantity' && (
-                    <Icon icon={sortConfig.direction === 'asc' ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'} className="ms-1" />
+                  {sortConfig.key === "total_sku_quantity" && (
+                    <Icon
+                      icon={
+                        sortConfig.direction === "asc"
+                          ? "solar:arrow-up-bold"
+                          : "solar:arrow-down-bold"
+                      }
+                      className="ms-1"
+                    />
                   )}
                 </th>
                 <th>Product Details</th>
@@ -3187,17 +3665,21 @@ const EntityReportLayer = () => {
               {paginatedData.map((row, index) => (
                 <tr key={index}>
                   <td>{row.campaign_name}</td>
-                  <td style={{ 
-                    color: '#16a34a',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: "#16a34a",
+                      fontWeight: "600",
+                    }}
+                  >
                     {formatCurrency(row.shopify_revenue)}
                   </td>
                   <td>{formatCurrency(row.shopify_cogs)}</td>
-                  <td style={{ 
-                    color: row.net_profit >= 0 ? '#16a34a' : '#dc2626',
-                    fontWeight: '600'
-                  }}>
+                  <td
+                    style={{
+                      color: row.net_profit >= 0 ? "#16a34a" : "#dc2626",
+                      fontWeight: "600",
+                    }}
+                  >
                     {formatCurrency(row.net_profit)}
                   </td>
                   <td>{formatNumber(row.total_sku_quantity)}</td>
@@ -3212,6 +3694,338 @@ const EntityReportLayer = () => {
           </table>
         </div>
         {renderPagination(filteredAndSortedData)}
+      </>
+    );
+  };
+
+  const renderAmazonAdsTable = () => {
+    const amazonData = data.amazon || [];
+    const filteredAndSortedData = getFilteredAndSortedData(amazonData);
+    const paginatedData = getPaginatedData(filteredAndSortedData);
+
+    // Helper functions for color styling
+    const getRoasColor = (roas) => {
+      if (roas >= 3) return "#dcfce7"; // Green for high ROAS
+      if (roas >= 1.5) return "#fef3c7"; // Yellow for medium ROAS
+      if (roas > 0) return "#fee2e2"; // Red for low ROAS
+      return "transparent";
+    };
+
+    const getRoasTextColor = (roas) => {
+      if (roas >= 3) return "#166534";
+      if (roas >= 1.5) return "#92400e";
+      if (roas > 0) return "#991b1b";
+      return "#374151";
+    };
+
+    const getAcosColor = (acos) => {
+      if (acos <= 30) return "#dcfce7"; // Green for low ACOS
+      if (acos <= 50) return "#fef3c7"; // Yellow for medium ACOS
+      if (acos > 0) return "#fee2e2"; // Red for high ACOS
+      return "transparent";
+    };
+
+    const getAcosTextColor = (acos) => {
+      if (acos <= 30) return "#166534";
+      if (acos <= 50) return "#92400e";
+      if (acos > 0) return "#991b1b";
+      return "#374151";
+    };
+
+    return (
+      <>
+        {paginatedData.length > 0 ? (
+          <>
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead className="table-light">
+                  <tr>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("campaign_name")}
+                    >
+                      Campaign Name
+                      {sortConfig.key === "campaign_name" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("campaign_status")}
+                    >
+                      Status
+                      {sortConfig.key === "campaign_status" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("impressions")}
+                    >
+                      Impressions
+                      {sortConfig.key === "impressions" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("clicks")}
+                    >
+                      Clicks
+                      {sortConfig.key === "clicks" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("ctr")}
+                    >
+                      CTR
+                      {sortConfig.key === "ctr" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("cpc")}
+                    >
+                      CPC
+                      {sortConfig.key === "cpc" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("spend")}
+                    >
+                      Spend
+                      {sortConfig.key === "spend" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("orders")}
+                    >
+                      Orders
+                      {sortConfig.key === "orders" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("revenue")}
+                    >
+                      Revenue
+                      {sortConfig.key === "revenue" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("roas")}
+                    >
+                      ROAS
+                      {sortConfig.key === "roas" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("acos")}
+                    >
+                      ACOS
+                      {sortConfig.key === "acos" && (
+                        <Icon
+                          icon={
+                            sortConfig.direction === "asc"
+                              ? "solar:arrow-up-bold"
+                              : "solar:arrow-down-bold"
+                          }
+                          className="ms-1"
+                        />
+                      )}
+                    </th>
+                    <th>Product Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedData.map((row, index) => (
+                    <tr
+                      key={`${row.campaign_id}-${index}`}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        // Navigate to Amazon campaign details page
+                        const params = new URLSearchParams({
+                          campaign: row.campaign_name,
+                          campaignId: row.campaign_id,
+                          startDate: filters.startDate,
+                          endDate: filters.endDate,
+                        });
+                        router.push(
+                          `/amazon-campaign-details?${params.toString()}`
+                        );
+                      }}
+                    >
+                      <td>
+                        <div className="d-flex flex-column">
+                          <span className="fw-semibold">
+                            {row.campaign_name}
+                          </span>
+                          <small className="text-muted">
+                            ID: {row.campaign_id}
+                          </small>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            row.campaign_status === "ENABLED"
+                              ? "bg-success"
+                              : row.campaign_status === "PAUSED"
+                              ? "bg-warning"
+                              : "bg-secondary"
+                          }`}
+                        >
+                          {row.campaign_status}
+                        </span>
+                      </td>
+                      <td>{row.impressions?.toLocaleString() || 0}</td>
+                      <td>{row.clicks?.toLocaleString() || 0}</td>
+                      <td>{row.ctr ? `${row.ctr.toFixed(2)}%` : "0.00%"}</td>
+                      <td>{row.cpc ? `₹${row.cpc.toFixed(2)}` : "₹0.00"}</td>
+                      <td>{formatCurrency(row.spend)}</td>
+                      <td>{row.orders || 0}</td>
+                      <td>{formatCurrency(row.revenue)}</td>
+                      <td>
+                        <span
+                          style={{
+                            backgroundColor: getRoasColor(row.roas),
+                            color: getRoasTextColor(row.roas),
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {row.roas ? `${row.roas.toFixed(2)}x` : "0.00x"}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            backgroundColor: getAcosColor(row.acos),
+                            color: getAcosTextColor(row.acos),
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {row.acos ? `${row.acos.toFixed(2)}%` : "0.00%"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-column">
+                          <span
+                            className="text-truncate"
+                            style={{ maxWidth: "200px" }}
+                          >
+                            {row.product_details || "No products"}
+                          </span>
+                          <small className="text-muted">
+                            {row.adgroups_count} adgroup
+                            {row.adgroups_count !== 1 ? "s" : ""}
+                          </small>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {renderPagination(filteredAndSortedData)}
+          </>
+        ) : (
+          <div className="text-center py-5">
+            <Icon
+              icon="solar:chart-2-bold"
+              className="text-muted"
+              style={{ fontSize: "48px" }}
+            />
+            <p className="text-muted mt-2">
+              No Amazon Ads data available for the selected date range
+            </p>
+          </div>
+        )}
       </>
     );
   };
@@ -3237,7 +4051,7 @@ const EntityReportLayer = () => {
       0
     );
 
-      // For Google tab, use API summary data directly
+    // For Google tab, use API summary data directly
     if (activeTab === "google" && data.google && data.google.length > 0) {
       // Get the summary data from the API response
       const googleSummary = data.googleSummary || {};
@@ -3251,38 +4065,47 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20 g-2">
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL SPEND
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-spend")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-spend")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-spend" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-spend" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3298,70 +4121,87 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Total Google Ads expenditure across Search, Display, Shopping, and Video campaigns
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Spend
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Total Google Ads expenditure across Search, Display,
+                          Shopping, and Video campaigns
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalSpend).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalSpend).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#3B82F6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#3B82F6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL REVENUE
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-revenue")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-revenue")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-revenue" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-revenue" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3377,70 +4217,87 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue from Shopify orders attributed to Google Ads campaigns
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Revenue
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue from Shopify orders attributed to Google Ads
+                          campaigns
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalRevenue).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#10B981", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#10B981",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL ORDERS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-orders")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-orders")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-orders" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-orders" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3456,70 +4313,87 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Shopify orders attributed to Google Ads via UTM tracking
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Orders
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Shopify orders attributed to Google Ads via UTM
+                          tracking
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {formatNumber(totalOrders)}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#F59E0B", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#F59E0B",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     GROSS ROAS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-gross-roas")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-gross-roas")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-gross-roas" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-gross-roas" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3535,70 +4409,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross ROAS</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue per rupee (before COGS): Rev ÷ Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Gross ROAS
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue per rupee (before COGS): Rev ÷ Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {grossRoas.toFixed(2)}x
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#8B5CF6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#8B5CF6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     NET ROAS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-net-roas")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-net-roas")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-net-roas" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-net-roas" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3614,70 +4504,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net ROAS</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit per rupee (after COGS): Net Profit ÷ Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Net ROAS
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Profit per rupee (after COGS): Net Profit ÷ Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {netRoas.toFixed(2)}x
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#06B6D4", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#06B6D4",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     NET PROFIT
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("google-net-profit")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("google-net-profit")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "google-net-profit" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "google-net-profit" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3693,34 +4599,41 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit after costs: Rev - COGS - Ad Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Net Profit
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Profit after costs: Rev - COGS - Ad Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(netProfit).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#EF4444", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#EF4444",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
@@ -3745,38 +4658,47 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20 g-2">
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL SPEND
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-spend")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-spend")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-spend" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-spend" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3792,70 +4714,87 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Spend</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Meta (Facebook & Instagram) ad spend across all campaigns
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Spend
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Meta (Facebook & Instagram) ad spend across all
+                          campaigns
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalSpend).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalSpend).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#3B82F6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#3B82F6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL REVENUE
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-revenue")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-revenue")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-revenue" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-revenue" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3871,70 +4810,87 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue from Shopify orders attributed to Meta Ads campaigns
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Revenue
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue from Shopify orders attributed to Meta Ads
+                          campaigns
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalRevenue).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#10B981", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#10B981",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL ORDERS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-orders")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-orders")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-orders" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-orders" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -3950,70 +4906,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Shopify orders attributed to Meta Ads via UTM tracking
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Orders
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Shopify orders attributed to Meta Ads via UTM tracking
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {formatNumber(totalOrders)}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#F59E0B", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#F59E0B",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     NET PROFIT
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-profit")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-profit")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-profit" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-profit" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4029,70 +5001,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit after costs: Rev - COGS - Ad Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Net Profit
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Profit after costs: Rev - COGS - Ad Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(netProfit).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#EF4444", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#EF4444",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     GROSS ROAS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-gross-roas")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-gross-roas")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-gross-roas" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-gross-roas" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4108,70 +5096,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross ROAS</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue per rupee (before COGS): Rev ÷ Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Gross ROAS
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue per rupee (before COGS): Rev ÷ Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {grossRoas.toFixed(2)}x
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#8B5CF6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#8B5CF6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     NET ROAS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("meta-net-roas")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("meta-net-roas")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "meta-net-roas" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "meta-net-roas" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4187,34 +5191,41 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net ROAS</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit per rupee (after COGS): Net Profit ÷ Spend
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Net ROAS
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Profit per rupee (after COGS): Net Profit ÷ Spend
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {netRoas.toFixed(2)}x
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#06B6D4", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#06B6D4",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
@@ -4244,38 +5255,47 @@ const EntityReportLayer = () => {
       return (
         <div className="row mb-20 g-2">
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL REVENUE
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("organic-revenue")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-revenue")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-revenue" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-revenue" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4291,70 +5311,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Revenue</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue from organic traffic and direct visits
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Revenue
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue from organic traffic and direct visits
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalRevenue).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalRevenue).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#10B981", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#10B981",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL COGS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("organic-cogs")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-cogs")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-cogs" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-cogs" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4370,70 +5406,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total COGS</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Cost of goods sold for organic orders
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total COGS
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Cost of goods sold for organic orders
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(totalCogs).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalCogs).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#F59E0B", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#F59E0B",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     TOTAL ORDERS
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("organic-orders")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-orders")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-orders" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-orders" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4449,70 +5501,88 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Total Orders</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Orders from organic traffic and direct visits
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Total Orders
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Orders from organic traffic and direct visits
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {formatNumber(totalOrders)}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#3B82F6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#3B82F6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     GROSS PROFIT
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() =>
+                      setActiveTooltip("organic-gross-profit")
+                    }
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-gross-profit")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-gross-profit" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-gross-profit" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4528,70 +5598,86 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Gross Profit</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Revenue minus COGS: Revenue - COGS
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Gross Profit
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Revenue minus COGS: Revenue - COGS
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(grossProfit).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(grossProfit).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#8B5CF6", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#8B5CF6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     NET PROFIT
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() => setActiveTooltip("organic-net-profit")}
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-net-profit")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-net-profit" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-net-profit" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4607,70 +5693,88 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Net Profit</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Profit after all costs: Revenue - COGS
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Net Profit
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Profit after all costs: Revenue - COGS
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
-                    {formatCurrency(netProfit).replace('₹', '₹')}
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(netProfit).replace("₹", "₹")}
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#06B6D4", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#06B6D4",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
           <div className="col-md-2 col-6">
-            <div className="card" style={{ 
-              height: "90px", 
-              border: "none", 
-              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              borderRadius: "6px"
-            }}>
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
               <div className="card-body d-flex flex-column justify-content-between p-1">
                 <div className="d-flex justify-content-between align-items-start">
-                  <span style={{ 
-                    fontSize: "9px", 
-                    fontWeight: "600", 
-                    color: "#6B7280", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
                     PROFIT MARGIN
                   </span>
-                    <div 
-                      style={{ 
-                        cursor: "pointer",
-                        display: "inline-block",
-                        position: "relative"
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-block",
+                      position: "relative",
+                    }}
+                    onMouseEnter={() =>
+                      setActiveTooltip("organic-profit-margin")
+                    }
+                    onMouseLeave={() => setActiveTooltip(null)}
+                  >
+                    <Icon
+                      icon="solar:info-circle-bold"
+                      style={{
+                        fontSize: "10px",
+                        color: "#9CA3AF",
                       }}
-                      onMouseEnter={() => setActiveTooltip("organic-profit-margin")}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      <Icon icon="solar:info-circle-bold" style={{ 
-                        fontSize: "10px", 
-                        color: "#9CA3AF"
-                      }} />
-                      {activeTooltip === "organic-profit-margin" && (
-                        <div style={{
+                    />
+                    {activeTooltip === "organic-profit-margin" && (
+                      <div
+                        style={{
                           position: "absolute",
                           background: "#f3f4f6",
                           color: "#374151",
@@ -4686,34 +5790,354 @@ const EntityReportLayer = () => {
                           maxWidth: "700px",
                           whiteSpace: "nowrap",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          border: "1px solid #d1d5db"
-                        }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Profit Margin</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Net profit as % of revenue: (Net Profit ÷ Revenue) × 100
-                          </div>
+                          border: "1px solid #d1d5db",
+                        }}
+                      >
+                        <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                          Profit Margin
                         </div>
-                      )}
-                    </div>
+                        <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                          Net profit as % of revenue: (Net Profit ÷ Revenue) ×
+                          100
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span style={{ 
-                    fontSize: "x-large", 
-                    fontWeight: "600", 
-                    color: "#111827", 
-                    margin: "0",
-                    lineHeight: "1",
-                    display: "block"
-                  }}>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
                     {profitMargin.toFixed(1)}%
                   </span>
                 </div>
-                <div style={{ 
-                  height: "2px", 
-                  backgroundColor: "#EF4444", 
-                  borderRadius: "2px",
-                  width: "100%"
-                }}></div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#EF4444",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // For Amazon tab, use API summary data directly
+    if (activeTab === "amazon" && data.amazon && data.amazon.length > 0) {
+      // Get the summary data from the API response
+      const amazonSummary = data.amazonSummary || {};
+      const totalSpend = amazonSummary.total_spend || 0;
+      const totalRevenue = amazonSummary.total_revenue || 0;
+      const totalOrders = amazonSummary.total_orders || 0;
+      const totalImpressions = amazonSummary.total_impressions || 0;
+      const totalClicks = amazonSummary.total_clicks || 0;
+      const averageRoas = amazonSummary.average_roas || 0;
+      const averageAcos = amazonSummary.average_acos || 0;
+
+      return (
+        <div className="row mb-20 g-2">
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    TOTAL SPEND
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalSpend)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#F59E0B",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    TOTAL REVENUE
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {formatCurrency(totalRevenue)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#10B981",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    TOTAL ORDERS
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {totalOrders}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#3B82F6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    ROAS
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {averageRoas.toFixed(2)}x
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#8B5CF6",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    ACOS
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {averageAcos.toFixed(2)}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#EC4899",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-2 col-6">
+            <div
+              className="card"
+              style={{
+                height: "90px",
+                border: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                borderRadius: "6px",
+              }}
+            >
+              <div className="card-body d-flex flex-column justify-content-between p-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                    }}
+                  >
+                    IMPRESSIONS
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "x-large",
+                      fontWeight: "600",
+                      color: "#111827",
+                      margin: "0",
+                      lineHeight: "1",
+                      display: "block",
+                    }}
+                  >
+                    {totalImpressions.toLocaleString()}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    backgroundColor: "#06B6D4",
+                    borderRadius: "2px",
+                    width: "100%",
+                  }}
+                ></div>
               </div>
             </div>
           </div>
@@ -4725,182 +6149,242 @@ const EntityReportLayer = () => {
     return (
       <div className="row mb-20" style={{ gap: "16px" }}>
         <div className="col-md-3 col-6">
-          <div className="card" style={{ 
-            height: "160px", 
-            border: "none", 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            borderRadius: "12px"
-          }}>
+          <div
+            className="card"
+            style={{
+              height: "160px",
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              borderRadius: "12px",
+            }}
+          >
             <div className="card-body d-flex flex-column justify-content-between p-3">
               <div className="d-flex justify-content-between align-items-start">
-                <span style={{ 
-                  fontSize: "11px", 
-                  fontWeight: "600", 
-                  color: "#6B7280", 
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    color: "#6B7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   TOTAL SPEND
                 </span>
-                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "14px", 
-                    color: "#9CA3AF"
-                  }} />
+                <span
+                  title="Detailed information about this metric"
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon
+                    icon="solar:info-circle-bold"
+                    style={{
+                      fontSize: "14px",
+                      color: "#9CA3AF",
+                    }}
+                  />
                 </span>
               </div>
               <div>
-                <h3 style={{ 
-                  fontSize: "28px", 
-                  fontWeight: "700", 
-                  color: "#111827", 
-                  margin: "0",
-                  lineHeight: "1"
-                }}>
-                  {formatCurrency(totalSpend).replace('₹', '₹')}
+                <h3
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "700",
+                    color: "#111827",
+                    margin: "0",
+                    lineHeight: "1",
+                  }}
+                >
+                  {formatCurrency(totalSpend).replace("₹", "₹")}
                 </h3>
               </div>
-              <div style={{ 
-                height: "4px", 
-                backgroundColor: "#3B82F6", 
-                borderRadius: "2px",
-                width: "100%"
-              }}></div>
+              <div
+                style={{
+                  height: "4px",
+                  backgroundColor: "#3B82F6",
+                  borderRadius: "2px",
+                  width: "100%",
+                }}
+              ></div>
             </div>
           </div>
         </div>
         <div className="col-md-3 col-6">
-          <div className="card" style={{ 
-            height: "160px", 
-            border: "none", 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            borderRadius: "12px"
-          }}>
+          <div
+            className="card"
+            style={{
+              height: "160px",
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              borderRadius: "12px",
+            }}
+          >
             <div className="card-body d-flex flex-column justify-content-between p-3">
               <div className="d-flex justify-content-between align-items-start">
-                <span style={{ 
-                  fontSize: "11px", 
-                  fontWeight: "600", 
-                  color: "#6B7280", 
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    color: "#6B7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   TOTAL REVENUE
                 </span>
-                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "14px", 
-                    color: "#9CA3AF"
-                  }} />
+                <span
+                  title="Detailed information about this metric"
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon
+                    icon="solar:info-circle-bold"
+                    style={{
+                      fontSize: "14px",
+                      color: "#9CA3AF",
+                    }}
+                  />
                 </span>
               </div>
               <div>
-                <h3 style={{ 
-                  fontSize: "28px", 
-                  fontWeight: "700", 
-                  color: "#111827", 
-                  margin: "0",
-                  lineHeight: "1"
-                }}>
-                  {formatCurrency(totalRevenue).replace('₹', '₹')}
+                <h3
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "700",
+                    color: "#111827",
+                    margin: "0",
+                    lineHeight: "1",
+                  }}
+                >
+                  {formatCurrency(totalRevenue).replace("₹", "₹")}
                 </h3>
               </div>
-              <div style={{ 
-                height: "4px", 
-                backgroundColor: "#10B981", 
-                borderRadius: "2px",
-                width: "100%"
-              }}></div>
+              <div
+                style={{
+                  height: "4px",
+                  backgroundColor: "#10B981",
+                  borderRadius: "2px",
+                  width: "100%",
+                }}
+              ></div>
             </div>
           </div>
         </div>
         <div className="col-md-3 col-6">
-          <div className="card" style={{ 
-            height: "160px", 
-            border: "none", 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            borderRadius: "12px"
-          }}>
+          <div
+            className="card"
+            style={{
+              height: "160px",
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              borderRadius: "12px",
+            }}
+          >
             <div className="card-body d-flex flex-column justify-content-between p-3">
               <div className="d-flex justify-content-between align-items-start">
-                <span style={{ 
-                  fontSize: "11px", 
-                  fontWeight: "600", 
-                  color: "#6B7280", 
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    color: "#6B7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   TOTAL ORDERS
                 </span>
-                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "14px", 
-                    color: "#9CA3AF"
-                  }} />
+                <span
+                  title="Detailed information about this metric"
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon
+                    icon="solar:info-circle-bold"
+                    style={{
+                      fontSize: "14px",
+                      color: "#9CA3AF",
+                    }}
+                  />
                 </span>
               </div>
               <div>
-                <h3 style={{ 
-                  fontSize: "28px", 
-                  fontWeight: "700", 
-                  color: "#111827", 
-                  margin: "0",
-                  lineHeight: "1"
-                }}>
+                <h3
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "700",
+                    color: "#111827",
+                    margin: "0",
+                    lineHeight: "1",
+                  }}
+                >
                   {formatNumber(totalOrders)}
                 </h3>
               </div>
-              <div style={{ 
-                height: "4px", 
-                backgroundColor: "#F59E0B", 
-                borderRadius: "2px",
-                width: "100%"
-              }}></div>
+              <div
+                style={{
+                  height: "4px",
+                  backgroundColor: "#F59E0B",
+                  borderRadius: "2px",
+                  width: "100%",
+                }}
+              ></div>
             </div>
           </div>
         </div>
         <div className="col-md-3 col-6">
-          <div className="card" style={{ 
-            height: "160px", 
-            border: "none", 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            borderRadius: "12px"
-          }}>
+          <div
+            className="card"
+            style={{
+              height: "160px",
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              borderRadius: "12px",
+            }}
+          >
             <div className="card-body d-flex flex-column justify-content-between p-3">
               <div className="d-flex justify-content-between align-items-start">
-                <span style={{ 
-                  fontSize: "11px", 
-                  fontWeight: "600", 
-                  color: "#6B7280", 
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    color: "#6B7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   NET PROFIT
                 </span>
-                <span title="Detailed information about this metric" style={{ cursor: "pointer" }}>
-                  <Icon icon="solar:info-circle-bold" style={{ 
-                    fontSize: "14px", 
-                    color: "#9CA3AF"
-                  }} />
+                <span
+                  title="Detailed information about this metric"
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon
+                    icon="solar:info-circle-bold"
+                    style={{
+                      fontSize: "14px",
+                      color: "#9CA3AF",
+                    }}
+                  />
                 </span>
               </div>
               <div>
-                <h3 style={{ 
-                  fontSize: "28px", 
-                  fontWeight: "700", 
-                  color: "#111827", 
-                  margin: "0",
-                  lineHeight: "1"
-                }}>
-                  {formatCurrency(totalNetProfit).replace('₹', '₹')}
+                <h3
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "700",
+                    color: "#111827",
+                    margin: "0",
+                    lineHeight: "1",
+                  }}
+                >
+                  {formatCurrency(totalNetProfit).replace("₹", "₹")}
                 </h3>
               </div>
-              <div style={{ 
-                height: "4px", 
-                backgroundColor: "#EF4444", 
-                borderRadius: "2px",
-                width: "100%"
-              }}></div>
+              <div
+                style={{
+                  height: "4px",
+                  backgroundColor: "#EF4444",
+                  borderRadius: "2px",
+                  width: "100%",
+                }}
+              ></div>
             </div>
           </div>
         </div>
@@ -4916,39 +6400,47 @@ const EntityReportLayer = () => {
           <div className="d-flex justify-content-between align-items-center mb-20">
             <div className="d-flex align-items-center">
               <h6 className="mb-0 me-2">Entity Report</h6>
-              <div 
-                style={{ 
-                  cursor: "pointer", 
+              <div
+                style={{
+                  cursor: "pointer",
                   display: "inline-block",
-                  position: "relative"
+                  position: "relative",
                 }}
                 onMouseEnter={() => setActiveTooltip("header")}
                 onMouseLeave={() => setActiveTooltip(null)}
               >
-                <Icon icon="solar:info-circle-bold" style={{ fontSize: "14px", color: "#9CA3AF" }} />
+                <Icon
+                  icon="solar:info-circle-bold"
+                  style={{ fontSize: "14px", color: "#9CA3AF" }}
+                />
                 {activeTooltip === "header" && (
-                  <div style={{
-                    position: "absolute",
-                    background: "#f3f4f6",
-                    color: "#374151",
-                    padding: "10px 14px",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                    lineHeight: "1.3",
-                    zIndex: 9999,
-                    top: "-40px",
-                    right: "0",
-                    transform: "translateX(0)",
-                    pointerEvents: "none",
-                    maxWidth: "700px",
-                    whiteSpace: "nowrap",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                    border: "1px solid #d1d5db"
-                  }}>
-                          <div style={{ fontWeight: "600", marginBottom: "2px" }}>Entity Report</div>
-                          <div style={{ fontSize: "11px", opacity: "0.9" }}>
-                            Analytics dashboard for Google Ads, Meta Ads, and Organic performance tracking
-                          </div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      background: "#f3f4f6",
+                      color: "#374151",
+                      padding: "10px 14px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      lineHeight: "1.3",
+                      zIndex: 9999,
+                      top: "-40px",
+                      right: "0",
+                      transform: "translateX(0)",
+                      pointerEvents: "none",
+                      maxWidth: "700px",
+                      whiteSpace: "nowrap",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                      border: "1px solid #d1d5db",
+                    }}
+                  >
+                    <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                      Entity Report
+                    </div>
+                    <div style={{ fontSize: "11px", opacity: "0.9" }}>
+                      Analytics dashboard for Google Ads, Meta Ads, and Organic
+                      performance tracking
+                    </div>
                   </div>
                 )}
               </div>
@@ -5005,7 +6497,11 @@ const EntityReportLayer = () => {
 
           {/* Tabs */}
           <div className="mb-20">
-            <ul className="nav nav-tabs" role="tablist" style={{ borderBottom: "1px solid #e5e7eb" }}>
+            <ul
+              className="nav nav-tabs"
+              role="tablist"
+              style={{ borderBottom: "1px solid #e5e7eb" }}
+            >
               <li className="nav-item" role="presentation">
                 <button
                   className={`nav-link ${
@@ -5013,9 +6509,13 @@ const EntityReportLayer = () => {
                   }`}
                   onClick={() => handleTabChange("google")}
                   style={{
-                    backgroundColor: activeTab === "google" ? "#f8fafc" : "transparent",
+                    backgroundColor:
+                      activeTab === "google" ? "#f8fafc" : "transparent",
                     border: "none",
-                    borderBottom: activeTab === "google" ? "2px solid #6b7280" : "2px solid transparent",
+                    borderBottom:
+                      activeTab === "google"
+                        ? "2px solid #6b7280"
+                        : "2px solid transparent",
                     color: activeTab === "google" ? "#374151" : "#6b7280",
                     fontWeight: activeTab === "google" ? "500" : "400",
                     borderRadius: "0",
@@ -5044,9 +6544,13 @@ const EntityReportLayer = () => {
                   className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
                   onClick={() => handleTabChange("meta")}
                   style={{
-                    backgroundColor: activeTab === "meta" ? "#f8fafc" : "transparent",
+                    backgroundColor:
+                      activeTab === "meta" ? "#f8fafc" : "transparent",
                     border: "none",
-                    borderBottom: activeTab === "meta" ? "2px solid #6b7280" : "2px solid transparent",
+                    borderBottom:
+                      activeTab === "meta"
+                        ? "2px solid #6b7280"
+                        : "2px solid transparent",
                     color: activeTab === "meta" ? "#374151" : "#6b7280",
                     fontWeight: activeTab === "meta" ? "500" : "400",
                     borderRadius: "0",
@@ -5077,9 +6581,13 @@ const EntityReportLayer = () => {
                   }`}
                   onClick={() => handleTabChange("organic")}
                   style={{
-                    backgroundColor: activeTab === "organic" ? "#f8fafc" : "transparent",
+                    backgroundColor:
+                      activeTab === "organic" ? "#f8fafc" : "transparent",
                     border: "none",
-                    borderBottom: activeTab === "organic" ? "2px solid #6b7280" : "2px solid transparent",
+                    borderBottom:
+                      activeTab === "organic"
+                        ? "2px solid #6b7280"
+                        : "2px solid transparent",
                     color: activeTab === "organic" ? "#374151" : "#6b7280",
                     fontWeight: activeTab === "organic" ? "500" : "400",
                     borderRadius: "0",
@@ -5101,6 +6609,43 @@ const EntityReportLayer = () => {
                 >
                   <Icon icon="solar:leaf-bold" className="me-2" />
                   Organic Attribution
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${
+                    activeTab === "amazon" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("amazon")}
+                  style={{
+                    backgroundColor:
+                      activeTab === "amazon" ? "#f8fafc" : "transparent",
+                    border: "none",
+                    borderBottom:
+                      activeTab === "amazon"
+                        ? "2px solid #6b7280"
+                        : "2px solid transparent",
+                    color: activeTab === "amazon" ? "#374151" : "#6b7280",
+                    fontWeight: activeTab === "amazon" ? "500" : "400",
+                    borderRadius: "0",
+                    padding: "12px 16px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "amazon") {
+                      e.target.style.backgroundColor = "#f9fafb";
+                      e.target.style.color = "#4b5563";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "amazon") {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#6b7280";
+                    }
+                  }}
+                >
+                  <Icon icon="logos:amazon-icon" className="me-2" />
+                  Amazon Ads
                 </button>
               </li>
             </ul>
@@ -5139,11 +6684,16 @@ const EntityReportLayer = () => {
               </div>
               <div className="col-md-6 text-end">
                 <small className="text-muted">
-                  {getFilteredAndSortedData(
-                    activeTab === "meta" 
-                      ? (data.metaHierarchy ? Object.values(data.metaHierarchy).flat() : [])
-                      : (data[activeTab] || [])
-                  ).length} results
+                  {
+                    getFilteredAndSortedData(
+                      activeTab === "meta"
+                        ? data.metaHierarchy
+                          ? Object.values(data.metaHierarchy).flat()
+                          : []
+                        : data[activeTab] || []
+                    ).length
+                  }{" "}
+                  results
                 </small>
               </div>
             </div>
@@ -5154,6 +6704,7 @@ const EntityReportLayer = () => {
             {activeTab === "google" && renderGoogleAdsTable()}
             {activeTab === "meta" && renderMetaHierarchicalTable()}
             {activeTab === "organic" && renderOrganicTable()}
+            {activeTab === "amazon" && renderAmazonAdsTable()}
           </div>
         </div>
       </div>

@@ -83,10 +83,10 @@ const ProcurementTableDataLayer = () => {
       }
     } catch (error) {
       console.error("Error fetching products:", error);
-      
+
       // Handle authentication errors specifically
-      if (error.message.includes('AUTHENTICATION_ERROR')) {
-        setAuthError(error.message.replace('AUTHENTICATION_ERROR: ', ''));
+      if (error.message.includes("AUTHENTICATION_ERROR")) {
+        setAuthError(error.message.replace("AUTHENTICATION_ERROR: ", ""));
       } else {
         handleError("load products");
       }
@@ -631,7 +631,10 @@ const ProcurementTableDataLayer = () => {
             <h4 className="mb-3" style={{ color: "#dc2626" }}>
               Authentication Required
             </h4>
-            <p className="text-muted mb-4" style={{ maxWidth: "500px", margin: "0 auto" }}>
+            <p
+              className="text-muted mb-4"
+              style={{ maxWidth: "500px", margin: "0 auto" }}
+            >
               {authError}
             </p>
             <div className="d-flex gap-3 justify-content-center">
@@ -644,7 +647,12 @@ const ProcurementTableDataLayer = () => {
                   fontWeight: "500",
                 }}
               >
-                <Icon icon="mdi:login" width="20" height="20" className="me-2" />
+                <Icon
+                  icon="mdi:login"
+                  width="20"
+                  height="20"
+                  className="me-2"
+                />
                 Sign In with Real Account
               </button>
               <button
@@ -662,8 +670,14 @@ const ProcurementTableDataLayer = () => {
             </div>
             <div className="mt-4">
               <small className="text-muted">
-                <Icon icon="mdi:information" width="16" height="16" className="me-1" />
-                The procurement API requires Firebase authentication. Please sign in with your account.
+                <Icon
+                  icon="mdi:information"
+                  width="16"
+                  height="16"
+                  className="me-1"
+                />
+                The procurement API requires Firebase authentication. Please
+                sign in with your account.
               </small>
             </div>
           </div>
@@ -673,1255 +687,1275 @@ const ProcurementTableDataLayer = () => {
   }
 
   return (
-    <div className="card basic-data-table">
-      <div className="card-header d-flex align-items-center justify-content-between">
-        <h5 className="card-title mb-0">Procurement Products</h5>
-        {hasOperation("procurement", "create") && (
-          <button
-            onClick={handleAddProduct}
-            className="btn btn-primary d-inline-flex align-items-center"
-            style={{ gap: "6px", padding: "8px 16px" }}
-          >
-            <Icon icon="lucide:plus" width="18" height="18" />
-            Add New Product
-          </button>
-        )}
-      </div>
+    <div className="container-fluid px-3 px-md-4 py-3">
+      <div className="card basic-data-table">
+        <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+          <h5 className="card-title mb-0">Procurement Products</h5>
+          {hasOperation("procurement", "create") && (
+            <button
+              onClick={handleAddProduct}
+              className="btn btn-primary d-inline-flex align-items-center"
+              style={{ gap: "6px", padding: "8px 16px" }}
+            >
+              <Icon icon="lucide:plus" width="18" height="18" />
+              <span className="d-none d-sm-inline">Add New Product</span>
+              <span className="d-sm-none">Add</span>
+            </button>
+          )}
+        </div>
 
-      <div className="card-body">
-        {/* Search and Filter Controls */}
-        <div className="row g-3 mb-4">
-          <div className="col-md-3">
-            <div className="input-group">
-              <span className="input-group-text bg-white">
-                <Icon icon="lucide:search" width="16" height="16" />
-              </span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <div className="card-body">
+          {/* Search and Filter Controls */}
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-3">
+              <div className="input-group">
+                <span className="input-group-text bg-white">
+                  <Icon icon="lucide:search" width="16" height="16" />
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="col-6 col-md-2">
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filtering
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div className="col-6 col-md-2">
+              <select
+                className="form-select"
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filtering
+                }}
+              >
+                <option value="all">All Categories</option>
+                {allCategories.map((category) => (
+                  <option key={category} value={category}>
+                    Category {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-6 col-md-2">
+              <select
+                className="form-select"
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              >
+                <option value={5}>5 Items</option>
+                <option value={10}>10 Items</option>
+                <option value={25}>25 Items</option>
+                <option value={50}>50 Items</option>
+              </select>
+            </div>
+            <div className="col-6 col-md-3">
+              <button
+                className="btn btn-outline-secondary w-100"
+                onClick={handleReset}
+              >
+                <Icon
+                  icon="lucide:rotate-ccw"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                <span className="d-none d-sm-inline">Reset Filters</span>
+                <span className="d-sm-none">Reset</span>
+              </button>
             </div>
           </div>
-          <div className="col-md-2">
-            <select
-              className="form-select"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1); // Reset to first page when filtering
-              }}
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <select
-              className="form-select"
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setCurrentPage(1); // Reset to first page when filtering
-              }}
-            >
-              <option value="all">All Categories</option>
-              {allCategories.map((category) => (
-                <option key={category} value={category}>
-                  Category {category}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="col-md-2">
-            <select
-              className="form-select"
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            >
-              <option value={5}>5 Items</option>
-              <option value={10}>10 Items</option>
-              <option value={25}>25 Items</option>
-              <option value={50}>50 Items</option>
-            </select>
-          </div>
-          <div className="col-md-3">
-            <button
-              className="btn btn-outline-secondary w-100"
-              onClick={handleReset}
-            >
-              <Icon
-                icon="lucide:rotate-ccw"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Reset
-            </button>
-          </div>
-        </div>
 
-        {/* Showing entries count */}
-        <div className="mb-3">
-          <small className="text-muted">
-            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
-            {totalItems} entries
-          </small>
-        </div>
-
-        {/* Table */}
-        <div className="table-responsive">
-          <table className="table table-hover" style={{ fontSize: "14px" }}>
-            <thead
-              style={{
-                backgroundColor: "#f9fafb",
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              <tr>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Product Name
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Product Category
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Product Price Category
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Variants
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Selling Price Range
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  COGS Range
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Total Quantity
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="text-center py-4">
-                    <div className="d-flex flex-column align-items-center">
-                      <Icon
-                        icon="lucide:package"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-2"
-                      />
-                      <p className="text-muted mb-0">No products found</p>
-                      {searchTerm && (
-                        <small className="text-muted">
-                          Try adjusting your search terms
-                        </small>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                currentData.map((product, index) => (
-                  <TableRow
-                    key={`${product.product_id}-${index}`}
-                    product={product}
-                    onEdit={handleEdit}
-                    onView={handleView}
-                    onDelete={(product) => {
-                      setDeleteProductId(product.product_id);
-                      setConfirmModalIsOpen(true);
-                    }}
-                    uniqueKey={`${product.product_id}-${
-                      product.variant_id || "no-variant"
-                    }-${index}`}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="d-flex justify-content-between align-items-center mt-3">
-            <div className="text-muted">
+          {/* Showing entries count */}
+          <div className="mb-3">
+            <small className="text-muted">
               Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
               {totalItems} entries
-            </div>
-            <div className="d-flex gap-1">
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={goToFirst}
-                disabled={currentPage === 1}
-              >
-                <Icon icon="lucide:chevrons-left" width="16" height="16" />
-              </button>
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={goToPrevious}
-                disabled={currentPage === 1}
-              >
-                <Icon icon="lucide:chevron-left" width="16" height="16" />
-              </button>
-              <span className="btn btn-outline-primary btn-sm disabled">
-                {currentPage} of {totalPages}
-              </span>
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={goToNext}
-                disabled={currentPage === totalPages}
-              >
-                <Icon icon="lucide:chevron-right" width="16" height="16" />
-              </button>
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={goToLast}
-                disabled={currentPage === totalPages}
-              >
-                <Icon icon="lucide:chevrons-right" width="16" height="16" />
-              </button>
-            </div>
+            </small>
           </div>
-        )}
-      </div>
 
-      {/* Delete Confirmation Modal - Full Screen */}
-      <Modal
-        isOpen={confirmModalIsOpen}
-        onRequestClose={() => setConfirmModalIsOpen(false)}
-        className="delete-confirmation-modal"
-        overlayClassName="delete-confirmation-overlay"
-        contentLabel="Delete Confirmation"
-        style={{
-          overlay: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-          content: {
-            position: "relative",
-            top: "auto",
-            left: "auto",
-            right: "auto",
-            bottom: "auto",
-            border: "none",
-            background: "transparent",
-            overflow: "auto",
-            borderRadius: "0",
-            outline: "none",
-            padding: "0",
-            width: "100%",
-            height: "100%",
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-        }}
-      >
-        <div
-          className="delete-confirmation-container"
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            className="delete-confirmation-card"
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              maxWidth: "450px",
-              width: "100%",
-              maxHeight: "70vh",
-              overflow: "hidden",
-              animation: "slideIn 0.3s ease-out",
-              position: "relative",
-            }}
-          >
-            {/* Close Button */}
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setConfirmModalIsOpen(false)}
-              disabled={isDeleting}
-              style={{
-                position: "absolute",
-                top: "20px",
-                right: "20px",
-                fontSize: "18px",
-                opacity: isDeleting ? 0.5 : 1,
-                cursor: isDeleting ? "not-allowed" : "pointer",
-                background: "none",
-                border: "none",
-                color: "#6c757d",
-                zIndex: 1,
-                width: "30px",
-                height: "30px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                transition: "all 0.2s ease",
-              }}
-              onMouseOver={(e) => {
-                if (!isDeleting) {
-                  e.target.style.background = "#f8f9fa";
-                  e.target.style.color = "#dc3545";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!isDeleting) {
-                  e.target.style.background = "none";
-                  e.target.style.color = "#6c757d";
-                }
-              }}
-            >
-              ×
-            </button>
-
-            {/* Body */}
-            <div
-              className="delete-confirmation-body"
-              style={{
-                padding: "50px 40px 40px 40px",
-                textAlign: "center",
-              }}
-            >
-              <div
-                className="warning-message"
+          {/* Table */}
+          <div className="table-responsive">
+            <table className="table table-hover" style={{ fontSize: "14px" }}>
+              <thead
                 style={{
-                  fontSize: "18px",
-                  color: "#374151",
-                  lineHeight: "1.6",
-                  marginBottom: "24px",
+                  backgroundColor: "#f9fafb",
+                  borderBottom: "2px solid #e5e7eb",
                 }}
               >
-                Are you absolutely sure you want to delete this product?
-              </div>
-
-              <div
-                className="warning-details"
-                style={{
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  marginBottom: "32px",
-                }}
-              >
-                <div
-                  className="warning-icon"
-                  style={{
-                    fontSize: "24px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  🗑️
-                </div>
-                <div
-                  className="warning-text"
-                  style={{
-                    fontSize: "14px",
-                    color: "#991b1b",
-                    fontWeight: "500",
-                  }}
-                >
-                  This will permanently delete:
-                </div>
-                <ul
-                  className="warning-list"
-                  style={{
-                    listStyle: "none",
-                    padding: "0",
-                    margin: "8px 0 0 0",
-                    fontSize: "14px",
-                    color: "#7f1d1d",
-                  }}
-                >
-                  <li>• Product information</li>
-                  <li>• All variants and their data</li>
-                  <li>• Associated images</li>
-                  <li>• Vendor information</li>
-                </ul>
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                className="delete-actions"
-                style={{
-                  display: "flex",
-                  gap: "16px",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setConfirmModalIsOpen(false)}
-                  disabled={isDeleting}
-                  style={{
-                    padding: "12px 32px",
-                    fontSize: "16px",
-                    fontWeight: "500",
-                    borderRadius: "8px",
-                    border: "2px solid #6c757d",
-                    background: "white",
-                    color: "#6c757d",
-                    transition: "all 0.2s ease",
-                    minWidth: "120px",
-                    opacity: isDeleting ? 0.5 : 1,
-                    cursor: isDeleting ? "not-allowed" : "pointer",
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isDeleting) {
-                      e.target.style.background = "#6c757d";
-                      e.target.style.color = "white";
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isDeleting) {
-                      e.target.style.background = "white";
-                      e.target.style.color = "#6c757d";
-                    }
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  style={{
-                    padding: "12px 32px",
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    borderRadius: "8px",
-                    background: isDeleting
-                      ? "linear-gradient(135deg, #6c757d 0%, #5a6268 100%)"
-                      : "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
-                    border: "none",
-                    color: "white",
-                    transition: "all 0.2s ease",
-                    minWidth: "120px",
-                    boxShadow: isDeleting
-                      ? "0 2px 8px rgba(108, 117, 125, 0.3)"
-                      : "0 4px 12px rgba(220, 53, 69, 0.3)",
-                    cursor: isDeleting ? "not-allowed" : "pointer",
-                    opacity: isDeleting ? 0.7 : 1,
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isDeleting) {
-                      e.target.style.transform = "translateY(-2px)";
-                      e.target.style.boxShadow =
-                        "0 6px 16px rgba(220, 53, 69, 0.4)";
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isDeleting) {
-                      e.target.style.transform = "translateY(0)";
-                      e.target.style.boxShadow =
-                        "0 4px 12px rgba(220, 53, 69, 0.3)";
-                    }
-                  }}
-                >
-                  {isDeleting ? (
-                    <>
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Forever"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Product View Modal */}
-      {viewModalIsOpen && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <Icon icon="mdi:package-variant" className="me-2" />
-                  Product Information - {selectedProduct?.product_name}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setViewModalIsOpen(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                {selectedProduct && (
-                  <>
-                    {/* Product Info Summary - Two Column Layout */}
-                    <div className="row mb-4">
-                      <div className="col-md-6">
-                        <h6 className="text-muted mb-3">Product Information</h6>
-                        <div className="d-flex flex-column gap-2">
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Product Name:</span>
-                            <span className="fw-medium">
-                              {selectedProduct.product_name}
-                            </span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Product ID:</span>
-                            <span className="fw-medium">
-                              {selectedProduct.product_id}
-                            </span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Category:</span>
-                            <span className="fw-medium">
-                              {selectedProduct.product_category}
-                            </span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Price Category:</span>
-                            <span
-                              className={`badge ${
-                                selectedProduct.product_price_category === "A"
-                                  ? "bg-success"
-                                  : selectedProduct.product_price_category ===
-                                    "B"
-                                  ? "bg-warning"
-                                  : "bg-info"
-                              }`}
-                            >
-                              Category {selectedProduct.product_price_category}
-                            </span>
-                          </div>
-                        </div>
+                <tr>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Product Name
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Product Category
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Status
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Product Price Category
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Variants
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Selling Price Range
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    COGS Range
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Total Quantity
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentData.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-4">
+                      <div className="d-flex flex-column align-items-center">
+                        <Icon
+                          icon="lucide:package"
+                          width="48"
+                          height="48"
+                          className="text-muted mb-2"
+                        />
+                        <p className="text-muted mb-0">No products found</p>
+                        {searchTerm && (
+                          <small className="text-muted">
+                            Try adjusting your search terms
+                          </small>
+                        )}
                       </div>
-                      <div className="col-md-6">
-                        <h6 className="text-muted mb-3">Summary</h6>
-                        <div className="d-flex flex-column gap-2">
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Status:</span>
-                            {getStatusBadge(selectedProduct.status)}
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Total Variants:</span>
-                            <span className="fw-medium">
-                              {selectedProduct.total_variants}
-                            </span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">Total Quantity:</span>
-                            <span className="fw-medium">
-                              {selectedProduct.total_quantity}
-                            </span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span className="text-muted">COGS Range:</span>
-                            <span className="fw-medium">
-                              ₹{selectedProduct.cogs_range}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Vendors Table */}
-                    {selectedProduct.vendors &&
-                      selectedProduct.vendors.length > 0 && (
-                        <div className="mb-3">
-                          <h6 className="text-muted mb-3">Vendors</h6>
-                          <div className="table-responsive">
-                            <table className="table table-sm table-bordered">
-                              <thead className="table-light">
-                                <tr>
-                                  <th className="small">Vendor Name</th>
-                                  <th className="small">Common Name</th>
-                                  <th className="small">Manufactured By</th>
-                                  <th className="small d-none d-md-table-cell">
-                                    Mfg Date
-                                  </th>
-                                  <th className="small d-none d-lg-table-cell">
-                                    Imported By
-                                  </th>
-                                  <th className="small text-center">Status</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedProduct.vendors.map(
-                                  (vendor, index) => (
-                                    <tr key={index}>
-                                      <td className="small fw-medium">
-                                        {vendor.vendor_name || "N/A"}
-                                      </td>
-                                      <td className="small">
-                                        {vendor.common_name || "N/A"}
-                                      </td>
-                                      <td className="small">
-                                        {vendor.manufactured_by || "N/A"}
-                                      </td>
-                                      <td className="small d-none d-md-table-cell">
-                                        {vendor.manufacturing_date || "N/A"}
-                                      </td>
-                                      <td className="small d-none d-lg-table-cell">
-                                        {vendor.imported_by || "N/A"}
-                                      </td>
-                                      <td className="small text-center">
-                                        <span
-                                          className={`badge ${
-                                            vendor.vendor_status === "active"
-                                              ? "bg-success"
-                                              : "bg-secondary"
-                                          }`}
-                                        >
-                                          {vendor.vendor_status || "N/A"}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  )
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Variants Table */}
-                    {selectedProduct.variants &&
-                      selectedProduct.variants.length > 0 && (
-                        <div className="mb-3">
-                          <h6 className="text-muted mb-3">Product Variants</h6>
-                          <div className="table-responsive">
-                            <table className="table table-sm table-bordered">
-                              <thead className="table-light">
-                                <tr>
-                                  <th className="small">Variant</th>
-                                  <th className="small text-center d-none d-md-table-cell">
-                                    SKU
-                                  </th>
-                                  <th className="small text-end">MRP</th>
-                                  <th className="small text-end">COGS</th>
-                                  <th className="small text-end">Margin</th>
-                                  <th className="small text-center">Qty</th>
-                                  <th className="small">Vendor</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedProduct.variants.map(
-                                  (variant, index) => (
-                                    <tr key={index}>
-                                      <td className="small">
-                                        <div className="fw-medium">
-                                          {formatVariantType(
-                                            variant.variant_type
-                                          )}
-                                        </div>
-                                        <div
-                                          className="text-muted d-md-none"
-                                          style={{ fontSize: "11px" }}
-                                        >
-                                          SKU: {variant.sku || "N/A"}
-                                        </div>
-                                      </td>
-                                      <td className="small text-center d-none d-md-table-cell">
-                                        <span className="badge bg-light text-dark">
-                                          {variant.sku || "N/A"}
-                                        </span>
-                                      </td>
-                                      <td className="small text-end">
-                                        ₹{variant.mrp}
-                                      </td>
-                                      <td className="small text-end">
-                                        ₹{variant.cogs}
-                                      </td>
-                                      <td className="small text-end fw-medium">
-                                        ₹
-                                        {(variant.mrp - variant.cogs).toFixed(
-                                          2
-                                        )}
-                                      </td>
-                                      <td className="small text-center">
-                                        <span className="badge bg-primary rounded-pill">
-                                          {variant.quantity}
-                                        </span>
-                                      </td>
-                                      <td className="small">
-                                        {variant.vendor_pricing &&
-                                        variant.vendor_pricing.length > 0
-                                          ? variant.vendor_pricing
-                                              .map(
-                                                (vp) => vp.vendor_name || "N/A"
-                                              )
-                                              .join(", ")
-                                          : "Not Assigned"}
-                                      </td>
-                                    </tr>
-                                  )
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Product Images */}
-                    {selectedProduct.images &&
-                      selectedProduct.images.length > 0 && (
-                        <div className="mb-3">
-                          <h6 className="text-muted mb-3">Product Images</h6>
-                          <div className="row g-2">
-                            {selectedProduct.images.map((image, index) => (
-                              <div key={index} className="col-md-4 col-6">
-                                <div className="card bg-light border-0">
-                                  <div className="card-body p-2">
-                                    <div className="d-flex justify-content-between align-items-center">
-                                      <div className="flex-grow-1">
-                                        <div className="fw-medium small">
-                                          {image.alt_text ||
-                                            `Image ${index + 1}`}
-                                        </div>
-                                        <div
-                                          className="text-muted"
-                                          style={{ fontSize: "11px" }}
-                                        >
-                                          {image.is_primary && (
-                                            <span
-                                              className="badge bg-primary me-1"
-                                              style={{ fontSize: "9px" }}
-                                            >
-                                              Primary
-                                            </span>
-                                          )}
-                                          Sort: {image.sort_order}
-                                        </div>
-                                      </div>
-                                      <button
-                                        className="btn btn-sm btn-outline-primary rounded-pill px-2"
-                                        onClick={() => handleImageView(image)}
-                                        title="View Image"
-                                        disabled={isLoadingImage}
-                                      >
-                                        {isLoadingImage ? (
-                                          <div
-                                            className="spinner-border spinner-border-sm"
-                                            role="status"
-                                            aria-hidden="true"
-                                            style={{
-                                              width: "12px",
-                                              height: "12px",
-                                            }}
-                                          ></div>
-                                        ) : (
-                                          <Icon
-                                            icon="lucide:eye"
-                                            width="14"
-                                            height="14"
-                                          />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                  </>
+                    </td>
+                  </tr>
+                ) : (
+                  currentData.map((product, index) => (
+                    <TableRow
+                      key={`${product.product_id}-${index}`}
+                      product={product}
+                      onEdit={handleEdit}
+                      onView={handleView}
+                      onDelete={(product) => {
+                        setDeleteProductId(product.product_id);
+                        setConfirmModalIsOpen(true);
+                      }}
+                      uniqueKey={`${product.product_id}-${
+                        product.variant_id || "no-variant"
+                      }-${index}`}
+                    />
+                  ))
                 )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <div className="text-muted">
+                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
+                {totalItems} entries
+              </div>
+              <div className="d-flex gap-1">
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={goToFirst}
+                  disabled={currentPage === 1}
+                >
+                  <Icon icon="lucide:chevrons-left" width="16" height="16" />
+                </button>
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={goToPrevious}
+                  disabled={currentPage === 1}
+                >
+                  <Icon icon="lucide:chevron-left" width="16" height="16" />
+                </button>
+                <span className="btn btn-outline-primary btn-sm disabled">
+                  {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={goToNext}
+                  disabled={currentPage === totalPages}
+                >
+                  <Icon icon="lucide:chevron-right" width="16" height="16" />
+                </button>
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={goToLast}
+                  disabled={currentPage === totalPages}
+                >
+                  <Icon icon="lucide:chevrons-right" width="16" height="16" />
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Image View Modal */}
-      <Modal
-        isOpen={imageModalIsOpen}
-        onRequestClose={() => setImageModalIsOpen(false)}
-        className="image-view-modal"
-        overlayClassName="image-view-overlay"
-        contentLabel="View Image"
-        style={{
-          overlay: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.9)",
-            zIndex: 10000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-          content: {
-            position: "relative",
-            top: "auto",
-            left: "auto",
-            right: "auto",
-            bottom: "auto",
-            border: "none",
-            background: "transparent",
-            overflow: "auto",
-            borderRadius: "0",
-            outline: "none",
-            padding: "0",
-            width: "100%",
-            height: "100%",
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          },
-        }}
-      >
-        <div
-          className="image-view-container"
+        {/* Delete Confirmation Modal - Full Screen */}
+        <Modal
+          isOpen={confirmModalIsOpen}
+          onRequestClose={() => setConfirmModalIsOpen(false)}
+          className="delete-confirmation-modal"
+          overlayClassName="delete-confirmation-overlay"
+          contentLabel="Delete Confirmation"
           style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            className="image-view-card"
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
-              overflow: "hidden",
-              animation: "slideIn 0.3s ease-out",
-              position: "relative",
-            }}
-          >
-            {/* Close Button */}
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setImageModalIsOpen(false)}
-              style={{
-                position: "absolute",
-                top: "20px",
-                right: "20px",
-                fontSize: "18px",
-                background: "rgba(0, 0, 0, 0.5)",
-                border: "none",
-                color: "white",
-                zIndex: 1,
-                width: "40px",
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                transition: "all 0.2s ease",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = "rgba(0, 0, 0, 0.8)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = "rgba(0, 0, 0, 0.5)";
-              }}
-            >
-              ×
-            </button>
-
-            {/* Image */}
-            {isLoadingImage ? (
-              <div style={{ padding: "40px", textAlign: "center" }}>
-                <div
-                  className="spinner-border text-primary"
-                  role="status"
-                  style={{ width: "3rem", height: "3rem" }}
-                >
-                  <span className="visually-hidden">Loading image...</span>
-                </div>
-                <p className="mt-3 text-muted">
-                  Loading large image, please wait...
-                </p>
-                <small className="text-muted">
-                  This may take a moment for large files
-                </small>
-              </div>
-            ) : selectedImageUrl ? (
-              <div style={{ padding: "20px", textAlign: "center" }}>
-                <img
-                  src={selectedImageUrl}
-                  alt="Product Image"
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "80vh",
-                    objectFit: "contain",
-                    borderRadius: "8px",
-                  }}
-                  onError={(e) => {
-                    console.error("Image failed to load:", selectedImageUrl);
-                    e.target.style.display = "none";
-                    const errorDiv = e.target.nextSibling;
-                    if (errorDiv) errorDiv.style.display = "block";
-                  }}
-                />
-                <div
-                  style={{ display: "none" }}
-                  className="alert alert-warning mt-3"
-                >
-                  <i className="icon-alert-triangle me-2"></i>
-                  This image failed to load. It might be too large or corrupted.
-                  <br />
-                  <small>
-                    Try refreshing the page or contact support if the issue
-                    persists.
-                  </small>
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: "40px", textAlign: "center" }}>
-                <div className="alert alert-info">
-                  <i className="icon-info me-2"></i>
-                  No image available
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
-
-      {/* Status Update Modal */}
-      <Modal
-        isOpen={statusModalIsOpen}
-        onRequestClose={() => setStatusModalIsOpen(false)}
-        className="status-update-modal"
-        overlayClassName="status-update-overlay"
-        contentLabel="Update Product Status"
-        style={{
-          overlay: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            zIndex: 10000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(4px)",
-          },
-          content: {
-            position: "relative",
-            top: "auto",
-            left: "auto",
-            right: "auto",
-            bottom: "auto",
-            border: "none",
-            borderRadius: "16px",
-            padding: "0",
-            maxWidth: "480px",
-            width: "90%",
-            maxHeight: "90vh",
-            overflow: "hidden",
-            background: "white",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            animation: "slideIn 0.3s ease-out",
-          },
-        }}
-      >
-        {/* Close button */}
-        <button
-          onClick={() => setStatusModalIsOpen(false)}
-          disabled={isUpdatingStatus}
-          style={{
-            position: "absolute",
-            top: "16px",
-            right: "16px",
-            width: "32px",
-            height: "32px",
-            border: "none",
-            borderRadius: "8px",
-            background: "transparent",
-            color: "#6b7280",
-            cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "all 0.2s",
-            fontSize: "20px",
-            zIndex: 1,
-          }}
-          onMouseEnter={(e) => {
-            if (!isUpdatingStatus) {
-              e.target.style.background = "#f3f4f6";
-              e.target.style.color = "#374151";
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = "transparent";
-            e.target.style.color = "#6b7280";
-          }}
-        >
-          ×
-        </button>
-
-        {/* Modal content */}
-        <div style={{ padding: "32px" }}>
-          {/* Icon */}
-          <div
-            style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            overlay: {
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              zIndex: 9999,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 24px",
-              boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <Icon
-              icon="mdi:check-circle"
-              width="36"
-              height="36"
-              style={{ color: "white" }}
-            />
-          </div>
-
-          {/* Title */}
-          <h4
-            style={{
-              textAlign: "center",
-              marginBottom: "12px",
-              fontSize: "24px",
-              fontWeight: "600",
-              color: "#111827",
-            }}
-          >
-            Approve Product?
-          </h4>
-
-          {/* Description */}
-          <p
-            style={{
-              textAlign: "center",
-              color: "#6b7280",
-              fontSize: "15px",
-              marginBottom: "8px",
-              lineHeight: "1.6",
-            }}
-          >
-            You are about to approve this product
-          </p>
-
-          {/* Product name */}
+            },
+            content: {
+              position: "relative",
+              top: "auto",
+              left: "auto",
+              right: "auto",
+              bottom: "auto",
+              border: "none",
+              background: "transparent",
+              overflow: "auto",
+              borderRadius: "0",
+              outline: "none",
+              padding: "0",
+              width: "100%",
+              height: "100%",
+              maxWidth: "none",
+              maxHeight: "none",
+              margin: "0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            },
+          }}
+        >
           <div
+            className="delete-confirmation-container"
             style={{
-              textAlign: "center",
-              background: "#f9fafb",
-              padding: "12px 16px",
-              borderRadius: "10px",
-              marginBottom: "32px",
-              border: "1px solid #e5e7eb",
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
             }}
           >
-            <span
+            <div
+              className="delete-confirmation-card"
               style={{
-                fontSize: "15px",
+                background: "white",
+                borderRadius: "16px",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                maxWidth: "450px",
+                width: "100%",
+                maxHeight: "70vh",
+                overflow: "hidden",
+                animation: "slideIn 0.3s ease-out",
+                position: "relative",
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setConfirmModalIsOpen(false)}
+                disabled={isDeleting}
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  right: "20px",
+                  fontSize: "18px",
+                  opacity: isDeleting ? 0.5 : 1,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  background: "none",
+                  border: "none",
+                  color: "#6c757d",
+                  zIndex: 1,
+                  width: "30px",
+                  height: "30px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  if (!isDeleting) {
+                    e.target.style.background = "#f8f9fa";
+                    e.target.style.color = "#dc3545";
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isDeleting) {
+                    e.target.style.background = "none";
+                    e.target.style.color = "#6c757d";
+                  }
+                }}
+              >
+                ×
+              </button>
+
+              {/* Body */}
+              <div
+                className="delete-confirmation-body"
+                style={{
+                  padding: "50px 40px 40px 40px",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  className="warning-message"
+                  style={{
+                    fontSize: "18px",
+                    color: "#374151",
+                    lineHeight: "1.6",
+                    marginBottom: "24px",
+                  }}
+                >
+                  Are you absolutely sure you want to delete this product?
+                </div>
+
+                <div
+                  className="warning-details"
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    marginBottom: "32px",
+                  }}
+                >
+                  <div
+                    className="warning-icon"
+                    style={{
+                      fontSize: "24px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    🗑️
+                  </div>
+                  <div
+                    className="warning-text"
+                    style={{
+                      fontSize: "14px",
+                      color: "#991b1b",
+                      fontWeight: "500",
+                    }}
+                  >
+                    This will permanently delete:
+                  </div>
+                  <ul
+                    className="warning-list"
+                    style={{
+                      listStyle: "none",
+                      padding: "0",
+                      margin: "8px 0 0 0",
+                      fontSize: "14px",
+                      color: "#7f1d1d",
+                    }}
+                  >
+                    <li>• Product information</li>
+                    <li>• All variants and their data</li>
+                    <li>• Associated images</li>
+                    <li>• Vendor information</li>
+                  </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div
+                  className="delete-actions"
+                  style={{
+                    display: "flex",
+                    gap: "16px",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => setConfirmModalIsOpen(false)}
+                    disabled={isDeleting}
+                    style={{
+                      padding: "12px 32px",
+                      fontSize: "16px",
+                      fontWeight: "500",
+                      borderRadius: "8px",
+                      border: "2px solid #6c757d",
+                      background: "white",
+                      color: "#6c757d",
+                      transition: "all 0.2s ease",
+                      minWidth: "120px",
+                      opacity: isDeleting ? 0.5 : 1,
+                      cursor: isDeleting ? "not-allowed" : "pointer",
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isDeleting) {
+                        e.target.style.background = "#6c757d";
+                        e.target.style.color = "white";
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isDeleting) {
+                        e.target.style.background = "white";
+                        e.target.style.color = "#6c757d";
+                      }
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    style={{
+                      padding: "12px 32px",
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      background: isDeleting
+                        ? "linear-gradient(135deg, #6c757d 0%, #5a6268 100%)"
+                        : "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+                      border: "none",
+                      color: "white",
+                      transition: "all 0.2s ease",
+                      minWidth: "120px",
+                      boxShadow: isDeleting
+                        ? "0 2px 8px rgba(108, 117, 125, 0.3)"
+                        : "0 4px 12px rgba(220, 53, 69, 0.3)",
+                      cursor: isDeleting ? "not-allowed" : "pointer",
+                      opacity: isDeleting ? 0.7 : 1,
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isDeleting) {
+                        e.target.style.transform = "translateY(-2px)";
+                        e.target.style.boxShadow =
+                          "0 6px 16px rgba(220, 53, 69, 0.4)";
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isDeleting) {
+                        e.target.style.transform = "translateY(0)";
+                        e.target.style.boxShadow =
+                          "0 4px 12px rgba(220, 53, 69, 0.3)";
+                      }
+                    }}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Forever"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Product View Modal */}
+        {viewModalIsOpen && (
+          <div
+            className="modal fade show d-block"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <Icon icon="mdi:package-variant" className="me-2" />
+                    Product Information - {selectedProduct?.product_name}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setViewModalIsOpen(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  {selectedProduct && (
+                    <>
+                      {/* Product Info Summary - Two Column Layout */}
+                      <div className="row mb-4">
+                        <div className="col-md-6">
+                          <h6 className="text-muted mb-3">
+                            Product Information
+                          </h6>
+                          <div className="d-flex flex-column gap-2">
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Product Name:</span>
+                              <span className="fw-medium">
+                                {selectedProduct.product_name}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Product ID:</span>
+                              <span className="fw-medium">
+                                {selectedProduct.product_id}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Category:</span>
+                              <span className="fw-medium">
+                                {selectedProduct.product_category}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">
+                                Price Category:
+                              </span>
+                              <span
+                                className={`badge ${
+                                  selectedProduct.product_price_category === "A"
+                                    ? "bg-success"
+                                    : selectedProduct.product_price_category ===
+                                      "B"
+                                    ? "bg-warning"
+                                    : "bg-info"
+                                }`}
+                              >
+                                Category{" "}
+                                {selectedProduct.product_price_category}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6">
+                          <h6 className="text-muted mb-3">Summary</h6>
+                          <div className="d-flex flex-column gap-2">
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Status:</span>
+                              {getStatusBadge(selectedProduct.status)}
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">
+                                Total Variants:
+                              </span>
+                              <span className="fw-medium">
+                                {selectedProduct.total_variants}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">
+                                Total Quantity:
+                              </span>
+                              <span className="fw-medium">
+                                {selectedProduct.total_quantity}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">COGS Range:</span>
+                              <span className="fw-medium">
+                                ₹{selectedProduct.cogs_range}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Vendors Table */}
+                      {selectedProduct.vendors &&
+                        selectedProduct.vendors.length > 0 && (
+                          <div className="mb-3">
+                            <h6 className="text-muted mb-3">Vendors</h6>
+                            <div className="table-responsive">
+                              <table className="table table-sm table-bordered">
+                                <thead className="table-light">
+                                  <tr>
+                                    <th className="small">Vendor Name</th>
+                                    <th className="small">Common Name</th>
+                                    <th className="small">Manufactured By</th>
+                                    <th className="small d-none d-md-table-cell">
+                                      Mfg Date
+                                    </th>
+                                    <th className="small d-none d-lg-table-cell">
+                                      Imported By
+                                    </th>
+                                    <th className="small text-center">
+                                      Status
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedProduct.vendors.map(
+                                    (vendor, index) => (
+                                      <tr key={index}>
+                                        <td className="small fw-medium">
+                                          {vendor.vendor_name || "N/A"}
+                                        </td>
+                                        <td className="small">
+                                          {vendor.common_name || "N/A"}
+                                        </td>
+                                        <td className="small">
+                                          {vendor.manufactured_by || "N/A"}
+                                        </td>
+                                        <td className="small d-none d-md-table-cell">
+                                          {vendor.manufacturing_date || "N/A"}
+                                        </td>
+                                        <td className="small d-none d-lg-table-cell">
+                                          {vendor.imported_by || "N/A"}
+                                        </td>
+                                        <td className="small text-center">
+                                          <span
+                                            className={`badge ${
+                                              vendor.vendor_status === "active"
+                                                ? "bg-success"
+                                                : "bg-secondary"
+                                            }`}
+                                          >
+                                            {vendor.vendor_status || "N/A"}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    )
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Variants Table */}
+                      {selectedProduct.variants &&
+                        selectedProduct.variants.length > 0 && (
+                          <div className="mb-3">
+                            <h6 className="text-muted mb-3">
+                              Product Variants
+                            </h6>
+                            <div className="table-responsive">
+                              <table className="table table-sm table-bordered">
+                                <thead className="table-light">
+                                  <tr>
+                                    <th className="small">Variant</th>
+                                    <th className="small text-center d-none d-md-table-cell">
+                                      SKU
+                                    </th>
+                                    <th className="small text-end">MRP</th>
+                                    <th className="small text-end">COGS</th>
+                                    <th className="small text-end">Margin</th>
+                                    <th className="small text-center">Qty</th>
+                                    <th className="small">Vendor</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedProduct.variants.map(
+                                    (variant, index) => (
+                                      <tr key={index}>
+                                        <td className="small">
+                                          <div className="fw-medium">
+                                            {formatVariantType(
+                                              variant.variant_type
+                                            )}
+                                          </div>
+                                          <div
+                                            className="text-muted d-md-none"
+                                            style={{ fontSize: "11px" }}
+                                          >
+                                            SKU: {variant.sku || "N/A"}
+                                          </div>
+                                        </td>
+                                        <td className="small text-center d-none d-md-table-cell">
+                                          <span className="badge bg-light text-dark">
+                                            {variant.sku || "N/A"}
+                                          </span>
+                                        </td>
+                                        <td className="small text-end">
+                                          ₹{variant.mrp}
+                                        </td>
+                                        <td className="small text-end">
+                                          ₹{variant.cogs}
+                                        </td>
+                                        <td className="small text-end fw-medium">
+                                          ₹
+                                          {(variant.mrp - variant.cogs).toFixed(
+                                            2
+                                          )}
+                                        </td>
+                                        <td className="small text-center">
+                                          <span className="badge bg-primary rounded-pill">
+                                            {variant.quantity}
+                                          </span>
+                                        </td>
+                                        <td className="small">
+                                          {variant.vendor_pricing &&
+                                          variant.vendor_pricing.length > 0
+                                            ? variant.vendor_pricing
+                                                .map(
+                                                  (vp) =>
+                                                    vp.vendor_name || "N/A"
+                                                )
+                                                .join(", ")
+                                            : "Not Assigned"}
+                                        </td>
+                                      </tr>
+                                    )
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Product Images */}
+                      {selectedProduct.images &&
+                        selectedProduct.images.length > 0 && (
+                          <div className="mb-3">
+                            <h6 className="text-muted mb-3">Product Images</h6>
+                            <div className="row g-2">
+                              {selectedProduct.images.map((image, index) => (
+                                <div key={index} className="col-md-4 col-6">
+                                  <div className="card bg-light border-0">
+                                    <div className="card-body p-2">
+                                      <div className="d-flex justify-content-between align-items-center">
+                                        <div className="flex-grow-1">
+                                          <div className="fw-medium small">
+                                            {image.alt_text ||
+                                              `Image ${index + 1}`}
+                                          </div>
+                                          <div
+                                            className="text-muted"
+                                            style={{ fontSize: "11px" }}
+                                          >
+                                            {image.is_primary && (
+                                              <span
+                                                className="badge bg-primary me-1"
+                                                style={{ fontSize: "9px" }}
+                                              >
+                                                Primary
+                                              </span>
+                                            )}
+                                            Sort: {image.sort_order}
+                                          </div>
+                                        </div>
+                                        <button
+                                          className="btn btn-sm btn-outline-primary rounded-pill px-2"
+                                          onClick={() => handleImageView(image)}
+                                          title="View Image"
+                                          disabled={isLoadingImage}
+                                        >
+                                          {isLoadingImage ? (
+                                            <div
+                                              className="spinner-border spinner-border-sm"
+                                              role="status"
+                                              aria-hidden="true"
+                                              style={{
+                                                width: "12px",
+                                                height: "12px",
+                                              }}
+                                            ></div>
+                                          ) : (
+                                            <Icon
+                                              icon="lucide:eye"
+                                              width="14"
+                                              height="14"
+                                            />
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image View Modal */}
+        <Modal
+          isOpen={imageModalIsOpen}
+          onRequestClose={() => setImageModalIsOpen(false)}
+          className="image-view-modal"
+          overlayClassName="image-view-overlay"
+          contentLabel="View Image"
+          style={{
+            overlay: {
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.9)",
+              zIndex: 10000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            },
+            content: {
+              position: "relative",
+              top: "auto",
+              left: "auto",
+              right: "auto",
+              bottom: "auto",
+              border: "none",
+              background: "transparent",
+              overflow: "auto",
+              borderRadius: "0",
+              outline: "none",
+              padding: "0",
+              width: "100%",
+              height: "100%",
+              maxWidth: "none",
+              maxHeight: "none",
+              margin: "0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            },
+          }}
+        >
+          <div
+            className="image-view-container"
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+            }}
+          >
+            <div
+              className="image-view-card"
+              style={{
+                background: "white",
+                borderRadius: "16px",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                maxWidth: "90vw",
+                maxHeight: "90vh",
+                overflow: "hidden",
+                animation: "slideIn 0.3s ease-out",
+                position: "relative",
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setImageModalIsOpen(false)}
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  right: "20px",
+                  fontSize: "18px",
+                  background: "rgba(0, 0, 0, 0.5)",
+                  border: "none",
+                  color: "white",
+                  zIndex: 1,
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = "rgba(0, 0, 0, 0.8)";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = "rgba(0, 0, 0, 0.5)";
+                }}
+              >
+                ×
+              </button>
+
+              {/* Image */}
+              {isLoadingImage ? (
+                <div style={{ padding: "40px", textAlign: "center" }}>
+                  <div
+                    className="spinner-border text-primary"
+                    role="status"
+                    style={{ width: "3rem", height: "3rem" }}
+                  >
+                    <span className="visually-hidden">Loading image...</span>
+                  </div>
+                  <p className="mt-3 text-muted">
+                    Loading large image, please wait...
+                  </p>
+                  <small className="text-muted">
+                    This may take a moment for large files
+                  </small>
+                </div>
+              ) : selectedImageUrl ? (
+                <div style={{ padding: "20px", textAlign: "center" }}>
+                  <img
+                    src={selectedImageUrl}
+                    alt="Product Image"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "80vh",
+                      objectFit: "contain",
+                      borderRadius: "8px",
+                    }}
+                    onError={(e) => {
+                      console.error("Image failed to load:", selectedImageUrl);
+                      e.target.style.display = "none";
+                      const errorDiv = e.target.nextSibling;
+                      if (errorDiv) errorDiv.style.display = "block";
+                    }}
+                  />
+                  <div
+                    style={{ display: "none" }}
+                    className="alert alert-warning mt-3"
+                  >
+                    <i className="icon-alert-triangle me-2"></i>
+                    This image failed to load. It might be too large or
+                    corrupted.
+                    <br />
+                    <small>
+                      Try refreshing the page or contact support if the issue
+                      persists.
+                    </small>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: "40px", textAlign: "center" }}>
+                  <div className="alert alert-info">
+                    <i className="icon-info me-2"></i>
+                    No image available
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+
+        {/* Status Update Modal */}
+        <Modal
+          isOpen={statusModalIsOpen}
+          onRequestClose={() => setStatusModalIsOpen(false)}
+          className="status-update-modal"
+          overlayClassName="status-update-overlay"
+          contentLabel="Update Product Status"
+          style={{
+            overlay: {
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              zIndex: 10000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(4px)",
+            },
+            content: {
+              position: "relative",
+              top: "auto",
+              left: "auto",
+              right: "auto",
+              bottom: "auto",
+              border: "none",
+              borderRadius: "16px",
+              padding: "0",
+              maxWidth: "480px",
+              width: "90%",
+              maxHeight: "90vh",
+              overflow: "hidden",
+              background: "white",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              animation: "slideIn 0.3s ease-out",
+            },
+          }}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setStatusModalIsOpen(false)}
+            disabled={isUpdatingStatus}
+            style={{
+              position: "absolute",
+              top: "16px",
+              right: "16px",
+              width: "32px",
+              height: "32px",
+              border: "none",
+              borderRadius: "8px",
+              background: "transparent",
+              color: "#6b7280",
+              cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s",
+              fontSize: "20px",
+              zIndex: 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isUpdatingStatus) {
+                e.target.style.background = "#f3f4f6";
+                e.target.style.color = "#374151";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "transparent";
+              e.target.style.color = "#6b7280";
+            }}
+          >
+            ×
+          </button>
+
+          {/* Modal content */}
+          <div style={{ padding: "32px" }}>
+            {/* Icon */}
+            <div
+              style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 24px",
+                boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              <Icon
+                icon="mdi:check-circle"
+                width="36"
+                height="36"
+                style={{ color: "white" }}
+              />
+            </div>
+
+            {/* Title */}
+            <h4
+              style={{
+                textAlign: "center",
+                marginBottom: "12px",
+                fontSize: "24px",
                 fontWeight: "600",
                 color: "#111827",
               }}
             >
-              {selectedProductForStatus?.product_name}
-            </span>
-          </div>
+              Approve Product?
+            </h4>
 
-          {/* Buttons */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <button
-              onClick={() => setStatusModalIsOpen(false)}
-              disabled={isUpdatingStatus}
+            {/* Description */}
+            <p
               style={{
-                flex: 1,
-                padding: "14px 24px",
+                textAlign: "center",
+                color: "#6b7280",
                 fontSize: "15px",
-                fontWeight: "600",
+                marginBottom: "8px",
+                lineHeight: "1.6",
+              }}
+            >
+              You are about to approve this product
+            </p>
+
+            {/* Product name */}
+            <div
+              style={{
+                textAlign: "center",
+                background: "#f9fafb",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                marginBottom: "32px",
                 border: "1px solid #e5e7eb",
-                borderRadius: "10px",
-                background: "white",
-                color: "#374151",
-                cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-                opacity: isUpdatingStatus ? 0.5 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!isUpdatingStatus) {
-                  e.target.style.background = "#f9fafb";
-                  e.target.style.borderColor = "#d1d5db";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "white";
-                e.target.style.borderColor = "#e5e7eb";
               }}
             >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleStatusUpdate("approved")}
-              disabled={isUpdatingStatus}
-              style={{
-                flex: 1,
-                padding: "14px 24px",
-                fontSize: "15px",
-                fontWeight: "600",
-                border: "none",
-                borderRadius: "10px",
-                background: isUpdatingStatus
-                  ? "#9ca3af"
-                  : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                color: "white",
-                cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-                boxShadow: isUpdatingStatus
-                  ? "none"
-                  : "0 4px 12px rgba(16, 185, 129, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-              onMouseEnter={(e) => {
-                if (!isUpdatingStatus) {
-                  e.target.style.transform = "translateY(-1px)";
-                  e.target.style.boxShadow =
-                    "0 6px 16px rgba(16, 185, 129, 0.4)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.3)";
-              }}
-            >
-              {isUpdatingStatus ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    aria-hidden="true"
-                    style={{ width: "16px", height: "16px" }}
-                  ></span>
-                  <span>Approving...</span>
-                </>
-              ) : (
-                <>
-                  <Icon icon="mdi:check" width="20" height="20" />
-                  <span>Approve Product</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
+              <span
+                style={{
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  color: "#111827",
+                }}
+              >
+                {selectedProductForStatus?.product_name}
+              </span>
+            </div>
 
-      <ToastContainer />
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setStatusModalIsOpen(false)}
+                disabled={isUpdatingStatus}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "10px",
+                  background: "white",
+                  color: "#374151",
+                  cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                  opacity: isUpdatingStatus ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isUpdatingStatus) {
+                    e.target.style.background = "#f9fafb";
+                    e.target.style.borderColor = "#d1d5db";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "white";
+                  e.target.style.borderColor = "#e5e7eb";
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleStatusUpdate("approved")}
+                disabled={isUpdatingStatus}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  border: "none",
+                  borderRadius: "10px",
+                  background: isUpdatingStatus
+                    ? "#9ca3af"
+                    : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: "white",
+                  cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                  boxShadow: isUpdatingStatus
+                    ? "none"
+                    : "0 4px 12px rgba(16, 185, 129, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isUpdatingStatus) {
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow =
+                      "0 6px 16px rgba(16, 185, 129, 0.4)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow =
+                    "0 4px 12px rgba(16, 185, 129, 0.3)";
+                }}
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                      style={{ width: "16px", height: "16px" }}
+                    ></span>
+                    <span>Approving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="mdi:check" width="20" height="20" />
+                    <span>Approve Product</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        <ToastContainer />
+      </div>
     </div>
   );
 };
