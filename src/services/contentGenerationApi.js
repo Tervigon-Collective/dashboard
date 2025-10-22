@@ -108,60 +108,65 @@ export const generateGraphic = async (briefId) => {
 };
 
 /**
- * Quick generate content from form data
+ * Quick generate content from form data (direct to Python backend)
  * @param {Object} formData - Generation form data
  * @returns {Promise<Object>} Generation job response {job_id, status}
  */
 export const quickGenerate = async (formData) => {
-  const response = await apiClient.post(
-    "/api/content-generation/generate/quick",
+  // Call Python backend directly
+  const response = await axios.post(
+    "http://localhost:8000/api/generate/quick",
     formData
   );
   return response.data;
 };
 
 /**
- * Get generation job status
+ * Get generation job status (direct to Python backend)
  * @param {string} jobId - Job ID
  * @returns {Promise<Object>} Status response {status, progress, result?, error?}
  */
 export const getGenerationStatus = async (jobId) => {
-  const response = await apiClient.get(
-    `/api/content-generation/generate/status/${jobId}`
+  // Call Python backend directly
+  const response = await axios.get(
+    `http://localhost:8000/api/generate/status/${jobId}`
   );
   return response.data;
 };
 
 /**
- * Get generation results
+ * Get generation results (direct to Python backend)
  * @param {string} jobId - Job ID
  * @returns {Promise<Object>} Generation results
  */
 export const getGenerationResults = async (jobId) => {
-  const response = await apiClient.get(
-    `/api/content-generation/generate/results/${jobId}`
+  // Call Python backend directly
+  const response = await axios.get(
+    `http://localhost:8000/api/generate/results/${jobId}`
   );
   return response.data;
 };
 
 /**
- * Get all generation jobs
+ * Get all generation jobs (direct to Python backend)
  * @returns {Promise<Object>} All jobs {jobs: Array}
  */
 export const getGenerationJobs = async () => {
-  const response = await apiClient.get("/api/content-generation/generate/jobs");
+  // Call Python backend directly
+  const response = await axios.get("http://localhost:8000/api/generate/jobs");
   return response.data;
 };
 
 /**
- * Retry image generation for a specific artifact
+ * Retry image generation for a specific artifact (direct to Python backend)
  * @param {string} jobId - Job ID
  * @param {string} artifactId - Artifact ID
  * @returns {Promise<Object>} Retry response
  */
 export const retryImageGeneration = async (jobId, artifactId) => {
-  const response = await apiClient.post(
-    `/api/content-generation/generate/retry-image/${jobId}/${artifactId}`
+  // Call Python backend directly
+  const response = await axios.post(
+    `http://localhost:8000/api/generate/retry-image/${jobId}/${artifactId}`
   );
   return response.data;
 };
@@ -169,7 +174,7 @@ export const retryImageGeneration = async (jobId, artifactId) => {
 // ========== File Upload ==========
 
 /**
- * Upload multiple images
+ * Upload multiple images (direct to Python backend)
  * @param {Array<File>} files - Array of image files
  * @returns {Promise<Object>} Upload response {urls: Array}
  */
@@ -179,8 +184,9 @@ export const uploadImages = async (files) => {
     formData.append("images", file);
   });
 
-  const response = await apiClient.post(
-    "/api/content-generation/upload/images",
+  // Call Python backend directly
+  const response = await axios.post(
+    "http://localhost:8000/api/upload/images",
     formData,
     {
       headers: {
@@ -215,12 +221,13 @@ export const uploadLogo = async (file) => {
 // ========== Generated Content ==========
 
 /**
- * Get all generated content
+ * Get all generated content (direct to Python backend)
  * @returns {Promise<Object>} Generated content {content: Array}
  */
 export const getGeneratedContent = async () => {
-  const response = await apiClient.get(
-    "/api/content-generation/content/generated"
+  // Call Python backend directly since Node.js proxy isn't working
+  const response = await axios.get(
+    "http://localhost:8000/api/content/generated"
   );
   return response.data;
 };

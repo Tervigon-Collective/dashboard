@@ -910,6 +910,17 @@ export default function CreateContentPage() {
                                             height: "100%",
                                             objectFit: "cover",
                                           }}
+                                          onError={(e) => {
+                                            // If external URL failed, try local URL
+                                            if (
+                                              e.target.src.includes(
+                                                "cdn-magnific.freepik.com"
+                                              ) &&
+                                              item.local_url
+                                            ) {
+                                              e.target.src = `http://localhost:8000${item.local_url}`;
+                                            }
+                                          }}
                                         />
                                       ) : (
                                         <div className="d-flex align-items-center justify-content-center h-100">
