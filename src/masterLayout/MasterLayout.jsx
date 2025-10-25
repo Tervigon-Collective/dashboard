@@ -365,22 +365,6 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-                    {hasSidebarPermission("createContent") && (
-                      <li>
-                        <Link
-                          href="/create-content"
-                          className={
-                            pathname === "/create-content" ? "active-page" : ""
-                          }
-                        >
-                          <Icon
-                            icon="solar:magic-stick-3-bold"
-                            className="menu-icon"
-                          />
-                          <span>Create Content</span>
-                        </Link>
-                      </li>
-                    )}
                     {hasSidebarPermission("userManagement") && (
                       <li>
                         <Link
@@ -469,6 +453,57 @@ const MasterLayout = ({ children }) => {
                     )}
                 </>
               );
+            })()}
+
+            {/* Content Generator Section - Only for Admin, Manager and Super Admin */}
+            {(() => {
+              const { role, hasSidebarPermission } = useUser();
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
+              if (isSuperAdmin || isAdmin || isManager) {
+                return (
+                  <>
+                    <li className="sidebar-menu-group-title">
+                      Content Generator
+                    </li>
+                    {hasSidebarPermission("createContent") && (
+                      <li>
+                        <Link
+                          href="/create-content"
+                          className={
+                            pathname === "/create-content" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:magic-stick-3-bold"
+                            className="menu-icon"
+                          />
+                          <span>Image Generator</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("createContent") && (
+                      <li>
+                        <Link
+                          href="/video-generator"
+                          className={
+                            pathname === "/video-generator" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:video-library-bold"
+                            className="menu-icon"
+                          />
+                          <span>Video Generator</span>
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                );
+              }
+              return null;
             })()}
 
             {/* <li>
