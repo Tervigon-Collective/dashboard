@@ -506,6 +506,56 @@ const MasterLayout = ({ children }) => {
               return null;
             })()}
 
+            {/* Inventory Management Section - Only for Admin, Manager and Super Admin */}
+            {(() => {
+              const { role, hasSidebarPermission } = useUser();
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
+              if (isSuperAdmin || isAdmin || isManager) {
+                return (
+                  <>
+                    <li className="sidebar-menu-group-title">
+                      Inventory Management
+                    </li>
+                    {hasSidebarPermission("receivingManagement") && (
+                      <li>
+                        <Link
+                          href="/receiving-management"
+                          className={
+                            pathname === "/receiving-management"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:truck-delivery"
+                            className="menu-icon"
+                          />
+                          <span>Receiving Management</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("masters") && (
+                      <li>
+                        <Link
+                          href="/masters"
+                          className={
+                            pathname === "/masters" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="mdi:cog" className="menu-icon" />
+                          <span>Manage Masters</span>
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                );
+              }
+              return null;
+            })()}
+
             {/* <li>
               <Link
                 href="/email"

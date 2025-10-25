@@ -18,6 +18,9 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
+    createContent: { enabled: false, operations: [] },
+    receivingManagement: { enabled: false, operations: [] },
+    masters: { enabled: false, operations: [] },
   },
   user: {
     dashboard: { enabled: false, operations: [] },
@@ -32,6 +35,9 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
+    createContent: { enabled: false, operations: [] },
+    receivingManagement: { enabled: false, operations: [] },
+    masters: { enabled: false, operations: [] },
   },
   manager: {
     dashboard: { enabled: true, operations: ["read"] }, // Read-only
@@ -49,6 +55,15 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
+    createContent: { enabled: true, operations: ["read", "create"] },
+    receivingManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
+    masters: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
   },
   admin: {
     dashboard: { enabled: true, operations: ["read"] }, // Read-only
@@ -69,6 +84,15 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       operations: ["read", "create", "update", "delete"], // NO change_role permission
     }, // Can manage users but NOT change roles
     systemSettings: { enabled: false, operations: [] },
+    createContent: { enabled: true, operations: ["read", "create"] },
+    receivingManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
+    masters: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
   },
   super_admin: {
     dashboard: { enabled: true, operations: ["read"] },
@@ -92,6 +116,15 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     },
+    createContent: { enabled: true, operations: ["read", "create"] },
+    receivingManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
+    masters: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
   },
 };
 
@@ -337,6 +370,34 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     icon: "solar:magic-stick-3-bold",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [OPERATION_TYPES.READ, OPERATION_TYPES.CREATE],
+    supportsCRUD: true,
+  },
+  receivingManagement: {
+    key: "receivingManagement",
+    label: "Receiving Management",
+    description: "Manage incoming inventory and receiving processes",
+    icon: "mdi:truck-delivery",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [
+      OPERATION_TYPES.READ,
+      OPERATION_TYPES.CREATE,
+      OPERATION_TYPES.UPDATE,
+      OPERATION_TYPES.DELETE,
+    ],
+    supportsCRUD: true,
+  },
+  masters: {
+    key: "masters",
+    label: "Masters",
+    description: "Manage master data and configuration settings",
+    icon: "mdi:cog",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [
+      OPERATION_TYPES.READ,
+      OPERATION_TYPES.CREATE,
+      OPERATION_TYPES.UPDATE,
+      OPERATION_TYPES.DELETE,
+    ],
     supportsCRUD: true,
   },
 };
