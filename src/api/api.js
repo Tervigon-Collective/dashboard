@@ -71,5 +71,18 @@ export const fetchOrganicEntityReport = async (params = {}) => {
   }
 };
 
+export const fetchAmazonEntityReport = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams(params);
+    const response = await apiClient.get(
+      `/api/amazon_entity_report?${queryParams}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching Amazon Entity report:", error);
+    throw error;
+  }
+};
+
 // Export the axios instance if needed
 export { apiClient };

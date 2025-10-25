@@ -4,6 +4,8 @@ import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
 import AuthGuard from "@/components/AuthGuard";
 import { UserProvider } from "@/helper/UserContext";
+import { GenerationProvider } from "@/contexts/GenerationContext";
+import { BriefProvider } from "@/contexts/BriefContext";
 
 export const metadata = {
   title: "NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
@@ -16,13 +18,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang='en'>
+    <html lang="en">
       <PluginInit />
       <body suppressHydrationWarning={true}>
         <ClientProvider>
           <UserProvider>
             <AuthGuard>
-              {children}
+              <GenerationProvider>
+                <BriefProvider>{children}</BriefProvider>
+              </GenerationProvider>
             </AuthGuard>
           </UserProvider>
         </ClientProvider>

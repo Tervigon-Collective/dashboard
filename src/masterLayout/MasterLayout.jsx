@@ -105,12 +105,12 @@ const MasterLayout = ({ children }) => {
     e.preventDefault();
     try {
       // Show loading state
-      const logoutButton = e.target.closest('a');
+      const logoutButton = e.target.closest("a");
       if (logoutButton) {
-        logoutButton.style.opacity = '0.5';
-        logoutButton.style.pointerEvents = 'none';
+        logoutButton.style.opacity = "0.5";
+        logoutButton.style.pointerEvents = "none";
       }
-      
+
       // Use the comprehensive logout function from UserContext
       await logout();
     } catch (error) {
@@ -451,9 +451,109 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-
                 </>
               );
+            })()}
+
+            {/* Content Generator Section - Only for Admin, Manager and Super Admin */}
+            {(() => {
+              const { role, hasSidebarPermission } = useUser();
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
+              if (isSuperAdmin || isAdmin || isManager) {
+                return (
+                  <>
+                    <li className="sidebar-menu-group-title">
+                      Content Generator
+                    </li>
+                    {hasSidebarPermission("createContent") && (
+                      <li>
+                        <Link
+                          href="/create-content"
+                          className={
+                            pathname === "/create-content" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:magic-stick-3-bold"
+                            className="menu-icon"
+                          />
+                          <span>Image Generator</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("createContent") && (
+                      <li>
+                        <Link
+                          href="/video-generator"
+                          className={
+                            pathname === "/video-generator" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="solar:video-library-bold"
+                            className="menu-icon"
+                          />
+                          <span>Video Generator</span>
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Inventory Management Section - Only for Admin, Manager and Super Admin */}
+            {(() => {
+              const { role, hasSidebarPermission } = useUser();
+              const isSuperAdmin = role === "super_admin";
+              const isAdmin = role === "admin";
+              const isManager = role === "manager";
+
+              if (isSuperAdmin || isAdmin || isManager) {
+                return (
+                  <>
+                    <li className="sidebar-menu-group-title">
+                      Inventory Management
+                    </li>
+                    {hasSidebarPermission("receivingManagement") && (
+                      <li>
+                        <Link
+                          href="/receiving-management"
+                          className={
+                            pathname === "/receiving-management"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:truck-delivery"
+                            className="menu-icon"
+                          />
+                          <span>Receiving Management</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("masters") && (
+                      <li>
+                        <Link
+                          href="/masters"
+                          className={
+                            pathname === "/masters" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="mdi:cog" className="menu-icon" />
+                          <span>Manage Masters</span>
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                );
+              }
+              return null;
             })()}
 
             {/* <li>

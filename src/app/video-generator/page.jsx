@@ -1,23 +1,40 @@
 import Breadcrumb from "@/components/Breadcrumb";
-import VideoGeneratorLayer from "@/components/VideoGeneratorLayer";
 import MasterLayout from "@/masterLayout/MasterLayout";
 
 export const metadata = {
-  title: "NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
-  description:
-    "NEXT JS is a developer-friendly, ready-to-use admin template designed for building attractive, scalable, and high-performing web applications.",
+  title: "Video Generator - Content Generator Suite",
+  description: "AI-powered video generation with custom styles and effects",
 };
 
 const Page = () => {
   return (
     <>
-      {/* MasterLayout */}
       <MasterLayout>
-        {/* Breadcrumb */}
-        <Breadcrumb title='Video Generator' />
+        <Breadcrumb title="Video Generator" />
 
-        {/* VideoGeneratorLayer */}
-        <VideoGeneratorLayer />
+        <div className="container-fluid">
+          <div className="row">
+            <div className="col-12">
+              <div className="card">
+                <div className="card-body text-center py-5">
+                  <div className="mb-4">
+                    <i
+                      className="ri-video-line text-primary"
+                      style={{ fontSize: "4rem" }}
+                    ></i>
+                  </div>
+                  <h4 className="mb-3">Video Generator</h4>
+                  <p className="text-muted mb-4">
+                    AI-powered video generation coming soon!
+                  </p>
+                  <p className="text-muted">
+                    Create engaging video content with AI assistance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </MasterLayout>
     </>
   );
