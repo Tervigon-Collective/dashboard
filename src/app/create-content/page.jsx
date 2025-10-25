@@ -60,10 +60,26 @@ export default function CreateContentPage() {
 
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files || []);
+    
+    // Check if adding these files would exceed the 3-image limit
+    if (uploadedImages.length + files.length > 3) {
+      alert(`You can only upload a maximum of 3 images. You currently have ${uploadedImages.length} images uploaded.`);
+      return;
+    }
+    
     const newUrls = files.map((file) => URL.createObjectURL(file));
 
     setUploadedImages((prev) => [...prev, ...files]);
     setImageUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const removeImage = (index) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(imageUrls[index]);
+    
+    // Remove from both arrays
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleInputChange = (field, value) => {
@@ -374,42 +390,103 @@ export default function CreateContentPage() {
                 <div className="card-body">
                   {/* Image Upload */}
                   <div className="mb-4">
-                    <label className="form-label">Product Images</label>
-                    <div className="border border-dashed border-primary rounded p-4 text-center">
-                      <Icon
-                        icon="solar:upload-bold"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-3"
-                      />
-                      <p className="text-muted mb-2">Upload product images</p>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="form-control"
-                        style={{ maxWidth: "300px", margin: "0 auto" }}
-                      />
-                    </div>
-
-                    {uploadedImages.length > 0 && (
-                      <div className="row g-2 mt-3">
-                        {uploadedImages.map((file, index) => (
-                          <div key={index} className="col-md-3">
-                            <div className="position-relative">
+                    <h6 className="fw-semibold mb-3">Source Images</h6>
+                    
+                    {uploadedImages.length === 0 ? (
+                      // Empty state - drag and drop area
+                      <div className="border border-dashed border-secondary rounded-3 p-5 text-center bg-light position-relative">
+                        <div className="d-flex flex-column align-items-center">
+                          <div className="bg-secondary rounded-circle p-3 mb-3">
+                            <Icon
+                              icon="solar:upload-bold"
+                              width="24"
+                              height="24"
+                              className="text-white"
+                            />
+                          </div>
+                          <h6 className="fw-semibold text-dark mb-2">Upload images</h6>
+                          <p className="text-muted mb-3">Drag and drop or click to select</p>
+                          <div className="text-muted small">
+                            <span>Supports: JPG, PNG, GIF, WebP</span>
+                            <span className="mx-2">•</span>
+                            <span>Max 3 images</span>
+                            <span className="mx-2">•</span>
+                            <span>Max 4MB per image</span>
+                          </div>
+                        </div>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="position-absolute opacity-0"
+                          style={{ 
+                            top: 0, 
+                            left: 0, 
+                            width: '100%', 
+                            height: '100%', 
+                            cursor: 'pointer',
+                            zIndex: 1
+                          }}
+                          data-max-files="3"
+                        />
+                      </div>
+                    ) : (
+                      // Uploaded state - image thumbnails with counter
+                      <div>
+                        <div className="d-flex gap-3 mb-3">
+                          {uploadedImages.map((file, index) => (
+                            <div
+                              key={index}
+                              className="position-relative"
+                              style={{ width: '120px', height: '120px' }}
+                            >
                               <img
                                 src={imageUrls[index]}
                                 alt={`Upload ${index + 1}`}
-                                className="w-100 rounded"
-                                style={{ height: "96px", objectFit: "cover" }}
+                                className="w-100 h-100 rounded-3"
+                                style={{ objectFit: "cover" }}
                               />
-                              <span className="badge bg-primary position-absolute top-0 end-0 small">
-                                {file.name}
-                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
+                                style={{ width: "24px", height: "24px", padding: "0", fontSize: "12px" }}
+                                onClick={() => removeImage(index)}
+                                title="Remove image"
+                              >
+                                ×
+                              </button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                          
+                          {/* Add more images button */}
+                          {uploadedImages.length < 3 && (
+                            <label
+                              className="border border-dashed border-secondary rounded-3 d-flex align-items-center justify-content-center bg-light"
+                              style={{ width: '120px', height: '120px', cursor: 'pointer' }}
+                            >
+                              <Icon
+                                icon="solar:add-circle-bold"
+                                width="32"
+                                height="32"
+                                className="text-secondary"
+                              />
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="d-none"
+                                data-max-files="3"
+                              />
+                            </label>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <span className="text-muted small">
+                            {uploadedImages.length} of 3 images uploaded
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
