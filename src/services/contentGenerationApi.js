@@ -171,6 +171,49 @@ export const retryImageGeneration = async (jobId, artifactId) => {
   return response.data;
 };
 
+// ========== Review Workflow ==========
+
+/**
+ * Get prompts for review (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Object>} Review data with prompts
+ */
+export const getReviewPrompts = async (jobId) => {
+  // Call Python backend directly
+  const response = await axios.get(
+    `http://localhost:8000/api/generate/review/${jobId}`
+  );
+  return response.data;
+};
+
+/**
+ * Update prompts for review (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @param {Object} data - Updated prompts data
+ * @returns {Promise<Object>} Update response
+ */
+export const updateReviewPrompts = async (jobId, data) => {
+  // Call Python backend directly
+  const response = await axios.put(
+    `http://localhost:8000/api/generate/review/${jobId}/prompts`,
+    data
+  );
+  return response.data;
+};
+
+/**
+ * Approve and continue generation (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Object>} Approval response
+ */
+export const approveReview = async (jobId) => {
+  // Call Python backend directly
+  const response = await axios.post(
+    `http://localhost:8000/api/generate/review/${jobId}/approve`
+  );
+  return response.data;
+};
+
 // ========== File Upload ==========
 
 /**

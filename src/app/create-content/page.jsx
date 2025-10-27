@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
@@ -15,6 +16,9 @@ import {
 } from "@/services/contentGenerationApi";
 
 export default function CreateContentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [activeTab, setActiveTab] = useState("create");
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imageUrls, setImageUrls] = useState([]);
@@ -179,7 +183,13 @@ export default function CreateContentPage() {
             error: status.error,
           });
 
-          if (status.status === "completed" || status.status === "failed") {
+          // Check for pending_review status
+          if (status.status === "pending_review") {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            // Redirect to review page with jobId as query parameter
+            router.push(`/review?jobId=${jobId}`);
+          } else if (status.status === "completed" || status.status === "failed") {
             clearInterval(pollInterval);
             setIsGenerating(false);
             if (status.status === "completed") {
@@ -268,6 +278,24 @@ export default function CreateContentPage() {
             className="text-success"
           />
         );
+      case "pending_review":
+        return (
+          <Icon
+            icon="solar:file-text-bold"
+            width="16"
+            height="16"
+            className="text-warning"
+          />
+        );
+      case "edited":
+        return (
+          <Icon
+            icon="solar:edit-bold"
+            width="16"
+            height="16"
+            className="text-info"
+          />
+        );
       case "generating":
         return (
           <Icon
@@ -275,6 +303,24 @@ export default function CreateContentPage() {
             width="16"
             height="16"
             className="text-primary"
+          />
+        );
+      case "pending":
+        return (
+          <Icon
+            icon="solar:hourglass-bold"
+            width="16"
+            height="16"
+            className="text-warning"
+          />
+        );
+      case "failed":
+        return (
+          <Icon
+            icon="solar:danger-circle-bold"
+            width="16"
+            height="16"
+            className="text-danger"
           />
         );
       default:
@@ -293,10 +339,18 @@ export default function CreateContentPage() {
     switch (status) {
       case "completed":
         return <span className="badge bg-success">Completed</span>;
+      case "pending_review":
+        return <span className="badge bg-warning">Awaiting Review</span>;
+      case "edited":
+        return <span className="badge bg-info">Prompts Edited</span>;
       case "generating":
         return <span className="badge bg-primary">Generating</span>;
-      default:
+      case "pending":
         return <span className="badge bg-secondary">Pending</span>;
+      case "failed":
+        return <span className="badge bg-danger">Failed</span>;
+      default:
+        return <span className="badge bg-secondary">{status}</span>;
     }
   };
 
@@ -862,6 +916,20 @@ export default function CreateContentPage() {
                                 at{" "}
                                 {new Date(job.created_at).toLocaleTimeString()}
                               </span>
+                              {job.status === "pending_review" && (
+                                <button
+                                  onClick={() => router.push(`/review?jobId=${job.job_id}`)}
+                                  className="btn btn-sm btn-warning"
+                                >
+                                  <Icon
+                                    icon="solar:file-text-bold"
+                                    width="14"
+                                    height="14"
+                                    className="me-1"
+                                  />
+                                  Review Prompts
+                                </button>
+                              )}
                               {job.status === "completed" && (
                                 <button
                                   onClick={() => handleViewResults(job.job_id)}
@@ -880,11 +948,15 @@ export default function CreateContentPage() {
                           </div>
                           <div className="text-muted bg-light p-3 rounded">
                             <p className="small mb-0">
-                              <strong>Status:</strong> {job.status}
+                              <strong>Status:</strong> {getStatusBadge(job.status)}
                               {job.status === "completed" &&
                                 ' - Click "View Prompts" to see generated content'}
-                              {job.status === "processing" &&
-                                ` - ${job.progress}% complete`}
+                              {job.status === "pending_review" &&
+                                ' - Click "Review Prompts" to edit before generating images'}
+                              {job.status === "generating" &&
+                                ` - Generating images in progress`}
+                              {job.status === "pending" &&
+                                ` - Generating prompts`}
                               {job.status === "failed" &&
                                 " - Generation failed"}
                             </p>
