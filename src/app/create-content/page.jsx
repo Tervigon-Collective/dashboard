@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
+import ReviewPromptsModal from "@/components/ReviewPromptsModal";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
 import {
@@ -16,6 +18,9 @@ import {
 import config from "@/config";
 
 export default function CreateContentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [activeTab, setActiveTab] = useState("create");
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imageUrls, setImageUrls] = useState([]);
@@ -24,6 +29,8 @@ export default function CreateContentPage() {
   const [generationResult, setGenerationResult] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewJobId, setReviewJobId] = useState(null);
   const [generationJobs, setGenerationJobs] = useState([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,10 +68,26 @@ export default function CreateContentPage() {
 
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files || []);
+    
+    // Check if adding these files would exceed the 3-image limit
+    if (uploadedImages.length + files.length > 3) {
+      alert(`You can only upload a maximum of 3 images. You currently have ${uploadedImages.length} images uploaded.`);
+      return;
+    }
+    
     const newUrls = files.map((file) => URL.createObjectURL(file));
 
     setUploadedImages((prev) => [...prev, ...files]);
     setImageUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const removeImage = (index) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(imageUrls[index]);
+    
+    // Remove from both arrays
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleInputChange = (field, value) => {
@@ -164,7 +187,14 @@ export default function CreateContentPage() {
             error: status.error,
           });
 
-          if (status.status === "completed" || status.status === "failed") {
+          // Check for pending_review status
+          if (status.status === "pending_review") {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            // Open review modal
+            setReviewJobId(jobId);
+            setIsReviewModalOpen(true);
+          } else if (status.status === "completed" || status.status === "failed") {
             clearInterval(pollInterval);
             setIsGenerating(false);
             if (status.status === "completed") {
@@ -253,6 +283,24 @@ export default function CreateContentPage() {
             className="text-success"
           />
         );
+      case "pending_review":
+        return (
+          <Icon
+            icon="solar:file-text-bold"
+            width="16"
+            height="16"
+            className="text-warning"
+          />
+        );
+      case "edited":
+        return (
+          <Icon
+            icon="solar:edit-bold"
+            width="16"
+            height="16"
+            className="text-info"
+          />
+        );
       case "generating":
         return (
           <Icon
@@ -260,6 +308,24 @@ export default function CreateContentPage() {
             width="16"
             height="16"
             className="text-primary"
+          />
+        );
+      case "pending":
+        return (
+          <Icon
+            icon="solar:hourglass-bold"
+            width="16"
+            height="16"
+            className="text-warning"
+          />
+        );
+      case "failed":
+        return (
+          <Icon
+            icon="solar:danger-circle-bold"
+            width="16"
+            height="16"
+            className="text-danger"
           />
         );
       default:
@@ -278,10 +344,18 @@ export default function CreateContentPage() {
     switch (status) {
       case "completed":
         return <span className="badge bg-success">Completed</span>;
+      case "pending_review":
+        return <span className="badge bg-warning">Awaiting Review</span>;
+      case "edited":
+        return <span className="badge bg-info">Prompts Edited</span>;
       case "generating":
         return <span className="badge bg-primary">Generating</span>;
-      default:
+      case "pending":
         return <span className="badge bg-secondary">Pending</span>;
+      case "failed":
+        return <span className="badge bg-danger">Failed</span>;
+      default:
+        return <span className="badge bg-secondary">{status}</span>;
     }
   };
 
@@ -296,62 +370,126 @@ export default function CreateContentPage() {
       <Breadcrumb title="Create Content" />
 
       <div className="container-fluid">
-        {/* Header */}
-        <div className="text-center mb-4">
-          <h1 className="h2 mb-2">Content Generator</h1>
-          <p className="text-muted">
-            Upload images and create briefs to generate compelling content
-          </p>
-        </div>
-
         {/* Tabs */}
-        <ul className="nav nav-tabs mb-4" role="tablist">
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "create" ? "active" : ""}`}
-              onClick={() => setActiveTab("create")}
-              type="button"
-            >
-              <Icon
-                icon="solar:upload-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Create Content
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "prompts" ? "active" : ""}`}
-              onClick={() => setActiveTab("prompts")}
-              type="button"
-            >
-              <Icon
-                icon="solar:magic-stick-3-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Generated Prompts
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "content" ? "active" : ""}`}
-              onClick={() => setActiveTab("content")}
-              type="button"
-            >
-              <Icon
-                icon="solar:video-library-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Generated Content
-            </button>
-          </li>
-        </ul>
+        <div className="mb-3">
+          <ul
+            className="nav nav-tabs"
+            role="tablist"
+            style={{ borderBottom: "1px solid #e5e7eb" }}
+          >
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "create" ? "active" : ""}`}
+                onClick={() => setActiveTab("create")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "create" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "create" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "create" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "create" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "create") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "create") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:upload-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Create Content
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "prompts" ? "active" : ""}`}
+                onClick={() => setActiveTab("prompts")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "prompts" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "prompts" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "prompts" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "prompts" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "prompts") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "prompts") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:magic-stick-3-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Generated Prompts
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "content" ? "active" : ""}`}
+                onClick={() => setActiveTab("content")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "content" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "content" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "content" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "content" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "content") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "content") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:video-library-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Generated Content
+              </button>
+            </li>
+          </ul>
+        </div>
 
         {/* Tab Content */}
         <div className="tab-content">
@@ -359,66 +497,120 @@ export default function CreateContentPage() {
           {activeTab === "create" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">
-                    Upload Images & Create Brief
-                  </h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Upload Images & Create Brief</h5>
                   <p className="card-subtitle text-muted mb-0">
-                    Upload your product images and provide a brief description
-                    to generate content
-                    <span className="d-block mt-2 small text-muted">
-                      Using brand guidelines from <strong>Seleric</strong> - Let
-                      Nature Lead
-                    </span>
+                    Upload your product images and provide a brief description to generate content
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   {/* Image Upload */}
                   <div className="mb-4">
-                    <label className="form-label">Product Images</label>
-                    <div className="border border-dashed border-primary rounded p-4 text-center">
-                      <Icon
-                        icon="solar:upload-bold"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-3"
-                      />
-                      <p className="text-muted mb-2">Upload product images</p>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="form-control"
-                        style={{ maxWidth: "300px", margin: "0 auto" }}
-                      />
-                    </div>
-
-                    {uploadedImages.length > 0 && (
-                      <div className="row g-2 mt-3">
-                        {uploadedImages.map((file, index) => (
-                          <div key={index} className="col-md-3">
-                            <div className="position-relative">
+                    <label className="form-label fw-semibold mb-2 d-block">Source Images</label>
+                    
+                    {uploadedImages.length === 0 ? (
+                      // Empty state - drag and drop area
+                      <div className="border border-dashed border-secondary rounded-3 p-24 text-center bg-light position-relative" style={{ minHeight: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="d-flex flex-column align-items-center">
+                          <div className="bg-secondary rounded-circle p-3 mb-3">
+                            <Icon
+                              icon="solar:upload-bold"
+                              width="24"
+                              height="24"
+                              className="text-white"
+                            />
+                          </div>
+                          <h6 className="fw-semibold text-dark mb-2">Upload images</h6>
+                          <p className="text-muted mb-3">Drag and drop or click to select</p>
+                          <div className="text-muted small">
+                            <span>Supports: JPG, PNG, GIF, WebP</span>
+                            <span className="mx-2">•</span>
+                            <span>Max 3 images</span>
+                            <span className="mx-2">•</span>
+                            <span>Max 4MB per image</span>
+                          </div>
+                        </div>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="position-absolute opacity-0"
+                          style={{ 
+                            top: 0, 
+                            left: 0, 
+                            width: '100%', 
+                            height: '100%', 
+                            cursor: 'pointer',
+                            zIndex: 1
+                          }}
+                          data-max-files="3"
+                        />
+                      </div>
+                    ) : (
+                      // Uploaded state - image thumbnails with counter
+                      <div>
+                        <div className="d-flex gap-3 mb-3">
+                          {uploadedImages.map((file, index) => (
+                            <div
+                              key={index}
+                              className="position-relative"
+                              style={{ width: '120px', height: '120px' }}
+                            >
                               <img
                                 src={imageUrls[index]}
                                 alt={`Upload ${index + 1}`}
-                                className="w-100 rounded"
-                                style={{ height: "96px", objectFit: "cover" }}
+                                className="w-100 h-100 rounded-3"
+                                style={{ objectFit: "cover" }}
                               />
-                              <span className="badge bg-primary position-absolute top-0 end-0 small">
-                                {file.name}
-                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
+                                style={{ width: "24px", height: "24px", padding: "0", fontSize: "12px" }}
+                                onClick={() => removeImage(index)}
+                                title="Remove image"
+                              >
+                                ×
+                              </button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                          
+                          {/* Add more images button */}
+                          {uploadedImages.length < 3 && (
+                            <label
+                              className="border border-dashed border-secondary rounded-3 d-flex align-items-center justify-content-center bg-light"
+                              style={{ width: '120px', height: '120px', cursor: 'pointer' }}
+                            >
+                              <Icon
+                                icon="solar:add-circle-bold"
+                                width="32"
+                                height="32"
+                                className="text-secondary"
+                              />
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="d-none"
+                                data-max-files="3"
+                              />
+                            </label>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <span className="text-muted small">
+                            {uploadedImages.length} of 3 images uploaded
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   {/* Brief Form */}
-                  <div className="mb-4">
+                  <div>
                     <div className="mb-3">
-                      <label className="form-label">Product Name *</label>
+                      <label className="form-label fw-semibold">Product Name *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -431,7 +623,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Short Description *</label>
+                      <label className="form-label fw-semibold">Short Description *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -445,7 +637,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Long Description *</label>
+                      <label className="form-label fw-semibold">Long Description *</label>
                       <textarea
                         className="form-control"
                         rows="4"
@@ -460,7 +652,7 @@ export default function CreateContentPage() {
                     <div className="row">
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">
+                          <label className="form-label fw-semibold">
                             Campaign Objective
                           </label>
                           <select
@@ -484,7 +676,7 @@ export default function CreateContentPage() {
                       </div>
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Content Channel</label>
+                          <label className="form-label fw-semibold">Content Channel</label>
                           <select
                             className="form-select"
                             value={formData.channel}
@@ -514,7 +706,7 @@ export default function CreateContentPage() {
                     <div className="row">
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Tone</label>
+                          <label className="form-label fw-semibold">Tone</label>
                           <select
                             className="form-select"
                             value={formData.tone}
@@ -534,7 +726,7 @@ export default function CreateContentPage() {
                       </div>
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Call to Action</label>
+                          <label className="form-label fw-semibold">Call to Action</label>
                           <select
                             className="form-select"
                             value={formData.cta}
@@ -555,7 +747,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Number of Variants</label>
+                      <label className="form-label fw-semibold">Number of Variants</label>
                       <input
                         type="number"
                         className="form-control"
@@ -587,7 +779,7 @@ export default function CreateContentPage() {
                           icon="solar:refresh-bold"
                           width="16"
                           height="16"
-                          className="me-2"
+                          className="me-2 spinner"
                         />
                         Generating Content...
                       </>
@@ -612,13 +804,13 @@ export default function CreateContentPage() {
           {activeTab === "prompts" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">Generated Prompts</h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Generated Prompts</h5>
                   <p className="card-subtitle text-muted mb-0">
                     AI-generated prompts based on your product images and brief
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   <div className="mb-4">
                     {/* Show loading state */}
                     {isLoadingJobs && (
@@ -786,6 +978,23 @@ export default function CreateContentPage() {
                                 at{" "}
                                 {new Date(job.created_at).toLocaleTimeString()}
                               </span>
+                              {job.status === "pending_review" && (
+                                <button
+                                  onClick={() => {
+                                    setReviewJobId(job.job_id);
+                                    setIsReviewModalOpen(true);
+                                  }}
+                                  className="btn btn-sm btn-warning"
+                                >
+                                  <Icon
+                                    icon="solar:file-text-bold"
+                                    width="14"
+                                    height="14"
+                                    className="me-1"
+                                  />
+                                  Review Prompts
+                                </button>
+                              )}
                               {job.status === "completed" && (
                                 <button
                                   onClick={() => handleViewResults(job.job_id)}
@@ -804,11 +1013,15 @@ export default function CreateContentPage() {
                           </div>
                           <div className="text-muted bg-light p-3 rounded">
                             <p className="small mb-0">
-                              <strong>Status:</strong> {job.status}
+                              <strong>Status:</strong> {getStatusBadge(job.status)}
                               {job.status === "completed" &&
                                 ' - Click "View Prompts" to see generated content'}
-                              {job.status === "processing" &&
-                                ` - ${job.progress}% complete`}
+                              {job.status === "pending_review" &&
+                                ' - Click "Review Prompts" to edit before generating images'}
+                              {job.status === "generating" &&
+                                ` - Generating images in progress`}
+                              {job.status === "pending" &&
+                                ` - Generating prompts`}
                               {job.status === "failed" &&
                                 " - Generation failed"}
                             </p>
@@ -844,14 +1057,13 @@ export default function CreateContentPage() {
           {activeTab === "content" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">Generated Content</h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Generated Content</h5>
                   <p className="card-subtitle text-muted mb-0">
-                    View and manage your generated content organized by product
-                    and time
+                    View and manage your generated content organized by product and time
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   {isLoadingContent ? (
                     <div className="d-flex align-items-center justify-content-center p-4">
                       <Icon
@@ -1027,6 +1239,22 @@ export default function CreateContentPage() {
           jobId={selectedJobId}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {/* Review Prompts Modal */}
+      {reviewJobId && (
+        <ReviewPromptsModal
+          jobId={reviewJobId}
+          isOpen={isReviewModalOpen}
+          onClose={() => {
+            setIsReviewModalOpen(false);
+            setReviewJobId(null);
+          }}
+          onApproveSuccess={(jobId) => {
+            // Refresh the jobs list
+            fetchGenerationJobs();
+          }}
         />
       )}
     </SidebarPermissionGuard>

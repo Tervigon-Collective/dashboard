@@ -59,28 +59,69 @@ class ProcurementApiService {
     return token;
   }
 
+  // Helper method to wait for auth state to be ready
+  async waitForAuthState() {
+    return new Promise(async (resolve) => {
+      const { auth } = await import("../helper/firebase");
+      const { onAuthStateChanged } = await import("firebase/auth");
+      
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        unsubscribe();
+        resolve(user);
+      });
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        unsubscribe();
+        resolve(null);
+      }, 5000);
+    });
+  }
+
   // Helper method to check if user is authenticated and get fresh token
   async isAuthenticated() {
     try {
       const { auth } = await import("../helper/firebase");
-      const currentUser = auth.currentUser;
+      let currentUser = auth.currentUser;
+      
+      console.log("🔍 Checking Firebase auth state...");
+      console.log("🔍 Current user:", currentUser ? "exists" : "null");
+      
+      // If no current user, wait for auth state
+      if (!currentUser) {
+        console.log("⏳ No current user, waiting for auth state...");
+        currentUser = await this.waitForAuthState();
+        console.log("🔍 After waiting, user:", currentUser ? "exists" : "null");
+      }
       
       if (!currentUser) {
-        console.log("No authenticated user found");
+        console.log("❌ No authenticated user found in Firebase");
         return false;
       }
+
+      // Check if user is actually signed in
+      if (currentUser.uid === null || currentUser.uid === undefined) {
+        console.log("❌ User UID is null/undefined");
+        return false;
+      }
+
+      console.log("✅ User UID:", currentUser.uid);
 
       // Try to get a fresh token to ensure it's valid
       try {
         const freshToken = await currentUser.getIdToken(false); // Don't force refresh initially
-        console.log("User is authenticated with valid token");
+        console.log("✅ User is authenticated with valid token");
+        
+        // Update localStorage with fresh token
+        localStorage.setItem("idToken", freshToken);
+        
         return true;
       } catch (tokenError) {
-        console.error("Token validation failed:", tokenError);
+        console.error("❌ Token validation failed:", tokenError);
         return false;
       }
     } catch (error) {
-      console.error("Error checking authentication:", error);
+      console.error("❌ Error checking authentication:", error);
       return false;
     }
   }
@@ -121,6 +162,20 @@ class ProcurementApiService {
     }
   }
 
+  // Helper method to use UserContext refreshToken if available
+  async refreshTokenViaContext() {
+    try {
+      // Try to get UserContext refreshToken function
+      const { useUser } = await import("../helper/UserContext");
+      
+      // This won't work in a service class, so we'll use direct Firebase approach
+      return await this.refreshToken();
+    } catch (error) {
+      console.error("Error using context refresh:", error);
+      return await this.refreshToken();
+    }
+  }
+
   // Helper method to refresh Firebase token
   async refreshToken() {
     try {
@@ -153,16 +208,36 @@ class ProcurementApiService {
 
   // Helper method for making authenticated requests
   async makeRequest(url, options = {}) {
+    console.log("🔐 Starting authentication check for API request...");
+    
     // Check if user is authenticated first
     const isAuth = await this.isAuthenticated();
+    console.log("🔐 Authentication check result:", isAuth);
+    
     if (!isAuth) {
-      throw new Error(
-        "AUTHENTICATION_ERROR: No authenticated user found. Please sign in again."
-      );
+      // Try to refresh token once more
+      console.log("🔄 Authentication failed, attempting token refresh...");
+      const refreshedToken = await this.refreshToken();
+      
+      if (!refreshedToken) {
+        console.error("❌ Token refresh failed, user needs to sign in again");
+        throw new Error(
+          "AUTHENTICATION_ERROR: No authenticated user found. Please sign in again."
+        );
+      }
+      console.log("✅ Token refresh successful");
     }
 
     // Get fresh token before making request
     let token = await this.getFreshToken();
+    console.log("🔑 Fresh token obtained:", !!token);
+    
+    if (!token) {
+      console.error("❌ Unable to get fresh token");
+      throw new Error(
+        "AUTHENTICATION_ERROR: Unable to get authentication token. Please sign in again."
+      );
+    }
 
     console.log("Auth token available:", !!token);
     console.log(

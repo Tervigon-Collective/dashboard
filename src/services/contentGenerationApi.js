@@ -173,6 +173,87 @@ export const retryImageGeneration = async (jobId, artifactId) => {
   return response.data;
 };
 
+// ========== Review Workflow ==========
+
+/**
+ * Get prompts for review (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Object>} Review data with prompts
+ */
+export const getReviewPrompts = async (jobId) => {
+  // Call Python backend directly
+  const response = await axios.get(
+    `http://localhost:8000/api/generate/review/${jobId}`
+  );
+  return response.data;
+};
+
+/**
+ * Update prompts for review (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @param {Object} data - Updated prompts data
+ * @returns {Promise<Object>} Update response
+ */
+export const updateReviewPrompts = async (jobId, data) => {
+  try {
+    console.log("Updating prompts for jobId:", jobId);
+    console.log("Prompts data:", data);
+    // Call Python backend directly
+    const response = await axios.put(
+      `http://localhost:8000/api/generate/review/${jobId}/prompts`,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log("Update prompts response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Update prompts error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `http://localhost:8000/api/generate/review/${jobId}/prompts`
+    });
+    throw error;
+  }
+};
+
+/**
+ * Approve and continue generation (direct to Python backend)
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Object>} Approval response
+ */
+export const approveReview = async (jobId) => {
+  try {
+    console.log("Approving review for jobId:", jobId);
+    // Call Python backend directly
+    const response = await axios.post(
+      `http://localhost:8000/api/generate/review/${jobId}/approve`,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log("Approve response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Approve error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `http://localhost:8000/api/generate/review/${jobId}/approve`
+    });
+    throw error;
+  }
+};
+
 // ========== File Upload ==========
 
 /**
