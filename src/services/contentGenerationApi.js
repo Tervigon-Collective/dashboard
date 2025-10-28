@@ -183,7 +183,7 @@ export const retryImageGeneration = async (jobId, artifactId) => {
 export const getReviewPrompts = async (jobId) => {
   // Call Python backend directly
   const response = await axios.get(
-    `http://localhost:8000/api/generate/review/${jobId}`
+    `${config.pythonApi.baseURL}/api/generate/review/${jobId}`
   );
   return response.data;
 };
@@ -200,12 +200,12 @@ export const updateReviewPrompts = async (jobId, data) => {
     console.log("Prompts data:", data);
     // Call Python backend directly
     const response = await axios.put(
-      `http://localhost:8000/api/generate/review/${jobId}/prompts`,
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts`,
       data,
       {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
     console.log("Update prompts response:", response.data);
@@ -216,7 +216,7 @@ export const updateReviewPrompts = async (jobId, data) => {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      url: `http://localhost:8000/api/generate/review/${jobId}/prompts`
+      url: `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts`,
     });
     throw error;
   }
@@ -232,12 +232,12 @@ export const approveReview = async (jobId) => {
     console.log("Approving review for jobId:", jobId);
     // Call Python backend directly
     const response = await axios.post(
-      `http://localhost:8000/api/generate/review/${jobId}/approve`,
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/approve`,
       {},
       {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
     console.log("Approve response:", response.data);
@@ -248,7 +248,7 @@ export const approveReview = async (jobId) => {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      url: `http://localhost:8000/api/generate/review/${jobId}/approve`
+      url: `${config.pythonApi.baseURL}/api/generate/review/${jobId}/approve`,
     });
     throw error;
   }

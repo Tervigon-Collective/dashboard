@@ -23,8 +23,7 @@ const ReceivingManagementLayer = () => {
 
   const [formData, setFormData] = useState({
     selectedVendor: null,
-    selectedProduct: null,
-    selectedVariants: [],
+    products: [{ product_id: null, selectedVariants: [] }], // Start with one empty product
     orderDate: "",
     deliveryDate: "",
   });
@@ -34,6 +33,15 @@ const ReceivingManagementLayer = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusConfirmModal, setStatusConfirmModal] = useState(false);
+  const [requestToUpdate, setRequestToUpdate] = useState(null);
+
+  // To Be Delivered tab state
+  const [toBeDeliveredRequests, setToBeDeliveredRequests] = useState([]);
+  const [toBeDeliveredLoading, setToBeDeliveredLoading] = useState(true);
+  const [toBeDeliveredCurrentPage, setToBeDeliveredCurrentPage] = useState(1);
+  const [toBeDeliveredTotalPages, setToBeDeliveredTotalPages] = useState(1);
+  const [toBeDeliveredTotalRecords, setToBeDeliveredTotalRecords] = useState(0);
 
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
@@ -66,6 +74,29 @@ const ReceivingManagementLayer = () => {
       console.error("Error loading purchase requests:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load to-be-delivered requests
+  const loadToBeDeliveredRequests = async (page = 1) => {
+    try {
+      setToBeDeliveredLoading(true);
+      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
+
+      if (result.success) {
+        // Filter only requests with status "to_be_delivered"
+        const filteredRequests = result.data.filter(
+          (request) => request.status === "to_be_delivered"
+        );
+        setToBeDeliveredRequests(filteredRequests);
+        setToBeDeliveredCurrentPage(result.pagination.page);
+        setToBeDeliveredTotalPages(result.pagination.totalPages);
+        setToBeDeliveredTotalRecords(filteredRequests.length);
+      }
+    } catch (error) {
+      console.error("Error loading to-be-delivered requests:", error);
+    } finally {
+      setToBeDeliveredLoading(false);
     }
   };
 
@@ -103,6 +134,13 @@ const ReceivingManagementLayer = () => {
     loadProducts();
   }, []);
 
+  // Load to-be-delivered requests when switching to that tab
+  useEffect(() => {
+    if (activeTab === "to-be-delivered") {
+      loadToBeDeliveredRequests();
+    }
+  }, [activeTab]);
+
   // Handle vendor selection
   const handleVendorSelect = (vendorId) => {
     const vendor = vendors.find((v) => v.vendor_id === vendorId);
@@ -117,49 +155,74 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  // Handle product selection
-  const handleProductSelect = (productId) => {
+  // Handle product selection - add product to the array
+  const handleProductSelect = (productId, index) => {
     const product = products.find((p) => p.product_id === productId);
     if (product) {
-      setFormData({ ...formData, selectedProduct: productId });
-      setProductData({
-        productName: product.product_name,
-        hsnCode: product.hsn_code,
-        variants: product.variants || [],
+      setFormData((prev) => {
+        const newProducts = [...prev.products];
+        if (index >= 0 && index < newProducts.length) {
+          // Update existing product
+          newProducts[index] = {
+            product_id: productId,
+            selectedVariants: [],
+          };
+        } else {
+          // Add new product
+          newProducts.push({
+            product_id: productId,
+            selectedVariants: [],
+          });
+        }
+        return { ...prev, products: newProducts };
       });
-      // Reset variant selections
-      setFormData((prev) => ({ ...prev, selectedVariants: [] }));
     }
   };
 
-  // Handle variant selection (can select multiple)
-  const handleVariantSelect = (variantId) => {
+  // Add new product entry
+  const handleAddProduct = () => {
+    setFormData((prev) => ({
+      ...prev,
+      products: [...prev.products, { product_id: null, selectedVariants: [] }],
+    }));
+  };
+
+  // Remove product entry
+  const handleRemoveProduct = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      products: prev.products.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Handle variant selection (can select multiple) - now works with product index
+  const handleVariantSelect = (variantId, productIndex, allVariants) => {
     setFormData((prev) => {
-      const variantIndex = prev.selectedVariants.findIndex(
+      const newProducts = [...prev.products];
+      const product = newProducts[productIndex];
+
+      if (!product) return prev;
+
+      const variantIndex = product.selectedVariants.findIndex(
         (v) => v.variant_id === variantId
       );
 
       if (variantIndex >= 0) {
         // Remove if already selected
-        return {
-          ...prev,
-          selectedVariants: prev.selectedVariants.filter(
-            (v) => v.variant_id !== variantId
-          ),
-        };
+        product.selectedVariants = product.selectedVariants.filter(
+          (v) => v.variant_id !== variantId
+        );
       } else {
         // Add to selection
-        const variant = productData.variants.find(
-          (v) => v.variant_id === variantId
-        );
-        return {
-          ...prev,
-          selectedVariants: [
-            ...prev.selectedVariants,
-            { ...variant, quantity: 1 },
-          ],
-        };
+        const variant = allVariants.find((v) => v.variant_id === variantId);
+        product.selectedVariants = [
+          ...product.selectedVariants,
+          { ...variant, quantity: 1 },
+        ];
       }
+
+      newProducts[productIndex] = product;
+      return { ...prev, products: newProducts };
     });
   };
 
@@ -169,18 +232,26 @@ const ReceivingManagementLayer = () => {
     setIsSubmitting(true);
 
     try {
+      // Prepare items from all products
+      const items = [];
+      formData.products.forEach((product) => {
+        product.selectedVariants
+          .filter((variant) => variant.quantity > 0)
+          .forEach((variant) => {
+            items.push({
+              product_id: product.product_id,
+              variant_id: variant.variant_id,
+              quantity: variant.quantity || 1,
+            });
+          });
+      });
+
       // Prepare request data
       const requestData = {
         vendor_id: formData.selectedVendor,
         order_date: formData.orderDate,
         delivery_date: formData.deliveryDate,
-        items: formData.selectedVariants
-          .filter((variant) => variant.quantity > 0)
-          .map((variant) => ({
-            product_id: formData.selectedProduct,
-            variant_id: variant.variant_id,
-            quantity: variant.quantity || 1,
-          })),
+        items: items,
       };
 
       let result;
@@ -252,8 +323,7 @@ const ReceivingManagementLayer = () => {
     setEditingRequest(null);
     setFormData({
       selectedVendor: null,
-      selectedProduct: null,
-      selectedVariants: [],
+      products: [{ product_id: null, selectedVariants: [] }],
       orderDate: "",
       deliveryDate: "",
     });
@@ -275,15 +345,29 @@ const ReceivingManagementLayer = () => {
     setEditingRequest(request);
     setIsEditMode(true);
 
-    // Set form data from the request
-    setFormData({
-      selectedVendor: request.vendor_id,
-      selectedProduct: request.items[0]?.product_id || null,
-      selectedVariants: request.items.map((item) => ({
+    // Group items by product_id and build products array
+    const productsMap = {};
+    request.items.forEach((item) => {
+      if (!productsMap[item.product_id]) {
+        productsMap[item.product_id] = [];
+      }
+      productsMap[item.product_id].push({
         variant_id: item.variant_id,
         quantity: item.quantity || 1,
         ...item, // Spread item to get all variant details
-      })),
+      });
+    });
+
+    // Convert map to array
+    const productsArray = Object.keys(productsMap).map((productId) => ({
+      product_id: parseInt(productId),
+      selectedVariants: productsMap[productId],
+    }));
+
+    // Set form data from the request
+    setFormData({
+      selectedVendor: request.vendor_id,
+      products: productsArray,
       // Parse dates - handle timezone properly
       // PostgreSQL returns dates as ISO strings with timezone
       // Split on 'T' to get just the date part (YYYY-MM-DD)
@@ -300,21 +384,6 @@ const ReceivingManagementLayer = () => {
       vendorGSTNumber: request.vendor_gst_number,
       vendorAddress: request.vendor_address,
     });
-
-    // Set product data
-    if (request.items && request.items.length > 0) {
-      const firstItem = request.items[0];
-      const product = products.find(
-        (p) => p.product_id === firstItem.product_id
-      );
-      if (product) {
-        setProductData({
-          productName: product.product_name,
-          hsnCode: product.hsn_code,
-          variants: product.variants || [],
-        });
-      }
-    }
 
     setModalOpen(true);
   };
@@ -346,6 +415,45 @@ const ReceivingManagementLayer = () => {
   const handleViewRequest = (request) => {
     setSelectedRequest(request);
     setViewModalOpen(true);
+  };
+
+  // Handle settings icon click (open status confirmation modal)
+  const handleSettingsClick = (request) => {
+    setRequestToUpdate(request);
+    setStatusConfirmModal(true);
+  };
+
+  // Handle status update confirmation
+  const handleStatusUpdateConfirm = async () => {
+    if (!requestToUpdate) return;
+
+    try {
+      const result = await purchaseRequestApi.updateStatus(
+        requestToUpdate.request_id,
+        "to_be_delivered"
+      );
+
+      if (result.success) {
+        // Close modal
+        setStatusConfirmModal(false);
+        setRequestToUpdate(null);
+
+        // Switch to TO BE DELIVERED tab
+        setActiveTab("to-be-delivered");
+
+        // Reload purchase requests
+        await loadPurchaseRequests(currentPage);
+        // Also reload to-be-delivered requests
+        await loadToBeDeliveredRequests();
+
+        console.log("Purchase request status updated successfully");
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Error updating purchase request status:", error);
+      alert("Failed to update purchase request status. Please try again.");
+    }
   };
 
   const tabs = [
@@ -425,12 +533,15 @@ const ReceivingManagementLayer = () => {
               handleVendorSelect={handleVendorSelect}
               handleProductSelect={handleProductSelect}
               handleVariantSelect={handleVariantSelect}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
               handleSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               handleModalClose={handleModalClose}
               handleEditRequest={handleEditRequest}
               handleDeleteRequest={handleDeleteRequest}
               handleViewRequest={handleViewRequest}
+              handleSettingsClick={handleSettingsClick}
               isEditMode={isEditMode}
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
@@ -440,12 +551,327 @@ const ReceivingManagementLayer = () => {
             />
           )}
           {activeTab === "to-be-delivered" && (
-            <div>{/* To Be Delivered content will go here */}</div>
+            <ToBeDeliveredTab
+              requests={toBeDeliveredRequests}
+              isLoading={toBeDeliveredLoading}
+              currentPage={toBeDeliveredCurrentPage}
+              totalPages={toBeDeliveredTotalPages}
+              totalRecords={toBeDeliveredTotalRecords}
+              loadToBeDeliveredRequests={loadToBeDeliveredRequests}
+              handleViewRequest={handleViewRequest}
+              viewModalOpen={viewModalOpen}
+              setViewModalOpen={setViewModalOpen}
+              selectedRequest={selectedRequest}
+            />
           )}
           {activeTab === "receipt-details" && (
             <div>{/* Receipt Details content will go here */}</div>
           )}
         </div>
+
+        {/* View Purchase Request Modal - Shared by both tabs */}
+        {viewModalOpen && selectedRequest && (
+          <div
+            className="modal show d-block"
+            tabIndex="-1"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <Icon icon="mdi:file-document" className="me-2" />
+                    Purchase Request Details
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setViewModalOpen(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="row mb-4">
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">Vendor Information</h6>
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Vendor Name:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.vendor_name}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Phone No.:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.vendor_phone_no}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">GST Number:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.vendor_gst_number}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Address:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.vendor_address}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">Delivery Information</h6>
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Order Date:</span>
+                          <span className="fw-medium">
+                            {new Date(
+                              selectedRequest.order_date
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Delivery Date:</span>
+                          <span className="fw-medium">
+                            {new Date(
+                              selectedRequest.delivery_date
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Status:</span>
+                          <span
+                            className={`badge ${
+                              selectedRequest.status === "Pending"
+                                ? "bg-warning"
+                                : selectedRequest.status === "Completed"
+                                ? "bg-success"
+                                : "bg-secondary"
+                            }`}
+                          >
+                            {selectedRequest.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items Table */}
+                  {selectedRequest.items &&
+                    selectedRequest.items.length > 0 && (
+                      <div className="mb-3">
+                        <h6 className="text-muted mb-3">Product Items</h6>
+                        <div className="table-responsive">
+                          <table className="table table-sm table-bordered">
+                            <thead className="table-light">
+                              <tr>
+                                <th className="small">Product Name</th>
+                                <th className="small">HSN Code</th>
+                                <th className="small">Variant</th>
+                                <th className="small">SKU</th>
+                                <th className="small">Quantity</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedRequest.items.map((item, index) => (
+                                <tr key={index}>
+                                  <td className="small">
+                                    {item.product_name || "-"}
+                                  </td>
+                                  <td className="small">
+                                    {item.hsn_code || "-"}
+                                  </td>
+                                  <td className="small">
+                                    {item.variant_display_name || "-"}
+                                  </td>
+                                  <td className="small">{item.sku || "-"}</td>
+                                  <td className="small">
+                                    {item.quantity || 0}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setViewModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Update Confirmation Modal (Procurement-style UI) */}
+        {statusConfirmModal && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1050,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "520px",
+                background: "white",
+                borderRadius: "12px",
+                boxShadow:
+                  "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                position: "relative",
+              }}
+            >
+              {/* Close button */}
+              <button
+                onClick={() => {
+                  setStatusConfirmModal(false);
+                  setRequestToUpdate(null);
+                }}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  width: "32px",
+                  height: "32px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: "transparent",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                  fontSize: "20px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f3f4f6";
+                  e.currentTarget.style.color = "#374151";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#6b7280";
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+
+              {/* Content */}
+              <div style={{ padding: "28px" }}>
+                {/* Icon */}
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "10px",
+                    background: "#eef2ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#4f46e5",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <Icon icon="mdi:cog" width="22" height="22" />
+                </div>
+
+                {/* Title */}
+                <h5
+                  style={{
+                    margin: 0,
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#111827",
+                  }}
+                >
+                  Change Request Status
+                </h5>
+
+                {/* Description */}
+                <p
+                  style={{
+                    marginTop: "8px",
+                    marginBottom: "20px",
+                    color: "#4b5563",
+                  }}
+                >
+                  Are you sure you want to move this purchase request to
+                  <span style={{ fontWeight: 600 }}> TO BE DELIVERED</span>?
+                </p>
+
+                {/* Buttons */}
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button
+                    onClick={() => {
+                      setStatusConfirmModal(false);
+                      setRequestToUpdate(null);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: "12px 18px",
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      background: "white",
+                      color: "#374151",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.borderColor = "#e5e7eb";
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleStatusUpdateConfirm}
+                    style={{
+                      flex: 1,
+                      padding: "12px 18px",
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      border: "none",
+                      borderRadius: "10px",
+                      background: "#4f46e5",
+                      color: "white",
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#4338ca";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#4f46e5";
+                    }}
+                  >
+                    Yes, Change Status
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -471,12 +897,15 @@ const PurchaseRequestTab = ({
   handleVendorSelect,
   handleProductSelect,
   handleVariantSelect,
+  handleAddProduct,
+  handleRemoveProduct,
   handleSubmit,
   isSubmitting,
   handleModalClose,
   handleEditRequest,
   handleDeleteRequest,
   handleViewRequest,
+  handleSettingsClick,
   isEditMode,
   viewModalOpen,
   setViewModalOpen,
@@ -763,6 +1192,19 @@ const PurchaseRequestTab = ({
                         >
                           <Icon icon="mdi:delete" width="16" height="16" />
                         </button>
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            border: "none",
+                            background: "none",
+                            padding: "4px",
+                            color: "#6c757d",
+                          }}
+                          title="Settings"
+                          onClick={() => handleSettingsClick(request)}
+                        >
+                          <Icon icon="mdi:cog" width="16" height="16" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -873,155 +1315,18 @@ const PurchaseRequestTab = ({
           formData={formData}
           setFormData={setFormData}
           vendorData={vendorData}
-          productData={productData}
           vendors={vendors}
           products={products}
           handleVendorSelect={handleVendorSelect}
           handleProductSelect={handleProductSelect}
           handleVariantSelect={handleVariantSelect}
-          selectedVariants={formData.selectedVariants}
+          handleAddProduct={handleAddProduct}
+          handleRemoveProduct={handleRemoveProduct}
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           handleModalClose={handleModalClose}
           isEditMode={isEditMode}
         />
-      )}
-
-      {/* View Purchase Request Modal */}
-      {viewModalOpen && selectedRequest && (
-        <div
-          className="modal show d-block"
-          tabIndex="-1"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <Icon icon="mdi:file-document" className="me-2" />
-                  Purchase Request Details
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setViewModalOpen(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <div className="row mb-4">
-                  <div className="col-md-6">
-                    <h6 className="text-muted mb-3">Vendor Information</h6>
-                    <div className="d-flex flex-column gap-2">
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Vendor Name:</span>
-                        <span className="fw-medium">
-                          {selectedRequest.vendor_name}
-                        </span>
-                      </div>
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Phone No.:</span>
-                        <span className="fw-medium">
-                          {selectedRequest.vendor_phone_no}
-                        </span>
-                      </div>
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">GST Number:</span>
-                        <span className="fw-medium">
-                          {selectedRequest.vendor_gst_number}
-                        </span>
-                      </div>
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Address:</span>
-                        <span className="fw-medium">
-                          {selectedRequest.vendor_address}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <h6 className="text-muted mb-3">Delivery Information</h6>
-                    <div className="d-flex flex-column gap-2">
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Order Date:</span>
-                        <span className="fw-medium">
-                          {new Date(
-                            selectedRequest.order_date
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Delivery Date:</span>
-                        <span className="fw-medium">
-                          {new Date(
-                            selectedRequest.delivery_date
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="d-flex justify-content-between">
-                        <span className="text-muted">Status:</span>
-                        <span
-                          className={`badge ${
-                            selectedRequest.status === "Pending"
-                              ? "bg-warning"
-                              : selectedRequest.status === "Completed"
-                              ? "bg-success"
-                              : "bg-secondary"
-                          }`}
-                        >
-                          {selectedRequest.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                {selectedRequest.items && selectedRequest.items.length > 0 && (
-                  <div className="mb-3">
-                    <h6 className="text-muted mb-3">Product Items</h6>
-                    <div className="table-responsive">
-                      <table className="table table-sm table-bordered">
-                        <thead className="table-light">
-                          <tr>
-                            <th className="small">Product Name</th>
-                            <th className="small">HSN Code</th>
-                            <th className="small">Variant</th>
-                            <th className="small">SKU</th>
-                            <th className="small">Quantity</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedRequest.items.map((item, index) => (
-                            <tr key={index}>
-                              <td className="small fw-medium">
-                                {item.product_name}
-                              </td>
-                              <td className="small">{item.hsn_code}</td>
-                              <td className="small">
-                                {item.variant_display_name || "-"}
-                              </td>
-                              <td className="small">{item.sku || "-"}</td>
-                              <td className="small">{item.quantity || "-"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setViewModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </>
   );
@@ -1031,13 +1336,13 @@ const PurchaseRequestModal = ({
   formData,
   setFormData,
   vendorData,
-  productData,
   vendors,
   products,
   handleVendorSelect,
   handleProductSelect,
   handleVariantSelect,
-  selectedVariants,
+  handleAddProduct,
+  handleRemoveProduct,
   handleSubmit,
   isSubmitting,
   handleModalClose,
@@ -1120,113 +1425,185 @@ const PurchaseRequestModal = ({
                 </div>
               </div>
 
-              {/* Product Section */}
+              {/* Product Section - Multiple Products */}
               <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Product Details</h6>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">
-                      Product Name <span className="text-danger">*</span>
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formData.selectedProduct || ""}
-                      onChange={(e) =>
-                        handleProductSelect(parseInt(e.target.value))
-                      }
-                      required
-                    >
-                      <option value="">Select product...</option>
-                      {products.map((product) => (
-                        <option
-                          key={product.product_id}
-                          value={product.product_id}
-                        >
-                          {product.product_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">HSN Code</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={productData.hsnCode}
-                      disabled
-                    />
-                  </div>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="fw-semibold mb-0">Product Details</h6>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary d-inline-flex align-items-center"
+                    onClick={handleAddProduct}
+                    style={{ gap: "4px" }}
+                  >
+                    <Icon icon="lucide:plus" width="14" height="14" />
+                    Add Product
+                  </button>
                 </div>
 
-                {/* Variants Selection */}
-                {productData.variants && productData.variants.length > 0 && (
-                  <div className="mb-3">
-                    <label className="form-label">Product Variants</label>
+                {formData.products.map((productEntry, productIndex) => {
+                  const selectedProduct = products.find(
+                    (p) => p.product_id === productEntry.product_id
+                  );
+                  const productVariants = selectedProduct?.variants || [];
+
+                  return (
                     <div
-                      className="border rounded p-3"
+                      key={productIndex}
+                      className="border rounded p-3 mb-3"
                       style={{ backgroundColor: "#f8f9fa" }}
                     >
-                      {productData.variants.map((variant) => {
-                        const isSelected = selectedVariants.some(
-                          (v) => v.variant_id === variant.variant_id
-                        );
-                        const selectedVariant = selectedVariants.find(
-                          (v) => v.variant_id === variant.variant_id
-                        );
-                        const quantity = selectedVariant?.quantity || "";
-
-                        return (
-                          <div
-                            key={variant.variant_id}
-                            className="row mb-2 align-items-center"
+                      {/* Product Header */}
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6 className="fw-semibold mb-0">
+                          Product #{productIndex + 1}
+                        </h6>
+                        {formData.products.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleRemoveProduct(productIndex)}
                           >
-                            <div className="col-md-6">
-                              <div className="form-check">
-                                <input
-                                  className="form-check-input"
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    handleVariantSelect(variant.variant_id)
-                                  }
-                                />
-                                <label className="form-check-label">
-                                  {variant.variant_display_name || "N/A"}
-                                  {variant.sku && ` (SKU: ${variant.sku})`}
-                                </label>
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <div className="col-md-6">
-                                <input
-                                  type="number"
-                                  className="form-control form-control-sm"
-                                  placeholder="Quantity"
-                                  min="0"
-                                  value={quantity}
-                                  onChange={(e) => {
-                                    const qty = parseInt(e.target.value) || "";
-                                    const updatedVariants =
-                                      selectedVariants.map((v) =>
-                                        v.variant_id === variant.variant_id
-                                          ? { ...v, quantity: qty }
-                                          : v
-                                      );
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      selectedVariants: updatedVariants,
-                                    }));
-                                  }}
-                                  required
-                                />
-                              </div>
-                            )}
+                            <Icon icon="mdi:delete" width="16" height="16" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Product Name Dropdown */}
+                      <div className="row mb-3">
+                        <div className="col-md-12">
+                          <label className="form-label">
+                            Product Name <span className="text-danger">*</span>
+                          </label>
+                          <select
+                            className="form-select"
+                            value={productEntry.product_id || ""}
+                            onChange={(e) =>
+                              handleProductSelect(
+                                parseInt(e.target.value),
+                                productIndex
+                              )
+                            }
+                            required
+                          >
+                            <option value="">Select product...</option>
+                            {products.map((product) => (
+                              <option
+                                key={product.product_id}
+                                value={product.product_id}
+                              >
+                                {product.product_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* HSN Code */}
+                      {selectedProduct && (
+                        <div className="row mb-3">
+                          <div className="col-md-12">
+                            <label className="form-label">HSN Code</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={selectedProduct.hsn_code || ""}
+                              disabled
+                            />
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+
+                      {/* Variants Selection */}
+                      {selectedProduct && productVariants.length > 0 && (
+                        <div>
+                          <label className="form-label">Product Variants</label>
+                          <div
+                            className="border rounded p-3"
+                            style={{ backgroundColor: "white" }}
+                          >
+                            {productVariants.map((variant) => {
+                              const isSelected =
+                                productEntry.selectedVariants.some(
+                                  (v) => v.variant_id === variant.variant_id
+                                );
+                              const selectedVariant =
+                                productEntry.selectedVariants.find(
+                                  (v) => v.variant_id === variant.variant_id
+                                );
+                              const quantity = selectedVariant?.quantity || "";
+
+                              return (
+                                <div
+                                  key={variant.variant_id}
+                                  className="row mb-2 align-items-center"
+                                >
+                                  <div className="col-md-6">
+                                    <div className="form-check">
+                                      <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() =>
+                                          handleVariantSelect(
+                                            variant.variant_id,
+                                            productIndex,
+                                            productVariants
+                                          )
+                                        }
+                                      />
+                                      <label className="form-check-label">
+                                        {variant.variant_display_name || "N/A"}
+                                        {variant.sku &&
+                                          ` (SKU: ${variant.sku})`}
+                                      </label>
+                                    </div>
+                                  </div>
+                                  {isSelected && (
+                                    <div className="col-md-6">
+                                      <input
+                                        type="number"
+                                        className="form-control form-control-sm"
+                                        placeholder="Quantity"
+                                        min="0"
+                                        value={quantity}
+                                        onChange={(e) => {
+                                          const qty =
+                                            parseInt(e.target.value) || "";
+                                          setFormData((prev) => {
+                                            const newProducts = [
+                                              ...prev.products,
+                                            ];
+                                            const product = {
+                                              ...newProducts[productIndex],
+                                            };
+                                            product.selectedVariants =
+                                              product.selectedVariants.map(
+                                                (v) =>
+                                                  v.variant_id ===
+                                                  variant.variant_id
+                                                    ? { ...v, quantity: qty }
+                                                    : v
+                                              );
+                                            newProducts[productIndex] = product;
+                                            return {
+                                              ...prev,
+                                              products: newProducts,
+                                            };
+                                          });
+                                        }}
+                                        required
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
 
               {/* Delivery Details */}
@@ -1280,9 +1657,14 @@ const PurchaseRequestModal = ({
                   className="btn btn-primary"
                   disabled={
                     isSubmitting ||
-                    selectedVariants.length === 0 ||
-                    selectedVariants.every(
-                      (v) => !v.quantity || v.quantity === 0
+                    formData.products.length === 0 ||
+                    formData.products.every(
+                      (product) =>
+                        !product.product_id ||
+                        product.selectedVariants.length === 0 ||
+                        product.selectedVariants.every(
+                          (v) => !v.quantity || v.quantity === 0
+                        )
                     )
                   }
                 >
@@ -1323,6 +1705,273 @@ const ReceivingManagementPage = () => {
           <ReceivingManagementLayer />
         </MasterLayout>
       </SidebarPermissionGuard>
+    </>
+  );
+};
+
+// To Be Delivered Tab Component
+const ToBeDeliveredTab = ({
+  requests,
+  isLoading,
+  currentPage,
+  totalPages,
+  totalRecords,
+  loadToBeDeliveredRequests,
+  handleViewRequest,
+  viewModalOpen,
+  setViewModalOpen,
+  selectedRequest,
+}) => {
+  return (
+    <>
+      {/* Table */}
+      <div
+        className="border rounded overflow-hidden"
+        style={{ backgroundColor: "white" }}
+      >
+        <div className="table-responsive">
+          <table className="table mb-0">
+            <thead style={{ backgroundColor: "#f8f9fa" }}>
+              <tr>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Sr No
+                </th>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Vendor Name
+                </th>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Order Date
+                </th>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Delivery Date
+                </th>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Product Name
+                </th>
+                <th
+                  style={{
+                    border: "none",
+                    padding: "12px 16px",
+                    fontWeight: "600",
+                    color: "#495057",
+                  }}
+                >
+                  Operate
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-4">
+                    <div className="d-flex justify-content-center align-items-center">
+                      <div
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      >
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      Loading delivery requests...
+                    </div>
+                  </td>
+                </tr>
+              ) : requests.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-4 text-muted">
+                    <div className="d-flex flex-column align-items-center">
+                      <Icon
+                        icon="mdi:truck-delivery"
+                        width="48"
+                        height="48"
+                        className="text-muted mb-2"
+                      />
+                      No delivery requests found.
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                requests.map((request, index) => (
+                  <tr
+                    key={request.request_id}
+                    style={{ borderBottom: "1px solid #e9ecef" }}
+                  >
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      {index + 1}
+                    </td>
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      {request.vendor_name || "-"}
+                    </td>
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      {new Date(request.order_date).toLocaleDateString()}
+                    </td>
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      {new Date(request.delivery_date).toLocaleDateString()}
+                    </td>
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      {request.items && request.items.length > 0
+                        ? [
+                            ...new Set(
+                              request.items.map((item) => item.product_name)
+                            ),
+                          ].join(", ")
+                        : "-"}
+                    </td>
+                    <td
+                      style={{
+                        border: "none",
+                        padding: "12px 16px",
+                        color: "#495057",
+                      }}
+                    >
+                      <div className="d-flex gap-2">
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            border: "none",
+                            background: "none",
+                            padding: "4px",
+                            color: "#0d6efd",
+                          }}
+                          title="View"
+                          onClick={() => handleViewRequest(request)}
+                        >
+                          <Icon icon="mdi:eye" width="16" height="16" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalRecords > 0 && (
+          <div
+            className="d-flex justify-content-between align-items-center px-3 py-2"
+            style={{
+              backgroundColor: "#f8f9fa",
+              borderRadius: "0 0 8px 8px",
+              marginTop: "0",
+            }}
+          >
+            <div className="d-flex align-items-center gap-2">
+              <button
+                className="btn btn-sm"
+                style={{ border: "none", background: "none", color: "#495057" }}
+                onClick={() => loadToBeDeliveredRequests(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <Icon icon="mdi:chevron-left" width="16" height="16" />
+              </button>
+
+              <div className="d-flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      className="btn btn-sm"
+                      style={{
+                        border: "none",
+                        background:
+                          pageNum === currentPage ? "#6f42c1" : "transparent",
+                        color: pageNum === currentPage ? "white" : "#495057",
+                        borderRadius: "4px",
+                        padding: "4px 8px",
+                        minWidth: "32px",
+                      }}
+                      onClick={() => loadToBeDeliveredRequests(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="btn btn-sm"
+                style={{ border: "none", background: "none", color: "#495057" }}
+                onClick={() => loadToBeDeliveredRequests(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <Icon icon="mdi:chevron-right" width="16" height="16" />
+              </button>
+            </div>
+
+            <div style={{ fontSize: "14px", color: "#6c757d" }}>
+              Showing <strong>{requests.length}</strong> of{" "}
+              <strong>{totalRecords}</strong> requests
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 };

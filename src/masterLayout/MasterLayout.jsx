@@ -484,7 +484,7 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-                    {hasSidebarPermission("createContent") && (
+                    {/* {hasSidebarPermission("createContent") && (
                       <li>
                         <Link
                           href="/video-generator"
@@ -499,7 +499,7 @@ const MasterLayout = ({ children }) => {
                           <span>Video Generator</span>
                         </Link>
                       </li>
-                    )}
+                    )} */}
                   </>
                 );
               }

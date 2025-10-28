@@ -67,6 +67,13 @@ class PurchaseRequestApiService {
       method: "DELETE",
     });
   }
+
+  async updateStatus(requestId, status) {
+    return this.makeRequest(`/receiving/purchase-request/${requestId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
 }
 
 export default new PurchaseRequestApiService();
