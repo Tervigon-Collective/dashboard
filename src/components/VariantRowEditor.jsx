@@ -7,7 +7,14 @@ import { useState } from "react";
  * Component to edit a single variant row
  * All fields displayed horizontally
  */
-const VariantRowEditor = ({ variant, vendors, onChange, isLast }) => {
+const VariantRowEditor = ({
+  variant,
+  vendors,
+  onChange,
+  onDelete,
+  mode,
+  isLast,
+}) => {
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
 
   const handleFieldChange = (field, value) => {
@@ -83,11 +90,27 @@ const VariantRowEditor = ({ variant, vendors, onChange, isLast }) => {
       style={{ backgroundColor: "#fff", borderColor: "#c9cccf" }}
     >
       {/* Variant Name */}
-      <div className="mb-3 pb-2" style={{ borderBottom: "1px solid #e1e3e5" }}>
+      <div
+        className="mb-3 pb-2 d-flex justify-content-between align-items-center"
+        style={{ borderBottom: "1px solid #e1e3e5" }}
+      >
         <strong style={{ color: "#005bd3", fontSize: "14px" }}>
           <Icon icon="mdi:tag" className="me-1" width="16" />
           {variant.displayName}
         </strong>
+
+        {/* Delete Button - Only show in edit mode */}
+        {mode === "edit" && onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="btn btn-sm btn-outline-danger"
+            style={{ padding: "4px 8px", fontSize: "12px" }}
+            title="Delete this variant"
+          >
+            <Icon icon="lucide:trash-2" width="14" height="14" />
+          </button>
+        )}
       </div>
 
       {/* Row 1: MRP, COGS, Quantity, Margin */}

@@ -39,6 +39,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   const [existingImages, setExistingImages] = useState([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
   const [imageModalIsOpen, setImageModalIsOpen] = useState(false);
+  const [variantsToDelete, setVariantsToDelete] = useState([]); // Track variant IDs to delete
 
   // Load product data for editing
   useEffect(() => {
@@ -281,6 +282,17 @@ const ProductForm = ({ mode = "add", productId = null }) => {
       const unchanged = prev.filter((v) => !updatedIds.includes(v.id));
       return [...unchanged, ...updatedVariants];
     });
+  };
+
+  // Handle variant deletion
+  const handleDeleteVariant = (variant) => {
+    // Only add to variantsToDelete if variant has variant_id (exists in database)
+    if (variant.variant_id) {
+      setVariantsToDelete((prev) => [...prev, variant.variant_id]);
+    }
+
+    // Remove from variants state
+    setVariants((prev) => prev.filter((v) => v.id !== variant.id));
   };
 
   // Handle product image upload
@@ -553,6 +565,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           },
           variants: variantsData,
           vendors: vendorsData,
+          variantsToDelete: variantsToDelete, // NEW: Include variant IDs to delete
         };
 
         // Add image requests if there are new images to upload
@@ -722,6 +735,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
               vendors={vendors}
               onVariantChange={handleVariantChange}
               onVariantsChange={handleVariantsChange}
+              onVariantDelete={handleDeleteVariant}
+              mode={mode}
             />
           )}
 

@@ -13,6 +13,8 @@ const VariantGroupDisplay = ({
   vendors,
   onVariantChange,
   onVariantsChange,
+  onVariantDelete,
+  mode,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [bulkValues, setBulkValues] = useState({});
@@ -195,7 +197,9 @@ const VariantGroupDisplay = ({
                       onChange={(updatedVariant) =>
                         onVariantChange(updatedVariant)
                       }
+                      onDelete={() => onVariantDelete(variant)}
                       isLast={index === variants.length - 1}
+                      mode={mode}
                     />
                   ))}
                 </div>
