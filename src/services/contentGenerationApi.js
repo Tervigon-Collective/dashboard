@@ -335,6 +335,25 @@ export const getContentDownloadUrl = (runId, artifactId) => {
   return `${config.api.baseURL}/api/content-generation/content/download/${runId}/${artifactId}`;
 };
 
+/**
+ * Edit an existing generated image with modifications (direct to Python backend)
+ * @param {string} runId - Run ID
+ * @param {string} artifactId - Artifact ID
+ * @param {string} editPrompt - User's modification request
+ * @returns {Promise<Object>} Edit job response {job_id, status}
+ */
+export const editImage = async (runId, artifactId, editPrompt) => {
+  const response = await axios.post(
+    "http://localhost:8000/api/content/edit-image",
+    {
+      run_id: runId,
+      artifact_id: artifactId,
+      edit_prompt: editPrompt,
+    }
+  );
+  return response.data;
+};
+
 // ========== Assets ==========
 
 /**

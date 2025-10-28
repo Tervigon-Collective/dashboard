@@ -14,6 +14,7 @@ import {
   quickGenerate,
   uploadImages,
   getGenerationStatus,
+  editImage,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -46,6 +47,12 @@ export default function CreateContentPage() {
 
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  
+  // State for edit functionality
+  const [editingImageId, setEditingImageId] = useState(null);
+  const [editPrompts, setEditPrompts] = useState({});
+  const [isSendingEdit, setIsSendingEdit] = useState(false);
+  const [editErrors, setEditErrors] = useState({});
 
   // Fetch generated content from API
   const fetchGeneratedContent = useCallback(async () => {
@@ -359,9 +366,133 @@ export default function CreateContentPage() {
     }
   };
 
-  const downloadImage = (imageData, filename) => {
-    // Implementation for downloading images
-    console.log("Download image:", filename);
+  const downloadImage = async (item, filename) => {
+    try {
+      let downloadUrl;
+
+      // Check if download_url is available from API
+      if (item.download_url) {
+        // Use the download_url from API (e.g., /api/content/download/run_id/artifact_id)
+        downloadUrl = `http://localhost:8000${item.download_url}`;
+      } 
+      // If not, try to construct from run_id and artifact_id
+      else if (item.run_id && item.artifact_id) {
+        downloadUrl = `http://localhost:8000/api/content/download/${item.run_id}/${item.artifact_id}`;
+      }
+      // Fallback to direct image URL
+      else if (item.image_url || item.local_url) {
+        // If we have a direct image URL, download it directly
+        const imageUrl = item.image_url || 
+                        (item.local_url ? `http://localhost:8000${item.local_url}` : null);
+        
+        if (imageUrl) {
+          // Fetch and download
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          return;
+        }
+      }
+
+      // If we have a download URL, open it in a new window
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank');
+      } else {
+        console.error('No download method available for item:', item);
+      }
+    } catch (error) {
+      console.error('Failed to download image:', error);
+    }
+  };
+
+  // Edit image handlers
+  const handleEditClick = (imageId) => {
+    setEditingImageId(imageId);
+    setEditErrors((prev) => ({ ...prev, [imageId]: null }));
+  };
+
+  const handleEditPromptChange = (imageId, value) => {
+    setEditPrompts((prev) => ({ ...prev, [imageId]: value }));
+    // Clear error when user starts typing
+    if (editErrors[imageId]) {
+      setEditErrors((prev) => ({ ...prev, [imageId]: null }));
+    }
+  };
+
+  const handleCancelEdit = (imageId) => {
+    setEditingImageId(null);
+    setEditPrompts((prev) => {
+      const newPrompts = { ...prev };
+      delete newPrompts[imageId];
+      return newPrompts;
+    });
+    setEditErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[imageId];
+      return newErrors;
+    });
+  };
+
+  const handleSendEdit = async (imageId, runId, artifactId) => {
+    const editPrompt = editPrompts[imageId]?.trim();
+    
+    // Validate prompt
+    if (!editPrompt) {
+      setEditErrors((prev) => ({ 
+        ...prev, 
+        [imageId]: "Please enter a description of changes you want" 
+      }));
+      return;
+    }
+
+    if (editPrompt.length > 500) {
+      setEditErrors((prev) => ({ 
+        ...prev, 
+        [imageId]: "Please keep changes under 500 characters" 
+      }));
+      return;
+    }
+
+    setIsSendingEdit(true);
+    setEditErrors((prev) => ({ ...prev, [imageId]: null }));
+
+    try {
+      // Call the edit image API
+      const response = await editImage(runId, artifactId, editPrompt);
+      
+      if (response.success) {
+        // Success! Close edit mode and refresh content
+        handleCancelEdit(imageId);
+        
+        // Wait a bit then refresh to show the new image
+        setTimeout(() => {
+          fetchGeneratedContent();
+        }, 3000);
+        
+        // Optional: Show success message
+        console.log("Edit submitted successfully:", response);
+      } else {
+        setEditErrors((prev) => ({ 
+          ...prev, 
+          [imageId]: response.error || "Failed to submit edit" 
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to submit edit:", error);
+      setEditErrors((prev) => ({ 
+        ...prev, 
+        [imageId]: error.response?.data?.error || error.message || "Failed to submit edit" 
+      }));
+    } finally {
+      setIsSendingEdit(false);
+    }
   };
 
   return (
@@ -1165,24 +1296,38 @@ export default function CreateContentPage() {
                                           {item.title}
                                         </h6>
                                         {(item.image_url || item.local_url) && (
-                                          <button
-                                            className="btn btn-sm btn-outline-secondary"
-                                            onClick={() =>
-                                              downloadImage(
-                                                item,
-                                                `${item.title.replace(
-                                                  /\s+/g,
-                                                  "_"
-                                                )}.jpg`
-                                              )
-                                            }
-                                          >
-                                            <Icon
-                                              icon="solar:download-bold"
-                                              width="12"
-                                              height="12"
-                                            />
-                                          </button>
+                                          <div className="d-flex gap-1">
+                                            <button
+                                              className="btn btn-sm btn-outline-info"
+                                              onClick={() => handleEditClick(item.id)}
+                                              title="Edit this image"
+                                            >
+                                              <Icon
+                                                icon="solar:pen-bold"
+                                                width="12"
+                                                height="12"
+                                              />
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-outline-secondary"
+                                              onClick={() =>
+                                                downloadImage(
+                                                  item,
+                                                  `${item.title.replace(
+                                                    /\s+/g,
+                                                    "_"
+                                                  )}.jpg`
+                                                )
+                                              }
+                                              title="Download this image"
+                                            >
+                                              <Icon
+                                                icon="solar:download-bold"
+                                                width="12"
+                                                height="12"
+                                              />
+                                            </button>
+                                          </div>
                                         )}
                                       </div>
                                       <div className="d-flex align-items-center gap-2 small text-muted">
@@ -1201,6 +1346,86 @@ export default function CreateContentPage() {
                                         </div>
                                       )}
                                     </div>
+                                    
+                                    {/* Edit Input Section */}
+                                    {editingImageId === item.id && (
+                                      <div className="card-footer bg-light border-top">
+                                        <div className="mb-2">
+                                          <label className="form-label small fw-semibold">
+                                            Describe the changes you want:
+                                          </label>
+                                          <textarea
+                                            className={`form-control form-control-sm ${
+                                              editErrors[item.id] ? "is-invalid" : ""
+                                            }`}
+                                            rows="3"
+                                            placeholder="e.g., Make it brighter with more vibrant colors..."
+                                            value={editPrompts[item.id] || ""}
+                                            onChange={(e) =>
+                                              handleEditPromptChange(
+                                                item.id,
+                                                e.target.value
+                                              )
+                                            }
+                                            disabled={isSendingEdit}
+                                          />
+                                          {editErrors[item.id] && (
+                                            <div className="invalid-feedback d-block small">
+                                              {editErrors[item.id]}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="d-flex align-items-center justify-content-between">
+                                          <small className="text-muted">
+                                            {(editPrompts[item.id]?.length || 0)} / 500 characters
+                                          </small>
+                                          <div className="d-flex gap-2">
+                                            <button
+                                              className="btn btn-sm btn-secondary"
+                                              onClick={() => handleCancelEdit(item.id)}
+                                              disabled={isSendingEdit}
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-primary"
+                                              onClick={() =>
+                                                handleSendEdit(
+                                                  item.id,
+                                                  item.run_id,
+                                                  item.artifact_id
+                                                )
+                                              }
+                                              disabled={
+                                                isSendingEdit ||
+                                                !editPrompts[item.id]?.trim() ||
+                                                (editPrompts[item.id]?.length || 0) > 500
+                                              }
+                                            >
+                                              {isSendingEdit ? (
+                                                <>
+                                                  <span
+                                                    className="spinner-border spinner-border-sm me-1"
+                                                    role="status"
+                                                  />
+                                                  Sending...
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Icon
+                                                    icon="solar:plain-2-bold"
+                                                    width="14"
+                                                    height="14"
+                                                    className="me-1"
+                                                  />
+                                                  Send
+                                                </>
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
