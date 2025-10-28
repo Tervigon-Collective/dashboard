@@ -7,7 +7,11 @@ import { Icon } from "@iconify/react";
  * Component to manage variant options (like Color, Size, etc.)
  * Allows selecting variant types and adding values for each type
  */
-const VariantOptionsManager = ({ onOptionsChange, initialOptions = [] }) => {
+const VariantOptionsManager = ({
+  onOptionsChange,
+  initialOptions = [],
+  hideHeader = false,
+}) => {
   const [variantOptions, setVariantOptions] = useState(initialOptions);
 
   // Predefined variant types
@@ -111,26 +115,26 @@ const VariantOptionsManager = ({ onOptionsChange, initialOptions = [] }) => {
   };
 
   return (
-    <div className="shopify-card">
-      <div className="shopify-card-header">
-        <h5 className="shopify-heading-3">
-          <Icon icon="mdi:sitemap" className="me-2" width="20" />
-          Variant Options
-        </h5>
-        <p className="shopify-text-muted mb-0">
-          Select variant types and add values. All combinations will be
-          generated automatically.
-        </p>
-      </div>
+    <div>
+      {!hideHeader && (
+        <div className="mb-4">
+          <h5 className="fw-semibold">
+            <Icon icon="mdi:sitemap" className="me-2" width="20" />
+            Variant Options
+          </h5>
+          <p className="text-muted mb-0">
+            Select variant types and add values. All combinations will be
+            generated automatically.
+          </p>
+        </div>
+      )}
 
-      <div className="shopify-card-body">
+      <div>
         {/* Variant Type Selector - Dropdown Style */}
         <div className="mb-3">
-          <label className="shopify-label">
-            <strong>Add options like size or color</strong>
-          </label>
+          <label className="form-label">Variant Type</label>
           <select
-            className="shopify-select"
+            className="form-select"
             onChange={(e) => {
               if (e.target.value === "custom") {
                 setShowCustomInput(true);
@@ -223,7 +227,7 @@ const VariantOptionsManager = ({ onOptionsChange, initialOptions = [] }) => {
         )}
 
         {variantOptions.length === 0 && (
-          <div className="shopify-banner shopify-banner-info">
+          <div className="alert alert-info">
             <Icon icon="mdi:information" className="me-2" />
             Select variant types above to get started
           </div>
@@ -407,10 +411,10 @@ const VariantOptionEditor = ({
   return (
     <div
       className="border rounded p-3 mb-3"
-      style={{ backgroundColor: "white", borderColor: "#c9cccf" }}
+      style={{ backgroundColor: "#f8f9fa", borderColor: "#dee2e6" }}
     >
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h6 className="shopify-text-muted mb-0">
+        <h6 className="fw-semibold mb-0" style={{ color: "#495057" }}>
           <Icon icon={option.icon} className="me-2" width="18" />
           {option.label}
         </h6>
@@ -429,15 +433,19 @@ const VariantOptionEditor = ({
       {option.values.length > 0 && (
         <div className="d-flex flex-wrap gap-2 mb-3">
           {option.values.map((value, index) => (
-            <span key={index} className="shopify-badge">
+            <span
+              key={index}
+              className="badge bg-primary text-white"
+              style={{ fontSize: "0.8rem", padding: "4px 8px" }}
+            >
               {value}
-              <span
-                className="badge-close"
+              <button
+                type="button"
+                className="btn-close btn-close-white ms-2"
                 onClick={() => onRemoveValue(value)}
                 aria-label="Remove"
-              >
-                ×
-              </span>
+                style={{ fontSize: "0.7rem", padding: "0" }}
+              ></button>
             </span>
           ))}
         </div>
@@ -449,8 +457,7 @@ const VariantOptionEditor = ({
           // Dropdown for predefined options
           <div>
             <select
-              className="shopify-select mb-2"
-              style={{ fontSize: "13px" }}
+              className="form-select mb-2"
               onChange={handleSelectPredefined}
               value=""
             >
@@ -465,8 +472,7 @@ const VariantOptionEditor = ({
             </select>
             <button
               type="button"
-              className="shopify-btn shopify-btn-secondary"
-              style={{ fontSize: "12px", padding: "6px 12px" }}
+              className="btn btn-sm btn-outline-primary"
               onClick={() => setShowCustomInput(true)}
             >
               <Icon icon="mdi:pencil" className="me-1" width="14" />
@@ -479,8 +485,7 @@ const VariantOptionEditor = ({
             <div className="d-flex gap-2 mb-2">
               <input
                 type="text"
-                className="shopify-input"
-                style={{ fontSize: "13px" }}
+                className="form-control"
                 placeholder={`Add ${option.label.toLowerCase()}...`}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -493,8 +498,7 @@ const VariantOptionEditor = ({
               />
               <button
                 type="button"
-                className="shopify-btn shopify-btn-primary"
-                style={{ fontSize: "13px", padding: "8px 16px" }}
+                className="btn btn-primary"
                 onClick={handleAddValue}
               >
                 Add
@@ -503,8 +507,7 @@ const VariantOptionEditor = ({
             {hasPredefined && (
               <button
                 type="button"
-                className="shopify-btn shopify-btn-secondary"
-                style={{ fontSize: "12px", padding: "6px 12px" }}
+                className="btn btn-sm btn-outline-secondary"
                 onClick={() => {
                   setShowCustomInput(false);
                   setInputValue("");
@@ -519,7 +522,7 @@ const VariantOptionEditor = ({
       </div>
 
       {option.values.length === 0 && (
-        <small className="shopify-text-small">No values added yet</small>
+        <small className="text-muted">No values added yet</small>
       )}
     </div>
   );

@@ -4,8 +4,11 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
+import { useRouter } from "next/navigation";
 
 const MastersLayer = () => {
+  const router = useRouter();
+
   const masterCards = [
     {
       id: "vendor",
@@ -20,8 +23,11 @@ const MastersLayer = () => {
   ];
 
   const handleCardClick = (cardId) => {
-    console.log(`Clicked on ${cardId} master`);
-    // Logic will be added later
+    if (cardId === "vendor") {
+      router.push("/masters/vendor");
+    } else if (cardId === "product") {
+      router.push("/masters/product");
+    }
   };
 
   return (
