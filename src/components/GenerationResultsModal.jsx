@@ -81,17 +81,36 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
     }
   };
 
-  const downloadImage = (imageData, filename) => {
-    // Create download link
-    const link = document.createElement("a");
-    link.href =
-      imageData.url ||
-      imageData.local_url ||
-      `data:image/jpeg;base64,${imageData.base64}`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (imageData, artifactId) => {
+    try {
+      if (!results?.run_id || !artifactId) {
+        console.error("Missing run_id or artifact_id for download");
+        return;
+      }
+
+      // Use the Python backend API endpoint
+      const downloadUrl = `http://localhost:8000/api/content/download/${results.run_id}/${artifactId}`;
+      
+      // Create a link and trigger download
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `generated_${results.run_id}_${artifactId}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Failed to download image:", error);
+      // Fallback to direct URL if API fails
+      const link = document.createElement("a");
+      link.href =
+        imageData.url ||
+        imageData.local_url ||
+        `data:image/jpeg;base64,${imageData.base64}`;
+      link.download = `image_${artifactId}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const formatDuration = (seconds) => {
@@ -113,14 +132,14 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
            <div className="modal-header border-bottom p-3">
              <div className="w-100 d-flex align-items-center justify-content-between">
                <div>
-                 <h5 className="modal-title d-flex align-items-center gap-2 mb-1" style={{ fontSize: '1rem' }}>
+                 <h6 className="modal-title d-flex align-items-center gap-2 mb-1">
                    {results?.plan_type === "video" ? (
-                     <Icon icon="solar:video-library-bold" width="18" height="18" className="text-primary" />
+                     <Icon icon="solar:video-library-bold" width="16" height="16" className="text-primary" />
                    ) : (
-                     <Icon icon="solar:gallery-bold" width="18" height="18" className="text-primary" />
+                     <Icon icon="solar:gallery-bold" width="16" height="16" className="text-primary" />
                    )}
                    Generated {results?.plan_type === "video" ? "Video" : "Graphic"} Content
-                 </h5>
+                 </h6>
                  <p className="text-muted mb-0 small" style={{ fontSize: '0.8rem' }}>
                    View the generated plan, prompts, and specifications
                  </p>
@@ -400,50 +419,28 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                <div key={imageData.artifact_id} className="card mb-2">
                                  <div className="card-header bg-light p-2">
                                    <div className="d-flex align-items-center justify-content-between">
-                                     <h6 className="card-title mb-0 fw-semibold small">
-                                       Generated Image {index + 1}
-                                     </h6>
-                                    <div className="d-flex gap-2">
-                                      {imageData.freepik_result.success && (
-                                        <button
-                                          className="btn btn-sm btn-outline-primary"
-                                          onClick={() =>
-                                            downloadImage(
-                                              imageData.freepik_result,
-                                              `generated_image_${imageData.artifact_id}.jpg`
-                                            )
-                                          }
-                                        >
-                                          <Icon
-                                            icon="solar:download-bold"
-                                            width="12"
-                                            height="12"
-                                            className="me-1"
-                                          />
-                                          Download
-                                        </button>
-                                      )}
+                                    <h6 className="card-title mb-0 fw-semibold small">
+                                      Generated Image {index + 1}
+                                    </h6>
+                                    {imageData.freepik_result.success && (
                                       <button
-                                        className="btn btn-sm btn-outline-secondary"
+                                        className="btn btn-sm btn-outline-primary"
                                         onClick={() =>
-                                          retryImageGeneration(
+                                          downloadImage(
+                                            imageData.freepik_result,
                                             imageData.artifact_id
                                           )
                                         }
-                                        disabled={
-                                          retryingImage ===
-                                          imageData.artifact_id
-                                        }
                                       >
                                         <Icon
-                                          icon="solar:refresh-bold"
+                                          icon="solar:download-bold"
                                           width="12"
                                           height="12"
                                           className="me-1"
                                         />
-                                        Retry
+                                        Download
                                       </button>
-                                    </div>
+                                    )}
                                   </div>
                                  </div>
                                  <div className="card-body p-3">
@@ -521,33 +518,13 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                          height="32"
                                          className="text-danger mb-2"
                                        />
-                                       <p className="text-danger fw-semibold mb-1 small">
-                                         Image generation failed
-                                       </p>
-                                       <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
-                                         {imageData.freepik_result.error ||
-                                           "Unknown error"}
-                                       </p>
-                                       <button
-                                         className="btn btn-sm btn-outline-primary"
-                                         onClick={() =>
-                                           retryImageGeneration(
-                                             imageData.artifact_id
-                                           )
-                                         }
-                                         disabled={
-                                           retryingImage ===
-                                           imageData.artifact_id
-                                         }
-                                       >
-                                         <Icon
-                                           icon="solar:refresh-bold"
-                                           width="12"
-                                           height="12"
-                                           className="me-1"
-                                         />
-                                         Retry Generation
-                                       </button>
+                                      <p className="text-danger fw-semibold mb-1 small">
+                                        Image generation failed
+                                      </p>
+                                      <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
+                                        {imageData.freepik_result.error ||
+                                          "Unknown error"}
+                                      </p>
                                      </div>
                                    )}
                                 </div>
