@@ -232,6 +232,7 @@ const VendorMasterList = ({
                   <th>Vendor Name</th>
                   <th>Common Name</th>
                   <th>Manufactured By</th>
+                  <th>Imported By</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -244,6 +245,7 @@ const VendorMasterList = ({
                     </td>
                     <td>{vendor.common_name || "-"}</td>
                     <td>{vendor.manufactured_by || "-"}</td>
+                    <td>{vendor.imported_by || "-"}</td>
                     <td>
                       {vendor.vendor_status && (
                         <span

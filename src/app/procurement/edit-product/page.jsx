@@ -24,7 +24,9 @@ export default function EditProductPage() {
             <i className="icon-alert-triangle me-2"></i>
             <div>
               <strong>Product ID Required</strong>
-              <span className="ms-2 text-muted">Please select a product to edit from the procurement list.</span>
+              <span className="ms-2 text-muted">
+                Please select a product to edit from the procurement list.
+              </span>
             </div>
           </div>
           <Link href="/procurement" className="btn btn-primary btn-sm">
@@ -38,15 +40,7 @@ export default function EditProductPage() {
 
   return (
     <>
-      {/* Header with Breadcrumb and Back Button in one line */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Breadcrumb title="Procurement / Edit Product" />
-        <Link href="/procurement" className="btn btn-outline-secondary btn-sm">
-          <i className="icon-arrow-left me-2"></i>
-          Back to Procurement
-        </Link>
-      </div>
-
+      <Breadcrumb title="Procurement / Edit Product" />
       <ProductForm mode="edit" productId={productId} />
     </>
   );
