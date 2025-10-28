@@ -193,12 +193,31 @@ export const getReviewPrompts = async (jobId) => {
  * @returns {Promise<Object>} Update response
  */
 export const updateReviewPrompts = async (jobId, data) => {
-  // Call Python backend directly
-  const response = await axios.put(
-    `http://localhost:8000/api/generate/review/${jobId}/prompts`,
-    data
-  );
-  return response.data;
+  try {
+    console.log("Updating prompts for jobId:", jobId);
+    console.log("Prompts data:", data);
+    // Call Python backend directly
+    const response = await axios.put(
+      `http://localhost:8000/api/generate/review/${jobId}/prompts`,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log("Update prompts response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Update prompts error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `http://localhost:8000/api/generate/review/${jobId}/prompts`
+    });
+    throw error;
+  }
 };
 
 /**
@@ -207,11 +226,30 @@ export const updateReviewPrompts = async (jobId, data) => {
  * @returns {Promise<Object>} Approval response
  */
 export const approveReview = async (jobId) => {
-  // Call Python backend directly
-  const response = await axios.post(
-    `http://localhost:8000/api/generate/review/${jobId}/approve`
-  );
-  return response.data;
+  try {
+    console.log("Approving review for jobId:", jobId);
+    // Call Python backend directly
+    const response = await axios.post(
+      `http://localhost:8000/api/generate/review/${jobId}/approve`,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log("Approve response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Approve error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `http://localhost:8000/api/generate/review/${jobId}/approve`
+    });
+    throw error;
+  }
 };
 
 // ========== File Upload ==========

@@ -109,30 +109,33 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
     >
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
-          {/* Modal Header */}
-          <div className="modal-header">
-            <h5 className="modal-title d-flex align-items-center gap-2">
-              {results?.plan_type === "video" ? (
-                <Icon icon="solar:video-library-bold" width="20" height="20" />
-              ) : (
-                <Icon icon="solar:gallery-bold" width="20" height="20" />
-              )}
-              Generated {results?.plan_type === "video" ? "Video" : "Graphic"}{" "}
-              Content
-            </h5>
-            <p className="modal-subtitle text-muted mb-0">
-              View the generated plan, prompts, and specifications
-            </p>
-            <button
-              type="button"
-              className="btn-close"
-              onClick={onClose}
-              aria-label="Close"
-            />
-          </div>
+           {/* Modal Header */}
+           <div className="modal-header border-bottom p-5">
+             <div className="w-100 d-flex align-items-center justify-content-between">
+               <div>
+                 <h5 className="modal-title d-flex align-items-center gap-2 mb-3">
+                   {results?.plan_type === "video" ? (
+                     <Icon icon="solar:video-library-bold" width="20" height="20" className="text-primary" />
+                   ) : (
+                     <Icon icon="solar:gallery-bold" width="20" height="20" className="text-primary" />
+                   )}
+                   Generated {results?.plan_type === "video" ? "Video" : "Graphic"} Content
+                 </h5>
+                 <p className="text-muted mb-0 small">
+                   View the generated plan, prompts, and specifications
+                 </p>
+               </div>
+               <button
+                 type="button"
+                 className="btn-close"
+                 onClick={onClose}
+                 aria-label="Close"
+               />
+             </div>
+           </div>
 
-          {/* Modal Body */}
-          <div className="modal-body">
+           {/* Modal Body */}
+           <div className="modal-body p-5 pb-5" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
             {loading && (
               <div className="d-flex align-items-center justify-content-center py-5">
                 <div className="spinner-border text-primary" role="status">
@@ -154,82 +157,148 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
             )}
 
             {results && (
-              <div className="space-y-4">
+              <div>
                 {/* Tabs */}
-                <ul className="nav nav-tabs" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${
-                        activeTab === "overview" ? "active" : ""
-                      }`}
-                      onClick={() => setActiveTab("overview")}
-                      type="button"
-                      role="tab"
-                    >
-                      Overview
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${
-                        activeTab === "images" ? "active" : ""
-                      }`}
-                      onClick={() => setActiveTab("images")}
-                      type="button"
-                      role="tab"
-                    >
-                      Generated Images
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${
-                        activeTab === "plan" ? "active" : ""
-                      }`}
-                      onClick={() => setActiveTab("plan")}
-                      type="button"
-                      role="tab"
-                    >
-                      Plan
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${
-                        activeTab === "prompts" ? "active" : ""
-                      }`}
-                      onClick={() => setActiveTab("prompts")}
-                      type="button"
-                      role="tab"
-                    >
-                      Prompts
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${
-                        activeTab === "specs" ? "active" : ""
-                      }`}
-                      onClick={() => setActiveTab("specs")}
-                      type="button"
-                      role="tab"
-                    >
-                      Specifications
-                    </button>
-                  </li>
-                </ul>
+                <div className="mb-4 pt-2">
+                  <ul
+                    className="nav nav-tabs"
+                    role="tablist"
+                    style={{ borderBottom: "1px solid #e5e7eb" }}
+                  >
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${
+                          activeTab === "overview" ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab("overview")}
+                        type="button"
+                        role="tab"
+                        style={{
+                          backgroundColor:
+                            activeTab === "overview" ? "#f8fafc" : "transparent",
+                          border: "none",
+                          borderBottom:
+                            activeTab === "overview" ? "2px solid #6b7280" : "2px solid transparent",
+                          color: activeTab === "overview" ? "#374151" : "#6b7280",
+                          fontWeight: activeTab === "overview" ? "500" : "400",
+                          borderRadius: "0",
+                          padding: "12px 20px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        Overview
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${
+                          activeTab === "images" ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab("images")}
+                        type="button"
+                        role="tab"
+                        style={{
+                          backgroundColor:
+                            activeTab === "images" ? "#f8fafc" : "transparent",
+                          border: "none",
+                          borderBottom:
+                            activeTab === "images" ? "2px solid #6b7280" : "2px solid transparent",
+                          color: activeTab === "images" ? "#374151" : "#6b7280",
+                          fontWeight: activeTab === "images" ? "500" : "400",
+                          borderRadius: "0",
+                          padding: "12px 20px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        Generated Images
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${
+                          activeTab === "plan" ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab("plan")}
+                        type="button"
+                        role="tab"
+                        style={{
+                          backgroundColor:
+                            activeTab === "plan" ? "#f8fafc" : "transparent",
+                          border: "none",
+                          borderBottom:
+                            activeTab === "plan" ? "2px solid #6b7280" : "2px solid transparent",
+                          color: activeTab === "plan" ? "#374151" : "#6b7280",
+                          fontWeight: activeTab === "plan" ? "500" : "400",
+                          borderRadius: "0",
+                          padding: "12px 20px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        Plan
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${
+                          activeTab === "prompts" ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab("prompts")}
+                        type="button"
+                        role="tab"
+                        style={{
+                          backgroundColor:
+                            activeTab === "prompts" ? "#f8fafc" : "transparent",
+                          border: "none",
+                          borderBottom:
+                            activeTab === "prompts" ? "2px solid #6b7280" : "2px solid transparent",
+                          color: activeTab === "prompts" ? "#374151" : "#6b7280",
+                          fontWeight: activeTab === "prompts" ? "500" : "400",
+                          borderRadius: "0",
+                          padding: "12px 20px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        Prompts
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${
+                          activeTab === "specs" ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab("specs")}
+                        type="button"
+                        role="tab"
+                        style={{
+                          backgroundColor:
+                            activeTab === "specs" ? "#f8fafc" : "transparent",
+                          border: "none",
+                          borderBottom:
+                            activeTab === "specs" ? "2px solid #6b7280" : "2px solid transparent",
+                          color: activeTab === "specs" ? "#374151" : "#6b7280",
+                          fontWeight: activeTab === "specs" ? "500" : "400",
+                          borderRadius: "0",
+                          padding: "12px 20px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        Specifications
+                      </button>
+                    </li>
+                  </ul>
+                </div>
 
                 <div className="tab-content">
                   {/* Overview Tab */}
                   {activeTab === "overview" && (
-                    <div className="tab-pane fade show active" role="tabpanel">
+                    <div className="tab-pane fade show active mt-3" role="tabpanel">
                       <div className="row g-4">
                         <div className="col-md-6">
-                          <div className="card">
-                            <div className="card-header">
-                              <h6 className="card-title mb-0">Plan Details</h6>
-                            </div>
-                            <div className="card-body">
+                             <div className="card">
+                               <div className="card-header bg-light p-3">
+                                 <h6 className="card-title mb-0 fw-semibold">Plan Details</h6>
+                               </div>
+                               <div className="card-body p-4">
                               <div className="d-flex align-items-center gap-2 mb-2">
                                 <Icon
                                   icon="solar:target-bold"
@@ -285,14 +354,14 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           </div>
                         </div>
 
-                        <div className="col-md-6">
-                          <div className="card">
-                            <div className="card-header">
-                              <h6 className="card-title mb-0">
-                                Generation Stats
-                              </h6>
-                            </div>
-                            <div className="card-body">
+                         <div className="col-md-6">
+                           <div className="card">
+                             <div className="card-header bg-light p-3">
+                               <h6 className="card-title mb-0 fw-semibold">
+                                 Generation Stats
+                               </h6>
+                             </div>
+                             <div className="card-body p-4">
                               <div className="small mb-2">
                                 <span className="fw-medium">Artifacts:</span>{" "}
                                 {results.artifacts?.length || 0}
@@ -314,22 +383,21 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Generated Images Tab */}
                   {activeTab === "images" && (
-                    <div className="tab-pane fade show active" role="tabpanel">
+                    <div className="tab-pane fade show active mt-3" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "400px" }}
+                        style={{ maxHeight: "500px" }}
                       >
-                        <div className="space-y-4">
+                        <div>
                           {results.generated_images &&
                           results.generated_images.length > 0 ? (
                             results.generated_images.map((imageData, index) => (
-                              <div key={imageData.artifact_id} className="card">
-                                <div className="card-header">
-                                  <div className="d-flex align-items-center justify-content-between">
-                                    <h6 className="card-title mb-0">
-                                      Generated Image {index + 1} -{" "}
-                                      {imageData.artifact_id}
-                                    </h6>
+                               <div key={imageData.artifact_id} className="card mb-3">
+                                 <div className="card-header bg-light p-4">
+                                   <div className="d-flex align-items-center justify-content-between">
+                                     <h6 className="card-title mb-0 fw-semibold">
+                                       Generated Image {index + 1}
+                                     </h6>
                                     <div className="d-flex gap-2">
                                       {imageData.freepik_result.success && (
                                         <button
@@ -372,26 +440,26 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                       </button>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="card-body">
-                                  {imageData.freepik_result.success ? (
-                                    <div className="space-y-4">
-                                      {imageData.freepik_result.url ||
-                                      imageData.freepik_result.local_url ||
-                                      imageData.freepik_result.base64 ? (
-                                        <div className="text-center">
-                                          <img
-                                            src={
-                                              imageData.freepik_result.url ||
-                                              imageData.freepik_result
-                                                .local_url ||
-                                              `data:image/jpeg;base64,${imageData.freepik_result.base64}`
-                                            }
-                                            alt={`Generated image ${index + 1}`}
-                                            className="img-fluid rounded shadow"
-                                            style={{ maxHeight: "400px" }}
-                                          />
-                                        </div>
+                                 </div>
+                                 <div className="card-body p-4">
+                                   {imageData.freepik_result.success ? (
+                                     <div>
+                                       {imageData.freepik_result.url ||
+                                       imageData.freepik_result.local_url ||
+                                       imageData.freepik_result.base64 ? (
+                                         <div className="text-center mb-4">
+                                           <img
+                                             src={
+                                               imageData.freepik_result.url ||
+                                               imageData.freepik_result
+                                                 .local_url ||
+                                               `data:image/jpeg;base64,${imageData.freepik_result.base64}`
+                                             }
+                                             alt={`Generated image ${index + 1}`}
+                                             className="img-fluid rounded shadow"
+                                             style={{ maxHeight: "400px", width: "auto" }}
+                                           />
+                                         </div>
                                       ) : (
                                         <div className="text-center py-5 text-muted">
                                           <Icon
@@ -404,90 +472,95 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                         </div>
                                       )}
 
-                                      {imageData.freepik_result.metadata && (
-                                        <div className="bg-light p-3 rounded">
-                                          <h6 className="fw-medium small mb-2">
-                                            Generation Details
-                                          </h6>
-                                          <div className="small">
-                                            <p className="mb-1">
-                                              <strong>Freepik ID:</strong>{" "}
-                                              {imageData.freepik_result.id ||
-                                                "N/A"}
-                                            </p>
-                                            <p className="mb-1">
-                                              <strong>Resolution:</strong>{" "}
-                                              {imageData.freepik_result.metadata
-                                                .resolution || "N/A"}
-                                            </p>
-                                            <p className="mb-1">
-                                              <strong>Style:</strong>{" "}
-                                              {imageData.freepik_result.metadata
-                                                .style || "N/A"}
-                                            </p>
-                                            <p className="mb-0">
-                                              <strong>Generated:</strong>{" "}
-                                              {new Date(
-                                                imageData.freepik_result.metadata.generated_at
-                                              ).toLocaleString()}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="text-center py-5">
-                                      <Icon
-                                        icon="solar:danger-circle-bold"
-                                        width="48"
-                                        height="48"
-                                        className="text-danger mb-2"
-                                      />
-                                      <p className="text-danger mb-2">
-                                        Image generation failed
-                                      </p>
-                                      <p className="small text-muted">
-                                        {imageData.freepik_result.error ||
-                                          "Unknown error"}
-                                      </p>
-                                      <button
-                                        className="btn btn-sm btn-outline-primary mt-3"
-                                        onClick={() =>
-                                          retryImageGeneration(
-                                            imageData.artifact_id
-                                          )
-                                        }
-                                        disabled={
-                                          retryingImage ===
-                                          imageData.artifact_id
-                                        }
-                                      >
-                                        <Icon
-                                          icon="solar:refresh-bold"
-                                          width="14"
-                                          height="14"
-                                          className="me-1"
-                                        />
-                                        Retry Generation
-                                      </button>
-                                    </div>
-                                  )}
+                                       {imageData.freepik_result.metadata && (
+                                         <div className="bg-light p-4 rounded mt-4">
+                                           <h6 className="fw-semibold mb-3 text-secondary d-flex align-items-center">
+                                             <Icon
+                                               icon="solar:info-circle-bold"
+                                               width="16"
+                                               height="16"
+                                               className="me-2"
+                                             />
+                                             Generation Details
+                                           </h6>
+                                           <div className="row">
+                                             <div className="col-md-6 mb-2">
+                                               <div className="small text-muted">Freepik ID</div>
+                                               <div className="fw-medium">{imageData.freepik_result.id || "N/A"}</div>
+                                             </div>
+                                             <div className="col-md-6 mb-2">
+                                               <div className="small text-muted">Resolution</div>
+                                               <div className="fw-medium">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
+                                             </div>
+                                             <div className="col-md-6 mb-2">
+                                               <div className="small text-muted">Style</div>
+                                               <div className="fw-medium">{imageData.freepik_result.metadata.style || "N/A"}</div>
+                                             </div>
+                                             {imageData.freepik_result.metadata.generated_at && (
+                                               <div className="col-md-6 mb-2">
+                                                 <div className="small text-muted">Generated</div>
+                                                 <div className="fw-medium">
+                                                   {new Date(imageData.freepik_result.metadata.generated_at).toLocaleString()}
+                                                 </div>
+                                               </div>
+                                             )}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   ) : (
+                                     <div className="text-center py-4">
+                                       <Icon
+                                         icon="solar:danger-circle-bold"
+                                         width="48"
+                                         height="48"
+                                         className="text-danger mb-3"
+                                       />
+                                       <p className="text-danger fw-semibold mb-1">
+                                         Image generation failed
+                                       </p>
+                                       <p className="small text-muted mb-3">
+                                         {imageData.freepik_result.error ||
+                                           "Unknown error"}
+                                       </p>
+                                       <button
+                                         className="btn btn-sm btn-outline-primary"
+                                         onClick={() =>
+                                           retryImageGeneration(
+                                             imageData.artifact_id
+                                           )
+                                         }
+                                         disabled={
+                                           retryingImage ===
+                                           imageData.artifact_id
+                                         }
+                                       >
+                                         <Icon
+                                           icon="solar:refresh-bold"
+                                           width="14"
+                                           height="14"
+                                           className="me-1"
+                                         />
+                                         Retry Generation
+                                       </button>
+                                     </div>
+                                   )}
                                 </div>
                               </div>
                             ))
                           ) : (
                             <div className="text-center py-5 text-muted">
-                              <Icon
-                                icon="solar:gallery-bold"
-                                width="48"
-                                height="48"
-                                className="text-muted mb-2"
-                              />
-                              <p>No images generated yet</p>
-                              <p className="small">
-                                Images will appear here after generation
-                                completes
-                              </p>
+                               <Icon
+                                 icon="solar:gallery-bold"
+                                 width="48"
+                                 height="48"
+                                 className="text-muted mb-3"
+                               />
+                               <p className="fw-medium mb-1">No images generated yet</p>
+                               <p className="small">
+                                 Images will appear here after generation
+                                 completes
+                               </p>
                             </div>
                           )}
                         </div>
@@ -497,83 +570,92 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Plan Tab */}
                   {activeTab === "plan" && (
-                    <div className="tab-pane fade show active" role="tabpanel">
+                    <div className="tab-pane fade show active mt-3" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "400px" }}
+                        style={{ maxHeight: "500px" }}
                       >
-                        <div className="card">
-                          <div className="card-header">
-                            <h6 className="card-title mb-0">Content Plan</h6>
-                          </div>
-                          <div className="card-body">
-                            <pre className="small bg-light p-3 rounded overflow-auto mb-0">
-                              {JSON.stringify(results.plan, null, 2)}
-                            </pre>
-                          </div>
-                        </div>
+                       <div className="card">
+                           <div className="card-header bg-light p-3">
+                             <h6 className="card-title mb-0 fw-semibold">Content Plan</h6>
+                           </div>
+                           <div className="card-body p-4">
+                             <div className="bg-light p-4 rounded">
+                               <pre className="small mb-0" style={{ maxHeight: "400px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                 {JSON.stringify(results.plan, null, 2)}
+                               </pre>
+                             </div>
+                           </div>
+                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Prompts Tab */}
                   {activeTab === "prompts" && (
-                    <div className="tab-pane fade show active" role="tabpanel">
+                    <div className="tab-pane fade show active mt-3" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "400px" }}
+                        style={{ maxHeight: "500px" }}
                       >
-                        <div className="space-y-4">
+                        <div>
                           {results.prompts && results.prompts.length > 0 ? (
-                            results.prompts.map((prompt, index) => (
-                              <div key={prompt.shot_id} className="card">
-                                <div className="card-header">
-                                  <div className="d-flex align-items-center justify-content-between">
-                                    <h6 className="card-title mb-0">
-                                      Shot {prompt.shot_id} - Prompt {index + 1}
-                                    </h6>
-                                    <button
-                                      className="btn btn-sm btn-outline-secondary"
-                                      onClick={() =>
-                                        copyToClipboard(
-                                          prompt.prompt,
-                                          prompt.shot_id
-                                        )
-                                      }
-                                    >
-                                      {copiedPrompt === prompt.shot_id ? (
-                                        <Icon
-                                          icon="solar:check-circle-bold"
-                                          width="14"
-                                          height="14"
-                                        />
-                                      ) : (
-                                        <Icon
-                                          icon="solar:copy-bold"
-                                          width="14"
-                                          height="14"
-                                        />
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                                <div className="card-body">
-                                  <div className="bg-light p-3 rounded">
-                                    <p
-                                      className="small mb-0"
-                                      style={{ whiteSpace: "pre-wrap" }}
-                                    >
-                                      {prompt.prompt}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-5 text-muted">
-                              No prompts available
-                            </div>
-                          )}
+                             results.prompts.map((prompt, index) => (
+                               <div key={prompt.shot_id} className="card mb-3">
+                                 <div className="card-header bg-light p-3">
+                                   <div className="d-flex align-items-center justify-content-between">
+                                     <h6 className="card-title mb-0 fw-semibold">
+                                       Shot {prompt.shot_id} - Prompt {index + 1}
+                                     </h6>
+                                     <button
+                                       className="btn btn-sm btn-outline-secondary"
+                                       onClick={() =>
+                                         copyToClipboard(
+                                           prompt.prompt,
+                                           prompt.shot_id
+                                         )
+                                       }
+                                       title="Copy to clipboard"
+                                     >
+                                       {copiedPrompt === prompt.shot_id ? (
+                                         <Icon
+                                           icon="solar:check-circle-bold"
+                                           width="14"
+                                           height="14"
+                                         />
+                                       ) : (
+                                         <Icon
+                                           icon="solar:copy-bold"
+                                           width="14"
+                                           height="14"
+                                         />
+                                       )}
+                                     </button>
+                                   </div>
+                                 </div>
+                                 <div className="card-body p-4">
+                                   <div className="bg-light p-4 rounded">
+                                     <p
+                                       className="small mb-0"
+                                       style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                                     >
+                                       {prompt.prompt}
+                                     </p>
+                                   </div>
+                                 </div>
+                               </div>
+                             ))
+                           ) : (
+                             <div className="text-center py-5 text-muted">
+                               <Icon
+                                 icon="solar:document-text-bold"
+                                 width="48"
+                                 height="48"
+                                 className="text-muted mb-3"
+                               />
+                               <p className="fw-medium">No prompts available</p>
+                             </div>
+                           )}
                         </div>
                       </div>
                     </div>
@@ -581,36 +663,44 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Specifications Tab */}
                   {activeTab === "specs" && (
-                    <div className="tab-pane fade show active" role="tabpanel">
+                    <div className="tab-pane fade show active mt-3" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "400px" }}
+                        style={{ maxHeight: "500px" }}
                       >
-                        <div className="space-y-4">
+                        <div>
                           {results.artifacts && results.artifacts.length > 0 ? (
-                            results.artifacts.map((artifact, index) => (
-                              <div
-                                key={artifact.shot_id || index}
-                                className="card"
-                              >
-                                <div className="card-header">
-                                  <h6 className="card-title mb-0">
-                                    {artifact.shot_id ||
-                                      `Specification ${index + 1}`}
-                                  </h6>
-                                </div>
-                                <div className="card-body">
-                                  <pre className="small bg-light p-3 rounded overflow-auto mb-0">
-                                    {JSON.stringify(artifact, null, 2)}
-                                  </pre>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-5 text-muted">
-                              No specifications available
-                            </div>
-                          )}
+                             results.artifacts.map((artifact, index) => (
+                               <div
+                                 key={artifact.shot_id || index}
+                                 className="card mb-3"
+                               >
+                                 <div className="card-header bg-light p-3">
+                                   <h6 className="card-title mb-0 fw-semibold">
+                                     {artifact.shot_id ||
+                                       `Specification ${index + 1}`}
+                                   </h6>
+                                 </div>
+                                 <div className="card-body p-4">
+                                   <div className="bg-light p-4 rounded">
+                                     <pre className="small mb-0" style={{ maxHeight: "300px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                       {JSON.stringify(artifact, null, 2)}
+                                     </pre>
+                                   </div>
+                                 </div>
+                               </div>
+                             ))
+                           ) : (
+                             <div className="text-center py-5 text-muted">
+                               <Icon
+                                 icon="solar:settings-bold"
+                                 width="48"
+                                 height="48"
+                                 className="text-muted mb-3"
+                               />
+                               <p className="fw-medium">No specifications available</p>
+                             </div>
+                           )}
                         </div>
                       </div>
                     </div>
@@ -620,16 +710,16 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
             )}
           </div>
 
-          {/* Modal Footer */}
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
+           {/* Modal Footer */}
+           <div className="modal-footer border-top">
+             <button
+               type="button"
+               className="btn btn-secondary"
+               onClick={onClose}
+             >
+               Close
+             </button>
+           </div>
         </div>
       </div>
     </div>

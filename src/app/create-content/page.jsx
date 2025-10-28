@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
+import ReviewPromptsModal from "@/components/ReviewPromptsModal";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
 import {
@@ -27,6 +28,8 @@ export default function CreateContentPage() {
   const [generationResult, setGenerationResult] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewJobId, setReviewJobId] = useState(null);
   const [generationJobs, setGenerationJobs] = useState([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [formData, setFormData] = useState({
@@ -187,8 +190,9 @@ export default function CreateContentPage() {
           if (status.status === "pending_review") {
             clearInterval(pollInterval);
             setIsGenerating(false);
-            // Redirect to review page with jobId as query parameter
-            router.push(`/review?jobId=${jobId}`);
+            // Open review modal
+            setReviewJobId(jobId);
+            setIsReviewModalOpen(true);
           } else if (status.status === "completed" || status.status === "failed") {
             clearInterval(pollInterval);
             setIsGenerating(false);
@@ -365,62 +369,126 @@ export default function CreateContentPage() {
       <Breadcrumb title="Create Content" />
 
       <div className="container-fluid">
-        {/* Header */}
-        <div className="text-center mb-4">
-          <h1 className="h2 mb-2">Content Generator</h1>
-          <p className="text-muted">
-            Upload images and create briefs to generate compelling content
-          </p>
-        </div>
-
         {/* Tabs */}
-        <ul className="nav nav-tabs mb-4" role="tablist">
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "create" ? "active" : ""}`}
-              onClick={() => setActiveTab("create")}
-              type="button"
-            >
-              <Icon
-                icon="solar:upload-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Create Content
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "prompts" ? "active" : ""}`}
-              onClick={() => setActiveTab("prompts")}
-              type="button"
-            >
-              <Icon
-                icon="solar:magic-stick-3-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Generated Prompts
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              className={`nav-link ${activeTab === "content" ? "active" : ""}`}
-              onClick={() => setActiveTab("content")}
-              type="button"
-            >
-              <Icon
-                icon="solar:video-library-bold"
-                width="16"
-                height="16"
-                className="me-2"
-              />
-              Generated Content
-            </button>
-          </li>
-        </ul>
+        <div className="mb-3">
+          <ul
+            className="nav nav-tabs"
+            role="tablist"
+            style={{ borderBottom: "1px solid #e5e7eb" }}
+          >
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "create" ? "active" : ""}`}
+                onClick={() => setActiveTab("create")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "create" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "create" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "create" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "create" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "create") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "create") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:upload-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Create Content
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "prompts" ? "active" : ""}`}
+                onClick={() => setActiveTab("prompts")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "prompts" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "prompts" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "prompts" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "prompts" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "prompts") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "prompts") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:magic-stick-3-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Generated Prompts
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "content" ? "active" : ""}`}
+                onClick={() => setActiveTab("content")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "content" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "content" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "content" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "content" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "content") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "content") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:video-library-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Generated Content
+              </button>
+            </li>
+          </ul>
+        </div>
 
         {/* Tab Content */}
         <div className="tab-content">
@@ -428,27 +496,20 @@ export default function CreateContentPage() {
           {activeTab === "create" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">
-                    Upload Images & Create Brief
-                  </h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Upload Images & Create Brief</h5>
                   <p className="card-subtitle text-muted mb-0">
-                    Upload your product images and provide a brief description
-                    to generate content
-                    <span className="d-block mt-2 small text-muted">
-                      Using brand guidelines from <strong>Seleric</strong> - Let
-                      Nature Lead
-                    </span>
+                    Upload your product images and provide a brief description to generate content
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   {/* Image Upload */}
                   <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Source Images</h6>
+                    <label className="form-label fw-semibold mb-2 d-block">Source Images</label>
                     
                     {uploadedImages.length === 0 ? (
                       // Empty state - drag and drop area
-                      <div className="border border-dashed border-secondary rounded-3 p-5 text-center bg-light position-relative">
+                      <div className="border border-dashed border-secondary rounded-3 p-24 text-center bg-light position-relative" style={{ minHeight: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div className="d-flex flex-column align-items-center">
                           <div className="bg-secondary rounded-circle p-3 mb-3">
                             <Icon
@@ -546,9 +607,9 @@ export default function CreateContentPage() {
                   </div>
 
                   {/* Brief Form */}
-                  <div className="mb-4">
+                  <div>
                     <div className="mb-3">
-                      <label className="form-label">Product Name *</label>
+                      <label className="form-label fw-semibold">Product Name *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -561,7 +622,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Short Description *</label>
+                      <label className="form-label fw-semibold">Short Description *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -575,7 +636,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Long Description *</label>
+                      <label className="form-label fw-semibold">Long Description *</label>
                       <textarea
                         className="form-control"
                         rows="4"
@@ -590,7 +651,7 @@ export default function CreateContentPage() {
                     <div className="row">
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">
+                          <label className="form-label fw-semibold">
                             Campaign Objective
                           </label>
                           <select
@@ -614,7 +675,7 @@ export default function CreateContentPage() {
                       </div>
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Content Channel</label>
+                          <label className="form-label fw-semibold">Content Channel</label>
                           <select
                             className="form-select"
                             value={formData.channel}
@@ -644,7 +705,7 @@ export default function CreateContentPage() {
                     <div className="row">
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Tone</label>
+                          <label className="form-label fw-semibold">Tone</label>
                           <select
                             className="form-select"
                             value={formData.tone}
@@ -664,7 +725,7 @@ export default function CreateContentPage() {
                       </div>
                       <div className="col-md-6">
                         <div className="mb-3">
-                          <label className="form-label">Call to Action</label>
+                          <label className="form-label fw-semibold">Call to Action</label>
                           <select
                             className="form-select"
                             value={formData.cta}
@@ -685,7 +746,7 @@ export default function CreateContentPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Number of Variants</label>
+                      <label className="form-label fw-semibold">Number of Variants</label>
                       <input
                         type="number"
                         className="form-control"
@@ -717,7 +778,7 @@ export default function CreateContentPage() {
                           icon="solar:refresh-bold"
                           width="16"
                           height="16"
-                          className="me-2"
+                          className="me-2 spinner"
                         />
                         Generating Content...
                       </>
@@ -742,13 +803,13 @@ export default function CreateContentPage() {
           {activeTab === "prompts" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">Generated Prompts</h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Generated Prompts</h5>
                   <p className="card-subtitle text-muted mb-0">
                     AI-generated prompts based on your product images and brief
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   <div className="mb-4">
                     {/* Show loading state */}
                     {isLoadingJobs && (
@@ -918,7 +979,10 @@ export default function CreateContentPage() {
                               </span>
                               {job.status === "pending_review" && (
                                 <button
-                                  onClick={() => router.push(`/review?jobId=${job.job_id}`)}
+                                  onClick={() => {
+                                    setReviewJobId(job.job_id);
+                                    setIsReviewModalOpen(true);
+                                  }}
                                   className="btn btn-sm btn-warning"
                                 >
                                   <Icon
@@ -992,14 +1056,13 @@ export default function CreateContentPage() {
           {activeTab === "content" && (
             <div className="tab-pane fade show active">
               <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">Generated Content</h5>
+                <div className="card-header border-bottom p-24">
+                  <h5 className="card-title mb-2">Generated Content</h5>
                   <p className="card-subtitle text-muted mb-0">
-                    View and manage your generated content organized by product
-                    and time
+                    View and manage your generated content organized by product and time
                   </p>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-24">
                   {isLoadingContent ? (
                     <div className="d-flex align-items-center justify-content-center p-4">
                       <Icon
@@ -1175,6 +1238,22 @@ export default function CreateContentPage() {
           jobId={selectedJobId}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {/* Review Prompts Modal */}
+      {reviewJobId && (
+        <ReviewPromptsModal
+          jobId={reviewJobId}
+          isOpen={isReviewModalOpen}
+          onClose={() => {
+            setIsReviewModalOpen(false);
+            setReviewJobId(null);
+          }}
+          onApproveSuccess={(jobId) => {
+            // Refresh the jobs list
+            fetchGenerationJobs();
+          }}
         />
       )}
     </SidebarPermissionGuard>
