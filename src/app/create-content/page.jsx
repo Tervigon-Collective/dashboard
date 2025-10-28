@@ -13,6 +13,7 @@ import {
   uploadImages,
   getGenerationStatus,
 } from "@/services/contentGenerationApi";
+import config from "@/config";
 
 export default function CreateContentPage() {
   const [activeTab, setActiveTab] = useState("create");
@@ -918,7 +919,7 @@ export default function CreateContentPage() {
                                               ) &&
                                               item.local_url
                                             ) {
-                                              e.target.src = `http://localhost:8000${item.local_url}`;
+                                              e.target.src = `${config.pythonApi.baseURL}${item.local_url}`;
                                             }
                                           }}
                                         />

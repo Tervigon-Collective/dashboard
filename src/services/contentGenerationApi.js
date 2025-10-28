@@ -115,7 +115,7 @@ export const generateGraphic = async (briefId) => {
 export const quickGenerate = async (formData) => {
   // Call Python backend directly
   const response = await axios.post(
-    "http://localhost:8000/api/generate/quick",
+    `${config.pythonApi.baseURL}/api/generate/quick`,
     formData
   );
   return response.data;
@@ -129,7 +129,7 @@ export const quickGenerate = async (formData) => {
 export const getGenerationStatus = async (jobId) => {
   // Call Python backend directly
   const response = await axios.get(
-    `http://localhost:8000/api/generate/status/${jobId}`
+    `${config.pythonApi.baseURL}/api/generate/status/${jobId}`
   );
   return response.data;
 };
@@ -142,7 +142,7 @@ export const getGenerationStatus = async (jobId) => {
 export const getGenerationResults = async (jobId) => {
   // Call Python backend directly
   const response = await axios.get(
-    `http://localhost:8000/api/generate/results/${jobId}`
+    `${config.pythonApi.baseURL}/api/generate/results/${jobId}`
   );
   return response.data;
 };
@@ -153,7 +153,9 @@ export const getGenerationResults = async (jobId) => {
  */
 export const getGenerationJobs = async () => {
   // Call Python backend directly
-  const response = await axios.get("http://localhost:8000/api/generate/jobs");
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/generate/jobs`
+  );
   return response.data;
 };
 
@@ -166,7 +168,7 @@ export const getGenerationJobs = async () => {
 export const retryImageGeneration = async (jobId, artifactId) => {
   // Call Python backend directly
   const response = await axios.post(
-    `http://localhost:8000/api/generate/retry-image/${jobId}/${artifactId}`
+    `${config.pythonApi.baseURL}/api/generate/retry-image/${jobId}/${artifactId}`
   );
   return response.data;
 };
@@ -186,7 +188,7 @@ export const uploadImages = async (files) => {
 
   // Call Python backend directly
   const response = await axios.post(
-    "http://localhost:8000/api/upload/images",
+    `${config.pythonApi.baseURL}/api/upload/images`,
     formData,
     {
       headers: {
@@ -227,7 +229,7 @@ export const uploadLogo = async (file) => {
 export const getGeneratedContent = async () => {
   // Call Python backend directly since Node.js proxy isn't working
   const response = await axios.get(
-    "http://localhost:8000/api/content/generated"
+    `${config.pythonApi.baseURL}/api/content/generated`
   );
   return response.data;
 };
