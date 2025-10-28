@@ -146,20 +146,20 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
           {/* Modal Header */}
-          <div className="modal-header border-bottom p-5">
+          <div className="modal-header border-bottom p-3">
             <div className="w-100 d-flex align-items-center justify-content-between">
               <div>
-                <h5 className="modal-title d-flex align-items-center gap-2 mb-3">
-                  <Icon icon="solar:file-text-bold" width="20" height="20" className="text-primary" />
+                <h6 className="modal-title d-flex align-items-center gap-2 mb-1">
+                  <Icon icon="solar:file-text-bold" width="14" height="14" className="text-primary" />
                   Review Generated Prompts
-                </h5>
-                <p className="text-muted mb-0 small">
+                </h6>
+                <p className="text-muted mb-0 small" style={{ fontSize: '0.8rem' }}>
                   Please review and edit the AI-generated prompts before sending them for image generation
                 </p>
               </div>
               <button
                 type="button"
-                className="btn-close"
+                className="btn-close btn-close-sm"
                 onClick={onClose}
                 aria-label="Close"
               />
@@ -167,22 +167,22 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
           </div>
 
           {/* Modal Body */}
-          <div className="modal-body p-5 pb-5" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+          <div className="modal-body p-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
             {loading && (
-              <div className="d-flex align-items-center justify-content-center py-5">
-                <div className="spinner-border text-primary" role="status">
+              <div className="d-flex align-items-center justify-content-center py-4">
+                <div className="spinner-border text-primary spinner-border-sm" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
             )}
 
             {(error || promptError) && (
-              <div className="text-center py-5">
-                <div className="alert alert-danger">
+              <div className="text-center py-4">
+                <div className="alert alert-danger small">
                   <strong>Error:</strong>
-                  <p className="mb-2">{error || promptError}</p>
+                  <p className="mb-2 mt-1">{error || promptError}</p>
                   <button
-                    className="btn btn-outline-primary"
+                    className="btn btn-outline-primary btn-sm"
                     onClick={loadPrompts}
                   >
                     Try Again
@@ -193,73 +193,62 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
 
             {!loading && !error && !promptError && (
               <div>
-                {/* Info Alert */}
-                <div className="alert alert-info mb-4">
-                  <Icon
-                    icon="solar:info-circle-bold"
-                    width="20"
-                    height="20"
-                    className="me-2"
-                  />
-                  <strong>Note:</strong> You can edit any of the prompts below. Changes will be saved as a draft when you click "Save Draft" or will be applied when you approve.
-                </div>
-
                 {/* Prompts List */}
-                <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <div style={{ maxHeight: '500px', overflowY: 'auto', overflowX: 'hidden' }}>
                   {prompts.length === 0 && (
-                  <div className="text-center py-5 text-muted">
-                    <Icon icon="solar:document-text-bold" width="48" height="48" className="text-muted mb-3" />
-                    <p className="fw-medium">No prompts available</p>
+                  <div className="text-center py-4 text-muted">
+                    <Icon icon="solar:document-text-bold" width="32" height="32" className="text-muted mb-2" />
+                    <p className="fw-medium small mb-0">No prompts available</p>
                   </div>
                 )}
                 {prompts.map((prompt, index) => (
-                    <div key={index} className="mb-3">
+                    <div key={index} className="mb-2">
                       <div className="card">
-                        <div className="card-header bg-light p-4">
+                        <div className="card-header bg-light p-2">
                           <div className="d-flex align-items-center justify-content-between">
                             <div>
-                              <h6 className="card-title mb-2 fw-semibold">
+                              <h6 className="card-title mb-1 fw-semibold small">
                                 {prompt.type === "shot"
                                   ? `Shot ${prompt.shot_number || index + 1}`
                                   : `Variant ${prompt.variant_number !== undefined ? prompt.variant_number + 1 : index + 1}`}
                               </h6>
-                              <span className="badge bg-primary small">{prompt.type}</span>
+                              <span className="badge bg-primary" style={{ fontSize: '0.7rem' }}>{prompt.type}</span>
                             </div>
                             {prompt.metadata?.format && (
-                              <span className="badge bg-secondary">
+                              <span className="badge bg-secondary" style={{ fontSize: '0.7rem' }}>
                                 {prompt.metadata.format}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="card-body p-4">
-                          <div className="mb-4">
-                            <label className="form-label fw-semibold">
+                        <div className="card-body p-3">
+                          <div className="mb-2">
+                            <label className="form-label fw-semibold small mb-1">
                               Prompt Text
                             </label>
                             <textarea
                               value={prompt.prompt}
                               onChange={(e) => handleEditPrompt(index, e.target.value)}
                               className="form-control"
-                              rows={8}
+                              rows={18}
                               placeholder="Enter prompt text..."
-                              style={{ wordBreak: "break-word" }}
+                              style={{ wordBreak: "break-word", fontSize: '0.875rem', resize: 'vertical' }}
                             />
-                            <small className="text-muted">
+                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
                               {prompt.prompt.length} characters
                             </small>
                           </div>
 
                           {(prompt.description || prompt.metadata?.resolution) && (
-                            <div className="d-flex gap-4 mt-3">
+                            <div className="d-flex gap-3 mt-2">
                               {prompt.description && (
-                                <div className="small">
+                                <div style={{ fontSize: '0.8rem' }}>
                                   <div className="text-muted mb-1">Description</div>
                                   <div className="fw-medium">{prompt.description}</div>
                                 </div>
                               )}
                               {prompt.metadata?.resolution && (
-                                <div className="small">
+                                <div style={{ fontSize: '0.8rem' }}>
                                   <div className="text-muted mb-1">Resolution</div>
                                   <div className="fw-medium">{prompt.metadata.resolution}</div>
                                 </div>
@@ -274,11 +263,11 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
 
                 {/* Error Banner if approve fails */}
                 {promptError && (
-                  <div className="alert alert-danger mt-3">
+                  <div className="alert alert-danger mt-2 py-2 small">
                     <Icon
                       icon="solar:danger-circle-bold"
-                      width="20"
-                      height="20"
+                      width="16"
+                      height="16"
                       className="me-2"
                     />
                     <strong>Error:</strong> {promptError}
@@ -289,21 +278,21 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
           </div>
 
           {/* Modal Footer */}
-          <div className="modal-footer border-top">
+          <div className="modal-footer border-top px-3 py-2">
             <div className="w-100 d-flex align-items-center justify-content-between">
               <div>
                 {hasChanges && (
-                  <span className="badge bg-warning me-2">
+                  <span className="badge bg-warning me-2" style={{ fontSize: '0.75rem' }}>
                     <Icon
                       icon="solar:edit-bold"
-                      width="12"
-                      height="12"
+                      width="10"
+                      height="10"
                       className="me-1"
                     />
                     Unsaved changes
                   </span>
                 )}
-                <small className="text-muted">
+                <small className="text-muted" style={{ fontSize: '0.75rem' }}>
                   Job ID: <code>{jobId}</code>
                 </small>
               </div>
@@ -311,15 +300,15 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                 <button
                   onClick={handleSaveDraft}
                   disabled={saving || !hasChanges}
-                  className="btn btn-outline-primary"
+                  className="btn btn-outline-primary btn-sm"
                 >
                   {saving ? (
                     <>
                       <Icon
                         icon="solar:refresh-bold"
-                        width="16"
-                        height="16"
-                        className="me-2 spinner"
+                        width="14"
+                        height="14"
+                        className="me-1 spinner"
                       />
                       Saving...
                     </>
@@ -327,18 +316,18 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                     <>
                       <Icon
                         icon="solar:diskette-bold"
-                        width="16"
-                        height="16"
-                        className="me-2"
+                        width="14"
+                        height="14"
+                        className="me-1"
                       />
-                      Save as Draft
+                      Save Draft
                     </>
                   )}
                 </button>
 
                 <button
                   onClick={onClose}
-                  className="btn btn-secondary"
+                  className="btn btn-secondary btn-sm"
                 >
                   Cancel
                 </button>
@@ -346,15 +335,15 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                 <button
                   onClick={handleApprove}
                   disabled={approving}
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-sm"
                 >
                   {approving ? (
                     <>
                       <Icon
                         icon="solar:refresh-bold"
-                        width="16"
-                        height="16"
-                        className="me-2 spinner"
+                        width="14"
+                        height="14"
+                        className="me-1 spinner"
                       />
                       Approving...
                     </>
@@ -362,9 +351,9 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                     <>
                       <Icon
                         icon="solar:check-circle-bold"
-                        width="16"
-                        height="16"
-                        className="me-2"
+                        width="14"
+                        height="14"
+                        className="me-1"
                       />
                       Approve & Generate
                     </>

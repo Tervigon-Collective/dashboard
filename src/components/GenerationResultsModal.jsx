@@ -110,24 +110,24 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
            {/* Modal Header */}
-           <div className="modal-header border-bottom p-5">
+           <div className="modal-header border-bottom p-3">
              <div className="w-100 d-flex align-items-center justify-content-between">
                <div>
-                 <h5 className="modal-title d-flex align-items-center gap-2 mb-3">
+                 <h5 className="modal-title d-flex align-items-center gap-2 mb-1" style={{ fontSize: '1rem' }}>
                    {results?.plan_type === "video" ? (
-                     <Icon icon="solar:video-library-bold" width="20" height="20" className="text-primary" />
+                     <Icon icon="solar:video-library-bold" width="18" height="18" className="text-primary" />
                    ) : (
-                     <Icon icon="solar:gallery-bold" width="20" height="20" className="text-primary" />
+                     <Icon icon="solar:gallery-bold" width="18" height="18" className="text-primary" />
                    )}
                    Generated {results?.plan_type === "video" ? "Video" : "Graphic"} Content
                  </h5>
-                 <p className="text-muted mb-0 small">
+                 <p className="text-muted mb-0 small" style={{ fontSize: '0.8rem' }}>
                    View the generated plan, prompts, and specifications
                  </p>
                </div>
                <button
                  type="button"
-                 className="btn-close"
+                 className="btn-close btn-close-sm"
                  onClick={onClose}
                  aria-label="Close"
                />
@@ -135,20 +135,20 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
            </div>
 
            {/* Modal Body */}
-           <div className="modal-body p-5 pb-5" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+           <div className="modal-body p-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
             {loading && (
-              <div className="d-flex align-items-center justify-content-center py-5">
-                <div className="spinner-border text-primary" role="status">
+              <div className="d-flex align-items-center justify-content-center py-4">
+                <div className="spinner-border text-primary spinner-border-sm" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
             )}
 
             {error && (
-              <div className="text-center py-5">
-                <p className="text-danger mb-3">{error}</p>
+              <div className="text-center py-4">
+                <p className="text-danger mb-3 small">{error}</p>
                 <button
-                  className="btn btn-outline-primary"
+                  className="btn btn-outline-primary btn-sm"
                   onClick={fetchResults}
                 >
                   Try Again
@@ -159,7 +159,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
             {results && (
               <div>
                 {/* Tabs */}
-                <div className="mb-4 pt-2">
+                <div className="mb-3 pt-2">
                   <ul
                     className="nav nav-tabs"
                     role="tablist"
@@ -182,8 +182,9 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           color: activeTab === "overview" ? "#374151" : "#6b7280",
                           fontWeight: activeTab === "overview" ? "500" : "400",
                           borderRadius: "0",
-                          padding: "12px 20px",
+                          padding: "8px 16px",
                           transition: "all 0.2s ease",
+                          fontSize: '0.875rem',
                         }}
                       >
                         Overview
@@ -206,8 +207,9 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           color: activeTab === "images" ? "#374151" : "#6b7280",
                           fontWeight: activeTab === "images" ? "500" : "400",
                           borderRadius: "0",
-                          padding: "12px 20px",
+                          padding: "8px 16px",
                           transition: "all 0.2s ease",
+                          fontSize: '0.875rem',
                         }}
                       >
                         Generated Images
@@ -230,8 +232,9 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           color: activeTab === "plan" ? "#374151" : "#6b7280",
                           fontWeight: activeTab === "plan" ? "500" : "400",
                           borderRadius: "0",
-                          padding: "12px 20px",
+                          padding: "8px 16px",
                           transition: "all 0.2s ease",
+                          fontSize: '0.875rem',
                         }}
                       >
                         Plan
@@ -254,8 +257,9 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           color: activeTab === "prompts" ? "#374151" : "#6b7280",
                           fontWeight: activeTab === "prompts" ? "500" : "400",
                           borderRadius: "0",
-                          padding: "12px 20px",
+                          padding: "8px 16px",
                           transition: "all 0.2s ease",
+                          fontSize: '0.875rem',
                         }}
                       >
                         Prompts
@@ -278,8 +282,9 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           color: activeTab === "specs" ? "#374151" : "#6b7280",
                           fontWeight: activeTab === "specs" ? "500" : "400",
                           borderRadius: "0",
-                          padding: "12px 20px",
+                          padding: "8px 16px",
                           transition: "all 0.2s ease",
+                          fontSize: '0.875rem',
                         }}
                       >
                         Specifications
@@ -291,22 +296,22 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                 <div className="tab-content">
                   {/* Overview Tab */}
                   {activeTab === "overview" && (
-                    <div className="tab-pane fade show active mt-3" role="tabpanel">
-                      <div className="row g-4">
+                    <div className="tab-pane fade show active mt-2" role="tabpanel">
+                      <div className="row g-3">
                         <div className="col-md-6">
                              <div className="card">
-                               <div className="card-header bg-light p-3">
-                                 <h6 className="card-title mb-0 fw-semibold">Plan Details</h6>
+                               <div className="card-header bg-light p-2">
+                                 <h6 className="card-title mb-0 fw-semibold small">Plan Details</h6>
                                </div>
-                               <div className="card-body p-4">
+                               <div className="card-body p-3">
                               <div className="d-flex align-items-center gap-2 mb-2">
                                 <Icon
                                   icon="solar:target-bold"
-                                  width="16"
-                                  height="16"
+                                  width="14"
+                                  height="14"
                                   className="text-muted"
                                 />
-                                <span className="small">
+                                <span className="small" style={{ fontSize: '0.8rem' }}>
                                   Type: {results.plan_type}
                                 </span>
                               </div>
@@ -314,11 +319,11 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                 <div className="d-flex align-items-center gap-2 mb-2">
                                   <Icon
                                     icon="solar:clock-circle-bold"
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     className="text-muted"
                                   />
-                                  <span className="small">
+                                  <span className="small" style={{ fontSize: '0.8rem' }}>
                                     Duration:{" "}
                                     {formatDuration(results.plan.duration_sec)}
                                   </span>
@@ -328,11 +333,11 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                 <div className="d-flex align-items-center gap-2 mb-2">
                                   <Icon
                                     icon="solar:video-library-bold"
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     className="text-muted"
                                   />
-                                  <span className="small">
+                                  <span className="small" style={{ fontSize: '0.8rem' }}>
                                     Format: {results.plan.format}
                                   </span>
                                 </div>
@@ -341,11 +346,11 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                 <div className="d-flex align-items-center gap-2 mb-2">
                                   <Icon
                                     icon="solar:palette-bold"
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     className="text-muted"
                                   />
-                                  <span className="small">
+                                  <span className="small" style={{ fontSize: '0.8rem' }}>
                                     Frame: {results.plan.neuromarketing_frame}
                                   </span>
                                 </div>
@@ -356,21 +361,21 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                          <div className="col-md-6">
                            <div className="card">
-                             <div className="card-header bg-light p-3">
-                               <h6 className="card-title mb-0 fw-semibold">
+                             <div className="card-header bg-light p-2">
+                               <h6 className="card-title mb-0 fw-semibold small">
                                  Generation Stats
                                </h6>
                              </div>
-                             <div className="card-body p-4">
-                              <div className="small mb-2">
+                             <div className="card-body p-3">
+                              <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
                                 <span className="fw-medium">Artifacts:</span>{" "}
                                 {results.artifacts?.length || 0}
                               </div>
-                              <div className="small mb-2">
+                              <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
                                 <span className="fw-medium">Prompts:</span>{" "}
                                 {results.prompts?.length || 0}
                               </div>
-                              <div className="small mb-2">
+                              <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
                                 <span className="fw-medium">Run ID:</span>{" "}
                                 {results.run_id}
                               </div>
@@ -383,19 +388,19 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Generated Images Tab */}
                   {activeTab === "images" && (
-                    <div className="tab-pane fade show active mt-3" role="tabpanel">
+                    <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "500px" }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
                       >
                         <div>
                           {results.generated_images &&
                           results.generated_images.length > 0 ? (
                             results.generated_images.map((imageData, index) => (
-                               <div key={imageData.artifact_id} className="card mb-3">
-                                 <div className="card-header bg-light p-4">
+                               <div key={imageData.artifact_id} className="card mb-2">
+                                 <div className="card-header bg-light p-2">
                                    <div className="d-flex align-items-center justify-content-between">
-                                     <h6 className="card-title mb-0 fw-semibold">
+                                     <h6 className="card-title mb-0 fw-semibold small">
                                        Generated Image {index + 1}
                                      </h6>
                                     <div className="d-flex gap-2">
@@ -411,8 +416,8 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                         >
                                           <Icon
                                             icon="solar:download-bold"
-                                            width="14"
-                                            height="14"
+                                            width="12"
+                                            height="12"
                                             className="me-1"
                                           />
                                           Download
@@ -432,8 +437,8 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                       >
                                         <Icon
                                           icon="solar:refresh-bold"
-                                          width="14"
-                                          height="14"
+                                          width="12"
+                                          height="12"
                                           className="me-1"
                                         />
                                         Retry
@@ -441,7 +446,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                     </div>
                                   </div>
                                  </div>
-                                 <div className="card-body p-4">
+                                 <div className="card-body p-3">
                                    {imageData.freepik_result.success ? (
                                      <div>
                                        {imageData.freepik_result.url ||
@@ -473,33 +478,33 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                       )}
 
                                        {imageData.freepik_result.metadata && (
-                                         <div className="bg-light p-4 rounded mt-4">
-                                           <h6 className="fw-semibold mb-3 text-secondary d-flex align-items-center">
+                                         <div className="bg-light p-3 rounded mt-3">
+                                           <h6 className="fw-semibold mb-2 text-secondary d-flex align-items-center small">
                                              <Icon
                                                icon="solar:info-circle-bold"
-                                               width="16"
-                                               height="16"
-                                               className="me-2"
+                                               width="14"
+                                               height="14"
+                                               className="me-1"
                                              />
                                              Generation Details
                                            </h6>
                                            <div className="row">
                                              <div className="col-md-6 mb-2">
-                                               <div className="small text-muted">Freepik ID</div>
-                                               <div className="fw-medium">{imageData.freepik_result.id || "N/A"}</div>
+                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Freepik ID</div>
+                                               <div className="fw-medium small">{imageData.freepik_result.id || "N/A"}</div>
                                              </div>
                                              <div className="col-md-6 mb-2">
-                                               <div className="small text-muted">Resolution</div>
-                                               <div className="fw-medium">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
+                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Resolution</div>
+                                               <div className="fw-medium small">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
                                              </div>
                                              <div className="col-md-6 mb-2">
-                                               <div className="small text-muted">Style</div>
-                                               <div className="fw-medium">{imageData.freepik_result.metadata.style || "N/A"}</div>
+                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Style</div>
+                                               <div className="fw-medium small">{imageData.freepik_result.metadata.style || "N/A"}</div>
                                              </div>
                                              {imageData.freepik_result.metadata.generated_at && (
                                                <div className="col-md-6 mb-2">
-                                                 <div className="small text-muted">Generated</div>
-                                                 <div className="fw-medium">
+                                                 <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Generated</div>
+                                                 <div className="fw-medium small">
                                                    {new Date(imageData.freepik_result.metadata.generated_at).toLocaleString()}
                                                  </div>
                                                </div>
@@ -509,17 +514,17 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                        )}
                                      </div>
                                    ) : (
-                                     <div className="text-center py-4">
+                                     <div className="text-center py-3">
                                        <Icon
                                          icon="solar:danger-circle-bold"
-                                         width="48"
-                                         height="48"
-                                         className="text-danger mb-3"
+                                         width="32"
+                                         height="32"
+                                         className="text-danger mb-2"
                                        />
-                                       <p className="text-danger fw-semibold mb-1">
+                                       <p className="text-danger fw-semibold mb-1 small">
                                          Image generation failed
                                        </p>
-                                       <p className="small text-muted mb-3">
+                                       <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
                                          {imageData.freepik_result.error ||
                                            "Unknown error"}
                                        </p>
@@ -537,8 +542,8 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                        >
                                          <Icon
                                            icon="solar:refresh-bold"
-                                           width="14"
-                                           height="14"
+                                           width="12"
+                                           height="12"
                                            className="me-1"
                                          />
                                          Retry Generation
@@ -549,15 +554,15 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                               </div>
                             ))
                           ) : (
-                            <div className="text-center py-5 text-muted">
+                            <div className="text-center py-4 text-muted">
                                <Icon
                                  icon="solar:gallery-bold"
-                                 width="48"
-                                 height="48"
-                                 className="text-muted mb-3"
+                                 width="32"
+                                 height="32"
+                                 className="text-muted mb-2"
                                />
-                               <p className="fw-medium mb-1">No images generated yet</p>
-                               <p className="small">
+                               <p className="fw-medium mb-1 small">No images generated yet</p>
+                               <p className="small" style={{ fontSize: '0.75rem' }}>
                                  Images will appear here after generation
                                  completes
                                </p>
@@ -570,18 +575,18 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Plan Tab */}
                   {activeTab === "plan" && (
-                    <div className="tab-pane fade show active mt-3" role="tabpanel">
+                    <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "500px" }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
                       >
                        <div className="card">
-                           <div className="card-header bg-light p-3">
-                             <h6 className="card-title mb-0 fw-semibold">Content Plan</h6>
+                           <div className="card-header bg-light p-2">
+                             <h6 className="card-title mb-0 fw-semibold small">Content Plan</h6>
                            </div>
-                           <div className="card-body p-4">
-                             <div className="bg-light p-4 rounded">
-                               <pre className="small mb-0" style={{ maxHeight: "400px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                           <div className="card-body p-3">
+                             <div className="bg-light p-3 rounded">
+                               <pre className="small mb-0" style={{ maxHeight: "350px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: '0.75rem' }}>
                                  {JSON.stringify(results.plan, null, 2)}
                                </pre>
                              </div>
@@ -593,18 +598,18 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Prompts Tab */}
                   {activeTab === "prompts" && (
-                    <div className="tab-pane fade show active mt-3" role="tabpanel">
+                    <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "500px" }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
                       >
                         <div>
                           {results.prompts && results.prompts.length > 0 ? (
                              results.prompts.map((prompt, index) => (
-                               <div key={prompt.shot_id} className="card mb-3">
-                                 <div className="card-header bg-light p-3">
+                               <div key={prompt.shot_id} className="card mb-2">
+                                 <div className="card-header bg-light p-2">
                                    <div className="d-flex align-items-center justify-content-between">
-                                     <h6 className="card-title mb-0 fw-semibold">
+                                     <h6 className="card-title mb-0 fw-semibold small">
                                        Shot {prompt.shot_id} - Prompt {index + 1}
                                      </h6>
                                      <button
@@ -620,24 +625,24 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                        {copiedPrompt === prompt.shot_id ? (
                                          <Icon
                                            icon="solar:check-circle-bold"
-                                           width="14"
-                                           height="14"
+                                           width="12"
+                                           height="12"
                                          />
                                        ) : (
                                          <Icon
                                            icon="solar:copy-bold"
-                                           width="14"
-                                           height="14"
+                                           width="12"
+                                           height="12"
                                          />
                                        )}
                                      </button>
                                    </div>
                                  </div>
-                                 <div className="card-body p-4">
-                                   <div className="bg-light p-4 rounded">
+                                 <div className="card-body p-3">
+                                   <div className="bg-light p-3 rounded">
                                      <p
                                        className="small mb-0"
-                                       style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                                       style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: '0.75rem' }}
                                      >
                                        {prompt.prompt}
                                      </p>
@@ -646,14 +651,14 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                </div>
                              ))
                            ) : (
-                             <div className="text-center py-5 text-muted">
+                             <div className="text-center py-4 text-muted">
                                <Icon
                                  icon="solar:document-text-bold"
-                                 width="48"
-                                 height="48"
-                                 className="text-muted mb-3"
+                                 width="32"
+                                 height="32"
+                                 className="text-muted mb-2"
                                />
-                               <p className="fw-medium">No prompts available</p>
+                               <p className="fw-medium small">No prompts available</p>
                              </div>
                            )}
                         </div>
@@ -663,27 +668,27 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
 
                   {/* Specifications Tab */}
                   {activeTab === "specs" && (
-                    <div className="tab-pane fade show active mt-3" role="tabpanel">
+                    <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "500px" }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
                       >
                         <div>
                           {results.artifacts && results.artifacts.length > 0 ? (
                              results.artifacts.map((artifact, index) => (
                                <div
                                  key={artifact.shot_id || index}
-                                 className="card mb-3"
+                                 className="card mb-2"
                                >
-                                 <div className="card-header bg-light p-3">
-                                   <h6 className="card-title mb-0 fw-semibold">
+                                 <div className="card-header bg-light p-2">
+                                   <h6 className="card-title mb-0 fw-semibold small">
                                      {artifact.shot_id ||
                                        `Specification ${index + 1}`}
                                    </h6>
                                  </div>
-                                 <div className="card-body p-4">
-                                   <div className="bg-light p-4 rounded">
-                                     <pre className="small mb-0" style={{ maxHeight: "300px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                 <div className="card-body p-3">
+                                   <div className="bg-light p-3 rounded">
+                                     <pre className="small mb-0" style={{ maxHeight: "250px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: '0.75rem' }}>
                                        {JSON.stringify(artifact, null, 2)}
                                      </pre>
                                    </div>
@@ -691,14 +696,14 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                </div>
                              ))
                            ) : (
-                             <div className="text-center py-5 text-muted">
+                             <div className="text-center py-4 text-muted">
                                <Icon
                                  icon="solar:settings-bold"
-                                 width="48"
-                                 height="48"
-                                 className="text-muted mb-3"
+                                 width="32"
+                                 height="32"
+                                 className="text-muted mb-2"
                                />
-                               <p className="fw-medium">No specifications available</p>
+                               <p className="fw-medium small">No specifications available</p>
                              </div>
                            )}
                         </div>
@@ -711,10 +716,10 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
           </div>
 
            {/* Modal Footer */}
-           <div className="modal-footer border-top">
+           <div className="modal-footer border-top px-3 py-2">
              <button
                type="button"
-               className="btn btn-secondary"
+               className="btn btn-secondary btn-sm"
                onClick={onClose}
              >
                Close
