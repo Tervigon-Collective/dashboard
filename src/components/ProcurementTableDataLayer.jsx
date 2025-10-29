@@ -1827,7 +1827,7 @@ const ProcurementTableDataLayer = () => {
                 color: "#111827",
               }}
             >
-              Approve Product?
+              Update Product Status
             </h4>
 
             {/* Description */}
@@ -1840,7 +1840,7 @@ const ProcurementTableDataLayer = () => {
                 lineHeight: "1.6",
               }}
             >
-              You are about to approve this product
+              Choose to approve or reject this product
             </p>
 
             {/* Product name */}
@@ -1868,33 +1868,58 @@ const ProcurementTableDataLayer = () => {
             {/* Buttons */}
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => setStatusModalIsOpen(false)}
+                onClick={() => handleStatusUpdate("rejected")}
                 disabled={isUpdatingStatus}
                 style={{
                   flex: 1,
                   padding: "14px 24px",
                   fontSize: "15px",
                   fontWeight: "600",
-                  border: "1px solid #e5e7eb",
+                  border: "none",
                   borderRadius: "10px",
-                  background: "white",
-                  color: "#374151",
+                  background: isUpdatingStatus
+                    ? "#9ca3af"
+                    : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  color: "white",
                   cursor: isUpdatingStatus ? "not-allowed" : "pointer",
                   transition: "all 0.2s",
-                  opacity: isUpdatingStatus ? 0.5 : 1,
+                  boxShadow: isUpdatingStatus
+                    ? "none"
+                    : "0 4px 12px rgba(239, 68, 68, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
                 }}
                 onMouseEnter={(e) => {
                   if (!isUpdatingStatus) {
-                    e.target.style.background = "#f9fafb";
-                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow =
+                      "0 6px 16px rgba(239, 68, 68, 0.4)";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = "white";
-                  e.target.style.borderColor = "#e5e7eb";
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow =
+                    "0 4px 12px rgba(239, 68, 68, 0.3)";
                 }}
               >
-                Cancel
+                {isUpdatingStatus ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                      style={{ width: "16px", height: "16px" }}
+                    ></span>
+                    <span>Rejecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="mdi:close-circle" width="20" height="20" />
+                    <span>Reject Product</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={() => handleStatusUpdate("approved")}
