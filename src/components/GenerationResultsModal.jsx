@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { toast } from "react-toastify";
 import * as contentApi from "@/services/contentGenerationApi";
 import { useGeneration } from "@/contexts/GenerationContext";
+import config from "@/config";
 
 /**
  * Generation Results Modal Component
@@ -89,7 +90,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
       }
 
       // Use the Python backend API endpoint
-      const downloadUrl = `http://localhost:8000/api/content/download/${results.run_id}/${artifactId}`;
+      const downloadUrl = `${config.pythonApi.baseURL}/api/content/download/${results.run_id}/${artifactId}`;
       
       // Create a link and trigger download
       const link = document.createElement("a");

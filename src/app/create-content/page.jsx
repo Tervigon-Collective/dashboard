@@ -373,17 +373,17 @@ export default function CreateContentPage() {
       // Check if download_url is available from API
       if (item.download_url) {
         // Use the download_url from API (e.g., /api/content/download/run_id/artifact_id)
-        downloadUrl = `http://localhost:8000${item.download_url}`;
+        downloadUrl = `${config.pythonApi.baseURL}${item.download_url}`;
       } 
       // If not, try to construct from run_id and artifact_id
       else if (item.run_id && item.artifact_id) {
-        downloadUrl = `http://localhost:8000/api/content/download/${item.run_id}/${item.artifact_id}`;
+        downloadUrl = `${config.pythonApi.baseURL}/api/content/download/${item.run_id}/${item.artifact_id}`;
       }
       // Fallback to direct image URL
       else if (item.image_url || item.local_url) {
         // If we have a direct image URL, download it directly
         const imageUrl = item.image_url || 
-                        (item.local_url ? `http://localhost:8000${item.local_url}` : null);
+                        (item.local_url ? `${config.pythonApi.baseURL}${item.local_url}` : null);
         
         if (imageUrl) {
           // Fetch and download

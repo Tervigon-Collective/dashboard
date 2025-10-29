@@ -344,7 +344,7 @@ export const getContentDownloadUrl = (runId, artifactId) => {
  */
 export const editImage = async (runId, artifactId, editPrompt) => {
   const response = await axios.post(
-    "http://localhost:8000/api/content/edit-image",
+    `${config.pythonApi.baseURL}/api/content/edit-image`,
     {
       run_id: runId,
       artifact_id: artifactId,
