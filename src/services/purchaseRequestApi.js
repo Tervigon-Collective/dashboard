@@ -51,8 +51,11 @@ class PurchaseRequestApiService {
     return this.makeRequest(`/receiving/purchase-request?${params}`);
   }
 
-  async getPurchaseRequestById(requestId) {
-    return this.makeRequest(`/receiving/purchase-request/${requestId}`);
+  async getPurchaseRequestById(requestId, includeQualityCheck = false) {
+    const url = includeQualityCheck
+      ? `/receiving/purchase-request/${requestId}?include_quality_check=true`
+      : `/receiving/purchase-request/${requestId}`;
+    return this.makeRequest(url);
   }
 
   async updatePurchaseRequest(requestId, requestData) {
