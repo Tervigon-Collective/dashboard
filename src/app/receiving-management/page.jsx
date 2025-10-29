@@ -53,7 +53,10 @@ const ReceivingManagementLayer = () => {
           <div className="card-body">
             {/* Table */}
             <div className="table-responsive">
-              <table className="table table-hover" style={{ fontSize: "14px" }}>
+              <table
+                className="table table-hover"
+                style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+              >
                 <thead
                   style={{
                     backgroundColor: "#f9fafb",
@@ -178,32 +181,80 @@ const ReceivingManagementLayer = () => {
                   ) : (
                     requests.map((request, index) => (
                       <tr key={request.request_id}>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {index + 1}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.vendor_name || "-"}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {new Date(request.order_date).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {new Date(request.delivery_date).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.aggregated?.productNames || "-"}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.aggregated?.totalInvoiceQty ?? 0}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.aggregated?.totalSortedQty ?? 0}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.aggregated?.totalDamageQty ?? 0}
                         </td>
                         <td style={{ padding: "12px" }}>
-                          <div className="d-flex gap-2">
+                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
                             <button
                               className="btn btn-sm"
                               style={{
@@ -228,9 +279,9 @@ const ReceivingManagementLayer = () => {
               </table>
             </div>
 
-            {/* Pagination */}
+            {/* Pagination - Responsive */}
             {totalRecords > 0 && (
-              <div className="d-flex justify-content-between align-items-center pt-3">
+              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
                 <div className="d-flex align-items-center gap-2">
                   <button
                     className="btn btn-sm"
@@ -1095,30 +1146,47 @@ const ReceivingManagementLayer = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="d-flex gap-4 mb-4 border-bottom pb-0">
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer position-relative ${
-                activeTab === tab.id ? "text-primary" : "text-muted"
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-              style={{ cursor: "pointer" }}
-            >
-              <Icon icon={tab.icon} className="icon" />
-              <span className="fw-medium">{tab.label}</span>
-              {activeTab === tab.id && (
-                <div
-                  className="position-absolute bottom-0 start-0 end-0"
-                  style={{
-                    height: "2px",
-                    backgroundColor: "#0d6efd",
-                  }}
+        {/* Tab Navigation - Responsive */}
+        <div
+          className="mb-4 border-bottom pb-0"
+          style={{ overflowX: "auto", overflowY: "hidden" }}
+        >
+          <div
+            className="d-flex gap-2 gap-md-4"
+            style={{ minWidth: "max-content", flexWrap: "nowrap" }}
+          >
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
+                  activeTab === tab.id ? "text-primary" : "text-muted"
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                <Icon
+                  icon={tab.icon}
+                  className="icon"
+                  style={{ flexShrink: 0 }}
                 />
-              )}
-            </div>
-          ))}
+                <span
+                  className="fw-medium"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  {tab.label}
+                </span>
+                {activeTab === tab.id && (
+                  <div
+                    className="position-absolute bottom-0 start-0 end-0"
+                    style={{
+                      height: "2px",
+                      backgroundColor: "#0d6efd",
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -1217,7 +1285,7 @@ const ReceivingManagementLayer = () => {
             tabIndex="-1"
             style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
           >
-            <div className="modal-dialog modal-lg">
+            <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
               <div className="modal-content">
                 <div className="modal-header">
                   <h5 className="modal-title">
@@ -1230,30 +1298,33 @@ const ReceivingManagementLayer = () => {
                     onClick={() => setViewModalOpen(false)}
                   ></button>
                 </div>
-                <div className="modal-body">
+                <div
+                  className="modal-body"
+                  style={{ maxHeight: "70vh", overflowY: "auto" }}
+                >
                   <div className="row mb-4">
-                    <div className="col-md-6">
+                    <div className="col-12 col-md-6 mb-3 mb-md-0">
                       <h6 className="text-muted mb-3">Vendor Information</h6>
                       <div className="d-flex flex-column gap-2">
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Vendor Name:</span>
-                          <span className="fw-medium">
+                          <span className="fw-medium text-break">
                             {selectedRequest.vendor_name}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Phone No.:</span>
-                          <span className="fw-medium">
+                          <span className="fw-medium text-break">
                             {selectedRequest.vendor_phone_no}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">GST Number:</span>
-                          <span className="fw-medium">
+                          <span className="fw-medium text-break">
                             {selectedRequest.vendor_gst_number}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Address:</span>
                           <span className="fw-medium">
                             {selectedRequest.vendor_address}
@@ -1261,10 +1332,10 @@ const ReceivingManagementLayer = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-12 col-md-6">
                       <h6 className="text-muted mb-3">Delivery Information</h6>
                       <div className="d-flex flex-column gap-2">
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Order Date:</span>
                           <span className="fw-medium">
                             {new Date(
@@ -1272,7 +1343,7 @@ const ReceivingManagementLayer = () => {
                             ).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Delivery Date:</span>
                           <span className="fw-medium">
                             {new Date(
@@ -1280,18 +1351,43 @@ const ReceivingManagementLayer = () => {
                             ).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Status:</span>
                           <span
                             className={`badge ${
-                              selectedRequest.status === "Pending"
+                              selectedRequest.status === "Pending" ||
+                              selectedRequest.status?.toLowerCase() ===
+                                "pending"
                                 ? "bg-warning"
-                                : selectedRequest.status === "Completed"
+                                : selectedRequest.status ===
+                                    "to_be_delivered" ||
+                                  selectedRequest.status?.toLowerCase() ===
+                                    "to_be_delivered"
+                                ? "bg-info"
+                                : selectedRequest.status === "arrived" ||
+                                  selectedRequest.status?.toLowerCase() ===
+                                    "arrived"
+                                ? "bg-primary"
+                                : selectedRequest.status === "fulfilled" ||
+                                  selectedRequest.status?.toLowerCase() ===
+                                    "fulfilled"
                                 ? "bg-success"
                                 : "bg-secondary"
                             }`}
+                            style={{
+                              fontSize: "clamp(11px, 2vw, 13px)",
+                              padding: "6px 12px",
+                            }}
                           >
-                            {selectedRequest.status}
+                            {selectedRequest.status === "Pending"
+                              ? "Pending"
+                              : selectedRequest.status === "to_be_delivered"
+                              ? "To Be Delivered"
+                              : selectedRequest.status === "arrived"
+                              ? "Arrived"
+                              : selectedRequest.status === "fulfilled"
+                              ? "Fulfilled"
+                              : selectedRequest.status}
                           </span>
                         </div>
                       </div>
@@ -1506,15 +1602,6 @@ const ReceivingManagementLayer = () => {
                       </div>
                     )}
                 </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setViewModalOpen(false)}
-                  >
-                    Close
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -1628,14 +1715,14 @@ const ReceivingManagementLayer = () => {
                 </p>
 
                 {/* Buttons */}
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div className="d-flex flex-column flex-sm-row gap-2">
                   <button
                     onClick={() => {
                       setStatusConfirmModal(false);
                       setRequestToUpdate(null);
                     }}
+                    className="w-100 w-sm-auto"
                     style={{
-                      flex: 1,
                       padding: "12px 18px",
                       fontSize: "15px",
                       fontWeight: 600,
@@ -1659,8 +1746,8 @@ const ReceivingManagementLayer = () => {
                   </button>
                   <button
                     onClick={handleStatusUpdateConfirm}
+                    className="w-100 w-sm-auto"
                     style={{
-                      flex: 1,
                       padding: "12px 18px",
                       fontSize: "15px",
                       fontWeight: 600,
@@ -1694,8 +1781,8 @@ const ReceivingManagementLayer = () => {
             style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
           >
             <div
-              className="modal-dialog modal-xl"
-              style={{ maxWidth: "1200px" }}
+              className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
+              style={{ maxWidth: "min(1200px, 95vw)", margin: "1rem auto" }}
             >
               <div className="modal-content">
                 <div className="modal-header">
@@ -1899,10 +1986,10 @@ const ReceivingManagementLayer = () => {
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer d-flex flex-column flex-sm-row gap-2 justify-content-end">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary w-100 w-sm-auto"
                     onClick={() => {
                       setInspectionModalOpen(false);
                       setRequestToInspect(null);
@@ -1913,7 +2000,7 @@ const ReceivingManagementLayer = () => {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary w-100 w-sm-auto"
                     onClick={handleSaveInspection}
                     disabled={isSavingInspection}
                   >
@@ -2017,7 +2104,10 @@ const PurchaseRequestTab = ({
 
           {/* Table */}
           <div className="table-responsive">
-            <table className="table table-hover" style={{ fontSize: "14px" }}>
+            <table
+              className="table table-hover"
+              style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+            >
               <thead
                 style={{
                   backgroundColor: "#f9fafb",
@@ -2029,7 +2119,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     #
@@ -2038,7 +2129,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Vendor Name
@@ -2047,7 +2139,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Order Date
@@ -2056,7 +2149,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Delivery Date
@@ -2065,7 +2159,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Product Name
@@ -2074,7 +2169,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     HSN Code
@@ -2083,7 +2179,8 @@ const PurchaseRequestTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Action
@@ -2148,19 +2245,49 @@ const PurchaseRequestTab = ({
                     })
                     .map((request, index) => (
                       <tr key={request.request_id}>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {index + 1}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.vendor_name || "-"}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {new Date(request.order_date).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {new Date(request.delivery_date).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.items && request.items.length > 0
                             ? [
                                 ...new Set(
@@ -2169,7 +2296,13 @@ const PurchaseRequestTab = ({
                               ].join(", ")
                             : "-"}
                         </td>
-                        <td style={{ padding: "12px", color: "#374151" }}>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
                           {request.items && request.items.length > 0
                             ? [
                                 ...new Set(
@@ -2179,7 +2312,7 @@ const PurchaseRequestTab = ({
                             : "-"}
                         </td>
                         <td style={{ padding: "12px" }}>
-                          <div className="d-flex gap-2">
+                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
                             <button
                               className="btn btn-sm"
                               style={{
@@ -2187,6 +2320,7 @@ const PurchaseRequestTab = ({
                                 background: "none",
                                 padding: "4px",
                                 color: "#0d6efd",
+                                minWidth: "32px",
                               }}
                               title="View"
                               onClick={() => handleViewRequest(request)}
@@ -2219,19 +2353,23 @@ const PurchaseRequestTab = ({
                             >
                               <Icon icon="mdi:delete" width="16" height="16" />
                             </button>
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                border: "none",
-                                background: "none",
-                                padding: "4px",
-                                color: "#6c757d",
-                              }}
-                              title="Settings"
-                              onClick={() => handleSettingsClick(request)}
-                            >
-                              <Icon icon="mdi:cog" width="16" height="16" />
-                            </button>
+                            {/* Only show Settings icon if status is "Pending" */}
+                            {(request.status === "Pending" ||
+                              request.status?.toLowerCase() === "pending") && (
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  padding: "4px",
+                                  color: "#6c757d",
+                                }}
+                                title="Settings"
+                                onClick={() => handleSettingsClick(request)}
+                              >
+                                <Icon icon="mdi:cog" width="16" height="16" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2241,9 +2379,9 @@ const PurchaseRequestTab = ({
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination - Responsive */}
           {totalRecords > 0 && (
-            <div className="d-flex justify-content-between align-items-center pt-3">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
               <div className="d-flex align-items-center gap-2">
                 <button
                   className="btn btn-sm"
@@ -2387,7 +2525,10 @@ const PurchaseRequestModal = ({
       tabIndex="-1"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
     >
-      <div className="modal-dialog modal-lg">
+      <div
+        className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
+        style={{ maxWidth: "min(800px, 95vw)", margin: "1rem auto" }}
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
@@ -2670,7 +2811,7 @@ const PurchaseRequestModal = ({
                                   {isSelected && (
                                     <div className="row g-2">
                                       {/* Quantity */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           Quantity
                                         </label>
@@ -2692,7 +2833,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* ORD Qty */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           ORD Qty
                                         </label>
@@ -2711,7 +2852,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* Rate */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           Rate
                                         </label>
@@ -2731,7 +2872,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* Taxable Amt */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           Taxable Amt
                                         </label>
@@ -2749,7 +2890,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* IGST % */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           IGST %
                                         </label>
@@ -2771,7 +2912,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* SGST % */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           SGST %
                                         </label>
@@ -2793,7 +2934,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* CGST % */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           CGST %
                                         </label>
@@ -2815,7 +2956,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* GST Amt */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           GST Amt
                                         </label>
@@ -2831,7 +2972,7 @@ const PurchaseRequestModal = ({
                                         />
                                       </div>
                                       {/* Net Amount */}
-                                      <div className="col-md-3">
+                                      <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
                                           Net Amount
                                         </label>
@@ -2899,17 +3040,17 @@ const PurchaseRequestModal = ({
                 </div>
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer d-flex flex-column flex-sm-row gap-2 justify-content-end">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary w-100 w-sm-auto"
                   onClick={handleModalClose}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary w-100 w-sm-auto"
                   disabled={
                     isSubmitting ||
                     formData.products.length === 0 ||
@@ -3273,7 +3414,10 @@ const QualityCheckTab = ({
         <div className="card-body">
           {/* Table */}
           <div className="table-responsive">
-            <table className="table table-hover" style={{ fontSize: "14px" }}>
+            <table
+              className="table table-hover"
+              style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+            >
               <thead
                 style={{
                   backgroundColor: "#f9fafb",
@@ -3448,9 +3592,9 @@ const QualityCheckTab = ({
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination - Responsive */}
           {totalRecords > 0 && (
-            <div className="d-flex justify-content-between align-items-center pt-3">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
               <div className="d-flex align-items-center gap-2">
                 <button
                   className="btn btn-sm"
@@ -3503,7 +3647,13 @@ const QualityCheckTab = ({
                 </button>
               </div>
 
-              <div style={{ fontSize: "14px", color: "#6c757d" }}>
+              <div
+                style={{
+                  fontSize: "clamp(12px, 2.5vw, 14px)",
+                  color: "#6c757d",
+                  textAlign: "center",
+                }}
+              >
                 Showing <strong>{requests.length}</strong> of{" "}
                 <strong>{totalRecords}</strong> requests
               </div>
