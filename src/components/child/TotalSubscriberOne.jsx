@@ -3,7 +3,7 @@ import useReactApexChart from "@/hook/useReactApexChart";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import dynamic from "next/dynamic";
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { apiClient } from "../../api/api";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
@@ -34,9 +34,9 @@ const TotalSubscriberOne = () => {
     const startDateStr = formatDate(startDate);
     const endDateStr = formatDate(endDate);
 
-    axios
+    apiClient
       .get(
-        `${config.api.baseURL}/api/net_profit_single_day?startDate=${startDateStr}&endDate=${endDateStr}`
+        `/api/net_profit_single_day?startDate=${startDateStr}&endDate=${endDateStr}`
       )
       .then((res) => {
         // Extract dailyBreakdowns from the response
@@ -157,4 +157,3 @@ const TotalSubscriberOne = () => {
 };
 
 export default TotalSubscriberOne;
-

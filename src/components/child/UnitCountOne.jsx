@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import config from "../../config";
-import axios from "axios";
+import { apiClient } from "../../api/api";
 
 // Utility to get today's date in YYYY-MM-DD format
 const getToday = () => {
@@ -146,12 +146,12 @@ const UnitCountOne = ({ dateRange }) => {
       }`;
 
       Promise.allSettled([
-        axios.get(`${config.api.baseURL}/api/ad_spend${query}`),
-        axios.get(`${config.api.baseURL}/api/cogs${query}`),
-        axios.get(`${config.api.baseURL}/api/sales${query}`),
-        axios.get(`${config.api.baseURL}/api/net_profit${query}`),
-        axios.get(`${config.api.baseURL}/api/order_count${query}`),
-        axios.get(`${config.api.baseURL}/api/roas${query}`),
+        apiClient.get(`/api/ad_spend${query}`),
+        apiClient.get(`/api/cogs${query}`),
+        apiClient.get(`/api/sales${query}`),
+        apiClient.get(`/api/net_profit${query}`),
+        apiClient.get(`/api/order_count${query}`),
+        apiClient.get(`/api/roas${query}`),
       ]).then((results) => {
         // ad_spend
         if (results[0].status === "fulfilled") {
@@ -243,11 +243,11 @@ const UnitCountOne = ({ dateRange }) => {
       const endDateTime = endDate.split(":")[0];
 
       Promise.allSettled([
-        axios.get(
-          `${config.api.baseURL}/api/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
+        apiClient.get(
+          `/api/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
         ),
-        axios.get(
-          `${config.api.baseURL}/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
+        apiClient.get(
+          `/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
         ),
       ])
         .then((results) => {

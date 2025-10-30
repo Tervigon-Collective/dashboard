@@ -1,5 +1,6 @@
 import axios from "axios";
 import config from "../config";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // Create an axios instance with the base URL
 const apiClient = axios.create({
@@ -8,12 +9,51 @@ const apiClient = axios.create({
 
 // Add a request interceptor to inject the idToken for secure API calls
 apiClient.interceptors.request.use(
-  (config) => {
-    if (typeof window !== "undefined") {
-      const idToken = localStorage.getItem("idToken");
-      if (idToken) {
-        config.headers.Authorization = `Bearer ${idToken}`;
+  async (config) => {
+    const auth = getAuth();
+    let user = auth.currentUser;
+    if (!user && typeof window !== "undefined") {
+      user = await new Promise((resolve) => {
+        const unsub = onAuthStateChanged(auth, (u) => {
+          unsub();
+          resolve(u);
+        });
+        setTimeout(() => {
+          unsub();
+          resolve(null);
+        }, 2500);
+      });
+    }
+    let tokenToUse = null;
+    if (user) {
+      try {
+        tokenToUse = await user.getIdToken();
+      } catch (_) {
+        // let backend return 401
       }
+    }
+    if (!tokenToUse && typeof window !== "undefined") {
+      // fallback to previously stored token if available
+      tokenToUse =
+        localStorage.getItem("idToken") ||
+        localStorage.getItem("firebaseToken");
+    }
+    if (tokenToUse) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${tokenToUse}`;
+    }
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const urlStr = (config.baseURL || "") + (config.url || "");
+        if (urlStr.includes("/api/customer-orders")) {
+          // Lightweight debug to confirm header presence for this route
+          // eslint-disable-next-line no-console
+          console.debug(
+            "[apiClient] customer-orders auth attached:",
+            !!config.headers?.Authorization
+          );
+        }
+      } catch (_) {}
     }
     return config;
   },
