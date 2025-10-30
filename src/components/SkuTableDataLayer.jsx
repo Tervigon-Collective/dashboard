@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Modal from "react-modal";
 import config from "../config";
+import { apiClient } from "../api/api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useUser } from "@/helper/UserContext";
@@ -88,12 +89,8 @@ const SkuTableDataLayer = () => {
     setIsLoading(true);
     setErrorMsg(""); // Clear previous errors
     try {
-      const response = await fetch(`${config.api.baseURL}/product_metrics`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch SKU data");
-      }
-      const data = await response.json();
-      setSkuData(data || []);
+      const response = await apiClient.get(`/product_metrics`);
+      setSkuData(response.data || []);
     } catch (error) {
       console.error("Error fetching SKU data:", error);
       handleError("fetch SKU data");
@@ -229,20 +226,16 @@ const SkuTableDataLayer = () => {
 
       // Make API call
       const url = editSku
-        ? `${config.api.baseURL}/product_metrics/${editSku.sku_name}`
-        : `${config.api.baseURL}/product_metrics`;
+        ? `/product_metrics/${editSku.sku_name}`
+        : `/product_metrics`;
 
-      const response = await fetch(url, {
+      const response = await apiClient.request({
+        url,
         method: editSku ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSku),
+        data: newSku,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to ${editSku ? "update" : "create"} SKU`);
-      }
-
-      const savedSku = await response.json();
+      const savedSku = response.data;
 
       // Update with server data to ensure consistency
       if (editSku) {
@@ -304,16 +297,7 @@ const SkuTableDataLayer = () => {
       );
       setConfirmModalIsOpen(false);
 
-      const response = await fetch(
-        `${config.api.baseURL}/product_metrics/${deleteSkuName}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to delete SKU");
-      }
+      await apiClient.delete(`/product_metrics/${deleteSkuName}`);
 
       handleSuccess("Delete SKU");
     } catch (error) {

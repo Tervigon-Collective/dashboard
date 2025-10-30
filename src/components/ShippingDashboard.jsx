@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import config from "../config";
+import { apiClient } from "../api/api";
 import { useUser } from "@/helper/UserContext";
 
 const ShippingDashboard = () => {
@@ -37,23 +38,16 @@ const ShippingDashboard = () => {
     setError(null);
 
     try {
-      let url = `${config.api.baseURL}/api/customer-orders?page=${page}&limit=${limit}`;
+      let url = `/api/customer-orders?page=${page}&limit=${limit}`;
 
       if (search) {
         // Use universal search endpoint to search across all fields
-        url = `${
-          config.api.baseURL
-        }/api/customer-orders/search?q=${encodeURIComponent(
+        url = `/api/customer-orders/search?q=${encodeURIComponent(
           search
         )}&page=${page}&limit=${limit}`;
       }
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const { data } = await apiClient.get(url);
 
       setOrders(data.orders || []);
       setPagination(

@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 import config from "../config";
+import { apiClient } from "../api/api";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const CustomerLayer = () => {
   const [orders, setOrders] = useState([]);
@@ -15,7 +17,7 @@ const CustomerLayer = () => {
     total: 0,
     totalPages: 0,
     hasNext: false,
-    hasPrev: false
+    hasPrev: false,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,35 +41,46 @@ const CustomerLayer = () => {
   const fetchOrders = async (page = 1, search = "", limit = pageSize) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      let url = `${config.api.baseURL}/api/customer-orders?page=${page}&limit=${limit}`;
-      
+      // Ensure Firebase auth is ready so the interceptor can attach the token
+      const auth = getAuth();
+      let user = auth.currentUser;
+      if (!user) {
+        user = await new Promise((resolve) => {
+          const unsub = onAuthStateChanged(auth, (u) => {
+            unsub();
+            resolve(u);
+          });
+        });
+      }
+      if (!user) {
+        setError("Please sign in to view orders.");
+        setLoading(false);
+        return;
+      }
+
+      let url = `/api/customer-orders?page=${page}&limit=${limit}`;
+
       if (search) {
         // Use universal search endpoint to search across all fields
-        url = `${config.api.baseURL}/api/customer-orders/search?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
+        url = `/api/customer-orders/search?q=${encodeURIComponent(
+          search
+        )}&page=${page}&limit=${limit}`;
       }
-      
-      const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json; charset=utf-8'
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+
+      const { data } = await apiClient.get(url);
       setOrders(data.orders || []);
-      setPagination(data.pagination || {
-        page: 1,
-        limit: limit,
-        total: 0,
-        totalPages: 0,
-        hasNext: false,
-        hasPrev: false
-      });
+      setPagination(
+        data.pagination || {
+          page: 1,
+          limit: limit,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        }
+      );
     } catch (err) {
       setError("Failed to load customer orders. Please try again.");
     } finally {
@@ -79,13 +92,12 @@ const CustomerLayer = () => {
     fetchOrders(currentPage, searchTerm, pageSize);
   }, [currentPage, searchTerm, pageSize]);
 
-
-
   // Reset select all state when page changes
   useEffect(() => {
-    const currentPageOrderIds = orders
-      .map(order => order.order_id);
-    const selectedCurrentPage = currentPageOrderIds.every(id => selectedOrders.has(id));
+    const currentPageOrderIds = orders.map((order) => order.order_id);
+    const selectedCurrentPage = currentPageOrderIds.every((id) =>
+      selectedOrders.has(id)
+    );
     setSelectAll(selectedCurrentPage && currentPageOrderIds.length > 0);
   }, [orders, selectedOrders]);
 
@@ -105,59 +117,62 @@ const CustomerLayer = () => {
     if (!lineItems || lineItems.length === 0) {
       return 1; // Default to 1 if no line items available
     }
-    return lineItems.reduce((total, item) => total + (item.lineitem_quantity || 0), 0);
+    return lineItems.reduce(
+      (total, item) => total + (item.lineitem_quantity || 0),
+      0
+    );
   };
 
   // Format phone number by removing country code prefix
   const formatPhoneNumber = (phone) => {
-    if (!phone) return 'N/A';
-    
+    if (!phone) return "N/A";
+
     // Remove "91" prefix if it exists at the beginning
     let formattedPhone = phone.toString().trim();
-    
+
     // Check if phone starts with "91" and has more than 10 digits
-    if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+    if (formattedPhone.startsWith("91") && formattedPhone.length > 10) {
       formattedPhone = formattedPhone.substring(2);
     }
-    
+
     // If still more than 10 digits, truncate to last 10 digits
     if (formattedPhone.length > 10) {
       formattedPhone = formattedPhone.substring(formattedPhone.length - 10);
     }
-    
+
     return formattedPhone;
   };
 
   // Get status badge for order
   const getStatusBadge = (order) => {
-    if (order.payment_status === 'voided') {
+    if (order.payment_status === "voided") {
       return {
-        text: 'Cancelled',
-        className: 'bg-danger-subtle text-danger',
-        icon: 'lucide:x-circle'
+        text: "Cancelled",
+        className: "bg-danger-subtle text-danger",
+        icon: "lucide:x-circle",
       };
     }
-    
-    if (order.payment_status === 'paid') {
+
+    if (order.payment_status === "paid") {
       return {
-        text: 'Paid',
-        className: 'bg-success-subtle text-success',
-        icon: 'lucide:check-circle'
+        text: "Paid",
+        className: "bg-success-subtle text-success",
+        icon: "lucide:check-circle",
       };
     }
-    
-    if (order.payment_status === 'pending') {
+
+    if (order.payment_status === "pending") {
       return {
-        text: 'Pending',
-        className: 'bg-warning-subtle text-warning',
-        icon: 'lucide:clock'
+        text: "Pending",
+        className: "bg-warning-subtle text-warning",
+        icon: "lucide:clock",
       };
     }
-    
+
     return {
-      text: 'Unknown',
-      className: 'bg-secondary-subtle text-secondary',
-      icon: 'lucide:help-circle'
+      text: "Unknown",
+      className: "bg-secondary-subtle text-secondary",
+      icon: "lucide:help-circle",
     };
   };
 
@@ -165,30 +180,29 @@ const CustomerLayer = () => {
   const getShippingStatusBadge = (order) => {
     if (order.awb_number) {
       return {
-        text: 'AWB Generated',
-        className: 'bg-info-subtle text-info',
-        icon: 'lucide:truck',
-        tooltip: `BlueDart AWB: ${order.awb_number}`
+        text: "AWB Generated",
+        className: "bg-info-subtle text-info",
+        icon: "lucide:truck",
+        tooltip: `BlueDart AWB: ${order.awb_number}`,
       };
     }
-    
+
     if (order.ewaybill_number) {
       return {
-        text: 'eWaybill Generated',
-        className: 'bg-primary-subtle text-primary',
-        icon: 'lucide:file-text',
-        tooltip: `DHL eWaybill: ${order.ewaybill_number}`
+        text: "eWaybill Generated",
+        className: "bg-primary-subtle text-primary",
+        icon: "lucide:file-text",
+        tooltip: `DHL eWaybill: ${order.ewaybill_number}`,
       };
     }
-    
+
     return {
-      text: 'No Shipping',
-      className: 'bg-light text-muted',
-      icon: 'lucide:package-x',
-      tooltip: 'No shipping documents generated'
+      text: "No Shipping",
+      className: "bg-light text-muted",
+      icon: "lucide:package-x",
+      tooltip: "No shipping documents generated",
     };
   };
-  
 
   // Format address
   const formatAddress = (order) => {
@@ -197,43 +211,45 @@ const CustomerLayer = () => {
       order.shipping_address2,
       order.shipping_city,
       order.shipping_province_name,
-      order.shipping_zip
+      order.shipping_zip,
     ].filter(Boolean);
-    
+
     return parts.join(", ");
   };
 
   // Handle view products
   const handleViewProducts = (order) => {
     // Map line_items to products format
-    const products = order.line_items?.length > 0 
-      ? order.line_items.map(item => ({
-          name: item.lineitem_name || 'Unknown Product',
-          sku: item.lineitem_sku || 'N/A',
-          quantity: item.lineitem_quantity || 0,
-          price: item.lineitem_price || 0,
-          total: (item.lineitem_quantity || 0) * (item.lineitem_price || 0),
-          compare_at_price: item.lineitem_compare_at_price || 0,
-          grams: item.lineitem_grams || 0,
-          vendor: item.lineitem_vendor || 'N/A',
-          requires_shipping: item.lineitem_requires_shipping || false,
-          taxable: item.lineitem_taxable || false,
-          fulfillment_status: item.lineitem_fulfillment_status || 'unfulfilled',
-          gift_card: item.lineitem_gift_card || false
-        }))
-      : [{
-          name: `Order ${order.order_name}`,
-          sku: `SKU-${order.order_name?.replace(/[^0-9]/g, '') || 'N/A'}`,
-          quantity: 1,
-          price: order.subtotal || 0,
-          total: order.subtotal || 0
-        }];
-    
+    const products =
+      order.line_items?.length > 0
+        ? order.line_items.map((item) => ({
+            name: item.lineitem_name || "Unknown Product",
+            sku: item.lineitem_sku || "N/A",
+            quantity: item.lineitem_quantity || 0,
+            price: item.lineitem_price || 0,
+            total: (item.lineitem_quantity || 0) * (item.lineitem_price || 0),
+            compare_at_price: item.lineitem_compare_at_price || 0,
+            grams: item.lineitem_grams || 0,
+            vendor: item.lineitem_vendor || "N/A",
+            requires_shipping: item.lineitem_requires_shipping || false,
+            taxable: item.lineitem_taxable || false,
+            fulfillment_status:
+              item.lineitem_fulfillment_status || "unfulfilled",
+            gift_card: item.lineitem_gift_card || false,
+          }))
+        : [
+            {
+              name: `Order ${order.order_name}`,
+              sku: `SKU-${order.order_name?.replace(/[^0-9]/g, "") || "N/A"}`,
+              quantity: 1,
+              price: order.subtotal || 0,
+              total: order.subtotal || 0,
+            },
+          ];
+
     setSelectedOrder({ order, products });
     setProductModalOpen(true);
   };
-
-
 
   // Handle file upload using SheetJS for robust parsing
   const handleFileUpload = (event) => {
@@ -242,8 +258,8 @@ const CustomerLayer = () => {
 
     // Check file type
     const fileName = file.name.toLowerCase();
-    const isCSV = fileName.endsWith('.csv');
-    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    const isCSV = fileName.endsWith(".csv");
+    const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
 
     if (!isCSV && !isExcel) {
       setUploadError("Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
@@ -256,19 +272,19 @@ const CustomerLayer = () => {
         const fileData = new Uint8Array(e.target.result);
 
         // Use SheetJS to parse the file
-        const workbook = XLSX.read(fileData, { 
-          type: 'array',
+        const workbook = XLSX.read(fileData, {
+          type: "array",
           cellDates: true,
           cellNF: false,
           cellText: false,
           cellStyles: false,
-          cellHTML: false
+          cellHTML: false,
         });
 
         // Get the first sheet
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        
+
         if (!worksheet) {
           setUploadError("No data found in the file.");
           return;
@@ -277,12 +293,14 @@ const CustomerLayer = () => {
         // Convert to JSON with headers, preserving string values for IDs
         const jsonData = XLSX.utils.sheet_to_json(worksheet, {
           header: 1, // Use first row as headers
-          defval: '', // Default value for empty cells
-          raw: true // Keep raw values to prevent scientific notation
+          defval: "", // Default value for empty cells
+          raw: true, // Keep raw values to prevent scientific notation
         });
 
         if (jsonData.length < 2) {
-          setUploadError("File must have at least a header row and one data row.");
+          setUploadError(
+            "File must have at least a header row and one data row."
+          );
           return;
         }
 
@@ -292,32 +310,44 @@ const CustomerLayer = () => {
 
         // Helper function to format cell values properly
         const formatCellValue = (value, header) => {
-          if (value === null || value === undefined) return '';
-          
+          if (value === null || value === undefined) return "";
+
           // Convert to string first
           let strValue = String(value);
-          
+
           // Handle scientific notation for large numbers (like IDs)
-          if (strValue.includes('E+') || strValue.includes('e+')) {
+          if (strValue.includes("E+") || strValue.includes("e+")) {
             const num = parseFloat(strValue);
             if (!isNaN(num)) {
               // Convert back to full number string
-              strValue = num.toLocaleString('fullwide', { useGrouping: false });
+              strValue = num.toLocaleString("fullwide", { useGrouping: false });
             }
           }
-          
+
           // Remove quotes from postal codes and zip codes
-          const postalColumns = ['Billing Zip', 'Shipping Zip', 'Zip', 'Postal Code'];
-          if (postalColumns.some(col => header && header.includes(col))) {
-            strValue = strValue.replace(/^['"]|['"]$/g, ''); // Remove leading/trailing quotes
+          const postalColumns = [
+            "Billing Zip",
+            "Shipping Zip",
+            "Zip",
+            "Postal Code",
+          ];
+          if (postalColumns.some((col) => header && header.includes(col))) {
+            strValue = strValue.replace(/^['"]|['"]$/g, ""); // Remove leading/trailing quotes
           }
-          
+
           // Handle specific columns that should be preserved as strings
-          const stringColumns = ['Id', 'Order ID', 'ID', 'Payment ID', 'Device ID', 'Receipt Number'];
-          if (stringColumns.some(col => header && header.includes(col))) {
+          const stringColumns = [
+            "Id",
+            "Order ID",
+            "ID",
+            "Payment ID",
+            "Device ID",
+            "Receipt Number",
+          ];
+          if (stringColumns.some((col) => header && header.includes(col))) {
             return strValue;
           }
-          
+
           return strValue;
         };
 
@@ -331,16 +361,18 @@ const CustomerLayer = () => {
         });
 
         if (parsedData.length === 0) {
-          setUploadError("No valid data found in file. Please check the format.");
+          setUploadError(
+            "No valid data found in file. Please check the format."
+          );
           return;
         }
 
         setFileData(parsedData);
 
         mapDataToBackendFormat(parsedData);
-              } catch (error) {
-          setUploadError(`Error parsing file: ${error.message}`);
-        }
+      } catch (error) {
+        setUploadError(`Error parsing file: ${error.message}`);
+      }
     };
 
     // Read file as array buffer for SheetJS
@@ -349,11 +381,10 @@ const CustomerLayer = () => {
 
   // Map Excel/CSV data to backend format
   const mapDataToBackendFormat = (data) => {
-    
     const groupedOrders = {};
     let processedRows = 0;
     let skippedRows = 0;
-    
+
     // More flexible order name validation
     const isValidOrderName = (name) => {
       return name && name.trim() && name.length > 0;
@@ -366,49 +397,84 @@ const CustomerLayer = () => {
           return row[name];
         }
       }
-      return '';
+      return "";
     };
-  
+
     data.forEach((row, index) => {
       // Check if row is valid
-      if (!row || typeof row !== 'object') {
+      if (!row || typeof row !== "object") {
         skippedRows++;
         return;
       }
-      
+
       // Try to find order name using various possible column names
-      const orderKey = findColumn(row, ['Name', 'Order Name', 'Order', 'Order ID', 'Name']);
+      const orderKey = findColumn(row, [
+        "Name",
+        "Order Name",
+        "Order",
+        "Order ID",
+        "Name",
+      ]);
       if (!orderKey || !isValidOrderName(orderKey)) {
         skippedRows++;
         return;
       }
-  
+
       if (!groupedOrders[orderKey]) {
-        
         // Construct order only once per ID
-        const orderId = findColumn(row, ['Id', 'Order ID', 'ID']) || '';
+        const orderId = findColumn(row, ["Id", "Order ID", "ID"]) || "";
         groupedOrders[orderKey] = {
-          order_id: orderId ? `gid://shopify/Order/${orderId}` : `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          
+          order_id: orderId
+            ? `gid://shopify/Order/${orderId}`
+            : `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+
           order_name: orderKey,
-          email: findColumn(row, ['Email', 'Customer Email', 'Email Address']),
-          subtotal: parseFloat(findColumn(row, ['Subtotal', 'Sub Total', 'Sub-total']) || 0),
-          shipping: parseFloat(findColumn(row, ['Shipping', 'Shipping Cost', 'Shipping Amount']) || 0),
-          taxes: parseFloat(findColumn(row, ['Taxes', 'Tax', 'Tax Amount']) || 0),
-          total: parseFloat(findColumn(row, ['Total', 'Order Total', 'Total Amount']) || 0),
-          discount_amount: parseFloat(findColumn(row, ['Discount Amount', 'Discount', 'Discount Total']) || 0),
-          created_at: findColumn(row, ['Created at', 'Created At', 'Created Date', 'Date']) || new Date().toISOString(),
-          
+          email: findColumn(row, ["Email", "Customer Email", "Email Address"]),
+          subtotal: parseFloat(
+            findColumn(row, ["Subtotal", "Sub Total", "Sub-total"]) || 0
+          ),
+          shipping: parseFloat(
+            findColumn(row, ["Shipping", "Shipping Cost", "Shipping Amount"]) ||
+              0
+          ),
+          taxes: parseFloat(
+            findColumn(row, ["Taxes", "Tax", "Tax Amount"]) || 0
+          ),
+          total: parseFloat(
+            findColumn(row, ["Total", "Order Total", "Total Amount"]) || 0
+          ),
+          discount_amount: parseFloat(
+            findColumn(row, [
+              "Discount Amount",
+              "Discount",
+              "Discount Total",
+            ]) || 0
+          ),
+          created_at:
+            findColumn(row, [
+              "Created at",
+              "Created At",
+              "Created Date",
+              "Date",
+            ]) || new Date().toISOString(),
+
           // Outstanding Balance - calculate based on payment status and total
           outstanding_balance: (() => {
-            const total = parseFloat(findColumn(row, ['Total', 'Order Total', 'Total Amount']) || 0);
-            const paymentStatus = findColumn(row, ['Financial Status', 'Payment Status', 'Status']) || 'pending';
-            
+            const total = parseFloat(
+              findColumn(row, ["Total", "Order Total", "Total Amount"]) || 0
+            );
+            const paymentStatus =
+              findColumn(row, [
+                "Financial Status",
+                "Payment Status",
+                "Status",
+              ]) || "pending";
+
             // If payment status is 'paid', outstanding balance is 0
             // If payment status is 'pending' or 'voided', outstanding balance is the total amount
-            if (paymentStatus.toLowerCase() === 'paid') {
+            if (paymentStatus.toLowerCase() === "paid") {
               return 0;
-            } else if (paymentStatus.toLowerCase() === 'voided') {
+            } else if (paymentStatus.toLowerCase() === "voided") {
               return 0; // Cancelled orders have no outstanding balance
             } else {
               return total; // Pending orders have full outstanding balance
@@ -416,88 +482,183 @@ const CustomerLayer = () => {
           })(),
 
           // Billing
-          billing_name: findColumn(row, ['Billing Name', 'Billing Name', 'Customer Name']),
-          billing_company: findColumn(row, ['Billing Company', 'Company']),
-          billing_street: findColumn(row, ['Billing Street', 'Billing Address', 'Street']),
-          billing_address1: findColumn(row, ['Billing Address1', 'Billing Address', 'Address 1']),
-          billing_address2: findColumn(row, ['Billing Address2', 'Address 2']),
-          billing_city: findColumn(row, ['Billing City', 'City']),
-          billing_zip: findColumn(row, ['Billing Zip', 'Zip', 'Postal Code']),
-          billing_country: findColumn(row, ['Billing Country', 'Country']) || 'IN',
-          billing_province_name: findColumn(row, ['Billing Province Name', 'Province', 'State']),
-          phone: findColumn(row, ['Billing Phone', 'Phone', 'Phone Number']),
+          billing_name: findColumn(row, [
+            "Billing Name",
+            "Billing Name",
+            "Customer Name",
+          ]),
+          billing_company: findColumn(row, ["Billing Company", "Company"]),
+          billing_street: findColumn(row, [
+            "Billing Street",
+            "Billing Address",
+            "Street",
+          ]),
+          billing_address1: findColumn(row, [
+            "Billing Address1",
+            "Billing Address",
+            "Address 1",
+          ]),
+          billing_address2: findColumn(row, ["Billing Address2", "Address 2"]),
+          billing_city: findColumn(row, ["Billing City", "City"]),
+          billing_zip: findColumn(row, ["Billing Zip", "Zip", "Postal Code"]),
+          billing_country:
+            findColumn(row, ["Billing Country", "Country"]) || "IN",
+          billing_province_name: findColumn(row, [
+            "Billing Province Name",
+            "Province",
+            "State",
+          ]),
+          phone: findColumn(row, ["Billing Phone", "Phone", "Phone Number"]),
 
           // Shipping
-          shipping_name: findColumn(row, ['Shipping Name', 'Shipping Name', 'Customer Name']),
-          shipping_company: findColumn(row, ['Shipping Company', 'Company']),
-          shipping_street: findColumn(row, ['Shipping Street', 'Shipping Address', 'Street']),
-          shipping_address1: findColumn(row, ['Shipping Address1', 'Shipping Address', 'Address 1']),
-          shipping_address2: findColumn(row, ['Shipping Address2', 'Address 2']),
-          shipping_city: findColumn(row, ['Shipping City', 'City']),
-          shipping_zip: findColumn(row, ['Shipping Zip', 'Zip', 'Postal Code']),
-          shipping_country: findColumn(row, ['Shipping Country', 'Country']) || 'IN',
-          shipping_province_name: findColumn(row, ['Shipping Province Name', 'Province', 'State']),
+          shipping_name: findColumn(row, [
+            "Shipping Name",
+            "Shipping Name",
+            "Customer Name",
+          ]),
+          shipping_company: findColumn(row, ["Shipping Company", "Company"]),
+          shipping_street: findColumn(row, [
+            "Shipping Street",
+            "Shipping Address",
+            "Street",
+          ]),
+          shipping_address1: findColumn(row, [
+            "Shipping Address1",
+            "Shipping Address",
+            "Address 1",
+          ]),
+          shipping_address2: findColumn(row, [
+            "Shipping Address2",
+            "Address 2",
+          ]),
+          shipping_city: findColumn(row, ["Shipping City", "City"]),
+          shipping_zip: findColumn(row, ["Shipping Zip", "Zip", "Postal Code"]),
+          shipping_country:
+            findColumn(row, ["Shipping Country", "Country"]) || "IN",
+          shipping_province_name: findColumn(row, [
+            "Shipping Province Name",
+            "Province",
+            "State",
+          ]),
 
           // Fallback shipping from billing if shipping block missing
-          ...(findColumn(row, ['Shipping Address1', 'Shipping Address']) ? {} : {
-            shipping_name: findColumn(row, ['Billing Name', 'Customer Name']),
-            shipping_company: findColumn(row, ['Billing Company', 'Company']),
-            shipping_street: findColumn(row, ['Billing Street', 'Billing Address', 'Street']),
-            shipping_address1: findColumn(row, ['Billing Address1', 'Address 1']),
-            shipping_address2: findColumn(row, ['Billing Address2', 'Address 2']),
-            shipping_city: findColumn(row, ['Billing City', 'City']),
-            shipping_zip: findColumn(row, ['Billing Zip', 'Zip', 'Postal Code']),
-            shipping_country: findColumn(row, ['Billing Country', 'Country']) || 'IN',
-            shipping_province_name: findColumn(row, ['Billing Province Name', 'Province', 'State']),
-          }),
+          ...(findColumn(row, ["Shipping Address1", "Shipping Address"])
+            ? {}
+            : {
+                shipping_name: findColumn(row, [
+                  "Billing Name",
+                  "Customer Name",
+                ]),
+                shipping_company: findColumn(row, [
+                  "Billing Company",
+                  "Company",
+                ]),
+                shipping_street: findColumn(row, [
+                  "Billing Street",
+                  "Billing Address",
+                  "Street",
+                ]),
+                shipping_address1: findColumn(row, [
+                  "Billing Address1",
+                  "Address 1",
+                ]),
+                shipping_address2: findColumn(row, [
+                  "Billing Address2",
+                  "Address 2",
+                ]),
+                shipping_city: findColumn(row, ["Billing City", "City"]),
+                shipping_zip: findColumn(row, [
+                  "Billing Zip",
+                  "Zip",
+                  "Postal Code",
+                ]),
+                shipping_country:
+                  findColumn(row, ["Billing Country", "Country"]) || "IN",
+                shipping_province_name: findColumn(row, [
+                  "Billing Province Name",
+                  "Province",
+                  "State",
+                ]),
+              }),
 
-          payment_method: findColumn(row, ['Payment Method', 'Payment Type']),
-          payment_status: findColumn(row, ['Financial Status', 'Payment Status', 'Status']) || 'pending',
-          fulfillment_status: findColumn(row, ['Fulfillment Status', 'Fulfillment']) || 'unfulfilled',
+          payment_method: findColumn(row, ["Payment Method", "Payment Type"]),
+          payment_status:
+            findColumn(row, ["Financial Status", "Payment Status", "Status"]) ||
+            "pending",
+          fulfillment_status:
+            findColumn(row, ["Fulfillment Status", "Fulfillment"]) ||
+            "unfulfilled",
 
-          tax_1_name: findColumn(row, ['Tax 1 Name', 'Tax Name']),
-          tax_1_value: parseFloat(findColumn(row, ['Tax 1 Value', 'Tax Value']) || 0),
-          tax_2_name: findColumn(row, ['Tax 2 Name']),
-          tax_2_value: parseFloat(findColumn(row, ['Tax 2 Value']) || 0),
+          tax_1_name: findColumn(row, ["Tax 1 Name", "Tax Name"]),
+          tax_1_value: parseFloat(
+            findColumn(row, ["Tax 1 Value", "Tax Value"]) || 0
+          ),
+          tax_2_name: findColumn(row, ["Tax 2 Name"]),
+          tax_2_value: parseFloat(findColumn(row, ["Tax 2 Value"]) || 0),
 
-          payment_id: findColumn(row, ['Payment ID', 'Payment ID']),
-          payment_terms_name: findColumn(row, ['Payment Terms Name']),
-          next_payment_due_at: findColumn(row, ['Next Payment Due At']),
-          payment_references: findColumn(row, ['Payment References']),
+          payment_id: findColumn(row, ["Payment ID", "Payment ID"]),
+          payment_terms_name: findColumn(row, ["Payment Terms Name"]),
+          next_payment_due_at: findColumn(row, ["Next Payment Due At"]),
+          payment_references: findColumn(row, ["Payment References"]),
 
-          notes: findColumn(row, ['Notes', 'Note']),
-          note_attributes: findColumn(row, ['Note Attributes']),
+          notes: findColumn(row, ["Notes", "Note"]),
+          note_attributes: findColumn(row, ["Note Attributes"]),
 
-          line_items: []
+          line_items: [],
         };
       }
-  
+
       // Add line item
-      const lineItemName = findColumn(row, ['Lineitem name', 'Product Name', 'Name', 'Title']);
-      if (lineItemName) { // Only add line item if there's a product name
+      const lineItemName = findColumn(row, [
+        "Lineitem name",
+        "Product Name",
+        "Name",
+        "Title",
+      ]);
+      if (lineItemName) {
+        // Only add line item if there's a product name
         groupedOrders[orderKey].line_items.push({
-          lineitem_quantity: parseInt(findColumn(row, ['Lineitem quantity', 'Quantity', 'Qty']) || 1),
+          lineitem_quantity: parseInt(
+            findColumn(row, ["Lineitem quantity", "Quantity", "Qty"]) || 1
+          ),
           lineitem_name: lineItemName,
-          lineitem_sku: findColumn(row, ['Lineitem sku', 'SKU', 'Product SKU']) || '',
-          lineitem_price: parseFloat(findColumn(row, ['Lineitem price', 'Price', 'Unit Price']) || 0),
-          lineitem_compare_at_price: parseFloat(findColumn(row, ['Lineitem compare at price', 'Compare Price']) || 0),
-          lineitem_grams: parseInt(findColumn(row, ['Lineitem grams', 'Weight', 'Grams']) || 0),
-          lineitem_requires_shipping: findColumn(row, ['Lineitem requires shipping', 'Requires Shipping']) || 'yes',
-          lineitem_taxable: findColumn(row, ['Lineitem taxable', 'Taxable']) || 'yes',
-          lineitem_fulfillment_status: findColumn(row, ['Lineitem fulfillment status', 'Fulfillment Status']) || 'fulfilled',
-          lineitem_vendor: findColumn(row, ['Vendor', 'Product Vendor']) || '',
-          lineitem_gift_card: findColumn(row, ['Lineitem gift_card', 'Gift Card']) || 'no',
+          lineitem_sku:
+            findColumn(row, ["Lineitem sku", "SKU", "Product SKU"]) || "",
+          lineitem_price: parseFloat(
+            findColumn(row, ["Lineitem price", "Price", "Unit Price"]) || 0
+          ),
+          lineitem_compare_at_price: parseFloat(
+            findColumn(row, ["Lineitem compare at price", "Compare Price"]) || 0
+          ),
+          lineitem_grams: parseInt(
+            findColumn(row, ["Lineitem grams", "Weight", "Grams"]) || 0
+          ),
+          lineitem_requires_shipping:
+            findColumn(row, [
+              "Lineitem requires shipping",
+              "Requires Shipping",
+            ]) || "yes",
+          lineitem_taxable:
+            findColumn(row, ["Lineitem taxable", "Taxable"]) || "yes",
+          lineitem_fulfillment_status:
+            findColumn(row, [
+              "Lineitem fulfillment status",
+              "Fulfillment Status",
+            ]) || "fulfilled",
+          lineitem_vendor: findColumn(row, ["Vendor", "Product Vendor"]) || "",
+          lineitem_gift_card:
+            findColumn(row, ["Lineitem gift_card", "Gift Card"]) || "no",
         });
       }
-      
+
       processedRows++;
     });
-  
+
     const mapped = Object.values(groupedOrders);
 
     setMappedData(mapped);
   };
-  
+
   // Handle bulk upload
   const handleBulkUpload = async () => {
     if (!mappedData.length) {
@@ -511,38 +672,44 @@ const CustomerLayer = () => {
 
     try {
       // Ensure we're sending an array of customer order objects
-      const customerOrders = mappedData.map(order => {
+      const customerOrders = mappedData.map((order) => {
         // Validate required fields
         if (!order.order_id || !order.order_name) {
-          throw new Error(`Invalid order data: Missing required fields (order_id: ${order.order_id}, order_name: ${order.order_name})`);
+          throw new Error(
+            `Invalid order data: Missing required fields (order_id: ${order.order_id}, order_name: ${order.order_name})`
+          );
         }
 
         return {
           order_id: order.order_id,
           order_name: order.order_name,
           created_at: order.created_at || new Date().toISOString(),
-          email: order.email || '',
-          billing_name: order.billing_name || '',
-          billing_address1: order.billing_address1 || '',
-          billing_address2: order.billing_address2 || '',
-          billing_city: order.billing_city || '',
-          billing_zip: order.billing_zip || '',
-          billing_province_name: order.billing_province_name || '',
-          billing_country: order.billing_country || 'IN',
-          billing_phone: order.billing_phone || '',
-          shipping_name: order.shipping_name || order.billing_name || '',
-          shipping_address1: order.shipping_address1 || order.billing_address1 || '',
-          shipping_address2: order.shipping_address2 || order.billing_address2 || '',
-          shipping_city: order.shipping_city || order.billing_city || '',
-          shipping_zip: order.shipping_zip || order.billing_zip || '',
-          shipping_province_name: order.shipping_province_name || order.billing_province_name || '',
-          shipping_country: order.shipping_country || order.billing_country || 'IN',
-          shipping_phone: order.shipping_phone || order.billing_phone || '',
-          payment_method: order.payment_method || '',
-          payment_status: order.payment_status || 'pending',
-          payment_id: order.payment_id || '',
-          payment_references: order.payment_references || '',
-          payment_terms_name: order.payment_terms_name || '',
+          email: order.email || "",
+          billing_name: order.billing_name || "",
+          billing_address1: order.billing_address1 || "",
+          billing_address2: order.billing_address2 || "",
+          billing_city: order.billing_city || "",
+          billing_zip: order.billing_zip || "",
+          billing_province_name: order.billing_province_name || "",
+          billing_country: order.billing_country || "IN",
+          billing_phone: order.billing_phone || "",
+          shipping_name: order.shipping_name || order.billing_name || "",
+          shipping_address1:
+            order.shipping_address1 || order.billing_address1 || "",
+          shipping_address2:
+            order.shipping_address2 || order.billing_address2 || "",
+          shipping_city: order.shipping_city || order.billing_city || "",
+          shipping_zip: order.shipping_zip || order.billing_zip || "",
+          shipping_province_name:
+            order.shipping_province_name || order.billing_province_name || "",
+          shipping_country:
+            order.shipping_country || order.billing_country || "IN",
+          shipping_phone: order.shipping_phone || order.billing_phone || "",
+          payment_method: order.payment_method || "",
+          payment_status: order.payment_status || "pending",
+          payment_id: order.payment_id || "",
+          payment_references: order.payment_references || "",
+          payment_terms_name: order.payment_terms_name || "",
           next_payment_due_at: order.next_payment_due_at || null,
           subtotal: parseFloat(order.subtotal) || 0,
           shipping: parseFloat(order.shipping) || 0,
@@ -550,19 +717,17 @@ const CustomerLayer = () => {
           discount_amount: parseFloat(order.discount_amount) || 0,
           total: parseFloat(order.total) || 0,
           outstanding_balance: parseFloat(order.outstanding_balance) || 0,
-          tax_1_name: order.tax_1_name || '',
+          tax_1_name: order.tax_1_name || "",
           tax_1_value: parseFloat(order.tax_1_value) || 0,
-          tax_2_name: order.tax_2_name || '',
+          tax_2_name: order.tax_2_name || "",
           tax_2_value: parseFloat(order.tax_2_value) || 0,
-          notes: order.notes || '',
-          note_attributes: order.note_attributes || '',
-          phone: order.phone || order.billing_phone || '',
-          fulfillment_status: order.fulfillment_status || 'unfulfilled',
-          line_items: Array.isArray(order.line_items) ? order.line_items : []
+          notes: order.notes || "",
+          note_attributes: order.note_attributes || "",
+          phone: order.phone || order.billing_phone || "",
+          fulfillment_status: order.fulfillment_status || "unfulfilled",
+          line_items: Array.isArray(order.line_items) ? order.line_items : [],
         };
       });
-
-
 
       // Process in smaller batches to avoid rate limiting
       const batchSize = 50; // Smaller batch size
@@ -570,8 +735,6 @@ const CustomerLayer = () => {
       for (let i = 0; i < customerOrders.length; i += batchSize) {
         batches.push(customerOrders.slice(i, i + batchSize));
       }
-
-
 
       let totalProcessed = 0;
       let totalSuccess = 0;
@@ -581,65 +744,71 @@ const CustomerLayer = () => {
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
 
-
         let retryCount = 0;
         const maxRetries = 3;
         let success = false;
 
         while (retryCount < maxRetries && !success) {
           try {
-            const response = await fetch(`${config.api.baseURL}/api/customer-orders/bulk`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(batch),
-            });
+            const response = await apiClient.post(
+              `/api/customer-orders/bulk`,
+              batch,
+              {
+                headers: { "Content-Type": "application/json" },
+                validateStatus: () => true,
+              }
+            );
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              
+            const isOk = response.status === 200 || response.status === 201;
+            if (!isOk) {
+              const errorText =
+                typeof response.data === "string"
+                  ? response.data
+                  : JSON.stringify(response.data);
+
               // Check if it's a rate limit error
               if (response.status === 429) {
                 const errorData = JSON.parse(errorText);
                 const retryAfter = errorData.retryAfter || 60;
-                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                await new Promise((resolve) =>
+                  setTimeout(resolve, retryAfter * 1000)
+                );
                 retryCount++;
                 continue;
               }
-              
-              throw new Error(`Batch ${i + 1} failed: ${response.status} - ${errorText}`);
+
+              throw new Error(
+                `Batch ${i + 1} failed: ${response.status} - ${errorText}`
+              );
             }
 
-            const result = await response.json();
-            
+            const result = response.data || {};
+
             if (result.success) {
               totalProcessed += result.total_processed || batch.length;
               totalSuccess += result.successful_inserts || batch.length;
               totalFailed += result.failed_inserts || 0;
-              
+
               if (result.errors && result.errors.length > 0) {
                 errors.push(...result.errors);
               }
-              
-  
+
               success = true;
             } else {
               throw new Error(result.error || `Batch ${i + 1} failed`);
             }
-
           } catch (error) {
             if (retryCount === maxRetries - 1) {
               // Final attempt failed
               errors.push({
                 batch: i + 1,
-                error: error.message
+                error: error.message,
               });
               totalFailed += batch.length;
             } else {
               // Wait before retry with exponential backoff
               const waitTime = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-              await new Promise(resolve => setTimeout(resolve, waitTime));
+              await new Promise((resolve) => setTimeout(resolve, waitTime));
               retryCount++;
             }
           }
@@ -647,21 +816,25 @@ const CustomerLayer = () => {
 
         // Add delay between batches to avoid rate limiting
         if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
         }
       }
 
       // Show results
       if (totalSuccess > 0) {
-        setUploadSuccess(`Successfully uploaded ${totalSuccess} orders! Total processed: ${totalProcessed}, Failed: ${totalFailed}${errors.length > 0 ? `, Errors: ${errors.length}` : ''}`);
+        setUploadSuccess(
+          `Successfully uploaded ${totalSuccess} orders! Total processed: ${totalProcessed}, Failed: ${totalFailed}${
+            errors.length > 0 ? `, Errors: ${errors.length}` : ""
+          }`
+        );
       } else {
         throw new Error(`All batches failed. Total failed: ${totalFailed}`);
       }
-      
+
       setUploadModalOpen(false);
       setFileData(null);
       setMappedData([]);
-      
+
       // Refresh the orders list
       fetchOrders(currentPage, searchTerm);
     } catch (error) {
@@ -689,11 +862,12 @@ const CustomerLayer = () => {
       newSelectedOrders.add(orderId);
     }
     setSelectedOrders(newSelectedOrders);
-    
+
     // Update select all state based on current page
-    const currentPageOrderIds = orders
-      .map(order => order.order_id);
-    const selectedCurrentPage = currentPageOrderIds.every(id => newSelectedOrders.has(id));
+    const currentPageOrderIds = orders.map((order) => order.order_id);
+    const selectedCurrentPage = currentPageOrderIds.every((id) =>
+      newSelectedOrders.has(id)
+    );
     setSelectAll(selectedCurrentPage && currentPageOrderIds.length > 0);
   };
 
@@ -702,7 +876,7 @@ const CustomerLayer = () => {
     if (selectAll) {
       // Deselect only current page orders
       const newSelectedOrders = new Set(selectedOrders);
-      orders.forEach(order => {
+      orders.forEach((order) => {
         newSelectedOrders.delete(order.order_id);
       });
       setSelectedOrders(newSelectedOrders);
@@ -710,7 +884,7 @@ const CustomerLayer = () => {
     } else {
       // Select all current page orders (including cancelled/voided)
       const newSelectedOrders = new Set(selectedOrders);
-      orders.forEach(order => {
+      orders.forEach((order) => {
         newSelectedOrders.add(order.order_id);
       });
       setSelectedOrders(newSelectedOrders);
@@ -734,13 +908,15 @@ const CustomerLayer = () => {
 
     setDownloading(true);
     try {
-      const selectedOrderData = orders.filter(order => selectedOrders.has(order.order_id));
-      
+      const selectedOrderData = orders.filter((order) =>
+        selectedOrders.has(order.order_id)
+      );
+
       // Find the maximum number of products across all orders to determine column count
-      const maxProducts = Math.max(...selectedOrderData.map(order => 
-        order.line_items?.length || 1
-      ));
-      
+      const maxProducts = Math.max(
+        ...selectedOrderData.map((order) => order.line_items?.length || 1)
+      );
+
       // Create dynamic headers for products and SKUs
       const productHeaders = [];
       const skuHeaders = [];
@@ -748,118 +924,158 @@ const CustomerLayer = () => {
         productHeaders.push(`Product${i}`);
         skuHeaders.push(`SKU${i}`);
       }
-      
+
       // Create CSV content with dynamic columns
       const csvContent = [
-        ['ORDER NO', 'ORDER DATE', 'MONTH', 'BRAND', 'CUSTOMER NAME', 'ADDRESS', 'PINCODE', 'STATE', 'PHONE NUMBER', 'EMAIL ID', 'AWB NUMBER', ...productHeaders, ...skuHeaders, 'AMOUNT', 'OUTSTANDING BALANCE', 'COUNT OF ITEMS', 'PAYMENT MODE'],
-        ...selectedOrderData.map(order => {
+        [
+          "ORDER NO",
+          "ORDER DATE",
+          "MONTH",
+          "BRAND",
+          "CUSTOMER NAME",
+          "ADDRESS",
+          "PINCODE",
+          "STATE",
+          "PHONE NUMBER",
+          "EMAIL ID",
+          "AWB NUMBER",
+          ...productHeaders,
+          ...skuHeaders,
+          "AMOUNT",
+          "OUTSTANDING BALANCE",
+          "COUNT OF ITEMS",
+          "PAYMENT MODE",
+        ],
+        ...selectedOrderData.map((order) => {
           // Use order_name as ORDER NO
-          const orderNo = order.order_name || 'N/A';
-          
+          const orderNo = order.order_name || "N/A";
+
           // Format order date
           const orderDate = new Date(order.created_at);
-          const formattedDate = orderDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-          const month = orderDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); // Jul'25 format
-          
+          const formattedDate = orderDate.toISOString().split("T")[0]; // YYYY-MM-DD format
+          const month = orderDate.toLocaleDateString("en-US", {
+            month: "short",
+            year: "2-digit",
+          }); // Jul'25 format
+
           // Format address
           const address = [
             order.shipping_address1,
             order.shipping_address2,
             order.shipping_city,
             order.shipping_province_name,
-            order.shipping_country
-          ].filter(Boolean).join(' ');
-          
+            order.shipping_country,
+          ]
+            .filter(Boolean)
+            .join(" ");
+
           // Get product names and SKUs in separate arrays
           const lineItems = order.line_items || [];
           const productNames = [];
           const productSkus = [];
-          
+
           // Fill product data
           for (let i = 0; i < maxProducts; i++) {
             if (i < lineItems.length) {
-              productNames.push(lineItems[i].lineitem_name || 'N/A');
-              productSkus.push(lineItems[i].lineitem_sku || 'N/A');
+              productNames.push(lineItems[i].lineitem_name || "N/A");
+              productSkus.push(lineItems[i].lineitem_sku || "N/A");
             } else {
-              productNames.push(''); // Empty for orders with fewer products
-              productSkus.push('');
+              productNames.push(""); // Empty for orders with fewer products
+              productSkus.push("");
             }
           }
-          
+
           // Get total quantity
           const totalQuantity = getTotalQuantity(order.line_items);
-          
+
           // Calculate outstanding balance
           const outstandingBalance = (() => {
-            if (order.payment_status === 'paid') {
+            if (order.payment_status === "paid") {
               return 0;
-            } else if (order.payment_status === 'voided') {
+            } else if (order.payment_status === "voided") {
               return 0; // Cancelled orders have no outstanding balance
             } else {
               return parseFloat(order.total || 0); // Pending orders have full outstanding balance
             }
           })();
-          
+
           // Format payment mode
           const paymentMode = (() => {
             const method = order.payment_method;
-            
+
             // If payment method is null/empty, return "null"
-            if (!method || method.trim() === '') {
-              return 'null';
+            if (!method || method.trim() === "") {
+              return "null";
             }
-            
+
             // Check if it contains Razorpay, UPI, Cards, Wallets, or NB
-            const onlinePaymentKeywords = ['razorpay', 'upi', 'cards', 'wallets', 'nb'];
-            const isOnlinePayment = onlinePaymentKeywords.some(keyword => 
+            const onlinePaymentKeywords = [
+              "razorpay",
+              "upi",
+              "cards",
+              "wallets",
+              "nb",
+            ];
+            const isOnlinePayment = onlinePaymentKeywords.some((keyword) =>
               method.toLowerCase().includes(keyword)
             );
-            
+
             if (isOnlinePayment) {
-              return 'Online Payment';
+              return "Online Payment";
             }
-            
+
             // For other cases, return the original method or default
-            return method || 'null';
+            return method || "null";
           })();
-          
+
           return [
             orderNo,
             formattedDate,
             month,
-            'TILTING HEADS',
-            order.shipping_name || 'N/A',
+            "TILTING HEADS",
+            order.shipping_name || "N/A",
             address,
-            order.shipping_zip || 'N/A',
-            order.shipping_province_name || 'N/A',
+            order.shipping_zip || "N/A",
+            order.shipping_province_name || "N/A",
             formatPhoneNumber(order.phone),
-            order.email || 'NA',
-            order.awb_number || 'N/A',
+            order.email || "NA",
+            order.awb_number || "N/A",
             ...productNames,
             ...productSkus,
             parseFloat(order.total || 0).toFixed(0),
             outstandingBalance.toFixed(0),
             totalQuantity,
-            paymentMode
+            paymentMode,
           ];
-        })
-      ].map(row => row.map(cell => {
-        // Properly escape quotes and handle special characters
-        const cellStr = String(cell || '');
-        return `"${cellStr.replace(/"/g, '""')}"`;
-      }).join(',')).join('\n');
+        }),
+      ]
+        .map((row) =>
+          row
+            .map((cell) => {
+              // Properly escape quotes and handle special characters
+              const cellStr = String(cell || "");
+              return `"${cellStr.replace(/"/g, '""')}"`;
+            })
+            .join(",")
+        )
+        .join("\n");
 
       // Add BOM (Byte Order Mark) for proper UTF-8 encoding recognition
-      const BOM = '\uFEFF';
+      const BOM = "\uFEFF";
       const csvWithBOM = BOM + csvContent;
-      
+
       // Create and download file
-      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+      const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `selected-customer-orders-report-${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `selected-customer-orders-report-${
+          new Date().toISOString().split("T")[0]
+        }.csv`
+      );
+      link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -873,9 +1089,9 @@ const CustomerLayer = () => {
   // Print invoice function
   const printInvoice = () => {
     if (!selectedOrder) return;
-    
+
     setPrinting(true);
-    
+
     // Create print content
     const printContent = `
       <!DOCTYPE html>
@@ -1112,11 +1328,15 @@ const CustomerLayer = () => {
             </div>
             <div class="invoice-details">
               <div class="invoice-title">INVOICE</div>
-              <div class="invoice-number">Order: ${selectedOrder.order.order_name}</div>
-              <div class="invoice-date">Date: ${new Date(selectedOrder.order.created_at).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              <div class="invoice-number">Order: ${
+                selectedOrder.order.order_name
+              }</div>
+              <div class="invoice-date">Date: ${new Date(
+                selectedOrder.order.created_at
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}</div>
             </div>
           </div>
@@ -1125,43 +1345,71 @@ const CustomerLayer = () => {
             <div class="info-card">
               <h4>Bill To</h4>
               <div class="info-item">
-                <span class="info-label">Name:</span> ${selectedOrder.order.shipping_name}
+                <span class="info-label">Name:</span> ${
+                  selectedOrder.order.shipping_name
+                }
               </div>
-              ${selectedOrder.order.shipping_company ? `
+              ${
+                selectedOrder.order.shipping_company
+                  ? `
               <div class="info-item">
                 <span class="info-label">Company:</span> ${selectedOrder.order.shipping_company}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
               <div class="info-item">
-                <span class="info-label">Email:</span> ${selectedOrder.order.email || 'N/A'}
+                <span class="info-label">Email:</span> ${
+                  selectedOrder.order.email || "N/A"
+                }
               </div>
               <div class="info-item">
-                <span class="info-label">Phone:</span> ${selectedOrder.order.phone || 'N/A'}
+                <span class="info-label">Phone:</span> ${
+                  selectedOrder.order.phone || "N/A"
+                }
               </div>
             </div>
             <div class="info-card">
               <h4>Ship To</h4>
               <div class="info-item">
-                <span class="info-label">Name:</span> ${selectedOrder.order.shipping_name}
+                <span class="info-label">Name:</span> ${
+                  selectedOrder.order.shipping_name
+                }
               </div>
-              ${selectedOrder.order.shipping_company ? `
+              ${
+                selectedOrder.order.shipping_company
+                  ? `
               <div class="info-item">
                 <span class="info-label">Company:</span> ${selectedOrder.order.shipping_company}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
               <div class="info-item">
-                <span class="info-label">Address:</span> ${selectedOrder.order.shipping_address1}
+                <span class="info-label">Address:</span> ${
+                  selectedOrder.order.shipping_address1
+                }
               </div>
-              ${selectedOrder.order.shipping_address2 ? `
+              ${
+                selectedOrder.order.shipping_address2
+                  ? `
               <div class="info-item">
                 <span class="info-label"></span> ${selectedOrder.order.shipping_address2}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
               <div class="info-item">
-                <span class="info-label">City:</span> ${selectedOrder.order.shipping_city}, ${selectedOrder.order.shipping_province_name} ${selectedOrder.order.shipping_zip}
+                <span class="info-label">City:</span> ${
+                  selectedOrder.order.shipping_city
+                }, ${selectedOrder.order.shipping_province_name} ${
+      selectedOrder.order.shipping_zip
+    }
               </div>
               <div class="info-item">
-                <span class="info-label">Country:</span> ${selectedOrder.order.shipping_country}
+                <span class="info-label">Country:</span> ${
+                  selectedOrder.order.shipping_country
+                }
               </div>
             </div>
           </div>
@@ -1179,15 +1427,23 @@ const CustomerLayer = () => {
                 </tr>
               </thead>
               <tbody>
-                ${selectedOrder.products.map(product => `
+                ${selectedOrder.products
+                  .map(
+                    (product) => `
                   <tr>
                     <td class="text-bold">${product.name}</td>
                     <td class="text-center">${product.sku}</td>
                     <td class="text-center">${product.quantity}</td>
-                    <td class="text-right">₹${parseFloat(product.price).toFixed(2)}</td>
-                    <td class="text-right text-bold">₹${parseFloat(product.total).toFixed(2)}</td>
+                    <td class="text-right">₹${parseFloat(product.price).toFixed(
+                      2
+                    )}</td>
+                    <td class="text-right text-bold">₹${parseFloat(
+                      product.total
+                    ).toFixed(2)}</td>
                   </tr>
-                `).join('')}
+                `
+                  )
+                  .join("")}
               </tbody>
             </table>
           </div>
@@ -1197,25 +1453,39 @@ const CustomerLayer = () => {
               <tbody>
                 <tr>
                   <td class="text-bold">Subtotal:</td>
-                  <td class="text-right">₹${parseFloat(selectedOrder.order.subtotal || 0).toFixed(2)}</td>
+                  <td class="text-right">₹${parseFloat(
+                    selectedOrder.order.subtotal || 0
+                  ).toFixed(2)}</td>
                 </tr>
                 <tr>
                   <td class="text-bold">Taxes:</td>
-                  <td class="text-right">₹${parseFloat(selectedOrder.order.taxes || 0).toFixed(2)}</td>
+                  <td class="text-right">₹${parseFloat(
+                    selectedOrder.order.taxes || 0
+                  ).toFixed(2)}</td>
                 </tr>
                 <tr>
                   <td class="text-bold">Shipping:</td>
-                  <td class="text-right">₹${parseFloat(selectedOrder.order.shipping || 0).toFixed(2)}</td>
+                  <td class="text-right">₹${parseFloat(
+                    selectedOrder.order.shipping || 0
+                  ).toFixed(2)}</td>
                 </tr>
-                ${selectedOrder.order.discount_amount > 0 ? `
+                ${
+                  selectedOrder.order.discount_amount > 0
+                    ? `
                 <tr>
                   <td class="text-bold">Discount:</td>
-                  <td class="text-right" style="color: #e74c3c;">-₹${parseFloat(selectedOrder.order.discount_amount).toFixed(2)}</td>
+                  <td class="text-right" style="color: #e74c3c;">-₹${parseFloat(
+                    selectedOrder.order.discount_amount
+                  ).toFixed(2)}</td>
                 </tr>
-                ` : ''}
+                `
+                    : ""
+                }
                 <tr class="total-row">
                   <td class="text-bold">TOTAL:</td>
-                  <td class="text-right">₹${parseFloat(selectedOrder.order.total || 0).toFixed(2)}</td>
+                  <td class="text-right">₹${parseFloat(
+                    selectedOrder.order.total || 0
+                  ).toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
@@ -1226,24 +1496,48 @@ const CustomerLayer = () => {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div>
                 <div class="info-item">
-                  <span class="info-label">Method:</span> ${selectedOrder.order.payment_method || 'N/A'}
+                  <span class="info-label">Method:</span> ${
+                    selectedOrder.order.payment_method || "N/A"
+                  }
                 </div>
                                  <div class="info-item">
                    <span class="info-label">Status:</span> 
-                   <span class="status-badge ${selectedOrder.order.payment_status === 'paid' ? 'status-paid' : selectedOrder.order.payment_status === 'voided' ? 'status-cancelled' : 'status-pending'}">
-                     ${selectedOrder.order.payment_status === 'paid' ? 'Paid' : selectedOrder.order.payment_status === 'voided' ? 'Cancelled' : 'Pending'}
+                   <span class="status-badge ${
+                     selectedOrder.order.payment_status === "paid"
+                       ? "status-paid"
+                       : selectedOrder.order.payment_status === "voided"
+                       ? "status-cancelled"
+                       : "status-pending"
+                   }">
+                     ${
+                       selectedOrder.order.payment_status === "paid"
+                         ? "Paid"
+                         : selectedOrder.order.payment_status === "voided"
+                         ? "Cancelled"
+                         : "Pending"
+                     }
                    </span>
                  </div>
               </div>
               <div>
                 <div class="info-item">
                   <span class="info-label">Fulfillment:</span> 
-                  <span class="status-badge ${selectedOrder.order.fulfillment_status === 'fulfilled' ? 'status-fulfilled' : 'status-unfulfilled'}">
-                    ${selectedOrder.order.fulfillment_status === 'fulfilled' ? 'Fulfilled' : 'Unfulfilled'}
+                  <span class="status-badge ${
+                    selectedOrder.order.fulfillment_status === "fulfilled"
+                      ? "status-fulfilled"
+                      : "status-unfulfilled"
+                  }">
+                    ${
+                      selectedOrder.order.fulfillment_status === "fulfilled"
+                        ? "Fulfilled"
+                        : "Unfulfilled"
+                    }
                   </span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Order ID:</span> ${selectedOrder.order.order_id}
+                  <span class="info-label">Order ID:</span> ${
+                    selectedOrder.order.order_id
+                  }
                 </div>
               </div>
             </div>
@@ -1265,10 +1559,10 @@ const CustomerLayer = () => {
     `;
 
     // Create a new window for printing
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     // Wait for content to load then print
     printWindow.onload = () => {
       printWindow.print();
@@ -1278,9 +1572,9 @@ const CustomerLayer = () => {
   };
 
   return (
-    <div className='card basic-data-table'>
-      <div className='card-header d-flex align-items-center justify-content-between flex-wrap gap-3'>
-        <h5 className='card-title mb-0'>Customer Orders</h5>
+    <div className="card basic-data-table">
+      <div className="card-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <h5 className="card-title mb-0">Customer Orders</h5>
         <div className="d-flex align-items-center gap-2">
           <div className="position-relative">
             <Icon
@@ -1297,7 +1591,7 @@ const CustomerLayer = () => {
               value={searchTerm}
               onChange={handleSearch}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   fetchOrders(1, searchTerm, pageSize);
                   setCurrentPage(1);
@@ -1306,7 +1600,10 @@ const CustomerLayer = () => {
               style={{ paddingLeft: "35px", minWidth: "200px" }}
             />
             {/* Search Help Tooltip */}
-            <div className="position-absolute top-50 translate-middle-y" style={{ right: "8px", cursor: "help" }}>
+            <div
+              className="position-absolute top-50 translate-middle-y"
+              style={{ right: "8px", cursor: "help" }}
+            >
               <Icon
                 icon="lucide:help-circle"
                 width="14"
@@ -1334,33 +1631,36 @@ Press Enter to search or type to search as you type`}
               />
             </div>
           </div>
-          
 
-          
-
-          
           {/* Download Selected Button - Only show when orders are selected */}
           {selectedOrders.size > 0 && (
             <button
               className="btn btn-success btn-sm d-flex align-items-center gap-2"
               onClick={downloadSelectedOrders}
               disabled={downloading}
-              title={`Download ${selectedOrders.size} selected order${selectedOrders.size > 1 ? 's' : ''} in report format`}
+              title={`Download ${selectedOrders.size} selected order${
+                selectedOrders.size > 1 ? "s" : ""
+              } in report format`}
             >
               {downloading ? (
                 <>
-                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                  ></span>
                   <span className="d-none d-sm-inline">Downloading...</span>
                 </>
               ) : (
                 <>
                   <Icon icon="lucide:download" width="16" height="16" />
-                  <span className="d-none d-sm-inline">Download ({selectedOrders.size})</span>
+                  <span className="d-none d-sm-inline">
+                    Download ({selectedOrders.size})
+                  </span>
                 </>
               )}
             </button>
           )}
-          
+
           <button
             className="btn btn-primary btn-sm d-flex align-items-center gap-2"
             onClick={() => setUploadModalOpen(true)}
@@ -1371,8 +1671,8 @@ Press Enter to search or type to search as you type`}
           </button>
         </div>
       </div>
-      
-      <div className='card-body p-0'>
+
+      <div className="card-body p-0">
         {loading ? (
           <div className="text-center py-5">
             <div className="spinner-border text-primary" role="status">
@@ -1392,14 +1692,21 @@ Press Enter to search or type to search as you type`}
               <div className="p-3 border-bottom bg-light">
                 <div className="d-flex align-items-center justify-content-between">
                   <div className="d-flex align-items-center gap-2">
-                    <Icon icon="lucide:search" width="16" height="16" className="text-muted" />
+                    <Icon
+                      icon="lucide:search"
+                      width="16"
+                      height="16"
+                      className="text-muted"
+                    />
                     <span className="text-muted">
-                      Universal search for "<strong>{searchTerm}</strong>" across all fields
+                      Universal search for "<strong>{searchTerm}</strong>"
+                      across all fields
                     </span>
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <span className="badge bg-primary-subtle text-primary">
-                      {pagination.total} result{pagination.total !== 1 ? 's' : ''}
+                      {pagination.total} result
+                      {pagination.total !== 1 ? "s" : ""}
                     </span>
                     <button
                       className="btn btn-sm btn-outline-secondary"
@@ -1415,12 +1722,15 @@ Press Enter to search or type to search as you type`}
                 </div>
               </div>
             )}
-            
+
             <div className="table-responsive">
-              <table className='table table-hover mb-0 border'>
+              <table className="table table-hover mb-0 border">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-end px-4 py-3 fw-semibold bg-light" style={{ width: '50px' }}>
+                    <th
+                      className="border-end px-4 py-3 fw-semibold bg-light"
+                      style={{ width: "50px" }}
+                    >
                       <div className="form-check d-flex justify-content-center">
                         <input
                           className="form-check-input"
@@ -1431,14 +1741,30 @@ Press Enter to search or type to search as you type`}
                         />
                       </div>
                     </th>
-                    <th className="border-end px-4 py-3 fw-semibold bg-light">Order</th>
-                    <th className="border-end px-4 py-3 fw-semibold bg-light">Customer</th>
-                    <th className="border-end px-4 py-3 fw-semibold d-none d-lg-table-cell bg-light">Email</th>
-                    <th className="border-end px-4 py-3 fw-semibold d-none d-xl-table-cell bg-light">Address</th>
-                    <th className="border-end px-4 py-3 fw-semibold d-none d-md-table-cell bg-light">Phone</th>
-                    <th className="border-end px-4 py-3 fw-semibold text-center bg-light">Qty</th>
-                    <th className="border-end px-4 py-3 fw-semibold text-end bg-light">Total</th>
-                    <th className="px-4 py-3 fw-semibold text-center bg-light">Actions</th>
+                    <th className="border-end px-4 py-3 fw-semibold bg-light">
+                      Order
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold bg-light">
+                      Customer
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold d-none d-lg-table-cell bg-light">
+                      Email
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold d-none d-xl-table-cell bg-light">
+                      Address
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold d-none d-md-table-cell bg-light">
+                      Phone
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold text-center bg-light">
+                      Qty
+                    </th>
+                    <th className="border-end px-4 py-3 fw-semibold text-end bg-light">
+                      Total
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-center bg-light">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1446,38 +1772,60 @@ Press Enter to search or type to search as you type`}
                     <tr>
                       <td colSpan="7" className="text-center py-5 border-0">
                         <div className="text-muted">
-                          <Icon icon="lucide:package" width="48" height="48" className="mb-3 opacity-50" />
+                          <Icon
+                            icon="lucide:package"
+                            width="48"
+                            height="48"
+                            className="mb-3 opacity-50"
+                          />
                           <p className="mb-0">
-                            {searchTerm ? 'No orders found matching your search' : 'No orders available'}
+                            {searchTerm
+                              ? "No orders found matching your search"
+                              : "No orders available"}
                           </p>
                         </div>
                       </td>
                     </tr>
                   ) : (
                     orders.map((order, index) => (
-                      <tr key={order.order_id || index} className={`border-bottom ${selectedOrders.has(order.order_id) ? 'table-active' : ''}`}>
+                      <tr
+                        key={order.order_id || index}
+                        className={`border-bottom ${
+                          selectedOrders.has(order.order_id)
+                            ? "table-active"
+                            : ""
+                        }`}
+                      >
                         <td className="border-end px-4 py-3 align-middle">
                           <div className="form-check d-flex justify-content-center">
                             <input
                               className="form-check-input"
                               type="checkbox"
                               checked={selectedOrders.has(order.order_id)}
-                              onChange={() => handleOrderSelection(order.order_id)}
+                              onChange={() =>
+                                handleOrderSelection(order.order_id)
+                              }
                               title="Select this order"
                             />
                           </div>
                         </td>
                         <td className="border-end px-4 py-3 align-middle">
                           <div className="d-flex flex-column">
-                            <Link href='#' className='text-primary fw-semibold text-decoration-none'>
+                            <Link
+                              href="#"
+                              className="text-primary fw-semibold text-decoration-none"
+                            >
                               {order.order_name}
                             </Link>
                             <small className="text-muted">
-                              {new Date(order.created_at).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
+                              {new Date(order.created_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )}
                             </small>
                             <small className="text-muted d-lg-none">
                               {order.email}
@@ -1486,7 +1834,9 @@ Press Enter to search or type to search as you type`}
                         </td>
                         <td className="border-end px-4 py-3 align-middle">
                           <div className="d-flex flex-column">
-                            <span className="fw-medium">{order.shipping_name || 'N/A'}</span>
+                            <span className="fw-medium">
+                              {order.shipping_name || "N/A"}
+                            </span>
                             {/* {order.shipping_company && (
                               <small className="text-muted">{order.shipping_company}</small>
                             )} */}
@@ -1499,12 +1849,17 @@ Press Enter to search or type to search as you type`}
                           <span className="text-break">{order.email}</span>
                         </td>
                         <td className="border-end px-4 py-3 d-none d-xl-table-cell align-middle">
-                          <div className="text-break" style={{ maxWidth: "200px" }}>
+                          <div
+                            className="text-break"
+                            style={{ maxWidth: "200px" }}
+                          >
                             {formatAddress(order)}
                           </div>
                         </td>
                         <td className="border-end px-4 py-3 d-none d-md-table-cell align-middle">
-                          <span className="text-break">{formatPhoneNumber(order.phone)}</span>
+                          <span className="text-break">
+                            {formatPhoneNumber(order.phone)}
+                          </span>
                         </td>
                         <td className="border-end px-4 py-3 text-center align-middle">
                           <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
@@ -1516,9 +1871,14 @@ Press Enter to search or type to search as you type`}
                             <span className="fw-bold fs-6">
                               ₹{parseFloat(order.total || 0).toFixed(2)}
                             </span>
-                            {order.payment_status === 'voided' && (
+                            {order.payment_status === "voided" && (
                               <span className="badge bg-danger-subtle text-danger small mt-1">
-                                <Icon icon="lucide:x-circle" className="me-1" width="10" height="10" />
+                                <Icon
+                                  icon="lucide:x-circle"
+                                  className="me-1"
+                                  width="10"
+                                  height="10"
+                                />
                                 Cancelled
                               </span>
                             )}
@@ -1531,8 +1891,14 @@ Press Enter to search or type to search as you type`}
                             onClick={() => handleViewProducts(order)}
                             title="View Products"
                           >
-                            <Icon icon="lucide:package" width="14" height="14" />
-                            <span className="ms-1 d-none d-sm-inline">Products</span>
+                            <Icon
+                              icon="lucide:package"
+                              width="14"
+                              height="14"
+                            />
+                            <span className="ms-1 d-none d-sm-inline">
+                              Products
+                            </span>
                           </button>
                         </td>
                       </tr>
@@ -1546,15 +1912,22 @@ Press Enter to search or type to search as you type`}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-center p-4 border-top gap-3">
               <div className="d-flex flex-column flex-sm-row align-items-center gap-3">
                 <div className="text-muted small text-center text-sm-start">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} orders
+                  Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total
+                  )}{" "}
+                  of {pagination.total} orders
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <span className="text-muted small">Show:</span>
-                  <select 
-                    className="form-select form-select-sm" 
-                    style={{ width: 'auto' }}
+                  <select
+                    className="form-select form-select-sm"
+                    style={{ width: "auto" }}
                     value={pageSize}
-                    onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handlePageSizeChange(parseInt(e.target.value))
+                    }
                     aria-label="Select page size"
                   >
                     <option value={10}>10</option>
@@ -1565,84 +1938,109 @@ Press Enter to search or type to search as you type`}
                   <span className="text-muted small">per page</span>
                 </div>
               </div>
-              
+
               {pagination.totalPages > 1 && (
                 <nav aria-label="Orders pagination">
                   <ul className="pagination pagination-sm mb-0">
                     {/* First Page */}
-                    <li className={`page-item ${pagination.page === 1 ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link border-0" 
+                    <li
+                      className={`page-item ${
+                        pagination.page === 1 ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link border-0"
                         onClick={() => handlePageChange(1)}
                         disabled={pagination.page === 1}
                         aria-label="Go to first page"
                       >
-                        <Icon icon="lucide:chevrons-left" width="16" height="16" />
+                        <Icon
+                          icon="lucide:chevrons-left"
+                          width="16"
+                          height="16"
+                        />
                       </button>
                     </li>
-                    
+
                     {/* Previous Page */}
-                    <li className={`page-item ${!pagination.hasPrev ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link border-0" 
+                    <li
+                      className={`page-item ${
+                        !pagination.hasPrev ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link border-0"
                         onClick={() => handlePageChange(pagination.page - 1)}
                         disabled={!pagination.hasPrev}
                         aria-label="Go to previous page"
                       >
-                        <Icon icon="lucide:chevron-left" width="16" height="16" />
+                        <Icon
+                          icon="lucide:chevron-left"
+                          width="16"
+                          height="16"
+                        />
                       </button>
                     </li>
-                    
+
                     {/* Page Numbers */}
                     {(() => {
                       const pages = [];
                       const totalPages = pagination.totalPages;
                       const currentPage = pagination.page;
-                      
+
                       // Always show first page
                       pages.push(1);
-                      
+
                       // Calculate start and end for page range
                       let start = Math.max(2, currentPage - 1);
                       let end = Math.min(totalPages - 1, currentPage + 1);
-                      
+
                       // Adjust range if near edges
                       if (currentPage <= 3) {
                         end = Math.min(totalPages - 1, 4);
                       } else if (currentPage >= totalPages - 2) {
                         start = Math.max(2, totalPages - 3);
                       }
-                      
+
                       // Add ellipsis after first page if needed
                       if (start > 2) {
-                        pages.push('...');
+                        pages.push("...");
                       }
-                      
+
                       // Add middle pages
                       for (let i = start; i <= end; i++) {
                         pages.push(i);
                       }
-                      
+
                       // Add ellipsis before last page if needed
                       if (end < totalPages - 1) {
-                        pages.push('...');
+                        pages.push("...");
                       }
-                      
+
                       // Always show last page if more than 1 page
                       if (totalPages > 1) {
                         pages.push(totalPages);
                       }
-                      
+
                       return pages.map((page, index) => (
-                        <li key={index} className={`page-item ${page === currentPage ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}>
-                          {page === '...' ? (
-                            <span className="page-link border-0 text-muted">...</span>
+                        <li
+                          key={index}
+                          className={`page-item ${
+                            page === currentPage ? "active" : ""
+                          } ${page === "..." ? "disabled" : ""}`}
+                        >
+                          {page === "..." ? (
+                            <span className="page-link border-0 text-muted">
+                              ...
+                            </span>
                           ) : (
                             <button
                               className="page-link border-0"
                               onClick={() => handlePageChange(page)}
                               aria-label={`Go to page ${page}`}
-                              aria-current={page === currentPage ? 'page' : undefined}
+                              aria-current={
+                                page === currentPage ? "page" : undefined
+                              }
                             >
                               {page}
                             </button>
@@ -1650,28 +2048,46 @@ Press Enter to search or type to search as you type`}
                         </li>
                       ));
                     })()}
-                    
+
                     {/* Next Page */}
-                    <li className={`page-item ${!pagination.hasNext ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link border-0" 
+                    <li
+                      className={`page-item ${
+                        !pagination.hasNext ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link border-0"
                         onClick={() => handlePageChange(pagination.page + 1)}
                         disabled={!pagination.hasNext}
                         aria-label="Go to next page"
                       >
-                        <Icon icon="lucide:chevron-right" width="16" height="16" />
+                        <Icon
+                          icon="lucide:chevron-right"
+                          width="16"
+                          height="16"
+                        />
                       </button>
                     </li>
-                    
+
                     {/* Last Page */}
-                    <li className={`page-item ${pagination.page === pagination.totalPages ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link border-0" 
+                    <li
+                      className={`page-item ${
+                        pagination.page === pagination.totalPages
+                          ? "disabled"
+                          : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link border-0"
                         onClick={() => handlePageChange(pagination.totalPages)}
                         disabled={pagination.page === pagination.totalPages}
                         aria-label="Go to last page"
                       >
-                        <Icon icon="lucide:chevrons-right" width="16" height="16" />
+                        <Icon
+                          icon="lucide:chevrons-right"
+                          width="16"
+                          height="16"
+                        />
                       </button>
                     </li>
                   </ul>
@@ -1684,12 +2100,19 @@ Press Enter to search or type to search as you type`}
 
       {/* Upload Modal */}
       {uploadModalOpen && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Bulk Upload Customers</h5>
-                <button type="button" className="btn-close" onClick={closeUploadModal}></button>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeUploadModal}
+                ></button>
               </div>
               <div className="modal-body">
                 {uploadSuccess && (
@@ -1698,7 +2121,7 @@ Press Enter to search or type to search as you type`}
                     {uploadSuccess}
                   </div>
                 )}
-                
+
                 {uploadError && (
                   <div className="alert alert-danger" role="alert">
                     <Icon icon="lucide:alert-circle" className="me-2" />
@@ -1715,7 +2138,9 @@ Press Enter to search or type to search as you type`}
                     onChange={handleFileUpload}
                   />
                   <div className="form-text">
-                    Upload a Shopify orders export file (CSV, Excel). The system will automatically map columns like Name, Email, Financial Status, etc.
+                    Upload a Shopify orders export file (CSV, Excel). The system
+                    will automatically map columns like Name, Email, Financial
+                    Status, etc.
                   </div>
                   {fileData && (
                     <button
@@ -1725,22 +2150,32 @@ Press Enter to search or type to search as you type`}
                         if (fileData.length > 0) {
                           // Show columns info in a more user-friendly way
                           const columns = Object.keys(fileData[0]);
-                          setUploadSuccess(`File loaded successfully! Available columns: ${columns.join(', ')}`);
+                          setUploadSuccess(
+                            `File loaded successfully! Available columns: ${columns.join(
+                              ", "
+                            )}`
+                          );
                         }
                       }}
                     >
-                      <Icon icon="lucide:info" width="14" height="14" className="me-1" />
+                      <Icon
+                        icon="lucide:info"
+                        width="14"
+                        height="14"
+                        className="me-1"
+                      />
                       View Columns
                     </button>
                   )}
                 </div>
 
-
-
                 {mappedData.length > 0 && (
                   <div className="mb-3">
                     <h6>Mapped Orders Preview ({mappedData.length} orders)</h6>
-                    <div className="table-responsive" style={{ maxHeight: '300px' }}>
+                    <div
+                      className="table-responsive"
+                      style={{ maxHeight: "300px" }}
+                    >
                       <table className="table table-sm table-bordered">
                         <thead className="table-light">
                           <tr>
@@ -1755,21 +2190,32 @@ Press Enter to search or type to search as you type`}
                             <tr key={index}>
                               <td className="small">{order.order_name}</td>
                               <td className="small">{order.email}</td>
-                              <td className="small">₹{parseFloat(order.total || 0).toFixed(2)}</td>
-                              <td className="small">{order.line_items?.length || 0}</td>
+                              <td className="small">
+                                ₹{parseFloat(order.total || 0).toFixed(2)}
+                              </td>
+                              <td className="small">
+                                {order.line_items?.length || 0}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                     {mappedData.length > 5 && (
-                      <small className="text-muted">Showing first 5 orders of {mappedData.length} total orders</small>
+                      <small className="text-muted">
+                        Showing first 5 orders of {mappedData.length} total
+                        orders
+                      </small>
                     )}
                   </div>
                 )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={closeUploadModal}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeUploadModal}
+                >
                   Cancel
                 </button>
                 <button
@@ -1780,11 +2226,14 @@ Press Enter to search or type to search as you type`}
                 >
                   {uploadLoading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
                       Uploading...
                     </>
                   ) : (
-                    'Upload Data'
+                    "Upload Data"
                   )}
                 </button>
               </div>
@@ -1795,7 +2244,10 @@ Press Enter to search or type to search as you type`}
 
       {/* Product Details Modal */}
       {productModalOpen && selectedOrder && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
@@ -1803,9 +2255,9 @@ Press Enter to search or type to search as you type`}
                   <Icon icon="lucide:package" className="me-2" />
                   Order Details - {selectedOrder.order.order_name}
                 </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => {
                     setProductModalOpen(false);
                     setSelectedOrder(null);
@@ -1820,24 +2272,34 @@ Press Enter to search or type to search as you type`}
                     <div className="d-flex flex-column gap-2">
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Order ID:</span>
-                        <span className="fw-medium">{selectedOrder.order.order_name}</span>
+                        <span className="fw-medium">
+                          {selectedOrder.order.order_name}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Customer:</span>
-                        <span className="fw-medium">{selectedOrder.order.shipping_name}</span>
+                        <span className="fw-medium">
+                          {selectedOrder.order.shipping_name}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Email:</span>
-                        <span className="fw-medium">{selectedOrder.order.email || 'N/A'}</span>
+                        <span className="fw-medium">
+                          {selectedOrder.order.email || "N/A"}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Phone:</span>
-                        <span className="fw-medium">{formatPhoneNumber(selectedOrder.order.phone)}</span>
+                        <span className="fw-medium">
+                          {formatPhoneNumber(selectedOrder.order.phone)}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Date:</span>
                         <span className="fw-medium">
-                          {new Date(selectedOrder.order.created_at).toLocaleDateString()}
+                          {new Date(
+                            selectedOrder.order.created_at
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -1847,69 +2309,134 @@ Press Enter to search or type to search as you type`}
                     <div className="d-flex flex-column gap-2">
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Subtotal:</span>
-                        <span className="fw-medium">₹{parseFloat(selectedOrder.order.subtotal || 0).toFixed(2)}</span>
+                        <span className="fw-medium">
+                          ₹
+                          {parseFloat(
+                            selectedOrder.order.subtotal || 0
+                          ).toFixed(2)}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Taxes:</span>
-                        <span className="fw-medium">₹{parseFloat(selectedOrder.order.taxes || 0).toFixed(2)}</span>
+                        <span className="fw-medium">
+                          ₹
+                          {parseFloat(selectedOrder.order.taxes || 0).toFixed(
+                            2
+                          )}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Shipping:</span>
-                        <span className="fw-medium">₹{parseFloat(selectedOrder.order.shipping || 0).toFixed(2)}</span>
+                        <span className="fw-medium">
+                          ₹
+                          {parseFloat(
+                            selectedOrder.order.shipping || 0
+                          ).toFixed(2)}
+                        </span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Discount:</span>
-                        <span className="fw-medium text-danger">-₹{parseFloat(selectedOrder.order.discount_amount || 0).toFixed(2)}</span>
+                        <span className="fw-medium text-danger">
+                          -₹
+                          {parseFloat(
+                            selectedOrder.order.discount_amount || 0
+                          ).toFixed(2)}
+                        </span>
                       </div>
                       <hr className="my-2" />
                       <div className="d-flex justify-content-between">
                         <span className="fw-bold">Total:</span>
-                        <span className="fw-bold fs-5 text-primary">₹{parseFloat(selectedOrder.order.total || 0).toFixed(2)}</span>
+                        <span className="fw-bold fs-5 text-primary">
+                          ₹
+                          {parseFloat(selectedOrder.order.total || 0).toFixed(
+                            2
+                          )}
+                        </span>
                       </div>
                       <hr className="my-2" />
                       <div className="d-flex justify-content-between">
                         <span className="fw-bold">Outstanding Balance:</span>
-                        <span className={`fw-bold fs-5 ${(() => {
-                          const outstanding = selectedOrder.order.outstanding_balance !== undefined 
-                            ? parseFloat(selectedOrder.order.outstanding_balance || 0) 
-                            : (selectedOrder.order.payment_status === 'paid' ? 0 : parseFloat(selectedOrder.order.total || 0));
-                          return outstanding > 0 ? 'text-warning' : 'text-success';
-                        })()}`}>
-                          ₹{(() => {
-                            if (selectedOrder.order.outstanding_balance !== undefined) {
-                              return parseFloat(selectedOrder.order.outstanding_balance || 0).toFixed(2);
+                        <span
+                          className={`fw-bold fs-5 ${(() => {
+                            const outstanding =
+                              selectedOrder.order.outstanding_balance !==
+                              undefined
+                                ? parseFloat(
+                                    selectedOrder.order.outstanding_balance || 0
+                                  )
+                                : selectedOrder.order.payment_status === "paid"
+                                ? 0
+                                : parseFloat(selectedOrder.order.total || 0);
+                            return outstanding > 0
+                              ? "text-warning"
+                              : "text-success";
+                          })()}`}
+                        >
+                          ₹
+                          {(() => {
+                            if (
+                              selectedOrder.order.outstanding_balance !==
+                              undefined
+                            ) {
+                              return parseFloat(
+                                selectedOrder.order.outstanding_balance || 0
+                              ).toFixed(2);
                             } else {
                               // Fallback calculation for existing orders
-                              if (selectedOrder.order.payment_status === 'paid') {
-                                return '0.00';
-                              } else if (selectedOrder.order.payment_status === 'voided') {
-                                return '0.00';
+                              if (
+                                selectedOrder.order.payment_status === "paid"
+                              ) {
+                                return "0.00";
+                              } else if (
+                                selectedOrder.order.payment_status === "voided"
+                              ) {
+                                return "0.00";
                               } else {
-                                return parseFloat(selectedOrder.order.total || 0).toFixed(2);
+                                return parseFloat(
+                                  selectedOrder.order.total || 0
+                                ).toFixed(2);
                               }
                             }
                           })()}
                         </span>
                       </div>
                       {(() => {
-                        const outstanding = selectedOrder.order.outstanding_balance !== undefined 
-                          ? parseFloat(selectedOrder.order.outstanding_balance || 0) 
-                          : (selectedOrder.order.payment_status === 'paid' ? 0 : parseFloat(selectedOrder.order.total || 0));
-                        
+                        const outstanding =
+                          selectedOrder.order.outstanding_balance !== undefined
+                            ? parseFloat(
+                                selectedOrder.order.outstanding_balance || 0
+                              )
+                            : selectedOrder.order.payment_status === "paid"
+                            ? 0
+                            : parseFloat(selectedOrder.order.total || 0);
+
                         if (outstanding > 0) {
                           return (
                             <div className="text-center">
                               <span className="badge bg-warning-subtle text-warning small">
-                                <Icon icon="lucide:clock" className="me-1" width="12" height="12" />
+                                <Icon
+                                  icon="lucide:clock"
+                                  className="me-1"
+                                  width="12"
+                                  height="12"
+                                />
                                 Payment Pending
                               </span>
                             </div>
                           );
-                        } else if (outstanding === 0 && selectedOrder.order.payment_status === 'paid') {
+                        } else if (
+                          outstanding === 0 &&
+                          selectedOrder.order.payment_status === "paid"
+                        ) {
                           return (
                             <div className="text-center">
                               <span className="badge bg-success-subtle text-success small">
-                                <Icon icon="lucide:check-circle" className="me-1" width="12" height="12" />
+                                <Icon
+                                  icon="lucide:check-circle"
+                                  className="me-1"
+                                  width="12"
+                                  height="12"
+                                />
                                 Fully Paid
                               </span>
                             </div>
@@ -1929,9 +2456,13 @@ Press Enter to search or type to search as you type`}
                       <thead className="table-light">
                         <tr>
                           <th className="small">Product</th>
-                          <th className="small text-center d-none d-md-table-cell">SKU</th>
+                          <th className="small text-center d-none d-md-table-cell">
+                            SKU
+                          </th>
                           <th className="small text-center">Qty</th>
-                          <th className="small text-end d-none d-sm-table-cell">Price</th>
+                          <th className="small text-end d-none d-sm-table-cell">
+                            Price
+                          </th>
                           <th className="small text-end">Total</th>
                         </tr>
                       </thead>
@@ -1940,36 +2471,55 @@ Press Enter to search or type to search as you type`}
                           <tr key={index}>
                             <td className="small">
                               <div className="d-flex align-items-center">
-                                <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                     style={{ width: '32px', height: '32px' }}>
-                                  <Icon icon="lucide:package" width="16" height="16" className="text-muted" />
+                                <div
+                                  className="bg-light rounded-circle d-flex align-items-center justify-content-center me-2"
+                                  style={{ width: "32px", height: "32px" }}
+                                >
+                                  <Icon
+                                    icon="lucide:package"
+                                    width="16"
+                                    height="16"
+                                    className="text-muted"
+                                  />
                                 </div>
                                 <div className="flex-grow-1">
-                                  <div className="fw-medium">{product.name}</div>
+                                  <div className="fw-medium">
+                                    {product.name}
+                                  </div>
                                   <div className="text-muted small d-md-none">
                                     SKU: {product.sku}
                                   </div>
-                                  {product.vendor && product.vendor !== 'N/A' && (
-                                    <div className="text-muted small">Vendor: {product.vendor}</div>
-                                  )}
+                                  {product.vendor &&
+                                    product.vendor !== "N/A" && (
+                                      <div className="text-muted small">
+                                        Vendor: {product.vendor}
+                                      </div>
+                                    )}
                                   <div className="d-sm-none">
                                     <div className="text-muted small">
-                                      Price: ₹{parseFloat(product.price).toFixed(2)}
+                                      Price: ₹
+                                      {parseFloat(product.price).toFixed(2)}
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td className="small text-center d-none d-md-table-cell">
-                              <span className="badge bg-light text-dark">{product.sku}</span>
+                              <span className="badge bg-light text-dark">
+                                {product.sku}
+                              </span>
                             </td>
                             <td className="small text-center">
-                              <span className="badge bg-primary rounded-pill">{product.quantity}</span>
+                              <span className="badge bg-primary rounded-pill">
+                                {product.quantity}
+                              </span>
                             </td>
                             <td className="small text-end d-none d-sm-table-cell">
                               ₹{parseFloat(product.price).toFixed(2)}
                             </td>
-                            <td className="small text-end fw-medium">₹{parseFloat(product.total).toFixed(2)}</td>
+                            <td className="small text-end fw-medium">
+                              ₹{parseFloat(product.total).toFixed(2)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1983,11 +2533,20 @@ Press Enter to search or type to search as you type`}
                   <div className="card bg-light">
                     <div className="card-body py-2">
                       <div className="d-flex align-items-start">
-                        <Icon icon="lucide:map-pin" className="me-2 mt-1 text-muted" width="16" height="16" />
+                        <Icon
+                          icon="lucide:map-pin"
+                          className="me-2 mt-1 text-muted"
+                          width="16"
+                          height="16"
+                        />
                         <div>
-                          <div className="fw-medium">{selectedOrder.order.shipping_name}</div>
+                          <div className="fw-medium">
+                            {selectedOrder.order.shipping_name}
+                          </div>
                           {selectedOrder.order.shipping_company && (
-                            <div className="text-muted small">{selectedOrder.order.shipping_company}</div>
+                            <div className="text-muted small">
+                              {selectedOrder.order.shipping_company}
+                            </div>
                           )}
                           <div className="text-muted small">
                             {selectedOrder.order.shipping_address1}
@@ -1996,9 +2555,13 @@ Press Enter to search or type to search as you type`}
                             )}
                           </div>
                           <div className="text-muted small">
-                            {selectedOrder.order.shipping_city}, {selectedOrder.order.shipping_province_name} {selectedOrder.order.shipping_zip}
+                            {selectedOrder.order.shipping_city},{" "}
+                            {selectedOrder.order.shipping_province_name}{" "}
+                            {selectedOrder.order.shipping_zip}
                           </div>
-                          <div className="text-muted small">{selectedOrder.order.shipping_country}</div>
+                          <div className="text-muted small">
+                            {selectedOrder.order.shipping_country}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2008,43 +2571,63 @@ Press Enter to search or type to search as you type`}
                 {/* Payment Status */}
                 <div className="row">
                   <div className="col-md-6">
-                                          <div className="d-flex align-items-center gap-2 mb-2">
-                        <span className="text-muted small">Payment Status:</span>
-                        {(() => {
-                          const status = getStatusBadge(selectedOrder.order);
-                          return (
-                            <span className={`badge ${status.className}`}>
-                              <Icon icon={status.icon} className="me-1" width="12" height="12" />
-                              {status.text}
-                            </span>
-                          );
-                        })()}
-                      </div>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <span className="text-muted small">Payment Status:</span>
+                      {(() => {
+                        const status = getStatusBadge(selectedOrder.order);
+                        return (
+                          <span className={`badge ${status.className}`}>
+                            <Icon
+                              icon={status.icon}
+                              className="me-1"
+                              width="12"
+                              height="12"
+                            />
+                            {status.text}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <div className="d-flex align-items-center gap-2">
                       <span className="text-muted small">Fulfillment:</span>
-                      <span className={`badge ${selectedOrder.order.fulfillment_status === 'fulfilled' ? 'bg-success' : 'bg-secondary'}`}>
-                        {selectedOrder.order.fulfillment_status === 'fulfilled' ? 'Fulfilled' : 'Unfulfilled'}
+                      <span
+                        className={`badge ${
+                          selectedOrder.order.fulfillment_status === "fulfilled"
+                            ? "bg-success"
+                            : "bg-secondary"
+                        }`}
+                      >
+                        {selectedOrder.order.fulfillment_status === "fulfilled"
+                          ? "Fulfilled"
+                          : "Unfulfilled"}
                       </span>
                     </div>
                   </div>
-                                      <div className="col-md-6 text-end">
-                      <div className="text-muted small">Payment Method</div>
-                      <div className="fw-medium">{selectedOrder.order.payment_method || 'N/A'}</div>
-                      {selectedOrder.order.payment_status === 'voided' && (
-                        <div className="mt-2">
-                          <span className="badge bg-danger-subtle text-danger small">
-                            <Icon icon="lucide:x-circle" className="me-1" width="10" height="10" />
-                            Order Cancelled
-                          </span>
-                        </div>
-                      )}
+                  <div className="col-md-6 text-end">
+                    <div className="text-muted small">Payment Method</div>
+                    <div className="fw-medium">
+                      {selectedOrder.order.payment_method || "N/A"}
                     </div>
+                    {selectedOrder.order.payment_status === "voided" && (
+                      <div className="mt-2">
+                        <span className="badge bg-danger-subtle text-danger small">
+                          <Icon
+                            icon="lucide:x-circle"
+                            className="me-1"
+                            width="10"
+                            height="10"
+                          />
+                          Order Cancelled
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => {
                     setProductModalOpen(false);
                     setSelectedOrder(null);
@@ -2052,15 +2635,18 @@ Press Enter to search or type to search as you type`}
                 >
                   Close
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={printInvoice}
                   disabled={printing}
                 >
                   {printing ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
                       Printing...
                     </>
                   ) : (
@@ -2075,11 +2661,8 @@ Press Enter to search or type to search as you type`}
           </div>
         </div>
       )}
-
-
     </div>
   );
 };
 
 export default CustomerLayer;
-
