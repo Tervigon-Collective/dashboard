@@ -759,7 +759,8 @@ const CustomerLayer = () => {
               }
             );
 
-            if (response.status !== 200) {
+            const isOk = response.status === 200 || response.status === 201;
+            if (!isOk) {
               const errorText =
                 typeof response.data === "string"
                   ? response.data
@@ -781,7 +782,7 @@ const CustomerLayer = () => {
               );
             }
 
-            const result = await response.json();
+            const result = response.data || {};
 
             if (result.success) {
               totalProcessed += result.total_processed || batch.length;
