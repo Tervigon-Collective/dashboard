@@ -9,6 +9,174 @@ import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 
+const QualityCheckDocumentsSection = ({ requestId }) => {
+  const [docType, setDocType] = useState("invoice");
+  const [files, setFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState("");
+
+  const refresh = async () => {
+    try {
+      const res = await qualityCheckApi.listDocuments(requestId);
+      if (res.success) setDocuments(res.data);
+    } catch (e) {
+      console.error("Failed to load documents", e);
+    }
+  };
+
+  useEffect(() => {
+    if (requestId) refresh();
+  }, [requestId]);
+
+  const onFileChange = (e) => {
+    const selected = Array.from(e.target.files || []);
+    setFiles(selected);
+  };
+
+  const onUpload = async () => {
+    if (!files.length) return;
+    setIsUploading(true);
+    setError("");
+    try {
+      for (const f of files) {
+        await qualityCheckApi.uploadDocument(requestId, {
+          docType,
+          itemId: null,
+          file: f,
+        });
+      }
+      setFiles([]);
+      await refresh();
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const onDelete = async (documentId) => {
+    try {
+      await qualityCheckApi.deleteDocument(documentId);
+      await refresh();
+    } catch (e) {
+      console.error("Failed to delete document", e);
+    }
+  };
+
+  return (
+    <div className="border rounded p-3" style={{ backgroundColor: "#f8f9fa" }}>
+      <div className="row g-2 align-items-end">
+        <div className="col-md-3">
+          <label className="form-label small mb-1">Document Type</label>
+          <select
+            className="form-select form-select-sm"
+            value={docType}
+            onChange={(e) => setDocType(e.target.value)}
+          >
+            <option value="invoice">Invoice</option>
+            <option value="purchase_order">Purchase Order</option>
+            <option value="delivery_challan">Delivery Challan</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div className="col-md-6">
+          <label className="form-label small mb-1">Select Files</label>
+          <input
+            type="file"
+            className="form-control form-control-sm"
+            accept=".pdf,image/*"
+            multiple
+            onChange={onFileChange}
+          />
+        </div>
+        <div className="col-md-3 d-flex gap-2">
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={onUpload}
+            disabled={isUploading || files.length === 0}
+          >
+            {isUploading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Uploading...
+              </>
+            ) : (
+              <>Upload</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div
+          className="alert alert-danger mt-2 py-2 mb-2"
+          style={{ fontSize: "12px" }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="table-responsive mt-3">
+        <table className="table table-sm table-bordered mb-0">
+          <thead className="table-light">
+            <tr>
+              <th className="small">Type</th>
+              <th className="small">Name</th>
+              <th className="small">Size</th>
+              <th className="small">Uploaded</th>
+              <th className="small">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {documents.length === 0 ? (
+              <tr>
+                <td className="small text-center" colSpan="5">
+                  No documents uploaded
+                </td>
+              </tr>
+            ) : (
+              documents.map((d) => (
+                <tr key={d.document_id}>
+                  <td className="small text-capitalize">
+                    {d.doc_type?.replace(/_/g, " ")}
+                  </td>
+                  <td className="small">{d.file_name}</td>
+                  <td className="small">
+                    {Math.ceil((d.file_size_bytes || 0) / 1024)} KB
+                  </td>
+                  <td className="small">
+                    {d.uploaded_at
+                      ? new Date(d.uploaded_at).toLocaleString()
+                      : "-"}
+                  </td>
+                  <td className="small">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      style={{
+                        border: "none",
+                        background: "none",
+                        color: "#dc3545",
+                      }}
+                      title="Delete"
+                      onClick={() => onDelete(d.document_id)}
+                    >
+                      <Icon icon="mdi:delete" width="16" height="16" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const ReceivingManagementLayer = () => {
   const [activeTab, setActiveTab] = useState("purchase-request");
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,6 +209,8 @@ const ReceivingManagementLayer = () => {
     viewModalOpen,
     setViewModalOpen,
     selectedRequest,
+    searchTerm,
+    setSearchTerm,
   }) => {
     return (
       <>
@@ -51,6 +221,23 @@ const ReceivingManagementLayer = () => {
           </div>
 
           <div className="card-body">
+            {/* Search */}
+            <div className="row g-3 mb-4">
+              <div className="col-12 col-md-4">
+                <div className="input-group">
+                  <span className="input-group-text bg-white">
+                    <Icon icon="lucide:search" width="16" height="16" />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by vendor or product..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
             {/* Table */}
             <div className="table-responsive">
               <table
@@ -179,101 +366,137 @@ const ReceivingManagementLayer = () => {
                       </td>
                     </tr>
                   ) : (
-                    requests.map((request, index) => (
-                      <tr key={request.request_id}>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {index + 1}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.vendor_name || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {new Date(request.order_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {new Date(request.delivery_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.productNames || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalInvoiceQty ?? 0}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalSortedQty ?? 0}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalDamageQty ?? 0}
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                border: "none",
-                                background: "none",
-                                padding: "4px",
-                                color: "#0d6efd",
-                              }}
-                              title="View"
-                              onClick={() =>
-                                handleViewRequest(request, "quality-check")
-                              }
-                            >
-                              <Icon icon="mdi:eye" width="16" height="16" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    requests
+                      .filter((request) => {
+                        if (!searchTerm) return true;
+                        const search = searchTerm.toLowerCase();
+                        // Search by vendor name
+                        if (
+                          request.vendor_name?.toLowerCase().includes(search)
+                        ) {
+                          return true;
+                        }
+                        // Search by aggregated product names (if present)
+                        const names =
+                          request.aggregated?.productNames ||
+                          (request.items && request.items.length > 0
+                            ? [
+                                ...new Set(
+                                  request.items
+                                    .map((it) => it.product_name)
+                                    .filter(Boolean)
+                                ),
+                              ].join(", ")
+                            : "");
+                        return names.toLowerCase().includes(search);
+                      })
+                      .map((request, index) => (
+                        <tr key={request.request_id}>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {index + 1}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.vendor_name || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {new Date(request.order_date).toLocaleDateString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {new Date(
+                              request.delivery_date
+                            ).toLocaleDateString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.productNames || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalInvoiceQty ?? 0}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalSortedQty ?? 0}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalDamageQty ?? 0}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex flex-wrap gap-1 gap-sm-2">
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="View"
+                                onClick={() =>
+                                  handleViewRequest(request, "quality-check")
+                                }
+                              >
+                                <Icon
+                                  icon="lucide:eye"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
@@ -904,6 +1127,20 @@ const ReceivingManagementLayer = () => {
   };
 
   // Handle view purchase request
+  const [viewDocuments, setViewDocuments] = useState([]);
+  const [docPreviewOpen, setDocPreviewOpen] = useState(false);
+  const [docPreviewUrl, setDocPreviewUrl] = useState("");
+  const [docPreviewName, setDocPreviewName] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (docPreviewUrl && docPreviewUrl.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(docPreviewUrl);
+        } catch (_) {}
+      }
+    };
+  }, [docPreviewUrl]);
   const handleViewRequest = async (request, sourceTab = null) => {
     try {
       // If viewing from quality-check tab, fetch with quality check data
@@ -922,6 +1159,13 @@ const ReceivingManagementLayer = () => {
         // Default behavior - use existing request data
         setSelectedRequest(request);
       }
+      // Load documents for this request
+      try {
+        const docs = await qualityCheckApi.listDocuments(request.request_id);
+        setViewDocuments(docs.success ? docs.data : []);
+      } catch (e) {
+        setViewDocuments([]);
+      }
       setViewModalOpen(true);
     } catch (error) {
       console.error("Error loading request details:", error);
@@ -932,7 +1176,50 @@ const ReceivingManagementLayer = () => {
   };
 
   // Handle settings icon click (open status confirmation modal)
-  const handleSettingsClick = (request, targetStatus = "to_be_delivered") => {
+  const handleSettingsClick = async (
+    request,
+    targetStatus = "to_be_delivered"
+  ) => {
+    // If attempting arrived -> fulfilled, enforce QC + Documents presence
+    if (targetStatus === "fulfilled") {
+      try {
+        // 1) Quality checks present
+        const qcRes = await qualityCheckApi.getQualityChecksByRequestId(
+          request.request_id
+        );
+        const hasAnyQC =
+          qcRes?.success && Array.isArray(qcRes.data) && qcRes.data.length > 0;
+
+        // 2) Documents present (invoice or PO preferred, but accept any)
+        const docsRes = await qualityCheckApi.listDocuments(request.request_id);
+        const docs =
+          docsRes?.success && Array.isArray(docsRes.data) ? docsRes.data : [];
+        const hasAnyDoc = docs.length > 0;
+
+        if (!hasAnyQC || !hasAnyDoc) {
+          let msg = "";
+          if (!hasAnyQC && !hasAnyDoc) {
+            msg =
+              "Please complete Item Inspection Details and upload at least one document before marking as Fulfilled.";
+          } else if (!hasAnyQC) {
+            msg =
+              "Please complete Item Inspection Details before marking as Fulfilled.";
+          } else if (!hasAnyDoc) {
+            msg =
+              "Please upload at least one document (e.g., invoice or purchase order) before marking as Fulfilled.";
+          }
+          alert(msg);
+          return; // Do not open confirmation modal
+        }
+      } catch (e) {
+        console.error("Pre-check before fulfillment failed", e);
+        alert(
+          "Unable to verify inspection or documents. Please try again in a moment."
+        );
+        return;
+      }
+    }
+
     setRequestToUpdate(request);
     setStatusUpdateTarget(targetStatus);
     setStatusConfirmModal(true);
@@ -1274,6 +1561,8 @@ const ReceivingManagementLayer = () => {
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
             />
           )}
         </div>
@@ -1391,6 +1680,73 @@ const ReceivingManagementLayer = () => {
                           </span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Documents */}
+                  <div className="mb-3">
+                    <h6 className="text-muted mb-3">Documents</h6>
+                    <div className="table-responsive">
+                      <table className="table table-sm table-bordered">
+                        <thead className="table-light">
+                          <tr>
+                            <th className="small">Type</th>
+                            <th className="small">Name</th>
+                            <th className="small">Size</th>
+                            <th className="small">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewDocuments.length === 0 ? (
+                            <tr>
+                              <td className="small text-center" colSpan="4">
+                                No documents uploaded
+                              </td>
+                            </tr>
+                          ) : (
+                            viewDocuments.map((d) => (
+                              <tr key={d.document_id}>
+                                <td className="small text-capitalize">
+                                  {d.doc_type?.replace(/_/g, " ")}
+                                </td>
+                                <td className="small">{d.file_name}</td>
+                                <td className="small">
+                                  {Math.ceil((d.file_size_bytes || 0) / 1024)}{" "}
+                                  KB
+                                </td>
+                                <td className="small">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={async () => {
+                                      try {
+                                        const blob =
+                                          await qualityCheckApi.fetchDocumentBlob(
+                                            d.document_id
+                                          );
+                                        const url = URL.createObjectURL(blob);
+                                        setDocPreviewUrl(url);
+                                        setDocPreviewName(
+                                          d.file_name || "Document"
+                                        );
+                                        setDocPreviewOpen(true);
+                                      } catch (e) {
+                                        console.error(
+                                          "Failed to fetch document",
+                                          e
+                                        );
+                                        alert("Unable to preview document.");
+                                      }
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
@@ -1601,6 +1957,55 @@ const ReceivingManagementLayer = () => {
                         </div>
                       </div>
                     )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Preview Modal (parent-level) */}
+        {docPreviewOpen && (
+          <div
+            className="modal show d-block"
+            tabIndex="-1"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div
+              className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
+              style={{ maxWidth: "min(1200px, 95vw)" }}
+            >
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <Icon icon="mdi:eye" className="me-2" />
+                    {docPreviewName || "Document"}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setDocPreviewOpen(false)}
+                  ></button>
+                </div>
+                <div className="modal-body" style={{ height: "75vh" }}>
+                  {docPreviewUrl ? (
+                    <iframe
+                      title="Document Preview"
+                      src={docPreviewUrl}
+                      style={{ width: "100%", height: "100%", border: 0 }}
+                    />
+                  ) : (
+                    <div className="text-muted">No preview available.</div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <a
+                    href={docPreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-secondary"
+                  >
+                    Open in new tab
+                  </a>
                 </div>
               </div>
             </div>
@@ -1866,6 +2271,14 @@ const ReceivingManagementLayer = () => {
                     </div>
                   </div>
 
+                  {/* Documents Upload */}
+                  <div className="mb-4">
+                    <h6 className="text-muted mb-3">Documents</h6>
+                    <QualityCheckDocumentsSection
+                      requestId={requestToInspect.request_id}
+                    />
+                  </div>
+
                   {/* Items Inspection Table */}
                   <div className="mb-3">
                     <h6 className="text-muted mb-3">Item Inspection Details</h6>
@@ -1987,17 +2400,6 @@ const ReceivingManagementLayer = () => {
                   </div>
                 </div>
                 <div className="modal-footer d-flex flex-column flex-sm-row gap-2 justify-content-end">
-                  <button
-                    type="button"
-                    className="btn btn-secondary w-100 w-sm-auto"
-                    onClick={() => {
-                      setInspectionModalOpen(false);
-                      setRequestToInspect(null);
-                    }}
-                    disabled={isSavingInspection}
-                  >
-                    Cancel
-                  </button>
                   <button
                     type="button"
                     className="btn btn-primary w-100 w-sm-auto"
@@ -2316,42 +2718,71 @@ const PurchaseRequestTab = ({
                             <button
                               className="btn btn-sm"
                               style={{
-                                border: "none",
-                                background: "none",
-                                padding: "4px",
-                                color: "#0d6efd",
-                                minWidth: "32px",
+                                width: "32px",
+                                height: "32px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "6px",
+                                backgroundColor: "white",
                               }}
                               title="View"
                               onClick={() => handleViewRequest(request)}
                             >
-                              <Icon icon="mdi:eye" width="16" height="16" />
+                              <Icon
+                                icon="lucide:eye"
+                                width="16"
+                                height="16"
+                                style={{ color: "#3b82f6" }}
+                              />
                             </button>
                             <button
                               className="btn btn-sm"
                               style={{
-                                border: "none",
-                                background: "none",
-                                padding: "4px",
-                                color: "#495057",
+                                width: "32px",
+                                height: "32px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "6px",
+                                backgroundColor: "white",
                               }}
                               title="Edit"
                               onClick={() => handleEditRequest(request)}
                             >
-                              <Icon icon="mdi:pencil" width="16" height="16" />
+                              <Icon
+                                icon="lucide:edit"
+                                width="16"
+                                height="16"
+                                style={{ color: "#3b82f6" }}
+                              />
                             </button>
                             <button
                               className="btn btn-sm"
                               style={{
-                                border: "none",
-                                background: "none",
-                                padding: "4px",
-                                color: "#dc3545",
+                                width: "32px",
+                                height: "32px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "6px",
+                                backgroundColor: "white",
                               }}
                               title="Delete"
                               onClick={() => handleDeleteRequest(request)}
                             >
-                              <Icon icon="mdi:delete" width="16" height="16" />
+                              <Icon
+                                icon="lucide:trash-2"
+                                width="16"
+                                height="16"
+                                style={{ color: "#ef4444" }}
+                              />
                             </button>
                             {/* Only show Settings icon if status is "Pending" */}
                             {(request.status === "Pending" ||
@@ -2359,15 +2790,25 @@ const PurchaseRequestTab = ({
                               <button
                                 className="btn btn-sm"
                                 style={{
-                                  border: "none",
-                                  background: "none",
-                                  padding: "4px",
-                                  color: "#6c757d",
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
                                 }}
                                 title="Settings"
                                 onClick={() => handleSettingsClick(request)}
                               >
-                                <Icon icon="mdi:cog" width="16" height="16" />
+                                <Icon
+                                  icon="lucide:settings"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#f59e0b" }}
+                                />
                               </button>
                             )}
                           </div>
@@ -3289,30 +3730,50 @@ const ToBeDeliveredTab = ({
                         <button
                           className="btn btn-sm"
                           style={{
-                            border: "none",
-                            background: "none",
-                            padding: "4px",
-                            color: "#0d6efd",
+                            width: "32px",
+                            height: "32px",
+                            padding: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "6px",
+                            backgroundColor: "white",
                           }}
                           title="View"
                           onClick={() => handleViewRequest(request)}
                         >
-                          <Icon icon="mdi:eye" width="16" height="16" />
+                          <Icon
+                            icon="lucide:eye"
+                            width="16"
+                            height="16"
+                            style={{ color: "#3b82f6" }}
+                          />
                         </button>
                         <button
                           className="btn btn-sm"
                           style={{
-                            border: "none",
-                            background: "none",
-                            padding: "4px",
-                            color: "#6c757d",
+                            width: "32px",
+                            height: "32px",
+                            padding: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "6px",
+                            backgroundColor: "white",
                           }}
                           title="Settings"
                           onClick={() =>
                             handleSettingsClick(request, "arrived")
                           }
                         >
-                          <Icon icon="mdi:cog" width="16" height="16" />
+                          <Icon
+                            icon="lucide:settings"
+                            width="16"
+                            height="16"
+                            style={{ color: "#f59e0b" }}
+                          />
                         </button>
                       </div>
                     </td>
@@ -3541,23 +4002,38 @@ const QualityCheckTab = ({
                           <button
                             className="btn btn-sm"
                             style={{
-                              border: "none",
-                              background: "none",
-                              padding: "4px",
-                              color: "#0d6efd",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
                             }}
                             title="View"
                             onClick={() => handleViewRequest(request)}
                           >
-                            <Icon icon="mdi:eye" width="16" height="16" />
+                            <Icon
+                              icon="lucide:eye"
+                              width="16"
+                              height="16"
+                              style={{ color: "#3b82f6" }}
+                            />
                           </button>
                           <button
                             className="btn btn-sm"
                             style={{
-                              border: "none",
-                              background: "none",
-                              padding: "4px",
-                              color: "#28a745",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
                             }}
                             title="Inspect"
                             onClick={() => handleInspectClick(request)}
@@ -3566,22 +4042,33 @@ const QualityCheckTab = ({
                               icon="mdi:clipboard-check"
                               width="16"
                               height="16"
+                              style={{ color: "#16a34a" }}
                             />
                           </button>
                           <button
                             className="btn btn-sm"
                             style={{
-                              border: "none",
-                              background: "none",
-                              padding: "4px",
-                              color: "#6c757d",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
                             }}
                             title="Settings"
                             onClick={() =>
                               handleSettingsClick(request, "fulfilled")
                             }
                           >
-                            <Icon icon="mdi:cog" width="16" height="16" />
+                            <Icon
+                              icon="lucide:settings"
+                              width="16"
+                              height="16"
+                              style={{ color: "#f59e0b" }}
+                            />
                           </button>
                         </div>
                       </td>
