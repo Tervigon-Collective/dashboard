@@ -209,6 +209,8 @@ const ReceivingManagementLayer = () => {
     viewModalOpen,
     setViewModalOpen,
     selectedRequest,
+    searchTerm,
+    setSearchTerm,
   }) => {
     return (
       <>
@@ -219,6 +221,23 @@ const ReceivingManagementLayer = () => {
           </div>
 
           <div className="card-body">
+            {/* Search */}
+            <div className="row g-3 mb-4">
+              <div className="col-12 col-md-4">
+                <div className="input-group">
+                  <span className="input-group-text bg-white">
+                    <Icon icon="lucide:search" width="16" height="16" />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by vendor or product..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
             {/* Table */}
             <div className="table-responsive">
               <table
@@ -347,111 +366,137 @@ const ReceivingManagementLayer = () => {
                       </td>
                     </tr>
                   ) : (
-                    requests.map((request, index) => (
-                      <tr key={request.request_id}>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {index + 1}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.vendor_name || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {new Date(request.order_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {new Date(request.delivery_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.productNames || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalInvoiceQty ?? 0}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalSortedQty ?? 0}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalDamageQty ?? 0}
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="View"
-                              onClick={() =>
-                                handleViewRequest(request, "quality-check")
-                              }
-                            >
-                              <Icon
-                                icon="lucide:eye"
-                                width="16"
-                                height="16"
-                                style={{ color: "#3b82f6" }}
-                              />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    requests
+                      .filter((request) => {
+                        if (!searchTerm) return true;
+                        const search = searchTerm.toLowerCase();
+                        // Search by vendor name
+                        if (
+                          request.vendor_name?.toLowerCase().includes(search)
+                        ) {
+                          return true;
+                        }
+                        // Search by aggregated product names (if present)
+                        const names =
+                          request.aggregated?.productNames ||
+                          (request.items && request.items.length > 0
+                            ? [
+                                ...new Set(
+                                  request.items
+                                    .map((it) => it.product_name)
+                                    .filter(Boolean)
+                                ),
+                              ].join(", ")
+                            : "");
+                        return names.toLowerCase().includes(search);
+                      })
+                      .map((request, index) => (
+                        <tr key={request.request_id}>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {index + 1}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.vendor_name || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {new Date(request.order_date).toLocaleDateString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {new Date(
+                              request.delivery_date
+                            ).toLocaleDateString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.productNames || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalInvoiceQty ?? 0}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalSortedQty ?? 0}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.aggregated?.totalDamageQty ?? 0}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex flex-wrap gap-1 gap-sm-2">
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="View"
+                                onClick={() =>
+                                  handleViewRequest(request, "quality-check")
+                                }
+                              >
+                                <Icon
+                                  icon="lucide:eye"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
@@ -1516,6 +1561,8 @@ const ReceivingManagementLayer = () => {
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
             />
           )}
         </div>
