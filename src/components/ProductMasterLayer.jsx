@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import productMasterApi from "../services/productMasterApi";
 import VariantOptionsManager from "./VariantOptionsManager";
@@ -7,7 +7,6 @@ import { generateVariantCombinations } from "../utils/variantCombinationGenerato
 
 const ProductMasterLayer = () => {
   const [products, setProducts] = useState([]);
-  const [allProducts, setAllProducts] = useState([]); // Store all products for filtering
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     productName: "",
@@ -31,86 +30,126 @@ const ProductMasterLayer = () => {
   
   // Search, filter, and sort states
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [hsnCodeFilter, setHsnCodeFilter] = useState("all"); // all, with, without
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
 
-  // Load products from API
-  const loadProducts = async (page = 1) => {
+  // Debounce search term (industry best practice: 500ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load products from API with server-side search, filters, and pagination
+  const loadProducts = async (page = 1, resetPage = false) => {
     try {
       setIsLoading(true);
-      const result = await productMasterApi.getAllProducts(page, 20);
+      
+      const targetPage = resetPage ? 1 : page;
+      
+      const options = {
+        search: debouncedSearchTerm || undefined,
+        hsnCodeFilter: hsnCodeFilter !== "all" ? hsnCodeFilter : undefined,
+        sortField: sortField || undefined,
+        sortDirection: sortDirection || undefined,
+      };
+
+      const result = await productMasterApi.getAllProducts(targetPage, 20, options);
 
       if (result.success) {
-        setAllProducts(result.data);
-        setProducts(result.data);
-        setCurrentPage(result.pagination.page);
-        setTotalPages(result.pagination.totalPages);
-        setTotalRecords(result.pagination.total);
+        setProducts(result.data || []);
+        setCurrentPage(result.pagination?.page || targetPage);
+        setTotalPages(result.pagination?.totalPages || 1);
+        setTotalRecords(result.pagination?.total || 0);
       } else {
         console.error("Failed to load products:", result.message);
+        setProducts([]);
       }
     } catch (error) {
       console.error("Error loading products:", error);
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load products on component mount
+  // Track initial mount
+  const [isMounted, setIsMounted] = useState(false);
+  const prevPageRef = useRef(1);
+  const prevFiltersRef = useRef({
+    search: "",
+    filter: "all",
+    sort: null,
+    sortDir: "asc",
+  });
+
+  // Initial load on mount
   useEffect(() => {
-    loadProducts();
+    setIsMounted(true);
+    loadProducts(1, false);
+    prevPageRef.current = 1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Search, filter, and sort logic
+  // Single effect to handle all data loading
   useEffect(() => {
-    let filtered = [...allProducts];
+    if (!isMounted) return;
 
-    // Apply search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((product) =>
-        product.product_name?.toLowerCase().includes(search) ||
-        product.hsn_code?.toLowerCase().includes(search) ||
-        product.item_description?.toLowerCase().includes(search)
-      );
+    const currentFilters = {
+      search: debouncedSearchTerm,
+      filter: hsnCodeFilter,
+      sort: sortField,
+      sortDir: sortDirection,
+    };
+
+    const prevFilters = prevFiltersRef.current;
+    const prevPage = prevPageRef.current;
+
+    // Check if filters changed
+    const filtersChanged =
+      prevFilters.search !== currentFilters.search ||
+      prevFilters.filter !== currentFilters.filter ||
+      prevFilters.sort !== currentFilters.sort ||
+      prevFilters.sortDir !== currentFilters.sortDir;
+
+    // Check if page changed
+    const pageChanged = prevPage !== currentPage;
+
+    // If filters changed, reset to page 1 and load
+    if (filtersChanged) {
+      prevFiltersRef.current = currentFilters;
+      if (currentPage !== 1) {
+        // Reset page first, let the page change trigger reload
+        prevPageRef.current = currentPage;
+        setCurrentPage(1);
+      } else {
+        // Already on page 1, load immediately
+        prevPageRef.current = 1;
+        loadProducts(1, true);
+      }
+      return;
     }
-
-    // Apply HSN code filter
-    if (hsnCodeFilter === "with") {
-      filtered = filtered.filter((product) => product.hsn_code && product.hsn_code.trim() !== "");
-    } else if (hsnCodeFilter === "without") {
-      filtered = filtered.filter((product) => !product.hsn_code || product.hsn_code.trim() === "");
+    
+    // If only page changed (not filters), load that page
+    if (pageChanged && currentPage > 0) {
+      prevPageRef.current = currentPage;
+      loadProducts(currentPage, false);
     }
-
-    // Apply sorting
-    if (sortField) {
-      filtered.sort((a, b) => {
-        let aVal = a[sortField] || "";
-        let bVal = b[sortField] || "";
-        
-        if (typeof aVal === "string") {
-          aVal = aVal.toLowerCase();
-          bVal = bVal.toLowerCase();
-        }
-
-        if (sortDirection === "asc") {
-          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-        } else {
-          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-        }
-      });
-    }
-
-    setProducts(filtered);
-  }, [searchTerm, hsnCodeFilter, sortField, sortDirection, allProducts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, debouncedSearchTerm, hsnCodeFilter, sortField, sortDirection, currentPage]);
 
   // Reset all filters
   const handleResetFilters = () => {
     setSearchTerm("");
+    setDebouncedSearchTerm("");
     setHsnCodeFilter("all");
     setSortField(null);
     setSortDirection("asc");
+    setCurrentPage(1);
   };
 
   // Handle column sort
@@ -288,8 +327,8 @@ const ProductMasterLayer = () => {
         setVariantOptions([]);
         setVariants([]);
 
-        // Reload products list to show updated data
-        await loadProducts(currentPage);
+        // Reload products list to show updated data with current filters
+        await loadProducts(currentPage, false);
 
         console.log(
           isEditMode
@@ -466,71 +505,68 @@ const ProductMasterLayer = () => {
   };
 
   return (
-    <div className="card h-100 radius-8 border">
-      <div className="card-body p-24">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div className="d-flex align-items-center">
-            <h6 className="mb-0 me-2">Product Master</h6>
-          </div>
-          <button
-            onClick={() => {
-              setFormErrors({});
-              setModalOpen(true);
-            }}
-            className="btn btn-primary d-inline-flex align-items-center"
-            style={{ gap: "6px", padding: "8px 16px" }}
-          >
-            <Icon icon="lucide:plus" width="18" height="18" />
-            <span className="d-none d-sm-inline">Add New Product</span>
-            <span className="d-sm-none">Add</span>
-          </button>
+    <div>
+      {/* Search, Filter, and Action Bar - Single Line */}
+      <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
+        {/* Search Input */}
+        <div className="position-relative" style={{ flex: "1 1 250px", minWidth: "200px" }}>
+          <Icon
+            icon="lucide:search"
+            width="16"
+            height="16"
+            className="position-absolute top-50 translate-middle-y"
+            style={{ left: "12px", color: "#6c757d", zIndex: 1 }}
+          />
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: "36px", height: "36px", fontSize: "0.875rem" }}
+          />
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className="row g-3 mb-3">
-          <div className="col-12 col-md-4">
-            <div className="input-group">
-              <span className="input-group-text bg-white border-end-0">
-                <Icon icon="lucide:search" width="16" height="16" />
-              </span>
-              <input
-                type="text"
-                className="form-control border-start-0"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ paddingLeft: "0" }}
-              />
-            </div>
-          </div>
-          <div className="col-12 col-md-3">
-            <select
-              className="form-select"
-              value={hsnCodeFilter}
-              onChange={(e) => setHsnCodeFilter(e.target.value)}
-            >
-              <option value="all">All HSN Codes</option>
-              <option value="with">With HSN Code</option>
-              <option value="without">Without HSN Code</option>
-            </select>
-          </div>
-          <div className="col-12 col-md-2">
-            <button
-              className="btn btn-outline-secondary w-100"
-              onClick={handleResetFilters}
-              title="Reset all filters"
-            >
-              <Icon icon="lucide:rotate-ccw" width="16" height="16" className="me-1" />
-              <span className="d-none d-sm-inline">Reset</span>
-            </button>
-          </div>
-          <div className="col-12 col-md-3 d-flex justify-content-end align-items-center">
-            <small className="text-muted">
-              Showing {products.length} of {totalRecords} products
-            </small>
-          </div>
-        </div>
+        {/* Filter Dropdown */}
+        <select
+          className="form-select form-select-sm"
+          value={hsnCodeFilter}
+          onChange={(e) => setHsnCodeFilter(e.target.value)}
+          style={{ height: "36px", width: "auto", minWidth: "150px", fontSize: "0.875rem" }}
+        >
+          <option value="all">All HSN Codes</option>
+          <option value="with">With HSN Code</option>
+          <option value="without">Without HSN Code</option>
+        </select>
+
+        {/* Reset Button */}
+        <button
+          className="btn btn-outline-secondary btn-sm"
+          onClick={handleResetFilters}
+          title="Reset filters"
+          style={{ height: "36px", padding: "6px 12px", fontSize: "0.875rem" }}
+        >
+          <Icon icon="lucide:x" width="14" height="14" />
+        </button>
+
+        {/* Product Count */}
+        <span className="text-muted ms-auto" style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}>
+          Showing {products.length} of {totalRecords} products
+        </span>
+
+        {/* Add Button */}
+        <button
+          onClick={() => {
+            setFormErrors({});
+            setModalOpen(true);
+          }}
+          className="btn btn-primary btn-sm d-inline-flex align-items-center"
+          style={{ gap: "4px", padding: "6px 14px", height: "36px", fontSize: "0.875rem" }}
+        >
+          <Icon icon="lucide:plus" width="16" height="16" />
+          <span>Add Product</span>
+        </button>
+      </div>
 
         {/* Products List */}
         <div className="table-responsive scroll-sm">
@@ -693,8 +729,8 @@ const ProductMasterLayer = () => {
               <button
                 className="btn btn-sm"
                 style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => loadProducts(currentPage - 1)}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1 || isLoading}
               >
                 <Icon icon="mdi:chevron-left" width="16" height="16" />
               </button>
@@ -716,7 +752,8 @@ const ProductMasterLayer = () => {
                         padding: "4px 8px",
                         minWidth: "32px",
                       }}
-                      onClick={() => loadProducts(pageNum)}
+                      onClick={() => setCurrentPage(pageNum)}
+                      disabled={isLoading}
                     >
                       {pageNum}
                     </button>
@@ -740,7 +777,8 @@ const ProductMasterLayer = () => {
                         padding: "4px 8px",
                         minWidth: "32px",
                       }}
-                      onClick={() => loadProducts(totalPages)}
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={isLoading}
                     >
                       {totalPages}
                     </button>
@@ -751,8 +789,8 @@ const ProductMasterLayer = () => {
               <button
                 className="btn btn-sm"
                 style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => loadProducts(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || isLoading}
               >
                 <Icon icon="mdi:chevron-right" width="16" height="16" />
               </button>
@@ -937,7 +975,6 @@ const ProductMasterLayer = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

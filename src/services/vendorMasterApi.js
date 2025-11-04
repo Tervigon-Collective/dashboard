@@ -172,9 +172,28 @@ class VendorMasterApiService {
   }
 
   // Get all vendors
-  async getAllVendors(page = 1, limit = 20, status = null) {
+  async getAllVendors(page = 1, limit = 20, options = {}) {
     const params = new URLSearchParams({ page, limit });
-    if (status) params.append("status", status);
+    
+    // Add search parameter (searches across all vendor fields)
+    if (options.search && options.search.trim()) {
+      params.append("search", options.search.trim());
+    }
+    
+    // Add filter parameters
+    if (options.status && options.status !== "all") {
+      params.append("status", options.status);
+    }
+    
+    if (options.commonNameFilter && options.commonNameFilter !== "all") {
+      params.append("commonNameFilter", options.commonNameFilter);
+    }
+    
+    // Add sorting parameters
+    if (options.sortField) {
+      params.append("sortBy", options.sortField);
+      params.append("sortOrder", options.sortDirection || "asc");
+    }
 
     return this.makeRequest(`/masters/vendor?${params}`);
   }

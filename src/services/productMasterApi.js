@@ -164,8 +164,24 @@ class ProductMasterApiService {
     });
   }
 
-  async getAllProducts(page = 1, limit = 20) {
+  async getAllProducts(page = 1, limit = 20, options = {}) {
     const params = new URLSearchParams({ page, limit });
+    
+    // Add search parameter
+    if (options.search && options.search.trim()) {
+      params.append("search", options.search.trim());
+    }
+    
+    // Add filter parameters
+    if (options.hsnCodeFilter && options.hsnCodeFilter !== "all") {
+      params.append("hsnCodeFilter", options.hsnCodeFilter);
+    }
+    
+    // Add sorting parameters
+    if (options.sortField) {
+      params.append("sortBy", options.sortField);
+      params.append("sortOrder", options.sortDirection || "asc");
+    }
 
     return this.makeRequest(`/masters/product?${params}`);
   }
