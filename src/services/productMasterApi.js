@@ -67,6 +67,12 @@ class ProductMasterApiService {
       method: "DELETE",
     });
   }
+
+  async syncProducts() {
+    return this.makeRequest("/products/sync", {
+      method: "POST",
+    });
+  }
 }
 
 export default new ProductMasterApiService();

@@ -23,6 +23,7 @@ const ProductMasterLayer = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -332,6 +333,40 @@ const ProductMasterLayer = () => {
     }
   };
 
+  const handleSyncProducts = async () => {
+    if (
+      window.confirm(
+        "This will sync all active products from Shopify to your database. Do you want to continue?"
+      )
+    ) {
+      try {
+        setIsSyncing(true);
+        const result = await productMasterApi.syncProducts();
+
+        if (result.success) {
+          const { data } = result;
+          const message = `Sync completed successfully!\n\nProducts: ${data.products.inserted} inserted, ${data.products.updated} updated\nVariants: ${data.variants.inserted} inserted, ${data.variants.updated} updated`;
+          alert(message);
+
+          // Reload products list to show synced data
+          await loadProducts(currentPage);
+        } else {
+          console.error("API Error:", result.message);
+          alert(
+            `Error: ${
+              result.message || result.error || "Failed to sync products"
+            }`
+          );
+        }
+      } catch (error) {
+        console.error("Error syncing products:", error);
+        alert("Failed to sync products. Please try again.");
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  };
+
   return (
     <div className="card h-100 radius-8 border">
       <div className="card-body p-24">
@@ -340,15 +375,41 @@ const ProductMasterLayer = () => {
           <div className="d-flex align-items-center">
             <h6 className="mb-0 me-2">Product Master</h6>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="btn btn-primary d-inline-flex align-items-center"
-            style={{ gap: "6px", padding: "8px 16px" }}
-          >
-            <Icon icon="lucide:plus" width="18" height="18" />
-            <span className="d-none d-sm-inline">Add New Product</span>
-            <span className="d-sm-none">Add</span>
-          </button>
+          <div className="d-flex gap-2">
+            <button
+              onClick={handleSyncProducts}
+              className="btn btn-outline-primary d-inline-flex align-items-center"
+              style={{ gap: "6px", padding: "8px 16px" }}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  <span className="d-none d-sm-inline">Syncing...</span>
+                  <span className="d-sm-none">Syncing...</span>
+                </>
+              ) : (
+                <>
+                  <Icon icon="lucide:refresh-cw" width="18" height="18" />
+                  <span className="d-none d-sm-inline">Sync Product</span>
+                  <span className="d-sm-none">Sync</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="btn btn-primary d-inline-flex align-items-center"
+              style={{ gap: "6px", padding: "8px 16px" }}
+            >
+              <Icon icon="lucide:plus" width="18" height="18" />
+              <span className="d-none d-sm-inline">Add New Product</span>
+              <span className="d-sm-none">Add</span>
+            </button>
+          </div>
         </div>
 
         {/* Products List */}
