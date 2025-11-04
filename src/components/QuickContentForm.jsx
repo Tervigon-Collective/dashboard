@@ -16,7 +16,7 @@ export default function QuickContentForm() {
     short_description: "",
     long_description: "",
     campaign_objective: "Product Launch",
-    content_channel: "Instagram Reels",
+    content_channel: "Image",
     tone: "Emotional",
     call_to_action: "Let nature lead",
     number_of_variants: 4,
@@ -56,6 +56,12 @@ export default function QuickContentForm() {
       !formData.long_description
     ) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Validate video requirements
+    if (formData.content_channel === "Video" && uploadedImages.length === 0) {
+      toast.error("Product image is required for video generation. Please upload a product image.");
       return;
     }
 
@@ -110,6 +116,23 @@ export default function QuickContentForm() {
           if (status.status === "completed") {
             clearInterval(pollInterval);
             setIsGenerating(false);
+            
+            // For video, we need to fetch full results
+            if (status.result?.plan_type === "video") {
+              try {
+                const fullResults = await contentApi.getGenerationResults(jobId);
+                setGenerationResult({
+                  job_id: jobId,
+                  status: status.status,
+                  progress: status.progress,
+                  result: fullResults,
+                  error: status.error,
+                });
+              } catch (err) {
+                console.error("Error fetching video results:", err);
+              }
+            }
+            
             toast.success("Content generated successfully!");
           } else if (status.status === "failed") {
             clearInterval(pollInterval);
@@ -224,7 +247,17 @@ export default function QuickContentForm() {
           {/* Image Upload */}
           <div className="mb-4">
             <label className="form-label">
-              Upload Product Images (Optional)
+              Upload Product Images {formData.content_channel === "Video" && <span className="text-danger">*</span>}
+              {formData.content_channel === "Video" && (
+                <small className="text-muted d-block mt-1">
+                  Required for video generation
+                </small>
+              )}
+              {formData.content_channel === "Image" && (
+                <small className="text-muted d-block mt-1">
+                  Optional for image generation
+                </small>
+              )}
             </label>
             <div className="mb-3">
               <input
@@ -352,11 +385,8 @@ export default function QuickContentForm() {
                   handleInputChange("content_channel", e.target.value)
                 }
               >
-                <option value="Instagram Reels">Instagram Reels</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube Shorts">YouTube Shorts</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Twitter">Twitter</option>
+                <option value="Image">Image</option>
+                <option value="Video">Video</option>
               </select>
             </div>
 
@@ -492,7 +522,22 @@ export default function QuickContentForm() {
                   />
                 </div>
                 <small className="text-muted">
-                  {generationResult.progress}% complete
+                  {(() => {
+                    const planType = generationResult.result?.plan_type || "graphic";
+                    if (planType === "video") {
+                      const summary = generationResult.result?.generation_summary || {};
+                      const successful = summary.successful_clips || 0;
+                      const total = summary.total_clips || 3;
+                      if (successful === 0) {
+                        return "Planning video clips...";
+                      } else if (successful < total) {
+                        return `Generating clip ${successful + 1}/${total}...`;
+                      } else {
+                        return "Finalizing video...";
+                      }
+                    }
+                    return `${generationResult.progress}% complete`;
+                  })()}
                 </small>
               </div>
             )}

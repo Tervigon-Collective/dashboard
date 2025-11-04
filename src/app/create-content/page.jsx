@@ -15,6 +15,7 @@ import {
   uploadImages,
   getGenerationStatus,
   editImage,
+  getGenerationResults,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -120,6 +121,14 @@ export default function CreateContentPage() {
       return;
     }
 
+    // Validate video requirements
+    if (formData.channel === "Video" && uploadedImages.length === 0) {
+      setFormError(
+        "Product image is required for video generation. Please upload a product image."
+      );
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationResult(null);
 
@@ -168,7 +177,7 @@ export default function CreateContentPage() {
         campaign_objective: mapObjective(
           formData.objective || "Product Launch"
         ),
-        content_channel: formData.channel || "Instagram Reels",
+        content_channel: formData.channel || "Image",
         tone: mapTone(formData.tone || "Emotional"),
         call_to_action: formData.cta || "Let nature lead",
         number_of_variants: formData.variantGoal,
@@ -205,6 +214,21 @@ export default function CreateContentPage() {
             clearInterval(pollInterval);
             setIsGenerating(false);
             if (status.status === "completed") {
+              // For video, we need to fetch full results
+              if (status.result?.plan_type === "video") {
+                try {
+                  const fullResults = await getGenerationResults(jobId);
+                  setGenerationResult({
+                    job_id: jobId,
+                    status: status.status,
+                    progress: status.progress,
+                    result: fullResults,
+                    error: status.error,
+                  });
+                } catch (err) {
+                  console.error("Error fetching video results:", err);
+                }
+              }
               setActiveTab("prompts");
               // Refresh the jobs list to show the new completed job
               fetchGenerationJobs();
@@ -244,7 +268,7 @@ export default function CreateContentPage() {
     setFormData((prev) => ({
       ...prev,
       objective: "Product Launch",
-      channel: "Instagram Reels",
+      channel: "Image",
       tone: "Emotional",
       cta: "Let nature lead",
     }));
@@ -637,7 +661,19 @@ export default function CreateContentPage() {
                 <div className="card-body p-24">
                   {/* Image Upload */}
                   <div className="mb-4">
-                    <label className="form-label fw-semibold mb-2 d-block">Source Images</label>
+                    <label className="form-label fw-semibold mb-2 d-block">
+                      Source Images {formData.channel === "Video" && <span className="text-danger">*</span>}
+                      {formData.channel === "Video" && (
+                        <small className="text-muted d-block mt-1">
+                          Required for video generation
+                        </small>
+                      )}
+                      {formData.channel === "Image" && (
+                        <small className="text-muted d-block mt-1">
+                          Optional for image generation
+                        </small>
+                      )}
+                    </label>
                     
                     {uploadedImages.length === 0 ? (
                       // Empty state - drag and drop area
@@ -815,20 +851,8 @@ export default function CreateContentPage() {
                               handleInputChange("channel", e.target.value)
                             }
                           >
-                            <option value="Instagram Reels">
-                              Instagram Reels
-                            </option>
-                            <option value="YouTube Shorts">
-                              YouTube Shorts
-                            </option>
-                            <option value="Instagram Carousel">
-                              Instagram Carousel
-                            </option>
-                            <option value="Product Page Hero">
-                              Product Page Hero
-                            </option>
-                            <option value="Facebook Ads">Facebook Ads</option>
-                            <option value="Google Ads">Google Ads</option>
+                            <option value="Image">Image</option>
+                            <option value="Video">Video</option>
                           </select>
                         </div>
                       </div>
@@ -991,7 +1015,22 @@ export default function CreateContentPage() {
                               ></div>
                             </div>
                             <p className="small text-muted mb-0">
-                              {generationResult.progress}% complete
+                              {(() => {
+                                const planType = generationResult.result?.plan_type || "graphic";
+                                if (planType === "video") {
+                                  const summary = generationResult.result?.generation_summary || {};
+                                  const successful = summary.successful_clips || 0;
+                                  const total = summary.total_clips || 3;
+                                  if (successful === 0) {
+                                    return "Planning video clips...";
+                                  } else if (successful < total) {
+                                    return `Generating clip ${successful + 1}/${total}...`;
+                                  } else {
+                                    return "Finalizing video...";
+                                  }
+                                }
+                                return `${generationResult.progress}% complete`;
+                              })()}
                             </p>
                           </div>
                         </div>

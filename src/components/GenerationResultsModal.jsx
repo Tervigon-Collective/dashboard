@@ -95,7 +95,8 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
       // Create a link and trigger download
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `generated_${results.run_id}_${artifactId}.jpg`;
+      const extension = results?.plan_type === "video" ? "mp4" : "jpg";
+      link.download = `generated_${results.run_id}_${artifactId}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -112,6 +113,11 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
       link.click();
       document.body.removeChild(link);
     }
+  };
+
+  const getVideoUrl = (clipId) => {
+    if (!results?.run_id || !clipId) return null;
+    return `${config.pythonApi.baseURL}/api/content/download/${results.run_id}/${clipId}`;
   };
 
   const formatDuration = (seconds) => {
@@ -232,7 +238,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           fontSize: '0.875rem',
                         }}
                       >
-                        Generated Images
+                        {results?.plan_type === "video" ? "Video Clips" : "Generated Images"}
                       </button>
                     </li>
                     <li className="nav-item" role="presentation">
@@ -388,9 +394,20 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                              </div>
                              <div className="card-body p-3">
                               <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
-                                <span className="fw-medium">Artifacts:</span>{" "}
-                                {results.artifacts?.length || 0}
+                                <span className="fw-medium">
+                                  {results.plan_type === "video" ? "Clips:" : "Artifacts:"}
+                                </span>{" "}
+                                {results.plan_type === "video"
+                                  ? results.generated_clips?.length || 0
+                                  : results.artifacts?.length || 0}
                               </div>
+                              {results.plan_type === "video" && results.generation_summary && (
+                                <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
+                                  <span className="fw-medium">Success Rate:</span>{" "}
+                                  {results.generation_summary.successful_clips || 0}/
+                                  {results.generation_summary.total_clips || 0} clips
+                                </div>
+                              )}
                               <div className="small mb-2" style={{ fontSize: '0.8rem' }}>
                                 <span className="fw-medium">Prompts:</span>{" "}
                                 {results.prompts?.length || 0}
@@ -406,7 +423,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                     </div>
                   )}
 
-                  {/* Generated Images Tab */}
+                  {/* Generated Images/Video Clips Tab */}
                   {activeTab === "images" && (
                     <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
@@ -414,7 +431,115 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                         style={{ maxHeight: "450px", overflowX: 'hidden' }}
                       >
                         <div>
-                          {results.generated_images &&
+                          {/* Video Clips Display */}
+                          {results.plan_type === "video" && results.generated_clips && results.generated_clips.length > 0 ? (
+                            results.generated_clips.map((clip, index) => {
+                              const clipPlan = results.clip_plans?.[index];
+                              return (
+                                <div key={clip.clip_id} className="card mb-2">
+                                  <div className="card-header bg-light p-2">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      <h6 className="card-title mb-0 fw-semibold small">
+                                        Clip {index + 1} {clipPlan?.beat && `- ${clipPlan.beat}`}
+                                      </h6>
+                                      {clip.status === "success" && (
+                                        <button
+                                          className="btn btn-sm btn-outline-primary"
+                                          onClick={() =>
+                                            downloadImage({}, clip.clip_id)
+                                          }
+                                        >
+                                          <Icon
+                                            icon="solar:download-bold"
+                                            width="12"
+                                            height="12"
+                                            className="me-1"
+                                          />
+                                          Download
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="card-body p-3">
+                                    {clip.status === "success" && clip.video_file_path ? (
+                                      <div>
+                                        <div className="text-center mb-3">
+                                          <video
+                                            src={getVideoUrl(clip.clip_id)}
+                                            controls
+                                            preload="metadata"
+                                            className="img-fluid rounded shadow"
+                                            style={{ maxHeight: "400px", width: "auto", maxWidth: "100%" }}
+                                            onError={(e) => {
+                                              console.error("Video load error:", e);
+                                            }}
+                                          >
+                                            Your browser does not support the video tag.
+                                          </video>
+                                        </div>
+                                        <div className="bg-light p-3 rounded mt-3">
+                                          <div className="row">
+                                            <div className="col-md-6 mb-2">
+                                              <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Duration</div>
+                                              <div className="fw-medium small">{clip.duration_actual || clipPlan?.duration || 0}s</div>
+                                            </div>
+                                            {clipPlan && (
+                                              <>
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Shot Type</div>
+                                                  <div className="fw-medium small">{clipPlan.shot_type || "N/A"}</div>
+                                                </div>
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Camera</div>
+                                                  <div className="fw-medium small">
+                                                    {clipPlan.camera_angle?.value || "N/A"} - {clipPlan.camera_movement?.type?.value || "N/A"}
+                                                  </div>
+                                                </div>
+                                                {clipPlan.scene_description && (
+                                                  <div className="col-md-12 mb-2">
+                                                    <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Scene</div>
+                                                    <div className="fw-medium small">{clipPlan.scene_description}</div>
+                                                  </div>
+                                                )}
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-3">
+                                        <Icon
+                                          icon="solar:danger-circle-bold"
+                                          width="32"
+                                          height="32"
+                                          className="text-danger mb-2"
+                                        />
+                                        <p className="text-danger fw-semibold mb-1 small">
+                                          Video clip generation failed
+                                        </p>
+                                        <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
+                                          {clip.error || "Unknown error"}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : results.plan_type === "video" ? (
+                            <div className="text-center py-4 text-muted">
+                              <Icon
+                                icon="solar:video-library-bold"
+                                width="32"
+                                height="32"
+                                className="text-muted mb-2"
+                              />
+                              <p className="fw-medium mb-1 small">No video clips generated yet</p>
+                              <p className="small" style={{ fontSize: '0.75rem' }}>
+                                Video clips will appear here after generation completes
+                              </p>
+                            </div>
+                          ) : results.generated_images &&
                           results.generated_images.length > 0 ? (
                             results.generated_images.map((imageData, index) => (
                                <div key={imageData.artifact_id} className="card mb-2">
@@ -584,7 +709,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                         <div>
                           {results.prompts && results.prompts.length > 0 ? (
                              results.prompts.map((prompt, index) => (
-                               <div key={prompt.shot_id} className="card mb-2">
+                               <div key={prompt.shot_id ?? index} className="card mb-2">
                                  <div className="card-header bg-light p-2">
                                    <div className="d-flex align-items-center justify-content-between">
                                      <h6 className="card-title mb-0 fw-semibold small">
@@ -598,7 +723,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                            prompt.shot_id
                                          )
                                        }
-                                       title="Copy to clipboard"
+                                       title="Copy to clipboard"         
                                      >
                                        {copiedPrompt === prompt.shot_id ? (
                                          <Icon
