@@ -26,6 +26,9 @@ const ProductMasterLayer = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   
+  // Form validation errors
+  const [formErrors, setFormErrors] = useState({});
+  
   // Search, filter, and sort states
   const [searchTerm, setSearchTerm] = useState("");
   const [hsnCodeFilter, setHsnCodeFilter] = useState("all"); // all, with, without
@@ -126,6 +129,43 @@ const ProductMasterLayer = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Parse validation errors and map to form fields
+  const parseValidationErrors = (validationErrors) => {
+    const errors = {};
+    if (validationErrors && Array.isArray(validationErrors)) {
+      validationErrors.forEach((error) => {
+        // Parse error message like "hsn_code: HSN code must be between 4 and 50 characters"
+        const match = error.match(/^(\w+):\s*(.+)$/);
+        if (match) {
+          const fieldName = match[1];
+          const message = match[2];
+          
+          // Map backend field names to frontend field names
+          const fieldMap = {
+            product_name: "productName",
+            hsn_code: "hsnCode",
+            item_description: "itemDescription",
+          };
+          
+          const frontendField = fieldMap[fieldName] || fieldName;
+          errors[frontendField] = message;
+        } else {
+          // If format doesn't match, show general error
+          errors.general = error;
+        }
+      });
+    }
+    return errors;
   };
 
   // Handle variant options change
@@ -240,6 +280,7 @@ const ProductMasterLayer = () => {
           itemDescription: "",
           hsnCode: "",
         });
+        setFormErrors({});
 
         setModalOpen(false);
         setIsEditMode(false);
@@ -258,11 +299,28 @@ const ProductMasterLayer = () => {
         );
       } else {
         console.error("API Error:", result.message);
-        alert(`Error: ${result.message}`);
+        // Parse and display validation errors
+        if (result.validationErrors && result.validationErrors.length > 0) {
+          const parsedErrors = parseValidationErrors(result.validationErrors);
+          setFormErrors(parsedErrors);
+        } else {
+          setFormErrors({ general: result.message || "An error occurred" });
+        }
       }
     } catch (error) {
-      console.error("Error adding product:", error);
-      alert("Failed to add product. Please try again.");
+      console.error("Error adding/updating product:", error);
+      
+      // Handle formatted errors from API service
+      if (error.result) {
+        if (error.result.validationErrors && error.result.validationErrors.length > 0) {
+          const parsedErrors = parseValidationErrors(error.result.validationErrors);
+          setFormErrors(parsedErrors);
+        } else {
+          setFormErrors({ general: error.result.message || error.message || "An error occurred" });
+        }
+      } else {
+        setFormErrors({ general: error.message || "Failed to add/update product. Please try again." });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -274,6 +332,7 @@ const ProductMasterLayer = () => {
     setEditingProduct(null);
     setVariantOptions([]);
     setVariants([]);
+    setFormErrors({});
     setFormData({
       productName: "",
       itemDescription: "",
@@ -284,6 +343,7 @@ const ProductMasterLayer = () => {
   const handleEditProduct = async (product) => {
     setEditingProduct(product);
     setIsEditMode(true);
+    setFormErrors({});
     setFormData({
       productName: product.product_name,
       itemDescription: product.item_description || "",
@@ -388,11 +448,19 @@ const ProductMasterLayer = () => {
           console.log("Product deleted successfully:", result.data);
         } else {
           console.error("API Error:", result.message);
-          alert(`Error: ${result.message}`);
+          if (result.validationErrors && result.validationErrors.length > 0) {
+            alert(`Validation Error:\n${result.validationErrors.join("\n")}`);
+          } else {
+            alert(`Error: ${result.message}`);
+          }
         }
       } catch (error) {
         console.error("Error deleting product:", error);
-        alert("Failed to delete product. Please try again.");
+        if (error.result) {
+          alert(`Error: ${error.result.message || error.message}`);
+        } else {
+          alert(`Error: ${error.message || "Failed to delete product. Please try again."}`);
+        }
       }
     }
   };
@@ -406,7 +474,10 @@ const ProductMasterLayer = () => {
             <h6 className="mb-0 me-2">Product Master</h6>
           </div>
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setFormErrors({});
+              setModalOpen(true);
+            }}
             className="btn btn-primary d-inline-flex align-items-center"
             style={{ gap: "6px", padding: "8px 16px" }}
           >
@@ -727,43 +798,65 @@ const ProductMasterLayer = () => {
                 </div>
                 <div className="modal-body">
                   <form onSubmit={handleSubmit}>
-                    <div className="row">
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">
-                          Product Name <span className="text-danger">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="productName"
-                          value={formData.productName}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">HSN Code</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="hsnCode"
-                          value={formData.hsnCode}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
+                     {/* General Error Message */}
+                     {formErrors.general && (
+                       <div className="alert alert-danger" role="alert">
+                         {formErrors.general}
+                       </div>
+                     )}
 
-                    <div className="mb-3">
-                      <label className="form-label">Item Description</label>
-                      <textarea
-                        className="form-control"
-                        name="itemDescription"
-                        rows="3"
-                        value={formData.itemDescription}
-                        onChange={handleInputChange}
-                        placeholder="Enter product description..."
-                      />
-                    </div>
+                     <div className="row">
+                       <div className="col-md-6 mb-3">
+                         <label className="form-label">
+                           Product Name <span className="text-danger">*</span>
+                         </label>
+                         <input
+                           type="text"
+                           className={`form-control ${formErrors.productName ? "is-invalid" : ""}`}
+                           name="productName"
+                           value={formData.productName}
+                           onChange={handleInputChange}
+                           required
+                         />
+                         {formErrors.productName && (
+                           <div className="invalid-feedback d-block">
+                             {formErrors.productName}
+                           </div>
+                         )}
+                       </div>
+                       <div className="col-md-6 mb-3">
+                         <label className="form-label">HSN Code</label>
+                         <input
+                           type="text"
+                           className={`form-control ${formErrors.hsnCode ? "is-invalid" : ""}`}
+                           name="hsnCode"
+                           value={formData.hsnCode}
+                           onChange={handleInputChange}
+                         />
+                         {formErrors.hsnCode && (
+                           <div className="invalid-feedback d-block">
+                             {formErrors.hsnCode}
+                           </div>
+                         )}
+                       </div>
+                     </div>
+
+                     <div className="mb-3">
+                       <label className="form-label">Item Description</label>
+                       <textarea
+                         className={`form-control ${formErrors.itemDescription ? "is-invalid" : ""}`}
+                         name="itemDescription"
+                         rows="3"
+                         value={formData.itemDescription}
+                         onChange={handleInputChange}
+                         placeholder="Enter product description..."
+                       />
+                       {formErrors.itemDescription && (
+                         <div className="invalid-feedback d-block">
+                           {formErrors.itemDescription}
+                         </div>
+                       )}
+                     </div>
 
                     {/* Variant Options Manager */}
                     <div className="mb-3">

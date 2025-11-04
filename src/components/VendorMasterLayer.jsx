@@ -23,6 +23,9 @@ const VendorMasterLayer = () => {
   const [editingVendor, setEditingVendor] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   
+  // Form validation errors
+  const [formErrors, setFormErrors] = useState({});
+  
   // Search, filter, and sort states
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -134,6 +137,46 @@ const VendorMasterLayer = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Parse validation errors and map to form fields
+  const parseValidationErrors = (validationErrors) => {
+    const errors = {};
+    if (validationErrors && Array.isArray(validationErrors)) {
+      validationErrors.forEach((error) => {
+        // Parse error message like "vendor_name: Vendor name is required"
+        const match = error.match(/^(\w+):\s*(.+)$/);
+        if (match) {
+          const fieldName = match[1];
+          const message = match[2];
+          
+          // Map backend field names to frontend field names
+          const fieldMap = {
+            vendor_name: "vendorName",
+            vendor_address: "vendorAddress",
+            vendor_phone_no: "vendorPhoneNo",
+            vendor_gst_number: "vendorGSTNumber",
+            common_name: "commonName",
+            vendor_status: "vendorStatus",
+          };
+          
+          const frontendField = fieldMap[fieldName] || fieldName;
+          errors[frontendField] = message;
+        } else {
+          // If format doesn't match, show general error
+          errors.general = error;
+        }
+      });
+    }
+    return errors;
   };
 
   const handleSubmit = async (e) => {
@@ -174,6 +217,7 @@ const VendorMasterLayer = () => {
           commonName: "",
           vendorStatus: "Active",
         });
+        setFormErrors({});
 
         setModalOpen(false);
         setIsEditMode(false);
@@ -190,11 +234,28 @@ const VendorMasterLayer = () => {
         );
       } else {
         console.error("API Error:", result.message);
-        alert(`Error: ${result.message}`);
+        // Parse and display validation errors
+        if (result.validationErrors && result.validationErrors.length > 0) {
+          const parsedErrors = parseValidationErrors(result.validationErrors);
+          setFormErrors(parsedErrors);
+        } else {
+          setFormErrors({ general: result.message || "An error occurred" });
+        }
       }
     } catch (error) {
-      console.error("Error adding vendor:", error);
-      alert("Failed to add vendor. Please try again.");
+      console.error("Error adding/updating vendor:", error);
+      
+      // Handle formatted errors from API service
+      if (error.result) {
+        if (error.result.validationErrors && error.result.validationErrors.length > 0) {
+          const parsedErrors = parseValidationErrors(error.result.validationErrors);
+          setFormErrors(parsedErrors);
+        } else {
+          setFormErrors({ general: error.result.message || error.message || "An error occurred" });
+        }
+      } else {
+        setFormErrors({ general: error.message || "Failed to add/update vendor. Please try again." });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -204,6 +265,7 @@ const VendorMasterLayer = () => {
     setModalOpen(false);
     setIsEditMode(false);
     setEditingVendor(null);
+    setFormErrors({});
     setFormData({
       vendorName: "",
       vendorAddress: "",
@@ -217,6 +279,7 @@ const VendorMasterLayer = () => {
   const handleEditVendor = (vendor) => {
     setEditingVendor(vendor);
     setIsEditMode(true);
+    setFormErrors({});
     setFormData({
       vendorName: vendor.vendor_name,
       vendorAddress: vendor.vendor_address,
@@ -241,11 +304,19 @@ const VendorMasterLayer = () => {
           console.log("Vendor deleted successfully:", result.data);
         } else {
           console.error("API Error:", result.message);
-          alert(`Error: ${result.message}`);
+          if (result.validationErrors && result.validationErrors.length > 0) {
+            alert(`Validation Error:\n${result.validationErrors.join("\n")}`);
+          } else {
+            alert(`Error: ${result.message}`);
+          }
         }
       } catch (error) {
         console.error("Error deleting vendor:", error);
-        alert("Failed to delete vendor. Please try again.");
+        if (error.result) {
+          alert(`Error: ${error.result.message || error.message}`);
+        } else {
+          alert(`Error: ${error.message || "Failed to delete vendor. Please try again."}`);
+        }
       }
     }
   };
@@ -259,7 +330,10 @@ const VendorMasterLayer = () => {
             <h6 className="mb-0 me-2">Vendor Master</h6>
           </div>
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setFormErrors({});
+              setModalOpen(true);
+            }}
             className="btn btn-primary d-inline-flex align-items-center"
             style={{ gap: "6px", padding: "8px 16px" }}
           >
@@ -628,6 +702,13 @@ const VendorMasterLayer = () => {
                 </div>
                 <div className="modal-body">
                   <form onSubmit={handleSubmit}>
+                    {/* General Error Message */}
+                    {formErrors.general && (
+                      <div className="alert alert-danger" role="alert">
+                        {formErrors.general}
+                      </div>
+                    )}
+
                     <div className="row">
                       <div className="col-md-6 mb-3">
                         <label htmlFor="vendorName" className="form-label">
@@ -635,13 +716,18 @@ const VendorMasterLayer = () => {
                         </label>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${formErrors.vendorName ? "is-invalid" : ""}`}
                           id="vendorName"
                           name="vendorName"
                           value={formData.vendorName}
                           onChange={handleInputChange}
                           required
                         />
+                        {formErrors.vendorName && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.vendorName}
+                          </div>
+                        )}
                       </div>
                       <div className="col-md-6 mb-3">
                         <label htmlFor="vendorPhoneNo" className="form-label">
@@ -650,13 +736,18 @@ const VendorMasterLayer = () => {
                         </label>
                         <input
                           type="tel"
-                          className="form-control"
+                          className={`form-control ${formErrors.vendorPhoneNo ? "is-invalid" : ""}`}
                           id="vendorPhoneNo"
                           name="vendorPhoneNo"
                           value={formData.vendorPhoneNo}
                           onChange={handleInputChange}
                           required
                         />
+                        {formErrors.vendorPhoneNo && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.vendorPhoneNo}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -668,13 +759,18 @@ const VendorMasterLayer = () => {
                         </label>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${formErrors.vendorGSTNumber ? "is-invalid" : ""}`}
                           id="vendorGSTNumber"
                           name="vendorGSTNumber"
                           value={formData.vendorGSTNumber}
                           onChange={handleInputChange}
                           required
                         />
+                        {formErrors.vendorGSTNumber && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.vendorGSTNumber}
+                          </div>
+                        )}
                       </div>
                       <div className="col-md-6 mb-3">
                         <label htmlFor="commonName" className="form-label">
@@ -682,12 +778,17 @@ const VendorMasterLayer = () => {
                         </label>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${formErrors.commonName ? "is-invalid" : ""}`}
                           id="commonName"
                           name="commonName"
                           value={formData.commonName}
                           onChange={handleInputChange}
                         />
+                        {formErrors.commonName && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.commonName}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -697,7 +798,7 @@ const VendorMasterLayer = () => {
                           Vendor Address <span className="text-danger">*</span>
                         </label>
                         <textarea
-                          className="form-control"
+                          className={`form-control ${formErrors.vendorAddress ? "is-invalid" : ""}`}
                           id="vendorAddress"
                           name="vendorAddress"
                           rows="3"
@@ -705,13 +806,18 @@ const VendorMasterLayer = () => {
                           onChange={handleInputChange}
                           required
                         ></textarea>
+                        {formErrors.vendorAddress && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.vendorAddress}
+                          </div>
+                        )}
                       </div>
                       <div className="col-md-6 mb-3">
                         <label htmlFor="vendorStatus" className="form-label">
                           Vendor Status <span className="text-danger">*</span>
                         </label>
                         <select
-                          className="form-select"
+                          className={`form-select ${formErrors.vendorStatus ? "is-invalid" : ""}`}
                           id="vendorStatus"
                           name="vendorStatus"
                           value={formData.vendorStatus}
@@ -721,6 +827,11 @@ const VendorMasterLayer = () => {
                           <option value="Active">Active</option>
                           <option value="Inactive">Inactive</option>
                         </select>
+                        {formErrors.vendorStatus && (
+                          <div className="invalid-feedback d-block">
+                            {formErrors.vendorStatus}
+                          </div>
+                        )}
                       </div>
                     </div>
 
