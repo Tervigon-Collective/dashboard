@@ -537,6 +537,24 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
+                    {hasSidebarPermission("stockManagement") && (
+                      <li>
+                        <Link
+                          href="/stock-management"
+                          className={
+                            pathname === "/stock-management"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:package-variant"
+                            className="menu-icon"
+                          />
+                          <span>Stock Management</span>
+                        </Link>
+                      </li>
+                    )}
                     {hasSidebarPermission("masters") && (
                       <li>
                         <Link
