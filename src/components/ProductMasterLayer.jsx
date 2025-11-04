@@ -285,8 +285,8 @@ const ProductMasterLayer = () => {
     try {
       const apiData = {
         product_name: formData.productName,
-        item_description: formData.itemDescription,
-        hsn_code: formData.hsnCode,
+        item_description: formData.itemDescription || null,
+        hsn_code: formData.hsnCode?.trim() || null,
       };
 
       // Include variants data if there are variants
