@@ -19,6 +19,7 @@ const ProductMasterLayer = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -530,6 +531,41 @@ const ProductMasterLayer = () => {
     }
   };
 
+  // Handle sync products from Shopify
+  const handleSyncProducts = async () => {
+    if (
+      window.confirm(
+        "This will sync all active products from Shopify to your database. Do you want to continue?"
+      )
+    ) {
+      try {
+        setIsSyncing(true);
+        const result = await productMasterApi.syncProducts();
+
+        if (result.success) {
+          const { data } = result;
+          const message = `Sync completed successfully!\n\nProducts: ${data.products.inserted} inserted, ${data.products.updated} updated\nVariants: ${data.variants.inserted} inserted, ${data.variants.updated} updated`;
+          alert(message);
+
+          // Reload products list to show synced data with current filters
+          await loadProducts(currentPage, false);
+        } else {
+          console.error("API Error:", result.message);
+          alert(
+            `Error: ${
+              result.message || result.error || "Failed to sync products"
+            }`
+          );
+        }
+      } catch (error) {
+        console.error("Error syncing products:", error);
+        alert("Failed to sync products. Please try again.");
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  };
+
   return (
     <div>
       {/* Search, Filter, and Action Bar - Single Line */}
@@ -594,6 +630,37 @@ const ProductMasterLayer = () => {
         >
           Showing {products.length} of {totalRecords} products
         </span>
+
+        {/* Sync Button */}
+        <button
+          onClick={handleSyncProducts}
+          className="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+          style={{
+            gap: "4px",
+            padding: "6px 14px",
+            height: "36px",
+            fontSize: "0.875rem",
+          }}
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
+            <>
+              <span
+                className="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              <span className="d-none d-sm-inline">Syncing...</span>
+              <span className="d-sm-none">Syncing...</span>
+            </>
+          ) : (
+            <>
+              <Icon icon="lucide:refresh-cw" width="16" height="16" />
+              <span className="d-none d-sm-inline">Sync Product</span>
+              <span className="d-sm-none">Sync</span>
+            </>
+          )}
+        </button>
 
         {/* Add Button */}
         <button
