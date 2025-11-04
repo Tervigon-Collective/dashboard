@@ -24,10 +24,10 @@ const ProductMasterLayer = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Form validation errors
   const [formErrors, setFormErrors] = useState({});
-  
+
   // Search, filter, and sort states
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -48,9 +48,9 @@ const ProductMasterLayer = () => {
   const loadProducts = async (page = 1, resetPage = false) => {
     try {
       setIsLoading(true);
-      
+
       const targetPage = resetPage ? 1 : page;
-      
+
       const options = {
         search: debouncedSearchTerm || undefined,
         hsnCodeFilter: hsnCodeFilter !== "all" ? hsnCodeFilter : undefined,
@@ -58,7 +58,11 @@ const ProductMasterLayer = () => {
         sortDirection: sortDirection || undefined,
       };
 
-      const result = await productMasterApi.getAllProducts(targetPage, 20, options);
+      const result = await productMasterApi.getAllProducts(
+        targetPage,
+        20,
+        options
+      );
 
       if (result.success) {
         setProducts(result.data || []);
@@ -133,14 +137,21 @@ const ProductMasterLayer = () => {
       }
       return;
     }
-    
+
     // If only page changed (not filters), load that page
     if (pageChanged && currentPage > 0) {
       prevPageRef.current = currentPage;
       loadProducts(currentPage, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, debouncedSearchTerm, hsnCodeFilter, sortField, sortDirection, currentPage]);
+  }, [
+    isMounted,
+    debouncedSearchTerm,
+    hsnCodeFilter,
+    sortField,
+    sortDirection,
+    currentPage,
+  ]);
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -177,7 +188,7 @@ const ProductMasterLayer = () => {
       });
     }
   };
-  
+
   // Parse validation errors and map to form fields
   const parseValidationErrors = (validationErrors) => {
     const errors = {};
@@ -188,14 +199,14 @@ const ProductMasterLayer = () => {
         if (match) {
           const fieldName = match[1];
           const message = match[2];
-          
+
           // Map backend field names to frontend field names
           const fieldMap = {
             product_name: "productName",
             hsn_code: "hsnCode",
             item_description: "itemDescription",
           };
-          
+
           const frontendField = fieldMap[fieldName] || fieldName;
           errors[frontendField] = message;
         } else {
@@ -348,17 +359,28 @@ const ProductMasterLayer = () => {
       }
     } catch (error) {
       console.error("Error adding/updating product:", error);
-      
+
       // Handle formatted errors from API service
       if (error.result) {
-        if (error.result.validationErrors && error.result.validationErrors.length > 0) {
-          const parsedErrors = parseValidationErrors(error.result.validationErrors);
+        if (
+          error.result.validationErrors &&
+          error.result.validationErrors.length > 0
+        ) {
+          const parsedErrors = parseValidationErrors(
+            error.result.validationErrors
+          );
           setFormErrors(parsedErrors);
         } else {
-          setFormErrors({ general: error.result.message || error.message || "An error occurred" });
+          setFormErrors({
+            general:
+              error.result.message || error.message || "An error occurred",
+          });
         }
       } else {
-        setFormErrors({ general: error.message || "Failed to add/update product. Please try again." });
+        setFormErrors({
+          general:
+            error.message || "Failed to add/update product. Please try again.",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -498,7 +520,11 @@ const ProductMasterLayer = () => {
         if (error.result) {
           alert(`Error: ${error.result.message || error.message}`);
         } else {
-          alert(`Error: ${error.message || "Failed to delete product. Please try again."}`);
+          alert(
+            `Error: ${
+              error.message || "Failed to delete product. Please try again."
+            }`
+          );
         }
       }
     }
@@ -509,7 +535,10 @@ const ProductMasterLayer = () => {
       {/* Search, Filter, and Action Bar - Single Line */}
       <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
         {/* Search Input */}
-        <div className="position-relative" style={{ flex: "1 1 250px", minWidth: "200px" }}>
+        <div
+          className="position-relative"
+          style={{ flex: "1 1 250px", minWidth: "200px" }}
+        >
           <Icon
             icon="lucide:search"
             width="16"
@@ -523,7 +552,11 @@ const ProductMasterLayer = () => {
             placeholder="Search products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: "36px", height: "36px", fontSize: "0.875rem" }}
+            style={{
+              paddingLeft: "36px",
+              height: "36px",
+              fontSize: "0.875rem",
+            }}
           />
         </div>
 
@@ -532,7 +565,12 @@ const ProductMasterLayer = () => {
           className="form-select form-select-sm"
           value={hsnCodeFilter}
           onChange={(e) => setHsnCodeFilter(e.target.value)}
-          style={{ height: "36px", width: "auto", minWidth: "150px", fontSize: "0.875rem" }}
+          style={{
+            height: "36px",
+            width: "auto",
+            minWidth: "150px",
+            fontSize: "0.875rem",
+          }}
         >
           <option value="all">All HSN Codes</option>
           <option value="with">With HSN Code</option>
@@ -550,7 +588,10 @@ const ProductMasterLayer = () => {
         </button>
 
         {/* Product Count */}
-        <span className="text-muted ms-auto" style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}>
+        <span
+          className="text-muted ms-auto"
+          style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
+        >
           Showing {products.length} of {totalRecords} products
         </span>
 
@@ -561,423 +602,437 @@ const ProductMasterLayer = () => {
             setModalOpen(true);
           }}
           className="btn btn-primary btn-sm d-inline-flex align-items-center"
-          style={{ gap: "4px", padding: "6px 14px", height: "36px", fontSize: "0.875rem" }}
+          style={{
+            gap: "4px",
+            padding: "6px 14px",
+            height: "36px",
+            fontSize: "0.875rem",
+          }}
         >
           <Icon icon="lucide:plus" width="16" height="16" />
           <span>Add Product</span>
         </button>
       </div>
 
-        {/* Products List */}
-        <div className="table-responsive scroll-sm">
-          <table className="table bordered-table mb-0">
-            <thead>
+      {/* Products List */}
+      <div className="table-responsive scroll-sm">
+        <table className="table bordered-table mb-0">
+          <thead>
+            <tr>
+              <th scope="col" style={{ width: "60px" }}>
+                #
+              </th>
+              <th
+                scope="col"
+                onClick={() => handleSort("product_name")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  Product Name
+                  {sortField === "product_name" && (
+                    <Icon
+                      icon={
+                        sortDirection === "asc"
+                          ? "lucide:chevron-up"
+                          : "lucide:chevron-down"
+                      }
+                      width="14"
+                      height="14"
+                    />
+                  )}
+                </div>
+              </th>
+              <th
+                scope="col"
+                onClick={() => handleSort("hsn_code")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  HSN Code
+                  {sortField === "hsn_code" && (
+                    <Icon
+                      icon={
+                        sortDirection === "asc"
+                          ? "lucide:chevron-up"
+                          : "lucide:chevron-down"
+                      }
+                      width="14"
+                      height="14"
+                    />
+                  )}
+                </div>
+              </th>
+              <th scope="col">Item Description</th>
+              <th
+                scope="col"
+                className="text-center"
+                style={{ width: "120px" }}
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
               <tr>
-                <th scope="col" style={{ width: "60px" }}>
-                  #
-                </th>
-                <th
-                  scope="col"
-                  onClick={() => handleSort("product_name")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  <div className="d-flex align-items-center gap-2">
-                    Product Name
-                    {sortField === "product_name" && (
-                      <Icon
-                        icon={
-                          sortDirection === "asc"
-                            ? "lucide:chevron-up"
-                            : "lucide:chevron-down"
-                        }
-                        width="14"
-                        height="14"
-                      />
-                    )}
+                <td colSpan="5" className="text-center py-4">
+                  <div className="d-flex justify-content-center align-items-center">
+                    <div
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                    >
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    Loading products...
                   </div>
-                </th>
-                <th
-                  scope="col"
-                  onClick={() => handleSort("hsn_code")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  <div className="d-flex align-items-center gap-2">
-                    HSN Code
-                    {sortField === "hsn_code" && (
-                      <Icon
-                        icon={
-                          sortDirection === "asc"
-                            ? "lucide:chevron-up"
-                            : "lucide:chevron-down"
-                        }
-                        width="14"
-                        height="14"
-                      />
-                    )}
-                  </div>
-                </th>
-                <th scope="col">Item Description</th>
-                <th scope="col" className="text-center" style={{ width: "120px" }}>
-                  Actions
-                </th>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4">
-                    <div className="d-flex justify-content-center align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      Loading products...
-                    </div>
-                  </td>
-                </tr>
-              ) : products.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-muted">
-                      <div className="d-flex flex-column align-items-center">
-                      <p className="text-muted mb-0">
-                        {searchTerm || hsnCodeFilter !== "all"
-                          ? "No products match your search criteria."
-                          : 'No products found. Click "Add New Product" to get started.'}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                products.map((product, index) => (
-                  <tr key={product.product_id}>
-                    <td>
-                      <span className="text-secondary-light">
-                        {(currentPage - 1) * 20 + index + 1}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="text-secondary-light fw-medium">
-                        {product.product_name}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="text-secondary-light">
-                        {product.hsn_code || "-"}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className="text-secondary-light text-truncate d-inline-block"
-                        style={{ maxWidth: "200px" }}
-                        title={product.item_description}
-                      >
-                        {product.item_description || "-"}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex gap-2 justify-content-center">
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            border: "1px solid #dee2e6",
-                            background: "white",
-                            padding: "4px 8px",
-                            color: "#495057",
-                            borderRadius: "4px",
-                          }}
-                          title="Edit"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Icon icon="lucide:pencil" width="14" height="14" />
-                        </button>
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            border: "1px solid #dc3545",
-                            background: "white",
-                            padding: "4px 8px",
-                            color: "#dc3545",
-                            borderRadius: "4px",
-                          }}
-                          title="Delete"
-                          onClick={() => handleDeleteProduct(product)}
-                        >
-                          <Icon icon="lucide:trash-2" width="14" height="14" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalRecords > 0 && (
-          <div
-            className="d-flex justify-content-between align-items-center px-3 py-2"
-            style={{
-              backgroundColor: "#f8f9fa",
-              borderRadius: "0 0 8px 8px",
-              marginTop: "0",
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <button
-                className="btn btn-sm"
-                style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1 || isLoading}
-              >
-                <Icon icon="mdi:chevron-left" width="16" height="16" />
-              </button>
-
-              {/* Page Numbers */}
-              <div className="d-flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      className="btn btn-sm"
-                      style={{
-                        border: "none",
-                        background:
-                          pageNum === currentPage ? "#6f42c1" : "transparent",
-                        color: pageNum === currentPage ? "white" : "#495057",
-                        borderRadius: "4px",
-                        padding: "4px 8px",
-                        minWidth: "32px",
-                      }}
-                      onClick={() => setCurrentPage(pageNum)}
-                      disabled={isLoading}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="px-2" style={{ color: "#495057" }}>
-                      ...
+            ) : products.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-4 text-muted">
+                  <div className="d-flex flex-column align-items-center">
+                    <p className="text-muted mb-0">
+                      {searchTerm || hsnCodeFilter !== "all"
+                        ? "No products match your search criteria."
+                        : 'No products found. Click "Add New Product" to get started.'}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              products.map((product, index) => (
+                <tr key={product.product_id}>
+                  <td>
+                    <span className="text-secondary-light">
+                      {(currentPage - 1) * 20 + index + 1}
                     </span>
-                    <button
-                      className="btn btn-sm"
-                      style={{
-                        border: "none",
-                        background:
-                          totalPages === currentPage
-                            ? "#6f42c1"
-                            : "transparent",
-                        color: totalPages === currentPage ? "white" : "#495057",
-                        borderRadius: "4px",
-                        padding: "4px 8px",
-                        minWidth: "32px",
-                      }}
-                      onClick={() => setCurrentPage(totalPages)}
-                      disabled={isLoading}
+                  </td>
+                  <td>
+                    <span className="text-secondary-light fw-medium">
+                      {product.product_name}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-secondary-light">
+                      {product.hsn_code || "-"}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className="text-secondary-light text-truncate d-inline-block"
+                      style={{ maxWidth: "200px" }}
+                      title={product.item_description}
                     >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-
-              <button
-                className="btn btn-sm"
-                style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages || isLoading}
-              >
-                <Icon icon="mdi:chevron-right" width="16" height="16" />
-              </button>
-            </div>
-
-            <div className="d-flex align-items-center gap-3">
-              <div className="d-flex align-items-center gap-2">
-                <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-                  20/page
-                </span>
-                <Icon
-                  icon="mdi:chevron-down"
-                  width="16"
-                  height="16"
-                  style={{ color: "#495057" }}
-                />
-              </div>
-              <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-                Total {totalRecords} record{totalRecords !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Add/Edit Product Modal */}
-        {modalOpen && (
-          <div
-            className="modal show d-block"
-            tabIndex="-1"
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-          >
-            <div className="modal-dialog modal-lg">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    {isEditMode ? "Edit Product" : "Add New Product"}
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={handleModalClose}
-                  ></button>
-                </div>
-                <div className="modal-body">
-                  <form onSubmit={handleSubmit}>
-                     {/* General Error Message */}
-                     {formErrors.general && (
-                       <div className="alert alert-danger" role="alert">
-                         {formErrors.general}
-                       </div>
-                     )}
-
-                     <div className="row">
-                       <div className="col-md-6 mb-3">
-                         <label className="form-label">
-                           Product Name <span className="text-danger">*</span>
-                         </label>
-                         <input
-                           type="text"
-                           className={`form-control ${formErrors.productName ? "is-invalid" : ""}`}
-                           name="productName"
-                           value={formData.productName}
-                           onChange={handleInputChange}
-                           required
-                         />
-                         {formErrors.productName && (
-                           <div className="invalid-feedback d-block">
-                             {formErrors.productName}
-                           </div>
-                         )}
-                       </div>
-                       <div className="col-md-6 mb-3">
-                         <label className="form-label">HSN Code</label>
-                         <input
-                           type="text"
-                           className={`form-control ${formErrors.hsnCode ? "is-invalid" : ""}`}
-                           name="hsnCode"
-                           value={formData.hsnCode}
-                           onChange={handleInputChange}
-                         />
-                         {formErrors.hsnCode && (
-                           <div className="invalid-feedback d-block">
-                             {formErrors.hsnCode}
-                           </div>
-                         )}
-                       </div>
-                     </div>
-
-                     <div className="mb-3">
-                       <label className="form-label">Item Description</label>
-                       <textarea
-                         className={`form-control ${formErrors.itemDescription ? "is-invalid" : ""}`}
-                         name="itemDescription"
-                         rows="3"
-                         value={formData.itemDescription}
-                         onChange={handleInputChange}
-                         placeholder="Enter product description..."
-                       />
-                       {formErrors.itemDescription && (
-                         <div className="invalid-feedback d-block">
-                           {formErrors.itemDescription}
-                         </div>
-                       )}
-                     </div>
-
-                    {/* Variant Options Manager */}
-                    <div className="mb-3">
-                      <label className="form-label">
-                        <strong>Variant Options</strong>
-                      </label>
-                      <VariantOptionsManager
-                        onOptionsChange={handleVariantOptionsChange}
-                        initialOptions={variantOptions}
-                        hideHeader={true}
-                      />
+                      {product.item_description || "-"}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <div className="d-flex gap-2 justify-content-center">
+                      <button
+                        className="btn btn-sm"
+                        style={{
+                          border: "1px solid #dee2e6",
+                          background: "white",
+                          padding: "4px 8px",
+                          color: "#495057",
+                          borderRadius: "4px",
+                        }}
+                        title="Edit"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Icon icon="lucide:pencil" width="14" height="14" />
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        style={{
+                          border: "1px solid #dc3545",
+                          background: "white",
+                          padding: "4px 8px",
+                          color: "#dc3545",
+                          borderRadius: "4px",
+                        }}
+                        title="Delete"
+                        onClick={() => handleDeleteProduct(product)}
+                      >
+                        <Icon icon="lucide:trash-2" width="14" height="14" />
+                      </button>
                     </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-                    {/* Variants SKU Input */}
-                    {variants.length > 0 && (
-                      <div className="mb-3">
-                        <label className="form-label">Variants SKU</label>
-                        <div
-                          className="border rounded p-3"
-                          style={{ backgroundColor: "#f8f9fa" }}
-                        >
-                          {variants.map((variant, index) => (
-                            <div key={variant.id} className="mb-2">
-                              <label className="form-label small">
-                                {variant.displayName}
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={variant.sku || ""}
-                                onChange={(e) =>
-                                  handleVariantChange(
-                                    index,
-                                    "sku",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder={`Enter SKU for ${variant.displayName}`}
-                              />
-                            </div>
-                          ))}
+      {/* Pagination */}
+      {totalRecords > 0 && (
+        <div
+          className="d-flex justify-content-between align-items-center px-3 py-2"
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderRadius: "0 0 8px 8px",
+            marginTop: "0",
+          }}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="btn btn-sm"
+              style={{ border: "none", background: "none", color: "#495057" }}
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || isLoading}
+            >
+              <Icon icon="mdi:chevron-left" width="16" height="16" />
+            </button>
+
+            {/* Page Numbers */}
+            <div className="d-flex gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    className="btn btn-sm"
+                    style={{
+                      border: "none",
+                      background:
+                        pageNum === currentPage ? "#6f42c1" : "transparent",
+                      color: pageNum === currentPage ? "white" : "#495057",
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      minWidth: "32px",
+                    }}
+                    onClick={() => setCurrentPage(pageNum)}
+                    disabled={isLoading}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              {totalPages > 5 && (
+                <>
+                  <span className="px-2" style={{ color: "#495057" }}>
+                    ...
+                  </span>
+                  <button
+                    className="btn btn-sm"
+                    style={{
+                      border: "none",
+                      background:
+                        totalPages === currentPage ? "#6f42c1" : "transparent",
+                      color: totalPages === currentPage ? "white" : "#495057",
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      minWidth: "32px",
+                    }}
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={isLoading}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button
+              className="btn btn-sm"
+              style={{ border: "none", background: "none", color: "#495057" }}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages || isLoading}
+            >
+              <Icon icon="mdi:chevron-right" width="16" height="16" />
+            </button>
+          </div>
+
+          <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2">
+              <span style={{ color: "#495057", fontSize: "0.875rem" }}>
+                20/page
+              </span>
+              <Icon
+                icon="mdi:chevron-down"
+                width="16"
+                height="16"
+                style={{ color: "#495057" }}
+              />
+            </div>
+            <span style={{ color: "#495057", fontSize: "0.875rem" }}>
+              Total {totalRecords} record{totalRecords !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Product Modal */}
+      {modalOpen && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {isEditMode ? "Edit Product" : "Add New Product"}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={handleModalClose}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={handleSubmit}>
+                  {/* General Error Message */}
+                  {formErrors.general && (
+                    <div className="alert alert-danger" role="alert">
+                      {formErrors.general}
+                    </div>
+                  )}
+
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">
+                        Product Name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          formErrors.productName ? "is-invalid" : ""
+                        }`}
+                        name="productName"
+                        value={formData.productName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.productName && (
+                        <div className="invalid-feedback d-block">
+                          {formErrors.productName}
                         </div>
+                      )}
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">HSN Code</label>
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          formErrors.hsnCode ? "is-invalid" : ""
+                        }`}
+                        name="hsnCode"
+                        value={formData.hsnCode}
+                        onChange={handleInputChange}
+                      />
+                      {formErrors.hsnCode && (
+                        <div className="invalid-feedback d-block">
+                          {formErrors.hsnCode}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Item Description</label>
+                    <textarea
+                      className={`form-control ${
+                        formErrors.itemDescription ? "is-invalid" : ""
+                      }`}
+                      name="itemDescription"
+                      rows="3"
+                      value={formData.itemDescription}
+                      onChange={handleInputChange}
+                      placeholder="Enter product description..."
+                    />
+                    {formErrors.itemDescription && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.itemDescription}
                       </div>
                     )}
+                  </div>
 
-                    <div className="modal-footer">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleModalClose}
+                  {/* Variant Options Manager */}
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Variant Options</strong>
+                    </label>
+                    <VariantOptionsManager
+                      onOptionsChange={handleVariantOptionsChange}
+                      initialOptions={variantOptions}
+                      hideHeader={true}
+                    />
+                  </div>
+
+                  {/* Variants SKU Input */}
+                  {variants.length > 0 && (
+                    <div className="mb-3">
+                      <label className="form-label">Variants SKU</label>
+                      <div
+                        className="border rounded p-3"
+                        style={{ backgroundColor: "#f8f9fa" }}
                       >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <span
-                              className="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            ></span>
-                            {isEditMode ? "Updating..." : "Saving..."}
-                          </>
-                        ) : isEditMode ? (
-                          "Update Product"
-                        ) : (
-                          "Save Product"
-                        )}
-                      </button>
+                        {variants.map((variant, index) => (
+                          <div key={variant.id} className="mb-2">
+                            <label className="form-label small">
+                              {variant.displayName}
+                            </label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={variant.sku || ""}
+                              onChange={(e) =>
+                                handleVariantChange(
+                                  index,
+                                  "sku",
+                                  e.target.value
+                                )
+                              }
+                              placeholder={`Enter SKU for ${variant.displayName}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </form>
-                </div>
+                  )}
+
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleModalClose}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          {isEditMode ? "Updating..." : "Saving..."}
+                        </>
+                      ) : isEditMode ? (
+                        "Update Product"
+                      ) : (
+                        "Save Product"
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default ProductMasterLayer;
-
