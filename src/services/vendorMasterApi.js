@@ -292,8 +292,8 @@ class VendorMasterApiService {
       params.append("status", options.status);
     }
 
-    if (options.commonNameFilter && options.commonNameFilter !== "all") {
-      params.append("commonNameFilter", options.commonNameFilter);
+    if (options.companyNameFilter && options.companyNameFilter !== "all") {
+      params.append("companyNameFilter", options.companyNameFilter);
     }
 
     // Add sorting parameters

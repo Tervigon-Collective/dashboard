@@ -11,7 +11,7 @@ const VendorMasterLayer = () => {
     vendorAddress: "",
     vendorPhoneNo: "",
     vendorGSTNumber: "",
-    commonName: "",
+    companyName: "",
     vendorStatus: "Active",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +21,7 @@ const VendorMasterLayer = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [editingVendor, setEditingVendor] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Infinite scroll state
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -35,7 +35,7 @@ const VendorMasterLayer = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [commonNameFilter, setCommonNameFilter] = useState("all"); // all, with, without
+  const [companyNameFilter, setCompanyNameFilter] = useState("all"); // all, with, without
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -60,8 +60,8 @@ const VendorMasterLayer = () => {
       const options = {
         search: debouncedSearchTerm || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        commonNameFilter:
-          commonNameFilter !== "all" ? commonNameFilter : undefined,
+        companyNameFilter:
+          companyNameFilter !== "all" ? companyNameFilter : undefined,
         sortField: sortField || undefined,
         sortDirection: sortDirection || undefined,
       };
@@ -104,10 +104,12 @@ const VendorMasterLayer = () => {
   const prevFiltersRef = useRef({
     search: "",
     status: "all",
-    commonName: "all",
+    companyName: "all",
     sort: null,
     sortDir: "asc",
   });
+  // Track if page change is from infinite scroll (should not trigger replacement)
+  const isInfiniteScrollRef = useRef(false);
 
   // Initial load on mount
   useEffect(() => {
@@ -124,7 +126,7 @@ const VendorMasterLayer = () => {
     const currentFilters = {
       search: debouncedSearchTerm,
       status: statusFilter,
-      commonName: commonNameFilter,
+      companyName: companyNameFilter,
       sort: sortField,
       sortDir: sortDirection,
     };
@@ -136,7 +138,7 @@ const VendorMasterLayer = () => {
     const filtersChanged =
       prevFilters.search !== currentFilters.search ||
       prevFilters.status !== currentFilters.status ||
-      prevFilters.commonName !== currentFilters.commonName ||
+      prevFilters.companyName !== currentFilters.companyName ||
       prevFilters.sort !== currentFilters.sort ||
       prevFilters.sortDir !== currentFilters.sortDir;
 
@@ -146,6 +148,7 @@ const VendorMasterLayer = () => {
     // If filters changed, reset to page 1 and load
     if (filtersChanged) {
       prevFiltersRef.current = currentFilters;
+      isInfiniteScrollRef.current = false; // Reset flag
       if (currentPage !== 1) {
         // Reset page first, let the page change trigger reload
         prevPageRef.current = currentPage;
@@ -158,17 +161,22 @@ const VendorMasterLayer = () => {
       return;
     }
 
-    // If only page changed (not filters), load that page
-    if (pageChanged && currentPage > 0) {
+    // If only page changed (not filters), and it's NOT from infinite scroll, load that page
+    // Skip if page change is from infinite scroll (data already loaded via append)
+    if (pageChanged && currentPage > 0 && !isInfiniteScrollRef.current) {
       prevPageRef.current = currentPage;
       loadVendors(currentPage, false);
+    } else if (pageChanged && isInfiniteScrollRef.current) {
+      // Page changed from infinite scroll, just update the ref and reset flag
+      prevPageRef.current = currentPage;
+      isInfiniteScrollRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isMounted,
     debouncedSearchTerm,
     statusFilter,
-    commonNameFilter,
+    companyNameFilter,
     sortField,
     sortDirection,
     currentPage,
@@ -179,7 +187,7 @@ const VendorMasterLayer = () => {
     setSearchTerm("");
     setDebouncedSearchTerm("");
     setStatusFilter("all");
-    setCommonNameFilter("all");
+    setCompanyNameFilter("all");
     setSortField(null);
     setSortDirection("asc");
     setCurrentPage(1);
@@ -192,31 +200,51 @@ const VendorMasterLayer = () => {
   };
 
   // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length || currentPage < totalPages;
-  }, [displayedItemsCount, currentPage, totalPages]);
+  const hasMoreData = useCallback(
+    (dataArray) => {
+      return displayedItemsCount < dataArray.length || currentPage < totalPages;
+    },
+    [displayedItemsCount, currentPage, totalPages]
+  );
 
   // Load more data callback
   const loadMoreData = useCallback(async () => {
     if (isLoadingMore || isLoading) return;
-    
+
     setIsLoadingMore(true);
     // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     // Check if we need to fetch more from API
     if (displayedItemsCount >= vendors.length && currentPage < totalPages) {
+      // Set flag to indicate this page change is from infinite scroll
+      isInfiniteScrollRef.current = true;
       await loadVendors(currentPage + 1, false, true);
     }
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
+
+    setDisplayedItemsCount((prev) => prev + itemsPerPage);
     setIsLoadingMore(false);
-  }, [isLoadingMore, isLoading, displayedItemsCount, vendors.length, currentPage, totalPages, itemsPerPage, loadVendors]);
+  }, [
+    isLoadingMore,
+    isLoading,
+    displayedItemsCount,
+    vendors.length,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    loadVendors,
+  ]);
 
   // Reset displayed items when search term or filters change
   useEffect(() => {
     setDisplayedItemsCount(20);
-  }, [debouncedSearchTerm, statusFilter, commonNameFilter, sortField, sortDirection]);
+  }, [
+    debouncedSearchTerm,
+    statusFilter,
+    companyNameFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   // Scroll detection for infinite scroll (using event listeners in addition to onScroll/onWheel)
   useEffect(() => {
@@ -230,24 +258,24 @@ const VendorMasterLayer = () => {
       const clientHeight = container.clientHeight;
       const isAtTop = scrollTop <= 1;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
+
       if (e.deltaY > 0 && isAtBottom) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       } else if (e.deltaY < 0 && isAtTop) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       }
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
+    container.addEventListener("wheel", handleWheel, { passive: true });
+
     return () => {
-      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -294,7 +322,7 @@ const VendorMasterLayer = () => {
             vendor_address: "vendorAddress",
             vendor_phone_no: "vendorPhoneNo",
             vendor_gst_number: "vendorGSTNumber",
-            common_name: "commonName",
+            company_name: "companyName",
             vendor_status: "vendorStatus",
           };
 
@@ -320,7 +348,7 @@ const VendorMasterLayer = () => {
         vendor_address: formData.vendorAddress,
         vendor_phone_no: formData.vendorPhoneNo,
         vendor_gst_number: formData.vendorGSTNumber,
-        common_name: formData.commonName,
+        company_name: formData.companyName,
         vendor_status: formData.vendorStatus,
       };
 
@@ -344,7 +372,7 @@ const VendorMasterLayer = () => {
           vendorAddress: "",
           vendorPhoneNo: "",
           vendorGSTNumber: "",
-          commonName: "",
+          companyName: "",
           vendorStatus: "Active",
         });
         setFormErrors({});
@@ -412,7 +440,7 @@ const VendorMasterLayer = () => {
       vendorAddress: "",
       vendorPhoneNo: "",
       vendorGSTNumber: "",
-      commonName: "",
+      companyName: "",
       vendorStatus: "Active",
     });
   };
@@ -426,7 +454,7 @@ const VendorMasterLayer = () => {
       vendorAddress: vendor.vendor_address,
       vendorPhoneNo: vendor.vendor_phone_no,
       vendorGSTNumber: vendor.vendor_gst_number,
-      commonName: vendor.common_name || "",
+      companyName: vendor.company_name || "",
       vendorStatus: vendor.vendor_status,
     });
     setModalOpen(true);
@@ -515,8 +543,8 @@ const VendorMasterLayer = () => {
 
         <select
           className="form-select form-select-sm"
-          value={commonNameFilter}
-          onChange={(e) => setCommonNameFilter(e.target.value)}
+          value={companyNameFilter}
+          onChange={(e) => setCompanyNameFilter(e.target.value)}
           style={{
             height: "36px",
             width: "auto",
@@ -524,9 +552,9 @@ const VendorMasterLayer = () => {
             fontSize: "0.875rem",
           }}
         >
-          <option value="all">All Common Names</option>
-          <option value="with">With Common Name</option>
-          <option value="without">Without Common Name</option>
+          <option value="all">All Company Names</option>
+          <option value="with">With Company Name</option>
+          <option value="without">Without Company Name</option>
         </select>
 
         {/* Reset Button */}
@@ -544,7 +572,7 @@ const VendorMasterLayer = () => {
           className="text-muted ms-auto"
           style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
         >
-          Showing {vendors.length} of {totalRecords} vendors
+          Showing {getDisplayedData(vendors).length} of {totalRecords} vendors
         </span>
 
         {/* Add Button */}
@@ -587,7 +615,7 @@ const VendorMasterLayer = () => {
           const scrollTop = target.scrollTop;
           const scrollHeight = target.scrollHeight;
           const clientHeight = target.clientHeight;
-          
+
           if (scrollTop + clientHeight >= scrollHeight * 0.8) {
             if (hasMoreData(vendors) && !isLoadingMore && !isLoading) {
               loadMoreData();
@@ -601,16 +629,16 @@ const VendorMasterLayer = () => {
           const clientHeight = target.clientHeight;
           const isAtTop = scrollTop <= 1;
           const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-          
+
           if (e.deltaY > 0 && isAtBottom) {
             window.scrollBy({
               top: e.deltaY,
-              behavior: 'auto'
+              behavior: "auto",
             });
           } else if (e.deltaY < 0 && isAtTop) {
             window.scrollBy({
               top: e.deltaY,
-              behavior: 'auto'
+              behavior: "auto",
             });
           }
         }}
@@ -636,6 +664,26 @@ const VendorMasterLayer = () => {
                 <div className="d-flex align-items-center gap-2">
                   Vendor Name
                   {sortField === "vendor_name" && (
+                    <Icon
+                      icon={
+                        sortDirection === "asc"
+                          ? "lucide:chevron-up"
+                          : "lucide:chevron-down"
+                      }
+                      width="14"
+                      height="14"
+                    />
+                  )}
+                </div>
+              </th>
+              <th
+                scope="col"
+                onClick={() => handleSort("company_name")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  Company Name
+                  {sortField === "company_name" && (
                     <Icon
                       icon={
                         sortDirection === "asc"
@@ -712,7 +760,8 @@ const VendorMasterLayer = () => {
                             height: "20px",
                             backgroundColor: "#e5e7eb",
                             borderRadius: "4px",
-                            animation: "skeletonPulse 1.5s ease-in-out infinite",
+                            animation:
+                              "skeletonPulse 1.5s ease-in-out infinite",
                           }}
                         />
                       </td>
@@ -727,7 +776,7 @@ const VendorMasterLayer = () => {
                     <p className="text-muted mb-0">
                       {searchTerm ||
                       statusFilter !== "all" ||
-                      commonNameFilter !== "all"
+                      companyNameFilter !== "all"
                         ? "No vendors match your search criteria."
                         : 'No vendors found. Click "Add New Vendor" to get started.'}
                     </p>
@@ -739,13 +788,16 @@ const VendorMasterLayer = () => {
                 {getDisplayedData(vendors).map((vendor, index) => (
                   <tr key={vendor.vendor_id}>
                     <td>
-                      <span className="text-secondary-light">
-                        {index + 1}
-                      </span>
+                      <span className="text-secondary-light">{index + 1}</span>
                     </td>
                     <td>
                       <span className="text-secondary-light fw-medium">
                         {vendor.vendor_name}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-secondary-light">
+                        {vendor.company_name || "-"}
                       </span>
                     </td>
                     <td>
@@ -825,7 +877,8 @@ const VendorMasterLayer = () => {
                                 height: "20px",
                                 backgroundColor: "#e5e7eb",
                                 borderRadius: "4px",
-                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                                animation:
+                                  "skeletonPulse 1.5s ease-in-out infinite",
                               }}
                             />
                           </td>
@@ -839,7 +892,6 @@ const VendorMasterLayer = () => {
           </tbody>
         </table>
       </div>
-
 
       {/* Infinite Scroll Footer */}
       {totalRecords > 0 && (
@@ -961,22 +1013,22 @@ const VendorMasterLayer = () => {
                       )}
                     </div>
                     <div className="col-md-6 mb-3">
-                      <label htmlFor="commonName" className="form-label">
-                        Common Name
+                      <label htmlFor="companyName" className="form-label">
+                        Company Name
                       </label>
                       <input
                         type="text"
                         className={`form-control ${
-                          formErrors.commonName ? "is-invalid" : ""
+                          formErrors.companyName ? "is-invalid" : ""
                         }`}
-                        id="commonName"
-                        name="commonName"
-                        value={formData.commonName}
+                        id="companyName"
+                        name="companyName"
+                        value={formData.companyName}
                         onChange={handleInputChange}
                       />
-                      {formErrors.commonName && (
+                      {formErrors.companyName && (
                         <div className="invalid-feedback d-block">
-                          {formErrors.commonName}
+                          {formErrors.companyName}
                         </div>
                       )}
                     </div>
