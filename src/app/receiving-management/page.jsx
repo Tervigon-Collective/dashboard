@@ -1131,6 +1131,8 @@ const ReceivingManagementLayer = () => {
   const [docPreviewOpen, setDocPreviewOpen] = useState(false);
   const [docPreviewUrl, setDocPreviewUrl] = useState("");
   const [docPreviewName, setDocPreviewName] = useState("");
+  const [purchaseOrderInfo, setPurchaseOrderInfo] = useState(null);
+  const [isDownloadingPO, setIsDownloadingPO] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -1166,6 +1168,27 @@ const ReceivingManagementLayer = () => {
       } catch (e) {
         setViewDocuments([]);
       }
+
+      // Check if Purchase Order PDF exists
+      try {
+        const poExists = await purchaseRequestApi.checkPurchaseOrderExists(
+          request.request_id
+        );
+        if (poExists) {
+          const poInfo = await purchaseRequestApi.getPurchaseOrderInfo(
+            request.request_id
+          );
+          if (poInfo.success) {
+            setPurchaseOrderInfo(poInfo.data);
+          }
+        } else {
+          setPurchaseOrderInfo(null);
+        }
+      } catch (e) {
+        console.error("Error checking Purchase Order:", e);
+        setPurchaseOrderInfo(null);
+      }
+
       setViewModalOpen(true);
     } catch (error) {
       console.error("Error loading request details:", error);
@@ -1264,6 +1287,13 @@ const ReceivingManagementLayer = () => {
         await loadToBeDeliveredRequests();
         await loadQualityCheckRequests();
         await loadReceiptDetailsRequests();
+
+        // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
+        if (statusUpdateTarget === "to_be_delivered") {
+          setTimeout(async () => {
+            await loadToBeDeliveredRequests();
+          }, 2000); // Wait 2 seconds for PDF generation to complete
+        }
 
         console.log("Purchase request status updated successfully");
       } else {
@@ -1584,7 +1614,10 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn-close"
-                    onClick={() => setViewModalOpen(false)}
+                    onClick={() => {
+                      setViewModalOpen(false);
+                      setPurchaseOrderInfo(null);
+                    }}
                   ></button>
                 </div>
                 <div
@@ -1682,6 +1715,92 @@ const ReceivingManagementLayer = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Purchase Order PDF Section */}
+                  {purchaseOrderInfo && (
+                    <div className="mb-3">
+                      <h6 className="text-muted mb-3">
+                        <Icon
+                          icon="mdi:file-pdf-box"
+                          className="me-2"
+                          style={{ color: "#dc3545" }}
+                        />
+                        Purchase Order
+                      </h6>
+                      <div
+                        className="p-3 border rounded"
+                        style={{ backgroundColor: "#f8f9fa" }}
+                      >
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                          <div>
+                            <div className="fw-medium">
+                              PO Number:{" "}
+                              {purchaseOrderInfo.purchase_order_number}
+                            </div>
+                            <small className="text-muted">
+                              Generated:{" "}
+                              {new Date(
+                                purchaseOrderInfo.generated_at
+                              ).toLocaleString()}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            disabled={isDownloadingPO}
+                            onClick={async () => {
+                              if (!selectedRequest) return;
+                              setIsDownloadingPO(true);
+                              try {
+                                const blob =
+                                  await purchaseRequestApi.downloadPurchaseOrderPdf(
+                                    selectedRequest.request_id
+                                  );
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download =
+                                  purchaseOrderInfo.file_name ||
+                                  `${purchaseOrderInfo.purchase_order_number}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              } catch (error) {
+                                console.error("Error downloading PDF:", error);
+                                alert(
+                                  "Failed to download Purchase Order PDF. Please try again."
+                                );
+                              } finally {
+                                setIsDownloadingPO(false);
+                              }
+                            }}
+                          >
+                            {isDownloadingPO ? (
+                              <>
+                                <span
+                                  className="spinner-border spinner-border-sm me-2"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Icon
+                                  icon="mdi:download"
+                                  className="me-1"
+                                  width="16"
+                                  height="16"
+                                />
+                                Download PDF
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Documents */}
                   <div className="mb-3">
@@ -2193,7 +2312,7 @@ const ReceivingManagementLayer = () => {
                 <div className="modal-header">
                   <h5 className="modal-title">
                     <Icon icon="mdi:clipboard-check" className="me-2" />
-                    Quality Check Inspection
+                    GRN
                   </h5>
                   <button
                     type="button"
@@ -3560,6 +3679,92 @@ const ToBeDeliveredTab = ({
   setViewModalOpen,
   selectedRequest,
 }) => {
+  const [downloadingPdf, setDownloadingPdf] = useState({});
+  const [poInfoCache, setPoInfoCache] = useState({});
+
+  // Check if PDF exists for a request
+  const checkPdfExists = async (requestId) => {
+    if (poInfoCache[requestId] !== undefined) {
+      return poInfoCache[requestId];
+    }
+    try {
+      const exists = await purchaseRequestApi.checkPurchaseOrderExists(
+        requestId
+      );
+      if (exists) {
+        const info = await purchaseRequestApi.getPurchaseOrderInfo(requestId);
+        setPoInfoCache((prev) => ({
+          ...prev,
+          [requestId]: info.success ? info.data : null,
+        }));
+        return info.success ? info.data : null;
+      } else {
+        setPoInfoCache((prev) => ({
+          ...prev,
+          [requestId]: null,
+        }));
+        return null;
+      }
+    } catch (error) {
+      console.error("Error checking PDF:", error);
+      setPoInfoCache((prev) => ({
+        ...prev,
+        [requestId]: null,
+      }));
+      return null;
+    }
+  };
+
+  // Download PDF handler
+  const handleDownloadPdf = async (request) => {
+    const requestId = request.request_id;
+    setDownloadingPdf((prev) => ({ ...prev, [requestId]: true }));
+
+    try {
+      const blob = await purchaseRequestApi.downloadPurchaseOrderPdf(requestId);
+      const poInfo = poInfoCache[requestId];
+      const fileName = poInfo?.file_name || `PO-${requestId}.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert(
+        "Failed to download Purchase Order PDF. Please try again or use the View button to access it."
+      );
+    } finally {
+      setDownloadingPdf((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  // Check PDF existence for all requests on mount/update
+  useEffect(() => {
+    if (requests.length > 0) {
+      requests.forEach((request) => {
+        // Only check if not already cached
+        if (poInfoCache[request.request_id] === undefined) {
+          checkPdfExists(request.request_id).then((poInfo) => {
+            if (poInfo) {
+              console.log(
+                `✅ PDF found for request ${request.request_id}:`,
+                poInfo.purchase_order_number
+              );
+            } else {
+              console.log(`ℹ️ No PDF found for request ${request.request_id}`);
+            }
+          });
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests]);
+
   return (
     <>
       {/* Table */}
@@ -3750,6 +3955,55 @@ const ToBeDeliveredTab = ({
                             style={{ color: "#3b82f6" }}
                           />
                         </button>
+                        {poInfoCache[request.request_id] ? (
+                          <button
+                            className="btn btn-sm"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
+                            }}
+                            title={`Download Purchase Order PDF (${
+                              poInfoCache[request.request_id]
+                                ?.purchase_order_number
+                            })`}
+                            onClick={() => handleDownloadPdf(request)}
+                            disabled={downloadingPdf[request.request_id]}
+                          >
+                            {downloadingPdf[request.request_id] ? (
+                              <span
+                                className="spinner-border spinner-border-sm"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                            ) : (
+                              <Icon
+                                icon="mdi:file-pdf-box"
+                                width="16"
+                                height="16"
+                                style={{ color: "#dc3545" }}
+                              />
+                            )}
+                          </button>
+                        ) : poInfoCache[request.request_id] === undefined ? (
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              borderWidth: "2px",
+                            }}
+                            role="status"
+                            aria-hidden="true"
+                            title="Checking for PDF..."
+                          ></span>
+                        ) : null}
                         <button
                           className="btn btn-sm"
                           style={{

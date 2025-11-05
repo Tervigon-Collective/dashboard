@@ -153,6 +153,108 @@ class PurchaseRequestApiService {
       body: JSON.stringify({ status }),
     });
   }
+
+  /**
+   * Download Purchase Order PDF
+   * @param {number} requestId - Purchase request ID
+   * @returns {Promise<Blob>} PDF blob
+   */
+  async downloadPurchaseOrderPdf(requestId) {
+    // Get fresh token from Firebase (not from localStorage)
+    const token = await this.getAuthToken();
+
+    // If no token, throw a clear error before making the request
+    if (!token) {
+      throw new Error(
+        "No authentication token available. Please sign in again."
+      );
+    }
+
+    let response = await fetch(
+      `${this.baseURL}/receiving/purchase-request/${requestId}/purchase-order-pdf`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // Handle 401 errors (expired token) and retry once
+    if (response.status === 401) {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+          // Force refresh the token
+          const newToken = await user.getIdToken(true);
+
+          // Update localStorage
+          localStorage.setItem("idToken", newToken);
+
+          // Retry the request with new token
+          response = await fetch(
+            `${this.baseURL}/receiving/purchase-request/${requestId}/purchase-order-pdf`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            }
+          );
+
+          // If still 401 after refresh, throw error
+          if (response.status === 401) {
+            throw new Error("Authentication failed. Please sign in again.");
+          }
+        } else {
+          throw new Error("No authenticated user found");
+        }
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        throw new Error("Authentication failed. Please sign in again.");
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Purchase Order PDF not found");
+      }
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    return response.blob();
+  }
+
+  /**
+   * Get Purchase Order metadata (without PDF data)
+   * @param {number} requestId - Purchase request ID
+   * @returns {Promise<Object>} Purchase Order metadata
+   */
+  async getPurchaseOrderInfo(requestId) {
+    return this.makeRequest(
+      `/receiving/purchase-request/${requestId}/purchase-order-info`
+    );
+  }
+
+  /**
+   * Check if Purchase Order PDF exists
+   * @param {number} requestId - Purchase request ID
+   * @returns {Promise<boolean>} True if PDF exists
+   */
+  async checkPurchaseOrderExists(requestId) {
+    try {
+      const result = await this.makeRequest(
+        `/receiving/purchase-request/${requestId}/purchase-order-exists`
+      );
+      return result.data?.purchase_order_exists || false;
+    } catch (error) {
+      console.error("Error checking Purchase Order existence:", error);
+      return false;
+    }
+  }
 }
 
 export default new PurchaseRequestApiService();
