@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
@@ -16,6 +16,10 @@ const StockManagementLayer = () => {
   const [inventoryTotalPages, setInventoryTotalPages] = useState(1);
   const [inventoryTotalRecords, setInventoryTotalRecords] = useState(0);
   const [inventorySearchTerm, setInventorySearchTerm] = useState("");
+  const [inventoryDisplayedItemsCount, setInventoryDisplayedItemsCount] = useState(20);
+  const [inventoryLoadingMore, setInventoryLoadingMore] = useState(false);
+  const inventoryContainerRef = useRef(null);
+  const inventoryItemsPerPage = 20;
 
   // Returns Management Tab State
   const [returnsData, setReturnsData] = useState([]);
@@ -24,40 +28,62 @@ const StockManagementLayer = () => {
   const [returnsTotalPages, setReturnsTotalPages] = useState(1);
   const [returnsTotalRecords, setReturnsTotalRecords] = useState(0);
   const [returnsStatusFilter, setReturnsStatusFilter] = useState("pending"); // pending, approved, rejected
+  const [returnsDisplayedItemsCount, setReturnsDisplayedItemsCount] = useState(20);
+  const [returnsLoadingMore, setReturnsLoadingMore] = useState(false);
+  const returnsContainerRef = useRef(null);
+  const returnsItemsPerPage = 20;
 
   // Load inventory data
-  const loadInventory = async (page = 1) => {
+  const loadInventory = async (page = 1, append = false) => {
     try {
-      setInventoryLoading(true);
+      if (!append) {
+        setInventoryLoading(true);
+      }
       const result = await stockManagementApi.getAllVariantsInventory(page, 50);
       if (result.success) {
-        setInventoryData(result.data);
+        if (append) {
+          setInventoryData((prev) => [...prev, ...result.data]);
+        } else {
+          setInventoryData(result.data);
+          setInventoryDisplayedItemsCount(20); // Reset displayed items
+        }
         setInventoryCurrentPage(result.pagination.page);
         setInventoryTotalPages(result.pagination.totalPages);
         setInventoryTotalRecords(result.pagination.total);
       }
     } catch (error) {
       console.error("Error loading inventory:", error);
-      setInventoryData([]);
+      if (!append) {
+        setInventoryData([]);
+      }
     } finally {
       setInventoryLoading(false);
     }
   };
 
   // Load returns data
-  const loadReturns = async (page = 1, status = null) => {
+  const loadReturns = async (page = 1, status = null, append = false) => {
     try {
-      setReturnsLoading(true);
+      if (!append) {
+        setReturnsLoading(true);
+      }
       const result = await stockManagementApi.getAllReturns(page, 50, status);
       if (result.success) {
-        setReturnsData(result.data);
+        if (append) {
+          setReturnsData((prev) => [...prev, ...result.data]);
+        } else {
+          setReturnsData(result.data);
+          setReturnsDisplayedItemsCount(20); // Reset displayed items
+        }
         setReturnsCurrentPage(result.pagination.page);
         setReturnsTotalPages(result.pagination.totalPages);
         setReturnsTotalRecords(result.pagination.total);
       }
     } catch (error) {
       console.error("Error loading returns:", error);
-      setReturnsData([]);
+      if (!append) {
+        setReturnsData([]);
+      }
     } finally {
       setReturnsLoading(false);
     }
@@ -118,16 +144,24 @@ const StockManagementLayer = () => {
   useEffect(() => {
     if (activeTab === "inventory") {
       loadInventory();
+      setInventoryDisplayedItemsCount(20);
     } else if (activeTab === "returns") {
       loadReturns(1, returnsStatusFilter);
+      setReturnsDisplayedItemsCount(20);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === "returns") {
       loadReturns(1, returnsStatusFilter);
+      setReturnsDisplayedItemsCount(20);
     }
   }, [returnsStatusFilter]);
+
+  // Reset displayed items when search term changes
+  useEffect(() => {
+    setInventoryDisplayedItemsCount(20);
+  }, [inventorySearchTerm]);
 
   const tabs = [
     {
@@ -207,6 +241,12 @@ const StockManagementLayer = () => {
               loadInventory={loadInventory}
               searchTerm={inventorySearchTerm}
               setSearchTerm={setInventorySearchTerm}
+              displayedItemsCount={inventoryDisplayedItemsCount}
+              setDisplayedItemsCount={setInventoryDisplayedItemsCount}
+              isLoadingMore={inventoryLoadingMore}
+              setIsLoadingMore={setInventoryLoadingMore}
+              containerRef={inventoryContainerRef}
+              itemsPerPage={inventoryItemsPerPage}
             />
           )}
 
@@ -222,6 +262,12 @@ const StockManagementLayer = () => {
               setStatusFilter={setReturnsStatusFilter}
               handleApproveReturn={handleApproveReturn}
               handleRejectReturn={handleRejectReturn}
+              displayedItemsCount={returnsDisplayedItemsCount}
+              setDisplayedItemsCount={setReturnsDisplayedItemsCount}
+              isLoadingMore={returnsLoadingMore}
+              setIsLoadingMore={setReturnsLoadingMore}
+              containerRef={returnsContainerRef}
+              itemsPerPage={returnsItemsPerPage}
             />
           )}
         </div>
@@ -240,6 +286,12 @@ const InventoryTab = ({
   loadInventory,
   searchTerm,
   setSearchTerm,
+  displayedItemsCount,
+  setDisplayedItemsCount,
+  isLoadingMore,
+  setIsLoadingMore,
+  containerRef,
+  itemsPerPage,
 }) => {
   // Filter inventory data by search term
   const filteredInventory = inventoryData.filter((item) => {
@@ -251,6 +303,66 @@ const InventoryTab = ({
       item.sku?.toLowerCase().includes(searchLower)
     );
   });
+
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
+  };
+
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length || currentPage < totalPages;
+  }, [displayedItemsCount, currentPage, totalPages]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || isLoading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if we need to fetch more from API
+    if (displayedItemsCount >= filteredInventory.length && currentPage < totalPages) {
+      await loadInventory(currentPage + 1, true);
+    }
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, isLoading, displayedItemsCount, filteredInventory.length, currentPage, totalPages, itemsPerPage, loadInventory, setIsLoadingMore, setDisplayedItemsCount]);
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   return (
     <>
@@ -285,147 +397,200 @@ const InventoryTab = ({
 
       {/* Table */}
       <div
-        className="border rounded overflow-hidden"
-        style={{ backgroundColor: "white" }}
+        ref={containerRef}
+        className="table-responsive table-scroll-container"
+        style={{
+          maxHeight: "600px",
+          overflowY: "auto",
+          overflowX: "auto",
+          position: "relative",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          scrollBehavior: "smooth",
+          overscrollBehavior: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        onScroll={(e) => {
+          const target = e.target;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          
+          if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+            if (hasMoreData(filteredInventory) && !isLoadingMore && !isLoading) {
+              loadMoreData();
+            }
+          }
+        }}
+        onWheel={(e) => {
+          const target = e.currentTarget;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          const isAtTop = scrollTop <= 1;
+          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+          
+          if (e.deltaY > 0 && isAtBottom) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          } else if (e.deltaY < 0 && isAtTop) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          }
+        }}
       >
-        <div className="table-responsive">
-          <table
-            className="table table-hover mb-0"
-            style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+        <table
+          className="table table-hover mb-0"
+          style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+        >
+          <thead
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              backgroundColor: "#f9fafb",
+              borderBottom: "2px solid #e5e7eb",
+            }}
           >
-            <thead
-              style={{
-                backgroundColor: "#f9fafb",
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
+            <tr>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Sr No
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Product Name
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Variant
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                SKU
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Available Qty
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Stock In
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Stock Out
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Cancels
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Approved Returns
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && inventoryData.length === 0 ? (
+              <>
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <tr key={`skeleton-${rowIndex}`}>
+                    {Array.from({ length: 9 }).map((_, colIndex) => (
+                      <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                        <div
+                          className="skeleton"
+                          style={{
+                            height: "20px",
+                            backgroundColor: "#e5e7eb",
+                            borderRadius: "4px",
+                            animation: "skeletonPulse 1.5s ease-in-out infinite",
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+            ) : filteredInventory.length === 0 ? (
               <tr>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Sr No
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Product Name
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Variant
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  SKU
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Available Qty
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Stock In
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Stock Out
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Cancels
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Approved Returns
-                </th>
+                <td colSpan="9" className="text-center py-4">
+                  <div className="d-flex flex-column align-items-center">
+                    <Icon
+                      icon="mdi:package-variant"
+                      width="48"
+                      height="48"
+                      className="text-muted mb-2"
+                    />
+                    <p className="text-muted mb-0">
+                      {searchTerm
+                        ? "No matching products found"
+                        : "No inventory data available"}
+                    </p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="9" className="text-center py-4">
-                    <div className="d-flex justify-content-center align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      Loading inventory...
-                    </div>
-                  </td>
-                </tr>
-              ) : inventoryData.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="text-center py-4">
-                    <div className="d-flex flex-column align-items-center">
-                      <Icon
-                        icon="mdi:package-variant"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-2"
-                      />
-                      <p className="text-muted mb-0">
-                        {searchTerm
-                          ? "No matching products found"
-                          : "No inventory data available"}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredInventory.map((item, index) => (
+            ) : (
+              <>
+                {getDisplayedData(filteredInventory).map((item, index) => (
                   <tr key={item.variant_id}>
                     <td style={{ padding: "12px", color: "#374151" }}>
-                      {(currentPage - 1) * 50 + index + 1}
+                      {index + 1}
                     </td>
                     <td style={{ padding: "12px", color: "#374151" }}>
                       {item.product_name || "-"}
@@ -486,42 +651,57 @@ const InventoryTab = ({
                       {item.approved_returns || 0}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {!isLoading && filteredInventory.length > 0 && (
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top">
-            <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              Showing <strong>{filteredInventory.length}</strong>{" "}
-              {searchTerm ? "filtered" : `of ${totalRecords}`} variant
-              {filteredInventory.length !== 1 ? "s" : ""}
-            </div>
-            <div className="d-flex align-items-center gap-2">
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => loadInventory(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <Icon icon="mdi:chevron-left" width="16" height="16" />
-              </button>
-              <span style={{ fontSize: "14px", color: "#6c757d" }}>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => loadInventory(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <Icon icon="mdi:chevron-right" width="16" height="16" />
-              </button>
-            </div>
-          </div>
-        )}
+                ))}
+                {isLoadingMore && (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-more-${rowIndex}`}>
+                        {Array.from({ length: 9 }).map((_, colIndex) => (
+                          <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Infinite Scroll Footer */}
+      {totalRecords > 0 && filteredInventory.length > 0 && (
+        <div
+          className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top"
+          style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 5,
+            backgroundColor: "#f8f9fa",
+          }}
+        >
+          <div style={{ fontSize: "14px", color: "#6c757d" }}>
+            Showing <strong>{getDisplayedData(filteredInventory).length}</strong>{" "}
+            {searchTerm ? "filtered" : `of ${totalRecords}`} variant
+            {getDisplayedData(filteredInventory).length !== 1 ? "s" : ""}
+          </div>
+          {hasMoreData(filteredInventory) && (
+            <div style={{ fontSize: "14px", color: "#6c757d" }}>
+              Scroll down to load more
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 };
@@ -538,7 +718,72 @@ const ReturnsManagementTab = ({
   setStatusFilter,
   handleApproveReturn,
   handleRejectReturn,
+  displayedItemsCount,
+  setDisplayedItemsCount,
+  isLoadingMore,
+  setIsLoadingMore,
+  containerRef,
+  itemsPerPage,
 }) => {
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
+  };
+
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length || currentPage < totalPages;
+  }, [displayedItemsCount, currentPage, totalPages]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || isLoading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if we need to fetch more from API
+    if (displayedItemsCount >= returnsData.length && currentPage < totalPages) {
+      await loadReturns(currentPage + 1, statusFilter, true);
+    }
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, isLoading, displayedItemsCount, returnsData.length, currentPage, totalPages, statusFilter, itemsPerPage, loadReturns, setIsLoadingMore, setDisplayedItemsCount]);
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
   return (
     <>
       {/* Filter Bar */}
@@ -561,131 +806,184 @@ const ReturnsManagementTab = ({
 
       {/* Table */}
       <div
-        className="border rounded overflow-hidden"
-        style={{ backgroundColor: "white" }}
+        ref={containerRef}
+        className="table-responsive table-scroll-container"
+        style={{
+          maxHeight: "600px",
+          overflowY: "auto",
+          overflowX: "auto",
+          position: "relative",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          scrollBehavior: "smooth",
+          overscrollBehavior: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        onScroll={(e) => {
+          const target = e.target;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          
+          if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+            if (hasMoreData(returnsData) && !isLoadingMore && !isLoading) {
+              loadMoreData();
+            }
+          }
+        }}
+        onWheel={(e) => {
+          const target = e.currentTarget;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          const isAtTop = scrollTop <= 1;
+          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+          
+          if (e.deltaY > 0 && isAtBottom) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          } else if (e.deltaY < 0 && isAtTop) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          }
+        }}
       >
-        <div className="table-responsive">
-          <table
-            className="table table-hover mb-0"
-            style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+        <table
+          className="table table-hover mb-0"
+          style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+        >
+          <thead
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              backgroundColor: "#f9fafb",
+              borderBottom: "2px solid #e5e7eb",
+            }}
           >
-            <thead
-              style={{
-                backgroundColor: "#f9fafb",
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
+            <tr>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Sr No
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Order Name
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Product
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Variant
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Return Qty
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Return Date
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                  textAlign: "center",
+                }}
+              >
+                Status
+              </th>
+              <th
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  padding: "12px",
+                }}
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && returnsData.length === 0 ? (
+              <>
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <tr key={`skeleton-${rowIndex}`}>
+                    {Array.from({ length: 8 }).map((_, colIndex) => (
+                      <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                        <div
+                          className="skeleton"
+                          style={{
+                            height: "20px",
+                            backgroundColor: "#e5e7eb",
+                            borderRadius: "4px",
+                            animation: "skeletonPulse 1.5s ease-in-out infinite",
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+            ) : returnsData.length === 0 ? (
               <tr>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Sr No
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Order Name
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Product
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Variant
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Return Qty
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Return Date
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                    textAlign: "center",
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    fontWeight: "600",
-                    color: "#374151",
-                    padding: "12px",
-                  }}
-                >
-                  Actions
-                </th>
+                <td colSpan="8" className="text-center py-4">
+                  <div className="d-flex flex-column align-items-center">
+                    <Icon
+                      icon="mdi:arrow-u-left-top"
+                      width="48"
+                      height="48"
+                      className="text-muted mb-2"
+                    />
+                    <p className="text-muted mb-0">No returns found</p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="8" className="text-center py-4">
-                    <div className="d-flex justify-content-center align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      Loading returns...
-                    </div>
-                  </td>
-                </tr>
-              ) : returnsData.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="text-center py-4">
-                    <div className="d-flex flex-column align-items-center">
-                      <Icon
-                        icon="mdi:arrow-u-left-top"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-2"
-                      />
-                      <p className="text-muted mb-0">No returns found</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                returnsData.map((returnItem, index) => (
+            ) : (
+              <>
+                {getDisplayedData(returnsData).map((returnItem, index) => (
                   <tr key={returnItem.event_id}>
                     <td style={{ padding: "12px", color: "#374151" }}>
-                      {(currentPage - 1) * 50 + index + 1}
+                      {index + 1}
                     </td>
                     <td style={{ padding: "12px", color: "#374151" }}>
                       {returnItem.order_name || returnItem.order_id || "-"}
@@ -781,41 +1079,56 @@ const ReturnsManagementTab = ({
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {!isLoading && returnsData.length > 0 && (
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top">
-            <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              Showing <strong>{returnsData.length}</strong> of{" "}
-              <strong>{totalRecords}</strong> returns
-            </div>
-            <div className="d-flex align-items-center gap-2">
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => loadReturns(currentPage - 1, statusFilter)}
-                disabled={currentPage === 1}
-              >
-                <Icon icon="mdi:chevron-left" width="16" height="16" />
-              </button>
-              <span style={{ fontSize: "14px", color: "#6c757d" }}>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => loadReturns(currentPage + 1, statusFilter)}
-                disabled={currentPage === totalPages}
-              >
-                <Icon icon="mdi:chevron-right" width="16" height="16" />
-              </button>
-            </div>
-          </div>
-        )}
+                ))}
+                {isLoadingMore && (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-more-${rowIndex}`}>
+                        {Array.from({ length: 8 }).map((_, colIndex) => (
+                          <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Infinite Scroll Footer */}
+      {totalRecords > 0 && returnsData.length > 0 && (
+        <div
+          className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top"
+          style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 5,
+            backgroundColor: "#f8f9fa",
+          }}
+        >
+          <div style={{ fontSize: "14px", color: "#6c757d" }}>
+            Showing <strong>{getDisplayedData(returnsData).length}</strong> of{" "}
+            <strong>{totalRecords}</strong> returns
+          </div>
+          {hasMoreData(returnsData) && (
+            <div style={{ fontSize: "14px", color: "#6c757d" }}>
+              Scroll down to load more
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 };

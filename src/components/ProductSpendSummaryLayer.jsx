@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import ExcelJS from "exceljs";
 import { DateRangePicker, CustomProvider } from "rsuite";
@@ -8,7 +8,6 @@ import "rsuite/dist/rsuite.min.css";
 
 const API_BASE =
   "https://skuspendsales-aghtewckaqbdfqep.centralindia-01.azurewebsites.net/api/product_spend";
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 function formatLocalISO(date) {
   if (!date) {
@@ -140,9 +139,13 @@ const ProductSpendSummaryLayer = () => {
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
   const [searchSku, setSearchSku] = useState("");
+  
+  // Infinite scroll state
+  const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const tableContainerRef = useRef(null);
+  const itemsPerPage = 20;
 
   const fetchSummary = async (range) => {
     setLoading(true);
@@ -172,16 +175,12 @@ const ProductSpendSummaryLayer = () => {
   useEffect(() => {
     if (dateRange && dateRange[0] && dateRange[1]) {
       fetchSummary(dateRange);
-      setCurrentPage(1); // Reset to first page on date change
+      setDisplayedItemsCount(20); // Reset displayed items on date change
     }
   }, [dateRange]);
 
   useEffect(() => {
-    setCurrentPage(1); // Reset to first page on items per page change
-  }, [itemsPerPage]);
-
-  useEffect(() => {
-    setCurrentPage(1); // Reset to first page on search change
+    setDisplayedItemsCount(20); // Reset displayed items on search change
   }, [searchSku]);
 
   // Sort products by revenue descending and filter by SKU search
@@ -204,51 +203,60 @@ const ProductSpendSummaryLayer = () => {
     );
   }, [products, searchSku]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
-  const pagedProducts = sortedProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Pagination controls
-  const goToPage = (page) => {
-    if (page < 1 || page > totalPages) {
-      return;
-    }
-    setCurrentPage(page);
-  };
-  const goToPrevious = () => goToPage(currentPage - 1);
-  const goToNext = () => goToPage(currentPage + 1);
-  const getPaginationNumbers = () => {
-    const delta = 2;
-    const range = [];
-    const rangeWithDots = [];
-    for (
-      let i = Math.max(2, currentPage - delta);
-      i <= Math.min(totalPages - 1, currentPage + delta);
-      i++
-    ) {
-      range.push(i);
-    }
-    if (currentPage - delta > 2) {
-      rangeWithDots.push(1, "...");
-    } else {
-      rangeWithDots.push(1);
-    }
-    rangeWithDots.push(...range);
-    if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push("...", totalPages);
-    } else if (totalPages > 1) {
-      rangeWithDots.push(totalPages);
-    }
-    return rangeWithDots;
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
   };
 
-  // Range text (e.g. Showing 1 to 10 of 37 entries)
-  const startIdx =
-    sortedProducts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
-  const endIdx = Math.min(currentPage * itemsPerPage, sortedProducts.length);
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length;
+  }, [displayedItemsCount]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || loading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, loading, itemsPerPage]);
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   // Handle Excel Download
   const handleDownload = async () => {
@@ -380,22 +388,6 @@ const ProductSpendSummaryLayer = () => {
               className="col-md-6 d-flex align-items-center flex-wrap"
               style={{ gap: 12 }}
             >
-              <div className="d-flex align-items-center" style={{ gap: 12 }}>
-                <label className="fw-semibold mb-0">Show</label>
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: 80, borderRadius: 6 }}
-                  value={itemsPerPage}
-                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                >
-                  {PAGE_SIZE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-                <label className="mb-0">entries</label>
-              </div>
               <div className="d-flex align-items-center" style={{ gap: 8 }}>
                 <Icon
                   icon="material-symbols:search"
@@ -498,143 +490,202 @@ const ProductSpendSummaryLayer = () => {
               </button>
             </div>
           </div>
-          <div className="table-responsive">
-            <table className="table table-striped table-bordered align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th style={{ minWidth: 120 }}>SKU</th>
-                  <th style={{ minWidth: 220 }}>Product Title</th>
-                  <th style={{ minWidth: 120 }}>Ad Spend</th>
-                  <th style={{ minWidth: 120 }}>Revenue</th>
-                  <th style={{ minWidth: 100 }}>Quantity</th>
-                  <th style={{ minWidth: 120 }}>COGS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : error ? (
-                  <tr>
-                    <td colSpan={6} className="text-center text-danger py-4">
-                      {error}
-                    </td>
-                  </tr>
-                ) : pagedProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4">
-                      {searchSku
-                        ? `No products found matching SKU: "${searchSku}"`
-                        : "No data found for this range."}
-                    </td>
-                  </tr>
-                ) : (
-                  pagedProducts.map((row, idx) => {
-                    return (
-                      <tr
-                        key={row.sku + idx}
-                        style={{ paddingTop: 12, paddingBottom: 12 }}
-                      >
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          {row.sku}
-                        </td>
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          {row.product_title}
-                        </td>
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          ₹
-                          {Number(row.spend).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          ₹
-                          {Number(row.revenue).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          {row.quantity}
-                        </td>
-                        <td style={{ paddingTop: 12, paddingBottom: 12 }}>
-                          ₹
-                          {Number(row.cogs).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="row align-items-center mt-2">
-            <div className="col-md-6 text-muted" style={{ fontSize: 14 }}>
-              Showing {startIdx} to {endIdx} of {sortedProducts.length} entries
-              {searchSku && (
-                <span className="ms-2 text-primary" style={{ fontSize: 13 }}>
-                  (filtered by SKU: "{searchSku}")
-                </span>
-              )}
-            </div>
-            <div className="col-md-6 d-flex justify-content-end align-items-center">
-              {totalPages > 1 && (
-                <ul
-                  className="pagination pagination-sm mb-0"
-                  style={{ gap: 2 }}
+          <div
+            ref={tableContainerRef}
+            className="table-scroll-container"
+            style={{
+              maxHeight: "600px",
+              overflowY: "auto",
+              overflowX: "auto",
+              scrollBehavior: "smooth",
+              overscrollBehavior: "auto",
+            }}
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+
+              if (
+                scrollTop + clientHeight >= scrollHeight - 10 &&
+                hasMoreData(sortedProducts) &&
+                !isLoadingMore &&
+                !loading
+              ) {
+                loadMoreData();
+              }
+            }}
+            onWheel={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+              const isAtTop = scrollTop <= 1;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+              if (e.deltaY > 0 && isAtBottom) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              } else if (e.deltaY < 0 && isAtTop) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              }
+            }}
+          >
+            <div className="table-responsive">
+              <table className="table table-striped table-bordered align-middle">
+                <thead
+                  className="table-light"
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
+                  }}
                 >
-                  <li
-                    className={`page-item${
-                      currentPage === 1 ? " disabled" : ""
-                    }`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={goToPrevious}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </button>
-                  </li>
-                  {getPaginationNumbers().map((number, idx) => (
-                    <li
-                      key={idx}
-                      className={`page-item${
-                        number === currentPage ? " active" : ""
-                      } ${number === "..." ? "disabled" : ""}`}
-                    >
-                      {number === "..." ? (
-                        <span className="page-link">...</span>
-                      ) : (
-                        <button
-                          className="page-link"
-                          onClick={() => goToPage(number)}
-                        >
-                          {number}
-                        </button>
+                  <tr>
+                    <th style={{ minWidth: 120 }}>SKU</th>
+                    <th style={{ minWidth: 220 }}>Product Title</th>
+                    <th style={{ minWidth: 120 }}>Ad Spend</th>
+                    <th style={{ minWidth: 120 }}>Revenue</th>
+                    <th style={{ minWidth: 100 }}>Quantity</th>
+                    <th style={{ minWidth: 120 }}>COGS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <>
+                      {Array.from({ length: 5 }).map((_, rowIndex) => (
+                        <tr key={`skeleton-${rowIndex}`}>
+                          {Array.from({ length: 6 }).map((_, colIndex) => (
+                            <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                              <div
+                                className="skeleton"
+                                style={{
+                                  height: "20px",
+                                  backgroundColor: "#e5e7eb",
+                                  borderRadius: "4px",
+                                  animation:
+                                    "skeletonPulse 1.5s ease-in-out infinite",
+                                }}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={6} className="text-center text-danger py-4">
+                        {error}
+                      </td>
+                    </tr>
+                  ) : sortedProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4">
+                        {searchSku
+                          ? `No products found matching SKU: "${searchSku}"`
+                          : "No data found for this range."}
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {getDisplayedData(sortedProducts).map((row, idx) => {
+                        return (
+                          <tr
+                            key={row.sku + idx}
+                            style={{ paddingTop: 12, paddingBottom: 12 }}
+                          >
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              {row.sku}
+                            </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              {row.product_title}
+                            </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              ₹
+                              {Number(row.spend).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              ₹
+                              {Number(row.revenue).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              {row.quantity}
+                            </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              ₹
+                              {Number(row.cogs).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {isLoadingMore && (
+                        <>
+                          {Array.from({ length: 5 }).map((_, rowIndex) => (
+                            <tr key={`skeleton-more-${rowIndex}`}>
+                              {Array.from({ length: 6 }).map((_, colIndex) => (
+                                <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                  <div
+                                    className="skeleton"
+                                    style={{
+                                      height: "20px",
+                                      backgroundColor: "#e5e7eb",
+                                      borderRadius: "4px",
+                                      animation:
+                                        "skeletonPulse 1.5s ease-in-out infinite",
+                                    }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
                       )}
-                    </li>
-                  ))}
-                  <li
-                    className={`page-item${
-                      currentPage === totalPages ? " disabled" : ""
-                    }`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={goToNext}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </li>
-                </ul>
-              )}
+                    </>
+                  )}
+                </tbody>
+              </table>
             </div>
+
+            {/* Infinite Scroll Footer */}
+            {sortedProducts.length > 0 && (
+              <div
+                className="d-flex justify-content-between align-items-center px-3 py-2"
+                style={{
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "0 0 8px 8px",
+                  marginTop: "0",
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 5,
+                }}
+              >
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Showing <strong>{getDisplayedData(sortedProducts).length}</strong> of{" "}
+                  <strong>{sortedProducts.length}</strong> entries
+                  {searchSku && (
+                    <span className="ms-2 text-primary" style={{ fontSize: 13 }}>
+                      (filtered by SKU: "{searchSku}")
+                    </span>
+                  )}
+                </div>
+                {hasMoreData(sortedProducts) && (
+                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                    Scroll down to load more
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

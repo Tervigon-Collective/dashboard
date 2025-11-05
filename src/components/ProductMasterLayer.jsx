@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import productMasterApi from "../services/productMasterApi";
 import VariantOptionsManager from "./VariantOptionsManager";
@@ -25,6 +25,12 @@ const ProductMasterLayer = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Infinite scroll state
+  const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const tableContainerRef = useRef(null);
+  const itemsPerPage = 20;
 
   // Form validation errors
   const [formErrors, setFormErrors] = useState({});
@@ -46,9 +52,11 @@ const ProductMasterLayer = () => {
   }, [searchTerm]);
 
   // Load products from API with server-side search, filters, and pagination
-  const loadProducts = async (page = 1, resetPage = false) => {
+  const loadProducts = async (page = 1, resetPage = false, append = false) => {
     try {
-      setIsLoading(true);
+      if (!append) {
+        setIsLoading(true);
+      }
 
       const targetPage = resetPage ? 1 : page;
 
@@ -66,17 +74,26 @@ const ProductMasterLayer = () => {
       );
 
       if (result.success) {
-        setProducts(result.data || []);
+        if (append) {
+          setProducts((prev) => [...prev, ...(result.data || [])]);
+        } else {
+          setProducts(result.data || []);
+          setDisplayedItemsCount(20); // Reset displayed items
+        }
         setCurrentPage(result.pagination?.page || targetPage);
         setTotalPages(result.pagination?.totalPages || 1);
         setTotalRecords(result.pagination?.total || 0);
       } else {
         console.error("Failed to load products:", result.message);
-        setProducts([]);
+        if (!append) {
+          setProducts([]);
+        }
       }
     } catch (error) {
       console.error("Error loading products:", error);
-      setProducts([]);
+      if (!append) {
+        setProducts([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +179,73 @@ const ProductMasterLayer = () => {
     setSortField(null);
     setSortDirection("asc");
     setCurrentPage(1);
+    setDisplayedItemsCount(20);
   };
+
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
+  };
+
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length || currentPage < totalPages;
+  }, [displayedItemsCount, currentPage, totalPages]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || isLoading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if we need to fetch more from API
+    if (displayedItemsCount >= products.length && currentPage < totalPages) {
+      await loadProducts(currentPage + 1, false, true);
+    }
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, isLoading, displayedItemsCount, products.length, currentPage, totalPages, itemsPerPage, loadProducts]);
+
+  // Reset displayed items when search term or filters change
+  useEffect(() => {
+    setDisplayedItemsCount(20);
+  }, [debouncedSearchTerm, hsnCodeFilter, sortField, sortDirection]);
+
+  // Scroll detection for infinite scroll (using event listeners in addition to onScroll/onWheel)
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   // Handle column sort
   const handleSort = (field) => {
@@ -682,9 +765,63 @@ const ProductMasterLayer = () => {
       </div>
 
       {/* Products List */}
-      <div className="table-responsive scroll-sm">
+      <div
+        ref={tableContainerRef}
+        className="table-responsive scroll-sm table-scroll-container"
+        style={{
+          maxHeight: "600px",
+          overflowY: "auto",
+          overflowX: "auto",
+          position: "relative",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          scrollBehavior: "smooth",
+          overscrollBehavior: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        onScroll={(e) => {
+          const target = e.target;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          
+          if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+            if (hasMoreData(products) && !isLoadingMore && !isLoading) {
+              loadMoreData();
+            }
+          }
+        }}
+        onWheel={(e) => {
+          const target = e.currentTarget;
+          const scrollTop = target.scrollTop;
+          const scrollHeight = target.scrollHeight;
+          const clientHeight = target.clientHeight;
+          const isAtTop = scrollTop <= 1;
+          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+          
+          if (e.deltaY > 0 && isAtBottom) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          } else if (e.deltaY < 0 && isAtTop) {
+            window.scrollBy({
+              top: e.deltaY,
+              behavior: 'auto'
+            });
+          }
+        }}
+      >
         <table className="table bordered-table mb-0">
-          <thead>
+          <thead
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              backgroundColor: "#f8f9fa",
+            }}
+          >
             <tr>
               <th scope="col" style={{ width: "60px" }}>
                 #
@@ -740,20 +877,26 @@ const ProductMasterLayer = () => {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan="5" className="text-center py-4">
-                  <div className="d-flex justify-content-center align-items-center">
-                    <div
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                    >
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    Loading products...
-                  </div>
-                </td>
-              </tr>
+            {isLoading && products.length === 0 ? (
+              <>
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <tr key={`skeleton-${rowIndex}`}>
+                    {Array.from({ length: 5 }).map((_, colIndex) => (
+                      <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                        <div
+                          className="skeleton"
+                          style={{
+                            height: "20px",
+                            backgroundColor: "#e5e7eb",
+                            borderRadius: "4px",
+                            animation: "skeletonPulse 1.5s ease-in-out infinite",
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
             ) : products.length === 0 ? (
               <tr>
                 <td colSpan="5" className="text-center py-4 text-muted">
@@ -767,72 +910,95 @@ const ProductMasterLayer = () => {
                 </td>
               </tr>
             ) : (
-              products.map((product, index) => (
-                <tr key={product.product_id}>
-                  <td>
-                    <span className="text-secondary-light">
-                      {(currentPage - 1) * 20 + index + 1}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-secondary-light fw-medium">
-                      {product.product_name}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-secondary-light">
-                      {product.hsn_code || "-"}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className="text-secondary-light text-truncate d-inline-block"
-                      style={{ maxWidth: "200px" }}
-                      title={product.item_description}
-                    >
-                      {product.item_description || "-"}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <div className="d-flex gap-2 justify-content-center">
-                      <button
-                        className="btn btn-sm"
-                        style={{
-                          border: "1px solid #dee2e6",
-                          background: "white",
-                          padding: "4px 8px",
-                          color: "#495057",
-                          borderRadius: "4px",
-                        }}
-                        title="Edit"
-                        onClick={() => handleEditProduct(product)}
+              <>
+                {getDisplayedData(products).map((product, index) => (
+                  <tr key={product.product_id}>
+                    <td>
+                      <span className="text-secondary-light">
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-secondary-light fw-medium">
+                        {product.product_name}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-secondary-light">
+                        {product.hsn_code || "-"}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className="text-secondary-light text-truncate d-inline-block"
+                        style={{ maxWidth: "200px" }}
+                        title={product.item_description}
                       >
-                        <Icon icon="lucide:pencil" width="14" height="14" />
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        style={{
-                          border: "1px solid #dc3545",
-                          background: "white",
-                          padding: "4px 8px",
-                          color: "#dc3545",
-                          borderRadius: "4px",
-                        }}
-                        title="Delete"
-                        onClick={() => handleDeleteProduct(product)}
-                      >
-                        <Icon icon="lucide:trash-2" width="14" height="14" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        {product.item_description || "-"}
+                      </span>
+                    </td>
+                    <td className="text-center">
+                      <div className="d-flex gap-2 justify-content-center">
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            border: "1px solid #dee2e6",
+                            background: "white",
+                            padding: "4px 8px",
+                            color: "#495057",
+                            borderRadius: "4px",
+                          }}
+                          title="Edit"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          <Icon icon="lucide:pencil" width="14" height="14" />
+                        </button>
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            border: "1px solid #dc3545",
+                            background: "white",
+                            padding: "4px 8px",
+                            color: "#dc3545",
+                            borderRadius: "4px",
+                          }}
+                          title="Delete"
+                          onClick={() => handleDeleteProduct(product)}
+                        >
+                          <Icon icon="lucide:trash-2" width="14" height="14" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {isLoadingMore && (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-more-${rowIndex}`}>
+                        {Array.from({ length: 5 }).map((_, colIndex) => (
+                          <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Infinite Scroll Footer */}
       {totalRecords > 0 && (
         <div
           className="d-flex justify-content-between align-items-center px-3 py-2"
@@ -840,95 +1006,20 @@ const ProductMasterLayer = () => {
             backgroundColor: "#f8f9fa",
             borderRadius: "0 0 8px 8px",
             marginTop: "0",
+            position: "sticky",
+            bottom: 0,
+            zIndex: 5,
           }}
         >
-          <div className="d-flex align-items-center gap-2">
-            <button
-              className="btn btn-sm"
-              style={{ border: "none", background: "none", color: "#495057" }}
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1 || isLoading}
-            >
-              <Icon icon="mdi:chevron-left" width="16" height="16" />
-            </button>
-
-            {/* Page Numbers */}
-            <div className="d-flex gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    className="btn btn-sm"
-                    style={{
-                      border: "none",
-                      background:
-                        pageNum === currentPage ? "#6f42c1" : "transparent",
-                      color: pageNum === currentPage ? "white" : "#495057",
-                      borderRadius: "4px",
-                      padding: "4px 8px",
-                      minWidth: "32px",
-                    }}
-                    onClick={() => setCurrentPage(pageNum)}
-                    disabled={isLoading}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 5 && (
-                <>
-                  <span className="px-2" style={{ color: "#495057" }}>
-                    ...
-                  </span>
-                  <button
-                    className="btn btn-sm"
-                    style={{
-                      border: "none",
-                      background:
-                        totalPages === currentPage ? "#6f42c1" : "transparent",
-                      color: totalPages === currentPage ? "white" : "#495057",
-                      borderRadius: "4px",
-                      padding: "4px 8px",
-                      minWidth: "32px",
-                    }}
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={isLoading}
-                  >
-                    {totalPages}
-                  </button>
-                </>
-              )}
-            </div>
-
-            <button
-              className="btn btn-sm"
-              style={{ border: "none", background: "none", color: "#495057" }}
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages || isLoading}
-            >
-              <Icon icon="mdi:chevron-right" width="16" height="16" />
-            </button>
+          <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+            Showing <strong>{getDisplayedData(products).length}</strong> of{" "}
+            <strong>{totalRecords}</strong> products
           </div>
-
-          <div className="d-flex align-items-center gap-3">
-            <div className="d-flex align-items-center gap-2">
-              <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-                20/page
-              </span>
-              <Icon
-                icon="mdi:chevron-down"
-                width="16"
-                height="16"
-                style={{ color: "#495057" }}
-              />
+          {hasMoreData(products) && (
+            <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+              Scroll down to load more
             </div>
-            <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-              Total {totalRecords} record{totalRecords !== 1 ? "s" : ""}
-            </span>
-          </div>
+          )}
         </div>
       )}
 

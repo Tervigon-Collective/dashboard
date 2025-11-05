@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
@@ -190,6 +190,12 @@ const ReceivingManagementLayer = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // Infinite scroll state for Purchase Request tab
+  const [purchaseRequestDisplayedItems, setPurchaseRequestDisplayedItems] = useState([]);
+  const [purchaseRequestLoadingMore, setPurchaseRequestLoadingMore] = useState(false);
+  const purchaseRequestContainerRef = useRef(null);
+  const purchaseRequestItemsPerPage = 20;
+
   const [formData, setFormData] = useState({
     selectedVendor: null,
     products: [{ product_id: null, selectedVariants: [] }], // Start with one empty product
@@ -201,17 +207,44 @@ const ReceivingManagementLayer = () => {
   const ReceiptDetailsTab = ({
     requests,
     isLoading,
-    currentPage,
-    totalPages,
-    totalRecords,
-    loadReceiptDetailsRequests,
     handleViewRequest,
     viewModalOpen,
     setViewModalOpen,
     selectedRequest,
     searchTerm,
     setSearchTerm,
+    displayedItems,
+    isLoadingMore,
+    containerRef,
+    getDisplayedData,
+    hasMoreData,
+    loadMoreData,
   }) => {
+    // Filter data based on search term
+    const filteredData = requests.filter((request) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      // Search by vendor name
+      if (request.vendor_name?.toLowerCase().includes(search)) {
+        return true;
+      }
+      // Search by aggregated product names (if present)
+      const names =
+        request.aggregated?.productNames ||
+        (request.items && request.items.length > 0
+          ? [
+              ...new Set(
+                request.items
+                  .map((it) => it.product_name)
+                  .filter(Boolean)
+              ),
+            ].join(", ")
+          : "");
+      return names.toLowerCase().includes(search);
+    });
+
+    const displayedData = filteredData.slice(0, displayedItems.length);
+
     return (
       <>
         {/* Card */}
@@ -239,333 +272,350 @@ const ReceivingManagementLayer = () => {
               </div>
             </div>
             {/* Table */}
-            <div className="table-responsive">
-              <table
-                className="table table-hover"
-                style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-              >
-                <thead
+            <div
+              ref={containerRef}
+              className="table-scroll-container"
+              style={{
+                maxHeight: "600px",
+                overflowY: "auto",
+                overflowX: "auto",
+                scrollBehavior: "smooth",
+                overscrollBehavior: "auto",
+              }}
+              onScroll={(e) => {
+                const target = e.currentTarget;
+                const scrollTop = target.scrollTop;
+                const scrollHeight = target.scrollHeight;
+                const clientHeight = target.clientHeight;
+
+                if (
+                  scrollTop + clientHeight >= scrollHeight - 10 &&
+                  displayedData.length < filteredData.length &&
+                  !isLoadingMore &&
+                  !isLoading
+                ) {
+                  loadMoreData();
+                }
+              }}
+              onWheel={(e) => {
+                const target = e.currentTarget;
+                const scrollTop = target.scrollTop;
+                const scrollHeight = target.scrollHeight;
+                const clientHeight = target.clientHeight;
+                const isAtTop = scrollTop <= 1;
+                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+                if (e.deltaY > 0 && isAtBottom) {
+                  window.scrollBy({
+                    top: e.deltaY,
+                    behavior: "auto",
+                  });
+                } else if (e.deltaY < 0 && isAtTop) {
+                  window.scrollBy({
+                    top: e.deltaY,
+                    behavior: "auto",
+                  });
+                }
+              }}
+            >
+              <div className="table-responsive">
+                <table
+                  className="table table-hover"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  <thead
+                    style={{
+                      backgroundColor: "#f9fafb",
+                      borderBottom: "2px solid #e5e7eb",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 10,
+                    }}
+                  >
+                    <tr>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Sr No
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Vendor Name
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Order Date
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Delivery Date
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Product Name
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Invoice Qty
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Sorted Qty
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Damage Qty
+                      </th>
+                      <th
+                        style={{
+                          fontWeight: "600",
+                          color: "#374151",
+                          padding: "12px",
+                        }}
+                      >
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <>
+                        {Array.from({ length: 5 }).map((_, rowIndex) => (
+                          <tr key={`skeleton-${rowIndex}`}>
+                            {Array.from({ length: 9 }).map((_, colIndex) => (
+                              <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                                <div
+                                  className="skeleton"
+                                  style={{
+                                    height: "20px",
+                                    backgroundColor: "#e5e7eb",
+                                    borderRadius: "4px",
+                                    animation:
+                                      "skeletonPulse 1.5s ease-in-out infinite",
+                                  }}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </>
+                    ) : displayedData.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" className="text-center py-4">
+                          <div className="d-flex flex-column align-items-center">
+                            <Icon
+                              icon="mdi:file-cabinet"
+                              width="48"
+                              height="48"
+                              className="text-muted mb-2"
+                            />
+                            <p className="text-muted mb-0">
+                              No receipt details found
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
+                        {displayedData.map((request, index) => (
+                          <tr key={request.request_id}>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {index + 1}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {request.vendor_name || "-"}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {new Date(request.order_date).toLocaleDateString()}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {new Date(
+                                request.delivery_date
+                              ).toLocaleDateString()}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {request.aggregated?.productNames || "-"}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {request.aggregated?.totalInvoiceQty ?? 0}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {request.aggregated?.totalSortedQty ?? 0}
+                            </td>
+                            <td
+                              style={{
+                                padding: "clamp(8px, 2vw, 12px)",
+                                color: "#374151",
+                                fontSize: "clamp(11px, 2.5vw, 14px)",
+                              }}
+                            >
+                              {request.aggregated?.totalDamageQty ?? 0}
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                              <div className="d-flex flex-wrap gap-1 gap-sm-2">
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="View"
+                                  onClick={() =>
+                                    handleViewRequest(request, "quality-check")
+                                  }
+                                >
+                                  <Icon
+                                    icon="lucide:eye"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#3b82f6" }}
+                                  />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {isLoadingMore && (
+                          <>
+                            {Array.from({ length: 5 }).map((_, rowIndex) => (
+                              <tr key={`skeleton-more-${rowIndex}`}>
+                                {Array.from({ length: 9 }).map((_, colIndex) => (
+                                  <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                    <div
+                                      className="skeleton"
+                                      style={{
+                                        height: "20px",
+                                        backgroundColor: "#e5e7eb",
+                                        borderRadius: "4px",
+                                        animation:
+                                          "skeletonPulse 1.5s ease-in-out infinite",
+                                      }}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Infinite Scroll Footer */}
+              {filteredData.length > 0 && (
+                <div
+                  className="d-flex justify-content-between align-items-center px-3 py-2"
                   style={{
-                    backgroundColor: "#f9fafb",
-                    borderBottom: "2px solid #e5e7eb",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "0 0 8px 8px",
+                    marginTop: "0",
+                    position: "sticky",
+                    bottom: 0,
+                    zIndex: 5,
                   }}
                 >
-                  <tr>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Sr No
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Vendor Name
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Order Date
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Delivery Date
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Product Name
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Invoice Qty
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Sorted Qty
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Damage Qty
-                    </th>
-                    <th
-                      style={{
-                        fontWeight: "600",
-                        color: "#374151",
-                        padding: "12px",
-                      }}
-                    >
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan="9" className="text-center py-4">
-                        <div className="d-flex justify-content-center align-items-center">
-                          <div
-                            className="spinner-border spinner-border-sm me-2"
-                            role="status"
-                          >
-                            <span className="visually-hidden">Loading...</span>
-                          </div>
-                          Loading receipt details...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : requests.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="text-center py-4">
-                        <div className="d-flex flex-column align-items-center">
-                          <Icon
-                            icon="mdi:file-cabinet"
-                            width="48"
-                            height="48"
-                            className="text-muted mb-2"
-                          />
-                          <p className="text-muted mb-0">
-                            No receipt details found
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    requests
-                      .filter((request) => {
-                        if (!searchTerm) return true;
-                        const search = searchTerm.toLowerCase();
-                        // Search by vendor name
-                        if (
-                          request.vendor_name?.toLowerCase().includes(search)
-                        ) {
-                          return true;
-                        }
-                        // Search by aggregated product names (if present)
-                        const names =
-                          request.aggregated?.productNames ||
-                          (request.items && request.items.length > 0
-                            ? [
-                                ...new Set(
-                                  request.items
-                                    .map((it) => it.product_name)
-                                    .filter(Boolean)
-                                ),
-                              ].join(", ")
-                            : "");
-                        return names.toLowerCase().includes(search);
-                      })
-                      .map((request, index) => (
-                        <tr key={request.request_id}>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {index + 1}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {request.vendor_name || "-"}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {new Date(request.order_date).toLocaleDateString()}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {new Date(
-                              request.delivery_date
-                            ).toLocaleDateString()}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {request.aggregated?.productNames || "-"}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {request.aggregated?.totalInvoiceQty ?? 0}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {request.aggregated?.totalSortedQty ?? 0}
-                          </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {request.aggregated?.totalDamageQty ?? 0}
-                          </td>
-                          <td style={{ padding: "12px" }}>
-                            <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="View"
-                                onClick={() =>
-                                  handleViewRequest(request, "quality-check")
-                                }
-                              >
-                                <Icon
-                                  icon="lucide:eye"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#3b82f6" }}
-                                />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination - Responsive */}
-            {totalRecords > 0 && (
-              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
-                <div className="d-flex align-items-center gap-2">
-                  <button
-                    className="btn btn-sm"
-                    style={{
-                      border: "none",
-                      background: "none",
-                      color: "#495057",
-                    }}
-                    onClick={() => loadReceiptDetailsRequests(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <Icon icon="mdi:chevron-left" width="16" height="16" />
-                  </button>
-
-                  <div className="d-flex gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const pageNum = i + 1;
-                      return (
-                        <button
-                          key={pageNum}
-                          className="btn btn-sm"
-                          style={{
-                            border: "none",
-                            background:
-                              pageNum === currentPage
-                                ? "#6f42c1"
-                                : "transparent",
-                            color:
-                              pageNum === currentPage ? "white" : "#495057",
-                            borderRadius: "4px",
-                            padding: "4px 8px",
-                            minWidth: "32px",
-                          }}
-                          onClick={() => loadReceiptDetailsRequests(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                    Showing <strong>{displayedData.length}</strong> of{" "}
+                    <strong>{filteredData.length}</strong> entries
                   </div>
-
-                  <button
-                    className="btn btn-sm"
-                    style={{
-                      border: "none",
-                      background: "none",
-                      color: "#495057",
-                    }}
-                    onClick={() => loadReceiptDetailsRequests(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <Icon icon="mdi:chevron-right" width="16" height="16" />
-                  </button>
+                  {displayedData.length < filteredData.length && (
+                    <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                      Scroll down to load more
+                    </div>
+                  )}
                 </div>
-
-                <div style={{ fontSize: "14px", color: "#6c757d" }}>
-                  Showing <strong>{requests.length}</strong> of{" "}
-                  <strong>{totalRecords}</strong> requests
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </>
@@ -598,6 +648,12 @@ const ReceivingManagementLayer = () => {
   const [toBeDeliveredCurrentPage, setToBeDeliveredCurrentPage] = useState(1);
   const [toBeDeliveredTotalPages, setToBeDeliveredTotalPages] = useState(1);
   const [toBeDeliveredTotalRecords, setToBeDeliveredTotalRecords] = useState(0);
+  
+  // Infinite scroll state for To Be Delivered tab
+  const [toBeDeliveredDisplayedItems, setToBeDeliveredDisplayedItems] = useState([]);
+  const [toBeDeliveredLoadingMore, setToBeDeliveredLoadingMore] = useState(false);
+  const toBeDeliveredContainerRef = useRef(null);
+  const toBeDeliveredItemsPerPage = 20;
 
   // Quality Check tab state
   const [qualityCheckRequests, setQualityCheckRequests] = useState([]);
@@ -605,6 +661,12 @@ const ReceivingManagementLayer = () => {
   const [qualityCheckCurrentPage, setQualityCheckCurrentPage] = useState(1);
   const [qualityCheckTotalPages, setQualityCheckTotalPages] = useState(1);
   const [qualityCheckTotalRecords, setQualityCheckTotalRecords] = useState(0);
+  
+  // Infinite scroll state for Quality Check tab
+  const [qualityCheckDisplayedItems, setQualityCheckDisplayedItems] = useState([]);
+  const [qualityCheckLoadingMore, setQualityCheckLoadingMore] = useState(false);
+  const qualityCheckContainerRef = useRef(null);
+  const qualityCheckItemsPerPage = 20;
 
   // Receipt Details tab state
   const [receiptRequests, setReceiptRequests] = useState([]);
@@ -612,6 +674,12 @@ const ReceivingManagementLayer = () => {
   const [receiptCurrentPage, setReceiptCurrentPage] = useState(1);
   const [receiptTotalPages, setReceiptTotalPages] = useState(1);
   const [receiptTotalRecords, setReceiptTotalRecords] = useState(0);
+  
+  // Infinite scroll state for Receipt Details tab
+  const [receiptDisplayedItems, setReceiptDisplayedItems] = useState([]);
+  const [receiptLoadingMore, setReceiptLoadingMore] = useState(false);
+  const receiptContainerRef = useRef(null);
+  const receiptItemsPerPage = 20;
 
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
@@ -629,13 +697,18 @@ const ReceivingManagementLayer = () => {
   });
 
   // Load purchase requests
-  const loadPurchaseRequests = async (page = 1) => {
+  const loadPurchaseRequests = async (page = 1, append = false) => {
     try {
       setIsLoading(true);
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
 
       if (result.success) {
-        setRequests(result.data);
+        if (append) {
+          setRequests(prev => [...prev, ...result.data]);
+        } else {
+          setRequests(result.data);
+          setPurchaseRequestDisplayedItems(result.data.slice(0, purchaseRequestItemsPerPage));
+        }
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
         setTotalRecords(result.pagination.total);
@@ -648,7 +721,7 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load to-be-delivered requests
-  const loadToBeDeliveredRequests = async (page = 1) => {
+  const loadToBeDeliveredRequests = async (page = 1, append = false) => {
     try {
       setToBeDeliveredLoading(true);
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
@@ -658,7 +731,12 @@ const ReceivingManagementLayer = () => {
         const filteredRequests = result.data.filter(
           (request) => request.status === "to_be_delivered"
         );
-        setToBeDeliveredRequests(filteredRequests);
+        if (append) {
+          setToBeDeliveredRequests(prev => [...prev, ...filteredRequests]);
+        } else {
+          setToBeDeliveredRequests(filteredRequests);
+          setToBeDeliveredDisplayedItems(filteredRequests.slice(0, toBeDeliveredItemsPerPage));
+        }
         setToBeDeliveredCurrentPage(result.pagination.page);
         setToBeDeliveredTotalPages(result.pagination.totalPages);
         setToBeDeliveredTotalRecords(filteredRequests.length);
@@ -671,7 +749,7 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load quality check (arrived) requests
-  const loadQualityCheckRequests = async (page = 1) => {
+  const loadQualityCheckRequests = async (page = 1, append = false) => {
     try {
       setQualityCheckLoading(true);
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
@@ -681,7 +759,12 @@ const ReceivingManagementLayer = () => {
         const filteredRequests = result.data.filter(
           (request) => request.status === "arrived"
         );
-        setQualityCheckRequests(filteredRequests);
+        if (append) {
+          setQualityCheckRequests(prev => [...prev, ...filteredRequests]);
+        } else {
+          setQualityCheckRequests(filteredRequests);
+          setQualityCheckDisplayedItems(filteredRequests.slice(0, qualityCheckItemsPerPage));
+        }
         setQualityCheckCurrentPage(result.pagination.page);
         setQualityCheckTotalPages(result.pagination.totalPages);
         setQualityCheckTotalRecords(filteredRequests.length);
@@ -694,7 +777,7 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load receipt details (fulfilled) requests with QC aggregation
-  const loadReceiptDetailsRequests = async (page = 1) => {
+  const loadReceiptDetailsRequests = async (page = 1, append = false) => {
     try {
       setReceiptLoading(true);
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
@@ -779,7 +862,12 @@ const ReceivingManagementLayer = () => {
           })
         );
 
-        setReceiptRequests(enriched);
+        if (append) {
+          setReceiptRequests(prev => [...prev, ...enriched]);
+        } else {
+          setReceiptRequests(enriched);
+          setReceiptDisplayedItems(enriched.slice(0, receiptItemsPerPage));
+        }
         setReceiptCurrentPage(result.pagination.page);
         setReceiptTotalPages(result.pagination.totalPages);
         setReceiptTotalRecords(enriched.length);
@@ -837,6 +925,111 @@ const ReceivingManagementLayer = () => {
       loadReceiptDetailsRequests();
     }
   }, [activeTab]);
+
+  // Reset displayed items when search term or active tab changes
+  useEffect(() => {
+    if (activeTab === "purchase-request") {
+      setPurchaseRequestDisplayedItems(requests.slice(0, purchaseRequestItemsPerPage));
+    } else if (activeTab === "to-be-delivered") {
+      setToBeDeliveredDisplayedItems(toBeDeliveredRequests.slice(0, toBeDeliveredItemsPerPage));
+    } else if (activeTab === "quality-check") {
+      setQualityCheckDisplayedItems(qualityCheckRequests.slice(0, qualityCheckItemsPerPage));
+    } else if (activeTab === "receipt-details") {
+      setReceiptDisplayedItems(receiptRequests.slice(0, receiptItemsPerPage));
+    }
+  }, [searchTerm, activeTab, requests, toBeDeliveredRequests, qualityCheckRequests, receiptRequests]);
+
+  // Infinite scroll helper functions for Purchase Request tab
+  const getPurchaseRequestDisplayedData = useCallback(() => {
+    return purchaseRequestDisplayedItems;
+  }, [purchaseRequestDisplayedItems]);
+
+  const hasMorePurchaseRequestData = useCallback((filteredArray) => {
+    return purchaseRequestDisplayedItems.length < filteredArray.length;
+  }, [purchaseRequestDisplayedItems.length]);
+
+  const loadMorePurchaseRequests = useCallback(async () => {
+    if (purchaseRequestLoadingMore || isLoading) return;
+    
+    setPurchaseRequestLoadingMore(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const nextItems = requests.slice(
+      purchaseRequestDisplayedItems.length,
+      purchaseRequestDisplayedItems.length + purchaseRequestItemsPerPage
+    );
+    setPurchaseRequestDisplayedItems(prev => [...prev, ...nextItems]);
+    setPurchaseRequestLoadingMore(false);
+  }, [purchaseRequestLoadingMore, isLoading, requests, purchaseRequestDisplayedItems.length, purchaseRequestItemsPerPage]);
+
+  // Infinite scroll helper functions for To Be Delivered tab
+  const getToBeDeliveredDisplayedData = useCallback(() => {
+    return toBeDeliveredDisplayedItems;
+  }, [toBeDeliveredDisplayedItems]);
+
+  const hasMoreToBeDeliveredData = useCallback(() => {
+    return toBeDeliveredDisplayedItems.length < toBeDeliveredRequests.length;
+  }, [toBeDeliveredDisplayedItems.length, toBeDeliveredRequests.length]);
+
+  const loadMoreToBeDelivered = useCallback(async () => {
+    if (toBeDeliveredLoadingMore || toBeDeliveredLoading) return;
+    
+    setToBeDeliveredLoadingMore(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const nextItems = toBeDeliveredRequests.slice(
+      toBeDeliveredDisplayedItems.length,
+      toBeDeliveredDisplayedItems.length + toBeDeliveredItemsPerPage
+    );
+    setToBeDeliveredDisplayedItems(prev => [...prev, ...nextItems]);
+    setToBeDeliveredLoadingMore(false);
+  }, [toBeDeliveredLoadingMore, toBeDeliveredLoading, toBeDeliveredRequests, toBeDeliveredDisplayedItems.length, toBeDeliveredItemsPerPage]);
+
+  // Infinite scroll helper functions for Quality Check tab
+  const getQualityCheckDisplayedData = useCallback(() => {
+    return qualityCheckDisplayedItems;
+  }, [qualityCheckDisplayedItems]);
+
+  const hasMoreQualityCheckData = useCallback(() => {
+    return qualityCheckDisplayedItems.length < qualityCheckRequests.length;
+  }, [qualityCheckDisplayedItems.length, qualityCheckRequests.length]);
+
+  const loadMoreQualityCheck = useCallback(async () => {
+    if (qualityCheckLoadingMore || qualityCheckLoading) return;
+    
+    setQualityCheckLoadingMore(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const nextItems = qualityCheckRequests.slice(
+      qualityCheckDisplayedItems.length,
+      qualityCheckDisplayedItems.length + qualityCheckItemsPerPage
+    );
+    setQualityCheckDisplayedItems(prev => [...prev, ...nextItems]);
+    setQualityCheckLoadingMore(false);
+  }, [qualityCheckLoadingMore, qualityCheckLoading, qualityCheckRequests, qualityCheckDisplayedItems.length, qualityCheckItemsPerPage]);
+
+  // Infinite scroll helper functions for Receipt Details tab
+  const getReceiptDisplayedData = useCallback(() => {
+    return receiptDisplayedItems;
+  }, [receiptDisplayedItems]);
+
+  const hasMoreReceiptData = useCallback(() => {
+    return receiptDisplayedItems.length < receiptRequests.length;
+  }, [receiptDisplayedItems.length, receiptRequests.length]);
+
+  const loadMoreReceipt = useCallback(async () => {
+    if (receiptLoadingMore || receiptLoading) return;
+    
+    setReceiptLoadingMore(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const nextItems = receiptRequests.slice(
+      receiptDisplayedItems.length,
+      receiptDisplayedItems.length + receiptItemsPerPage
+    );
+    setReceiptDisplayedItems(prev => [...prev, ...nextItems]);
+    setReceiptLoadingMore(false);
+  }, [receiptLoadingMore, receiptLoading, receiptRequests, receiptDisplayedItems.length, receiptItemsPerPage]);
 
   // Handle vendor selection
   const handleVendorSelect = (vendorId) => {
@@ -1544,31 +1737,35 @@ const ReceivingManagementLayer = () => {
               selectedRequest={selectedRequest}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
+              displayedItems={purchaseRequestDisplayedItems}
+              isLoadingMore={purchaseRequestLoadingMore}
+              containerRef={purchaseRequestContainerRef}
+              getDisplayedData={getPurchaseRequestDisplayedData}
+              hasMoreData={hasMorePurchaseRequestData}
+              loadMoreData={loadMorePurchaseRequests}
             />
           )}
           {activeTab === "to-be-delivered" && (
             <ToBeDeliveredTab
               requests={toBeDeliveredRequests}
               isLoading={toBeDeliveredLoading}
-              currentPage={toBeDeliveredCurrentPage}
-              totalPages={toBeDeliveredTotalPages}
-              totalRecords={toBeDeliveredTotalRecords}
-              loadToBeDeliveredRequests={loadToBeDeliveredRequests}
               handleViewRequest={handleViewRequest}
               handleSettingsClick={handleSettingsClick}
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
+              displayedItems={toBeDeliveredDisplayedItems}
+              isLoadingMore={toBeDeliveredLoadingMore}
+              containerRef={toBeDeliveredContainerRef}
+              getDisplayedData={getToBeDeliveredDisplayedData}
+              hasMoreData={hasMoreToBeDeliveredData}
+              loadMoreData={loadMoreToBeDelivered}
             />
           )}
           {activeTab === "quality-check" && (
             <QualityCheckTab
               requests={qualityCheckRequests}
               isLoading={qualityCheckLoading}
-              currentPage={qualityCheckCurrentPage}
-              totalPages={qualityCheckTotalPages}
-              totalRecords={qualityCheckTotalRecords}
-              loadQualityCheckRequests={loadQualityCheckRequests}
               handleViewRequest={(request) =>
                 handleViewRequest(request, "quality-check")
               }
@@ -1577,22 +1774,30 @@ const ReceivingManagementLayer = () => {
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
+              displayedItems={qualityCheckDisplayedItems}
+              isLoadingMore={qualityCheckLoadingMore}
+              containerRef={qualityCheckContainerRef}
+              getDisplayedData={getQualityCheckDisplayedData}
+              hasMoreData={hasMoreQualityCheckData}
+              loadMoreData={loadMoreQualityCheck}
             />
           )}
           {activeTab === "receipt-details" && (
             <ReceiptDetailsTab
               requests={receiptRequests}
               isLoading={receiptLoading}
-              currentPage={receiptCurrentPage}
-              totalPages={receiptTotalPages}
-              totalRecords={receiptTotalRecords}
-              loadReceiptDetailsRequests={loadReceiptDetailsRequests}
               handleViewRequest={handleViewRequest}
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
+              displayedItems={receiptDisplayedItems}
+              isLoadingMore={receiptLoadingMore}
+              containerRef={receiptContainerRef}
+              getDisplayedData={getReceiptDisplayedData}
+              hasMoreData={hasMoreReceiptData}
+              loadMoreData={loadMoreReceipt}
             />
           )}
         </div>
@@ -2586,7 +2791,36 @@ const PurchaseRequestTab = ({
   selectedRequest,
   searchTerm,
   setSearchTerm,
+  displayedItems,
+  isLoadingMore,
+  containerRef,
+  getDisplayedData,
+  hasMoreData,
+  loadMoreData,
 }) => {
+  // Filter data based on search term
+  const filteredData = requests.filter((request) => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+
+    // Search by vendor name
+    if (request.vendor_name?.toLowerCase().includes(search)) {
+      return true;
+    }
+
+    // Search by product names
+    if (request.items && request.items.length > 0) {
+      return request.items.some((item) =>
+        item.product_name?.toLowerCase().includes(search)
+      );
+    }
+
+    return false;
+  });
+
+  // Get displayed data for infinite scroll - slice filtered data
+  const displayedData = filteredData.slice(0, displayedItems.length);
+
   return (
     <>
       {/* Action Buttons and Search */}
@@ -2624,7 +2858,52 @@ const PurchaseRequestTab = ({
           </div>
 
           {/* Table */}
-          <div className="table-responsive">
+          <div
+            ref={containerRef}
+            className="table-responsive table-scroll-container"
+            style={{
+              maxHeight: "600px",
+              overflowY: "auto",
+              overflowX: "auto",
+              scrollBehavior: "smooth",
+              overscrollBehavior: "auto",
+            }}
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+
+              if (
+                scrollTop + clientHeight >= scrollHeight - 10 &&
+                hasMoreData(filteredData) &&
+                !isLoadingMore &&
+                !isLoading
+              ) {
+                loadMoreData();
+              }
+            }}
+            onWheel={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+              const isAtTop = scrollTop <= 1;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+              if (e.deltaY > 0 && isAtBottom) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              } else if (e.deltaY < 0 && isAtTop) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              }
+            }}
+          >
             <table
               className="table table-hover"
               style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
@@ -2633,6 +2912,9 @@ const PurchaseRequestTab = ({
                 style={{
                   backgroundColor: "#f9fafb",
                   borderBottom: "2px solid #e5e7eb",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
                 }}
               >
                 <tr>
@@ -2710,20 +2992,27 @@ const PurchaseRequestTab = ({
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan="7" className="text-center py-4">
-                      <div className="d-flex justify-content-center align-items-center">
-                        <div
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Loading...</span>
-                        </div>
-                        Loading purchase requests...
-                      </div>
-                    </td>
-                  </tr>
-                ) : requests.length === 0 ? (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-${rowIndex}`}>
+                        {Array.from({ length: 7 }).map((_, colIndex) => (
+                          <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation:
+                                  "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                ) : displayedData.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
@@ -2745,26 +3034,8 @@ const PurchaseRequestTab = ({
                     </td>
                   </tr>
                 ) : (
-                  requests
-                    .filter((request) => {
-                      if (!searchTerm) return true;
-                      const search = searchTerm.toLowerCase();
-
-                      // Search by vendor name
-                      if (request.vendor_name?.toLowerCase().includes(search)) {
-                        return true;
-                      }
-
-                      // Search by product names
-                      if (request.items && request.items.length > 0) {
-                        return request.items.some((item) =>
-                          item.product_name?.toLowerCase().includes(search)
-                        );
-                      }
-
-                      return false;
-                    })
-                    .map((request, index) => (
+                  <>
+                    {displayedData.map((request, index) => (
                       <tr key={request.request_id}>
                         <td
                           style={{
@@ -2933,110 +3204,59 @@ const PurchaseRequestTab = ({
                           </div>
                         </td>
                       </tr>
-                    ))
+                    ))}
+                    {isLoadingMore && (
+                      <>
+                        {Array.from({ length: 5 }).map((_, rowIndex) => (
+                          <tr key={`skeleton-more-${rowIndex}`}>
+                            {Array.from({ length: 7 }).map((_, colIndex) => (
+                              <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                <div
+                                  className="skeleton"
+                                  style={{
+                                    height: "20px",
+                                    backgroundColor: "#e5e7eb",
+                                    borderRadius: "4px",
+                                    animation:
+                                      "skeletonPulse 1.5s ease-in-out infinite",
+                                  }}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </>
                 )}
               </tbody>
             </table>
+
+            {/* Infinite Scroll Footer */}
+            {filteredData.length > 0 && (
+              <div
+                className="d-flex justify-content-between align-items-center px-3 py-2"
+                style={{
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "0 0 8px 8px",
+                  marginTop: "0",
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 5,
+                }}
+              >
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Showing <strong>{displayedData.length}</strong> of{" "}
+                  <strong>{filteredData.length}</strong> entries
+                </div>
+                {hasMoreData(filteredData) && (
+                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                    Scroll down to load more
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-
-          {/* Pagination - Responsive */}
-          {totalRecords > 0 && (
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
-              <div className="d-flex align-items-center gap-2">
-                <button
-                  className="btn btn-sm"
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: "#495057",
-                  }}
-                  onClick={() => loadPurchaseRequests(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <Icon icon="mdi:chevron-left" width="16" height="16" />
-                </button>
-
-                <div className="d-flex gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <button
-                        key={pageNum}
-                        className="btn btn-sm"
-                        style={{
-                          border: "none",
-                          background:
-                            pageNum === currentPage ? "#6f42c1" : "transparent",
-                          color: pageNum === currentPage ? "white" : "#495057",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          minWidth: "32px",
-                        }}
-                        onClick={() => loadPurchaseRequests(pageNum)}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  {totalPages > 5 && (
-                    <>
-                      <span className="px-2" style={{ color: "#495057" }}>
-                        ...
-                      </span>
-                      <button
-                        className="btn btn-sm"
-                        style={{
-                          border: "none",
-                          background:
-                            totalPages === currentPage
-                              ? "#6f42c1"
-                              : "transparent",
-                          color:
-                            totalPages === currentPage ? "white" : "#495057",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          minWidth: "32px",
-                        }}
-                        onClick={() => loadPurchaseRequests(totalPages)}
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  className="btn btn-sm"
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: "#495057",
-                  }}
-                  onClick={() => loadPurchaseRequests(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  <Icon icon="mdi:chevron-right" width="16" height="16" />
-                </button>
-              </div>
-
-              <div className="d-flex align-items-center gap-3">
-                <div className="d-flex align-items-center gap-2">
-                  <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-                    20/page
-                  </span>
-                  <Icon
-                    icon="mdi:chevron-down"
-                    width="16"
-                    height="16"
-                    style={{ color: "#495057" }}
-                  />
-                </div>
-                <span style={{ color: "#495057", fontSize: "0.875rem" }}>
-                  Total {totalRecords} record{totalRecords !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -3669,15 +3889,17 @@ const ReceivingManagementPage = () => {
 const ToBeDeliveredTab = ({
   requests,
   isLoading,
-  currentPage,
-  totalPages,
-  totalRecords,
-  loadToBeDeliveredRequests,
   handleViewRequest,
   handleSettingsClick,
   viewModalOpen,
   setViewModalOpen,
   selectedRequest,
+  displayedItems,
+  isLoadingMore,
+  containerRef,
+  getDisplayedData,
+  hasMoreData,
+  loadMoreData,
 }) => {
   const [downloadingPdf, setDownloadingPdf] = useState({});
   const [poInfoCache, setPoInfoCache] = useState({});
@@ -4037,67 +4259,6 @@ const ToBeDeliveredTab = ({
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalRecords > 0 && (
-          <div
-            className="d-flex justify-content-between align-items-center px-3 py-2"
-            style={{
-              backgroundColor: "#f8f9fa",
-              borderRadius: "0 0 8px 8px",
-              marginTop: "0",
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <button
-                className="btn btn-sm"
-                style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => loadToBeDeliveredRequests(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <Icon icon="mdi:chevron-left" width="16" height="16" />
-              </button>
-
-              <div className="d-flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      className="btn btn-sm"
-                      style={{
-                        border: "none",
-                        background:
-                          pageNum === currentPage ? "#6f42c1" : "transparent",
-                        color: pageNum === currentPage ? "white" : "#495057",
-                        borderRadius: "4px",
-                        padding: "4px 8px",
-                        minWidth: "32px",
-                      }}
-                      onClick={() => loadToBeDeliveredRequests(pageNum)}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                className="btn btn-sm"
-                style={{ border: "none", background: "none", color: "#495057" }}
-                onClick={() => loadToBeDeliveredRequests(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <Icon icon="mdi:chevron-right" width="16" height="16" />
-              </button>
-            </div>
-
-            <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              Showing <strong>{requests.length}</strong> of{" "}
-              <strong>{totalRecords}</strong> requests
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
@@ -4107,17 +4268,21 @@ const ToBeDeliveredTab = ({
 const QualityCheckTab = ({
   requests,
   isLoading,
-  currentPage,
-  totalPages,
-  totalRecords,
-  loadQualityCheckRequests,
   handleViewRequest,
   handleInspectClick,
   handleSettingsClick,
   viewModalOpen,
   setViewModalOpen,
   selectedRequest,
+  displayedItems,
+  isLoadingMore,
+  containerRef,
+  getDisplayedData,
+  hasMoreData,
+  loadMoreData,
 }) => {
+  const displayedData = getDisplayedData();
+
   return (
     <>
       {/* Card */}
@@ -4128,278 +4293,316 @@ const QualityCheckTab = ({
 
         <div className="card-body">
           {/* Table */}
-          <div className="table-responsive">
-            <table
-              className="table table-hover"
-              style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-            >
-              <thead
-                style={{
-                  backgroundColor: "#f9fafb",
-                  borderBottom: "2px solid #e5e7eb",
-                }}
+          <div
+            ref={containerRef}
+            className="table-scroll-container"
+            style={{
+              maxHeight: "600px",
+              overflowY: "auto",
+              overflowX: "auto",
+              scrollBehavior: "smooth",
+              overscrollBehavior: "auto",
+            }}
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+
+              if (
+                scrollTop + clientHeight >= scrollHeight - 10 &&
+                hasMoreData() &&
+                !isLoadingMore &&
+                !isLoading
+              ) {
+                loadMoreData();
+              }
+            }}
+            onWheel={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+              const isAtTop = scrollTop <= 1;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+              if (e.deltaY > 0 && isAtBottom) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              } else if (e.deltaY < 0 && isAtTop) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              }
+            }}
+          >
+            <div className="table-responsive">
+              <table
+                className="table table-hover"
+                style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
               >
-                <tr>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Sr No
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Vendor Name
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Order Date
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Delivery Date
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Product Name
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
+                <thead
+                  style={{
+                    backgroundColor: "#f9fafb",
+                    borderBottom: "2px solid #e5e7eb",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
+                  }}
+                >
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      <div className="d-flex justify-content-center align-items-center">
-                        <div
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Loading...</span>
-                        </div>
-                        Loading quality check requests...
-                      </div>
-                    </td>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Sr No
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Vendor Name
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Order Date
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Delivery Date
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Product Name
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Action
+                    </th>
                   </tr>
-                ) : requests.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <Icon
-                          icon="mdi:shield-check"
-                          width="48"
-                          height="48"
-                          className="text-muted mb-2"
-                        />
-                        <p className="text-muted mb-0">
-                          No quality check requests found
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  requests.map((request, index) => (
-                    <tr key={request.request_id}>
-                      <td style={{ padding: "12px", color: "#374151" }}>
-                        {index + 1}
-                      </td>
-                      <td style={{ padding: "12px", color: "#374151" }}>
-                        {request.vendor_name || "-"}
-                      </td>
-                      <td style={{ padding: "12px", color: "#374151" }}>
-                        {new Date(request.order_date).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: "12px", color: "#374151" }}>
-                        {new Date(request.delivery_date).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: "12px", color: "#374151" }}>
-                        {request.items && request.items.length > 0
-                          ? [
-                              ...new Set(
-                                request.items.map((item) => item.product_name)
-                              ),
-                            ].join(", ")
-                          : "-"}
-                      </td>
-                      <td style={{ padding: "12px" }}>
-                        <div className="d-flex gap-2">
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              backgroundColor: "white",
-                            }}
-                            title="View"
-                            onClick={() => handleViewRequest(request)}
-                          >
-                            <Icon
-                              icon="lucide:eye"
-                              width="16"
-                              height="16"
-                              style={{ color: "#3b82f6" }}
-                            />
-                          </button>
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              backgroundColor: "white",
-                            }}
-                            title="Inspect"
-                            onClick={() => handleInspectClick(request)}
-                          >
-                            <Icon
-                              icon="mdi:clipboard-check"
-                              width="16"
-                              height="16"
-                              style={{ color: "#16a34a" }}
-                            />
-                          </button>
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              backgroundColor: "white",
-                            }}
-                            title="Settings"
-                            onClick={() =>
-                              handleSettingsClick(request, "fulfilled")
-                            }
-                          >
-                            <Icon
-                              icon="lucide:settings"
-                              width="16"
-                              height="16"
-                              style={{ color: "#f59e0b" }}
-                            />
-                          </button>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <>
+                      {Array.from({ length: 5 }).map((_, rowIndex) => (
+                        <tr key={`skeleton-${rowIndex}`}>
+                          {Array.from({ length: 6 }).map((_, colIndex) => (
+                            <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                              <div
+                                className="skeleton"
+                                style={{
+                                  height: "20px",
+                                  backgroundColor: "#e5e7eb",
+                                  borderRadius: "4px",
+                                  animation:
+                                    "skeletonPulse 1.5s ease-in-out infinite",
+                                }}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ) : displayedData.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-4">
+                        <div className="d-flex flex-column align-items-center">
+                          <Icon
+                            icon="mdi:shield-check"
+                            width="48"
+                            height="48"
+                            className="text-muted mb-2"
+                          />
+                          <p className="text-muted mb-0">
+                            No quality check requests found
+                          </p>
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    <>
+                      {displayedData.map((request, index) => (
+                        <tr key={request.request_id}>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {index + 1}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {request.vendor_name || "-"}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {new Date(request.order_date).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {new Date(request.delivery_date).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {request.items && request.items.length > 0
+                              ? [
+                                  ...new Set(
+                                    request.items.map((item) => item.product_name)
+                                  ),
+                                ].join(", ")
+                              : "-"}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="View"
+                                onClick={() => handleViewRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:eye"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Inspect"
+                                onClick={() => handleInspectClick(request)}
+                              >
+                                <Icon
+                                  icon="mdi:clipboard-check"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#16a34a" }}
+                                />
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Settings"
+                                onClick={() =>
+                                  handleSettingsClick(request, "fulfilled")
+                                }
+                              >
+                                <Icon
+                                  icon="lucide:settings"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#f59e0b" }}
+                                />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {isLoadingMore && (
+                        <>
+                          {Array.from({ length: 5 }).map((_, rowIndex) => (
+                            <tr key={`skeleton-more-${rowIndex}`}>
+                              {Array.from({ length: 6 }).map((_, colIndex) => (
+                                <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                  <div
+                                    className="skeleton"
+                                    style={{
+                                      height: "20px",
+                                      backgroundColor: "#e5e7eb",
+                                      borderRadius: "4px",
+                                      animation:
+                                        "skeletonPulse 1.5s ease-in-out infinite",
+                                    }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Pagination - Responsive */}
-          {totalRecords > 0 && (
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 gap-2">
-              <div className="d-flex align-items-center gap-2">
-                <button
-                  className="btn btn-sm"
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: "#495057",
-                  }}
-                  onClick={() => loadQualityCheckRequests(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <Icon icon="mdi:chevron-left" width="16" height="16" />
-                </button>
-
-                <div className="d-flex gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <button
-                        key={pageNum}
-                        className="btn btn-sm"
-                        style={{
-                          border: "none",
-                          background:
-                            pageNum === currentPage ? "#6f42c1" : "transparent",
-                          color: pageNum === currentPage ? "white" : "#495057",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          minWidth: "32px",
-                        }}
-                        onClick={() => loadQualityCheckRequests(pageNum)}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  className="btn btn-sm"
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: "#495057",
-                  }}
-                  onClick={() => loadQualityCheckRequests(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  <Icon icon="mdi:chevron-right" width="16" height="16" />
-                </button>
-              </div>
-
+            {/* Infinite Scroll Footer */}
+            {requests.length > 0 && (
               <div
+                className="d-flex justify-content-between align-items-center px-3 py-2"
                 style={{
-                  fontSize: "clamp(12px, 2.5vw, 14px)",
-                  color: "#6c757d",
-                  textAlign: "center",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "0 0 8px 8px",
+                  marginTop: "0",
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 5,
                 }}
               >
-                Showing <strong>{requests.length}</strong> of{" "}
-                <strong>{totalRecords}</strong> requests
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Showing <strong>{displayedData.length}</strong> of{" "}
+                  <strong>{requests.length}</strong> entries
+                </div>
+                {hasMoreData() && (
+                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                    Scroll down to load more
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </>
