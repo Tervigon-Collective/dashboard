@@ -4,11 +4,7 @@ class ProcurementApiService {
   constructor() {
     this.baseURL = config.api.baseURL + "/api"; // Add /api prefix here
     this.tokenRefreshInterval = null;
-    console.log(
-      "ProcurementApiService initialized with baseURL:",
-      this.baseURL
-    );
-    
+
     // Start periodic token refresh
     this.startTokenRefresh();
   }
@@ -18,17 +14,15 @@ class ProcurementApiService {
     if (this.tokenRefreshInterval) {
       clearInterval(this.tokenRefreshInterval);
     }
-    
+
     this.tokenRefreshInterval = setInterval(async () => {
       try {
         const { auth } = await import("../helper/firebase");
         const currentUser = auth.currentUser;
-        
+
         if (currentUser) {
-          console.log("Performing periodic token refresh...");
           const newToken = await currentUser.getIdToken(true);
           localStorage.setItem("idToken", newToken);
-          console.log("Periodic token refresh completed");
         }
       } catch (error) {
         console.error("Periodic token refresh failed:", error);
@@ -48,14 +42,14 @@ class ProcurementApiService {
   getAuthToken() {
     if (typeof window === "undefined") return null;
     const token = localStorage.getItem("idToken");
-    
+
     // Basic token validation
     if (token && !token.startsWith("eyJ")) {
       console.warn("Invalid token format detected, clearing token");
       localStorage.removeItem("idToken");
       return null;
     }
-    
+
     return token;
   }
 
@@ -64,12 +58,12 @@ class ProcurementApiService {
     return new Promise(async (resolve) => {
       const { auth } = await import("../helper/firebase");
       const { onAuthStateChanged } = await import("firebase/auth");
-      
+
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         unsubscribe();
         resolve(user);
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => {
         unsubscribe();
@@ -83,38 +77,28 @@ class ProcurementApiService {
     try {
       const { auth } = await import("../helper/firebase");
       let currentUser = auth.currentUser;
-      
-      console.log("🔍 Checking Firebase auth state...");
-      console.log("🔍 Current user:", currentUser ? "exists" : "null");
-      
+
       // If no current user, wait for auth state
       if (!currentUser) {
-        console.log("⏳ No current user, waiting for auth state...");
         currentUser = await this.waitForAuthState();
-        console.log("🔍 After waiting, user:", currentUser ? "exists" : "null");
       }
-      
+
       if (!currentUser) {
-        console.log("❌ No authenticated user found in Firebase");
         return false;
       }
 
       // Check if user is actually signed in
       if (currentUser.uid === null || currentUser.uid === undefined) {
-        console.log("❌ User UID is null/undefined");
         return false;
       }
-
-      console.log("✅ User UID:", currentUser.uid);
 
       // Try to get a fresh token to ensure it's valid
       try {
         const freshToken = await currentUser.getIdToken(false); // Don't force refresh initially
-        console.log("✅ User is authenticated with valid token");
-        
+
         // Update localStorage with fresh token
         localStorage.setItem("idToken", freshToken);
-        
+
         return true;
       } catch (tokenError) {
         console.error("❌ Token validation failed:", tokenError);
@@ -132,7 +116,6 @@ class ProcurementApiService {
       localStorage.removeItem("idToken");
       localStorage.removeItem("userRole");
       localStorage.removeItem("userData");
-      console.log("Authentication data cleared");
     } catch (error) {
       console.error("Error clearing auth data:", error);
     }
@@ -143,7 +126,7 @@ class ProcurementApiService {
     try {
       const { auth } = await import("../helper/firebase");
       const currentUser = auth.currentUser;
-      
+
       if (!currentUser) {
         console.error("No authenticated user found");
         return null;
@@ -151,10 +134,10 @@ class ProcurementApiService {
 
       // Get fresh token
       const token = await currentUser.getIdToken(false);
-      
+
       // Update localStorage with fresh token
       localStorage.setItem("idToken", token);
-      
+
       return token;
     } catch (error) {
       console.error("Error getting fresh token:", error);
@@ -167,7 +150,7 @@ class ProcurementApiService {
     try {
       // Try to get UserContext refreshToken function
       const { useUser } = await import("../helper/UserContext");
-      
+
       // This won't work in a service class, so we'll use direct Firebase approach
       return await this.refreshToken();
     } catch (error) {
@@ -182,21 +165,18 @@ class ProcurementApiService {
       // Import Firebase auth dynamically to avoid circular dependencies
       const { auth } = await import("../helper/firebase");
       const currentUser = auth.currentUser;
-      
+
       if (!currentUser) {
         console.error("No authenticated user found for token refresh");
         return null;
       }
 
-      console.log("Refreshing Firebase token...");
-      
       // Force refresh the token
       const newToken = await currentUser.getIdToken(true);
-      
+
       // Update localStorage with new token
       localStorage.setItem("idToken", newToken);
-      
-      console.log("Token refreshed successfully");
+
       return newToken;
     } catch (error) {
       console.error("Error refreshing token:", error);
@@ -208,42 +188,30 @@ class ProcurementApiService {
 
   // Helper method for making authenticated requests
   async makeRequest(url, options = {}) {
-    console.log("🔐 Starting authentication check for API request...");
-    
     // Check if user is authenticated first
     const isAuth = await this.isAuthenticated();
-    console.log("🔐 Authentication check result:", isAuth);
-    
+
     if (!isAuth) {
       // Try to refresh token once more
-      console.log("🔄 Authentication failed, attempting token refresh...");
       const refreshedToken = await this.refreshToken();
-      
+
       if (!refreshedToken) {
-        console.error("❌ Token refresh failed, user needs to sign in again");
+        console.error("Token refresh failed, user needs to sign in again");
         throw new Error(
           "AUTHENTICATION_ERROR: No authenticated user found. Please sign in again."
         );
       }
-      console.log("✅ Token refresh successful");
     }
 
     // Get fresh token before making request
     let token = await this.getFreshToken();
-    console.log("🔑 Fresh token obtained:", !!token);
-    
+
     if (!token) {
-      console.error("❌ Unable to get fresh token");
+      console.error("Unable to get fresh token");
       throw new Error(
         "AUTHENTICATION_ERROR: Unable to get authentication token. Please sign in again."
       );
     }
-
-    console.log("Auth token available:", !!token);
-    console.log(
-      "Token preview:",
-      token ? `${token.substring(0, 20)}...` : "No token"
-    );
 
     const defaultOptions = {
       method: "GET",
@@ -262,14 +230,34 @@ class ProcurementApiService {
       },
     };
 
-    console.log("Making API request to:", url);
-    console.log("Request headers:", requestOptions.headers);
-
     try {
-      const response = await fetch(url, requestOptions);
+      let response = await fetch(url, requestOptions);
 
-      console.log("Response status:", response.status);
-      console.log("Response ok:", response.ok);
+      // Handle 401 errors (expired token) and retry once
+      if (response.status === 401 && !options._retry) {
+        try {
+          // Force refresh the token
+          const newToken = await this.refreshToken();
+
+          if (newToken) {
+            // Update request options with new token
+            requestOptions.headers.Authorization = `Bearer ${newToken}`;
+
+            // Retry the request with new token
+            response = await fetch(url, {
+              ...requestOptions,
+              _retry: true,
+            });
+          } else {
+            throw new Error("Failed to refresh token");
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          throw new Error(
+            "AUTHENTICATION_ERROR: Your session has expired. Please sign in again."
+          );
+        }
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -317,7 +305,6 @@ class ProcurementApiService {
     const url = `${this.baseURL}/procurement/products${
       queryParams.toString() ? "?" + queryParams.toString() : ""
     }`;
-    console.log("getAllProducts - Final URL being called:", url);
     return this.makeRequest(url);
   }
 

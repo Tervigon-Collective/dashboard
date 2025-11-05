@@ -1,21 +1,167 @@
 import axios from "axios";
 import config from "../config";
+import { getAuth } from "firebase/auth";
+import {
+  handleAuthError,
+  isOnline,
+  waitForOnline,
+  retryWithBackoff,
+} from "../utils/authErrorHandler";
 
 // Create axios instance for content generation API
 const apiClient = axios.create({
   baseURL: config.api.baseURL,
 });
 
-// Add auth interceptor
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const idToken = localStorage.getItem("idToken");
-    if (idToken) {
-      config.headers.Authorization = `Bearer ${idToken}`;
+// Token refresh queue management
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
     }
+  });
+  failedQueue = [];
+};
+
+// Add auth interceptor - use Firebase auth instead of localStorage
+apiClient.interceptors.request.use(
+  async (config) => {
+    if (typeof window !== "undefined") {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+          // getIdToken() automatically refreshes expired tokens
+          const idToken = await user.getIdToken();
+          config.headers.Authorization = `Bearer ${idToken}`;
+
+          // Update localStorage for compatibility with other parts of the app
+          localStorage.setItem("idToken", idToken);
+        }
+      } catch (error) {
+        console.error("Error getting ID token:", error);
+        // Let backend return 401, which will trigger refresh in response interceptor
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add response interceptor to handle 401 errors and refresh tokens
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Check if error is due to expired token
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      typeof window !== "undefined"
+    ) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (!user) {
+          // No authenticated user - handle gracefully
+          const error = new Error("No authenticated user found");
+          error.code = "auth/no-user";
+
+          const handled = await handleAuthError(error, {
+            enableRedirect: true,
+            showNotification: true,
+          });
+
+          if (handled.handled) {
+            processQueue(error, null);
+            return Promise.reject(error);
+          }
+          throw error;
+        }
+
+        // Check network connectivity before attempting refresh
+        if (!isOnline()) {
+          await waitForOnline(10000); // Wait up to 10 seconds
+        }
+
+        // Retry token refresh with exponential backoff for network issues
+        const newToken = await retryWithBackoff(
+          async () => {
+            // Force refresh the token
+            const token = await user.getIdToken(true);
+            return token;
+          },
+          { maxRetries: 3, initialDelay: 1000 }
+        );
+
+        // Update localStorage with new token
+        localStorage.setItem("idToken", newToken);
+
+        // Update the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+        // Process queued requests
+        processQueue(null, newToken);
+
+        // Retry the original request
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+
+        // Handle the error with appropriate recovery strategy
+        const errorInfo = await handleAuthError(refreshError, {
+          enableRedirect: true,
+          showNotification: true,
+          retryCount: 0,
+        });
+
+        // Process queue with error
+        processQueue(refreshError, null);
+
+        // If error was handled (redirected), reject with handled flag
+        if (errorInfo.handled) {
+          const handledError = new Error(
+            "Authentication failed - redirecting to sign in"
+          );
+          handledError.handled = true;
+          handledError.code = refreshError.code || "auth/refresh-failed";
+          return Promise.reject(handledError);
+        }
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // ========== Creative Briefs ==========
 
@@ -196,8 +342,6 @@ export const getReviewPrompts = async (jobId) => {
  */
 export const updateReviewPrompts = async (jobId, data) => {
   try {
-    console.log("Updating prompts for jobId:", jobId);
-    console.log("Prompts data:", data);
     // Call Python backend directly
     const response = await axios.put(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts`,
@@ -208,7 +352,6 @@ export const updateReviewPrompts = async (jobId, data) => {
         },
       }
     );
-    console.log("Update prompts response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Update prompts error details:", {
@@ -229,7 +372,6 @@ export const updateReviewPrompts = async (jobId, data) => {
  */
 export const approveReview = async (jobId) => {
   try {
-    console.log("Approving review for jobId:", jobId);
     // Call Python backend directly
     const response = await axios.post(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}/approve`,
@@ -240,7 +382,6 @@ export const approveReview = async (jobId) => {
         },
       }
     );
-    console.log("Approve response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Approve error details:", {
