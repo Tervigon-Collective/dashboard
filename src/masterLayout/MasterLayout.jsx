@@ -480,7 +480,7 @@ const MasterLayout = ({ children }) => {
                             icon="solar:magic-stick-3-bold"
                             className="menu-icon"
                           />
-                          <span>Image Generator</span>
+                          <span>Content Craft</span>
                         </Link>
                       </li>
                     )}
@@ -686,7 +686,7 @@ const MasterLayout = ({ children }) => {
                     }
                   >
                     <i className='ri-circle-fill circle-icon text-info-main w-auto' />{" "}
-                    Image Generator
+                    Content Craft
                   </Link>
                 </li>
                 <li>

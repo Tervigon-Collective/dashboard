@@ -227,7 +227,7 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                               Prompt Text
                             </label>
                             <textarea
-                              value={prompt.prompt}
+                              value={prompt.prompt || ''}
                               onChange={(e) => handleEditPrompt(index, e.target.value)}
                               className="form-control"
                               rows={18}
@@ -235,7 +235,7 @@ export default function ReviewPromptsModal({ jobId, isOpen, onClose, onApproveSu
                               style={{ wordBreak: "break-word", fontSize: '0.875rem', resize: 'vertical' }}
                             />
                             <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                              {prompt.prompt.length} characters
+                              {(prompt.prompt || '').length} characters
                             </small>
                           </div>
 

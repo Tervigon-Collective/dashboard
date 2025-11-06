@@ -21,6 +21,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
   const [copiedPrompt, setCopiedPrompt] = useState(null);
   const [retryingImage, setRetryingImage] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [playingVideoId, setPlayingVideoId] = useState(null); // Track which video is playing
 
   const { getGenerationById } = useGeneration();
 
@@ -115,9 +116,82 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
     }
   };
 
-  const getVideoUrl = (clipId) => {
-    if (!results?.run_id || !clipId) return null;
-    return `${config.pythonApi.baseURL}/api/content/download/${results.run_id}/${clipId}`;
+  // Helper to normalize video URLs
+  const normalizeVideoUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/api/content/video') || url.startsWith('/api/content/download-video')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    if (url.startsWith('/')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    return url;
+  };
+
+  // Helper to normalize preview URLs
+  const normalizePreviewUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/api/content/preview')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    if (url.startsWith('/')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    return url;
+  };
+
+  const getVideoUrl = (clip) => {
+    // Use enhanced video structure if available
+    if (clip.video_url) {
+      return normalizeVideoUrl(clip.video_url);
+    }
+    // Fallback to old structure
+    if (results?.run_id && clip.clip_id) {
+      return `${config.pythonApi.baseURL}/api/content/video/${results.run_id}/${clip.clip_id}/${clip.video_filename || `${clip.clip_id}_video.mp4`}`;
+    }
+    return null;
+  };
+
+  const getPreviewUrl = (clip) => {
+    // Use enhanced preview structure if available
+    if (clip.preview_url) {
+      return normalizePreviewUrl(clip.preview_url);
+    }
+    // Fallback to old structure
+    if (results?.run_id && clip.clip_id) {
+      return `${config.pythonApi.baseURL}/api/content/preview/${results.run_id}/${clip.clip_id}`;
+    }
+    return null;
+  };
+
+  const downloadVideo = async (clip) => {
+    try {
+      let downloadUrl;
+      
+      // Use enhanced structure if available
+      if (clip.download_url) {
+        downloadUrl = normalizeVideoUrl(clip.download_url);
+      } else if (clip.video_url) {
+        downloadUrl = normalizeVideoUrl(clip.video_url);
+      } else if (results?.run_id && clip.clip_id) {
+        const filename = clip.video_filename || `${clip.clip_id}_video.mp4`;
+        downloadUrl = `${config.pythonApi.baseURL}/api/content/download-video/${results.run_id}/${clip.clip_id}/${filename}`;
+      }
+
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank');
+      } else {
+        console.error('No download URL available for video:', clip);
+      }
+    } catch (error) {
+      console.error('Failed to download video:', error);
+    }
   };
 
   const formatDuration = (seconds) => {
@@ -398,7 +472,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                   {results.plan_type === "video" ? "Clips:" : "Artifacts:"}
                                 </span>{" "}
                                 {results.plan_type === "video"
-                                  ? results.generated_clips?.length || 0
+                                  ? (results.generated_videos || results.generated_clips)?.length || 0
                                   : results.artifacts?.length || 0}
                               </div>
                               {results.plan_type === "video" && results.generation_summary && (
@@ -428,25 +502,231 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                     <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden', overflowY: 'auto' }}
                       >
-                        <div>
-                          {/* Video Clips Display */}
-                          {results.plan_type === "video" && results.generated_clips && results.generated_clips.length > 0 ? (
-                            results.generated_clips.map((clip, index) => {
-                              const clipPlan = results.clip_plans?.[index];
-                              return (
-                                <div key={clip.clip_id} className="card mb-2">
+                        <div style={{ width: '100%', overflowX: 'hidden' }}>
+                          {/* Video Clips Display - Enhanced with generated_videos */}
+                          {results.plan_type === "video" && (
+                            (() => {
+                              // Use generated_videos if available, otherwise fallback to generated_clips
+                              const videoClips = results.generated_videos || results.generated_clips || [];
+                              
+                              if (videoClips.length > 0) {
+                                return (
+                                  <div className="row g-3" style={{ margin: 0, maxWidth: '100%' }}>
+                                    {videoClips.map((clip, index) => {
+                                      const clipId = clip.clip_id || clip.id || `clip_${index}`;
+                                      const videoUrl = getVideoUrl(clip);
+                                      const previewUrl = getPreviewUrl(clip);
+                                      const isPlaying = playingVideoId === clipId;
+                                      const clipPlan = results.clip_plans?.[index];
+                                      
+                                      return (
+                                        <div key={clipId} className="col-md-6 col-lg-4" style={{ paddingLeft: '12px', paddingRight: '12px' }}>
+                                          <div className="card h-100">
+                                            <div className="card-header bg-light p-2">
+                                              <div className="d-flex align-items-center justify-content-between">
+                                                <h6 className="card-title mb-0 fw-semibold small">
+                                                  {clip.clip_id || `Clip ${index + 1}`}
+                                                  {clipPlan?.beat && ` - ${clipPlan.beat}`}
+                                                </h6>
+                                                {videoUrl && (
+                                                  <button
+                                                    className="btn btn-sm btn-outline-secondary"
+                                                    onClick={() => downloadVideo(clip)}
+                                                    title="Download video"
+                                                  >
+                                                    <Icon
+                                                      icon="solar:download-bold"
+                                                      width="12"
+                                                      height="12"
+                                                    />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="card-body p-2">
+                                              {videoUrl ? (
+                                                <div className="position-relative" style={{ aspectRatio: "16/9", backgroundColor: "#000" }}>
+                                                  <video
+                                                    src={videoUrl}
+                                                    poster={previewUrl || undefined}
+                                                    controls={isPlaying}
+                                                    preload="metadata"
+                                                    className="w-100 h-100"
+                                                    style={{
+                                                      objectFit: "cover",
+                                                      display: "block",
+                                                    }}
+                                                    onPlay={() => setPlayingVideoId(clipId)}
+                                                    onPause={() => setPlayingVideoId(null)}
+                                                    onEnded={() => setPlayingVideoId(null)}
+                                                    onError={(e) => {
+                                                      console.error("Video load error:", e);
+                                                      // Try CDN URL if available
+                                                      if (clip.cdn_url && e.target.src !== clip.cdn_url) {
+                                                        e.target.src = clip.cdn_url;
+                                                      }
+                                                    }}
+                                                  >
+                                                    Your browser does not support the video tag.
+                                                  </video>
+                                                  
+                                                  {/* Play button overlay - shown when video is not playing */}
+                                                  {!isPlaying && (
+                                                    <div
+                                                      className="position-absolute top-50 start-50 translate-middle"
+                                                      style={{
+                                                        cursor: "pointer",
+                                                        zIndex: 2,
+                                                      }}
+                                                      onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        const container = e.currentTarget.closest('.position-relative');
+                                                        const video = container?.querySelector('video');
+                                                        if (video) {
+                                                          video.play().catch(err => {
+                                                            console.error('Error playing video:', err);
+                                                          });
+                                                          setPlayingVideoId(clipId);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <div
+                                                        className="rounded-circle d-flex align-items-center justify-content-center"
+                                                        style={{
+                                                          width: "60px",
+                                                          height: "60px",
+                                                          backgroundColor: "rgba(0, 0, 0, 0.7)",
+                                                          backdropFilter: "blur(4px)",
+                                                          transition: "all 0.2s ease",
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                          e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+                                                          e.currentTarget.style.transform = "scale(1.1)";
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                          e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+                                                          e.currentTarget.style.transform = "scale(1)";
+                                                        }}
+                                                      >
+                                                        <Icon
+                                                          icon="solar:play-bold"
+                                                          width="32"
+                                                          height="32"
+                                                          className="text-white"
+                                                          style={{ marginLeft: "4px" }}
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Video duration badge */}
+                                                  {(clip.duration || clip.duration_actual) && (
+                                                    <div className="position-absolute bottom-0 end-0 m-2">
+                                                      <span className="badge bg-dark bg-opacity-75">
+                                                        {clip.duration || clip.duration_actual}s
+                                                      </span>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ) : previewUrl ? (
+                                                <div className="position-relative" style={{ aspectRatio: "16/9", backgroundColor: "#000" }}>
+                                                  <img
+                                                    src={previewUrl}
+                                                    alt={`Preview ${clipId}`}
+                                                    className="w-100 h-100"
+                                                    style={{ objectFit: "cover" }}
+                                                  />
+                                                  <div className="position-absolute top-50 start-50 translate-middle">
+                                                    <div
+                                                      className="rounded-circle d-flex align-items-center justify-content-center"
+                                                      style={{
+                                                        width: "60px",
+                                                        height: "60px",
+                                                        backgroundColor: "rgba(0, 0, 0, 0.7)",
+                                                        backdropFilter: "blur(4px)",
+                                                      }}
+                                                    >
+                                                      <Icon
+                                                        icon="solar:play-bold"
+                                                        width="32"
+                                                        height="32"
+                                                        className="text-white"
+                                                        style={{ marginLeft: "4px" }}
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="d-flex align-items-center justify-content-center" style={{ aspectRatio: "16/9", backgroundColor: "#f8f9fa" }}>
+                                                  <Icon
+                                                    icon="solar:video-library-bold"
+                                                    width="32"
+                                                    height="32"
+                                                    className="text-muted"
+                                                  />
+                                                </div>
+                                              )}
+                                              
+                                              {/* Video info */}
+                                              {(clip.duration || clip.duration_actual || clipPlan) && (
+                                                <div className="mt-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>
+                                                    Duration: {clip.duration || clip.duration_actual || clipPlan?.duration || 0}s
+                                                  </div>
+                                                  {clipPlan?.shot_type && (
+                                                    <div className="small text-muted" style={{ fontSize: '0.7rem' }}>
+                                                      Shot: {clipPlan.shot_type}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-center py-4 text-muted">
+                                    <Icon
+                                      icon="solar:video-library-bold"
+                                      width="32"
+                                      height="32"
+                                      className="text-muted mb-2"
+                                    />
+                                    <p className="fw-medium mb-1 small">No video clips generated yet</p>
+                                    <p className="small" style={{ fontSize: '0.75rem' }}>
+                                      Video clips will appear here after generation completes
+                                    </p>
+                                  </div>
+                                );
+                              }
+                            })()
+                          )}
+                          
+                          {/* Generated Images Display - Only show for non-video content */}
+                          {results.plan_type !== "video" && (
+                            results.generated_images && results.generated_images.length > 0 ? (
+                              results.generated_images.map((imageData, index) => (
+                                <div key={imageData.artifact_id} className="card mb-2">
                                   <div className="card-header bg-light p-2">
                                     <div className="d-flex align-items-center justify-content-between">
                                       <h6 className="card-title mb-0 fw-semibold small">
-                                        Clip {index + 1} {clipPlan?.beat && `- ${clipPlan.beat}`}
+                                        Generated Image {index + 1}
                                       </h6>
-                                      {clip.status === "success" && (
+                                      {imageData.freepik_result.success && (
                                         <button
                                           className="btn btn-sm btn-outline-primary"
                                           onClick={() =>
-                                            downloadImage({}, clip.clip_id)
+                                            downloadImage(
+                                              imageData.freepik_result,
+                                              imageData.artifact_id
+                                            )
                                           }
                                         >
                                           <Icon
@@ -461,50 +741,71 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                     </div>
                                   </div>
                                   <div className="card-body p-3">
-                                    {clip.status === "success" && clip.video_file_path ? (
+                                    {imageData.freepik_result.success ? (
                                       <div>
-                                        <div className="text-center mb-3">
-                                          <video
-                                            src={getVideoUrl(clip.clip_id)}
-                                            controls
-                                            preload="metadata"
-                                            className="img-fluid rounded shadow"
-                                            style={{ maxHeight: "400px", width: "auto", maxWidth: "100%" }}
-                                            onError={(e) => {
-                                              console.error("Video load error:", e);
-                                            }}
-                                          >
-                                            Your browser does not support the video tag.
-                                          </video>
-                                        </div>
-                                        <div className="bg-light p-3 rounded mt-3">
-                                          <div className="row">
-                                            <div className="col-md-6 mb-2">
-                                              <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Duration</div>
-                                              <div className="fw-medium small">{clip.duration_actual || clipPlan?.duration || 0}s</div>
-                                            </div>
-                                            {clipPlan && (
-                                              <>
-                                                <div className="col-md-6 mb-2">
-                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Shot Type</div>
-                                                  <div className="fw-medium small">{clipPlan.shot_type || "N/A"}</div>
-                                                </div>
-                                                <div className="col-md-6 mb-2">
-                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Camera</div>
-                                                  <div className="fw-medium small">
-                                                    {clipPlan.camera_angle?.value || "N/A"} - {clipPlan.camera_movement?.type?.value || "N/A"}
-                                                  </div>
-                                                </div>
-                                                {clipPlan.scene_description && (
-                                                  <div className="col-md-12 mb-2">
-                                                    <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Scene</div>
-                                                    <div className="fw-medium small">{clipPlan.scene_description}</div>
-                                                  </div>
-                                                )}
-                                              </>
-                                            )}
+                                        {imageData.freepik_result.url ||
+                                        imageData.freepik_result.local_url ||
+                                        imageData.freepik_result.base64 ? (
+                                          <div className="text-center mb-4">
+                                            <img
+                                              src={
+                                                imageData.freepik_result.url ||
+                                                imageData.freepik_result
+                                                  .local_url ||
+                                                `data:image/jpeg;base64,${imageData.freepik_result.base64}`
+                                              }
+                                              alt={`Generated image ${index + 1}`}
+                                              className="img-fluid rounded shadow"
+                                              style={{ maxHeight: "400px", width: "auto" }}
+                                            />
                                           </div>
-                                        </div>
+                                        ) : (
+                                          <div className="text-center py-5 text-muted">
+                                            <Icon
+                                              icon="solar:gallery-bold"
+                                              width="48"
+                                              height="48"
+                                              className="text-muted mb-2"
+                                            />
+                                            <p>Image not available</p>
+                                          </div>
+                                        )}
+
+                                        {imageData.freepik_result.metadata && (
+                                          <div className="bg-light p-3 rounded mt-3">
+                                            <h6 className="fw-semibold mb-2 text-secondary d-flex align-items-center small">
+                                              <Icon
+                                                icon="solar:info-circle-bold"
+                                                width="14"
+                                                height="14"
+                                                className="me-1"
+                                              />
+                                              Generation Details
+                                            </h6>
+                                            <div className="row">
+                                              <div className="col-md-6 mb-2">
+                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Freepik ID</div>
+                                                <div className="fw-medium small">{imageData.freepik_result.id || "N/A"}</div>
+                                              </div>
+                                              <div className="col-md-6 mb-2">
+                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Resolution</div>
+                                                <div className="fw-medium small">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
+                                              </div>
+                                              <div className="col-md-6 mb-2">
+                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Style</div>
+                                                <div className="fw-medium small">{imageData.freepik_result.metadata.style || "N/A"}</div>
+                                              </div>
+                                              {imageData.freepik_result.metadata.generated_at && (
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Generated</div>
+                                                  <div className="fw-medium small">
+                                                    {new Date(imageData.freepik_result.metadata.generated_at).toLocaleString()}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="text-center py-3">
@@ -515,161 +816,32 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                           className="text-danger mb-2"
                                         />
                                         <p className="text-danger fw-semibold mb-1 small">
-                                          Video clip generation failed
+                                          Image generation failed
                                         </p>
                                         <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
-                                          {clip.error || "Unknown error"}
+                                          {imageData.freepik_result.error ||
+                                            "Unknown error"}
                                         </p>
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                              );
-                            })
-                          ) : results.plan_type === "video" ? (
-                            <div className="text-center py-4 text-muted">
-                              <Icon
-                                icon="solar:video-library-bold"
-                                width="32"
-                                height="32"
-                                className="text-muted mb-2"
-                              />
-                              <p className="fw-medium mb-1 small">No video clips generated yet</p>
-                              <p className="small" style={{ fontSize: '0.75rem' }}>
-                                Video clips will appear here after generation completes
-                              </p>
-                            </div>
-                          ) : results.generated_images &&
-                          results.generated_images.length > 0 ? (
-                            results.generated_images.map((imageData, index) => (
-                               <div key={imageData.artifact_id} className="card mb-2">
-                                 <div className="card-header bg-light p-2">
-                                   <div className="d-flex align-items-center justify-content-between">
-                                    <h6 className="card-title mb-0 fw-semibold small">
-                                      Generated Image {index + 1}
-                                    </h6>
-                                    {imageData.freepik_result.success && (
-                                      <button
-                                        className="btn btn-sm btn-outline-primary"
-                                        onClick={() =>
-                                          downloadImage(
-                                            imageData.freepik_result,
-                                            imageData.artifact_id
-                                          )
-                                        }
-                                      >
-                                        <Icon
-                                          icon="solar:download-bold"
-                                          width="12"
-                                          height="12"
-                                          className="me-1"
-                                        />
-                                        Download
-                                      </button>
-                                    )}
-                                  </div>
-                                 </div>
-                                 <div className="card-body p-3">
-                                   {imageData.freepik_result.success ? (
-                                     <div>
-                                       {imageData.freepik_result.url ||
-                                       imageData.freepik_result.local_url ||
-                                       imageData.freepik_result.base64 ? (
-                                         <div className="text-center mb-4">
-                                           <img
-                                             src={
-                                               imageData.freepik_result.url ||
-                                               imageData.freepik_result
-                                                 .local_url ||
-                                               `data:image/jpeg;base64,${imageData.freepik_result.base64}`
-                                             }
-                                             alt={`Generated image ${index + 1}`}
-                                             className="img-fluid rounded shadow"
-                                             style={{ maxHeight: "400px", width: "auto" }}
-                                           />
-                                         </div>
-                                      ) : (
-                                        <div className="text-center py-5 text-muted">
-                                          <Icon
-                                            icon="solar:gallery-bold"
-                                            width="48"
-                                            height="48"
-                                            className="text-muted mb-2"
-                                          />
-                                          <p>Image not available</p>
-                                        </div>
-                                      )}
-
-                                       {imageData.freepik_result.metadata && (
-                                         <div className="bg-light p-3 rounded mt-3">
-                                           <h6 className="fw-semibold mb-2 text-secondary d-flex align-items-center small">
-                                             <Icon
-                                               icon="solar:info-circle-bold"
-                                               width="14"
-                                               height="14"
-                                               className="me-1"
-                                             />
-                                             Generation Details
-                                           </h6>
-                                           <div className="row">
-                                             <div className="col-md-6 mb-2">
-                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Freepik ID</div>
-                                               <div className="fw-medium small">{imageData.freepik_result.id || "N/A"}</div>
-                                             </div>
-                                             <div className="col-md-6 mb-2">
-                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Resolution</div>
-                                               <div className="fw-medium small">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
-                                             </div>
-                                             <div className="col-md-6 mb-2">
-                                               <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Style</div>
-                                               <div className="fw-medium small">{imageData.freepik_result.metadata.style || "N/A"}</div>
-                                             </div>
-                                             {imageData.freepik_result.metadata.generated_at && (
-                                               <div className="col-md-6 mb-2">
-                                                 <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Generated</div>
-                                                 <div className="fw-medium small">
-                                                   {new Date(imageData.freepik_result.metadata.generated_at).toLocaleString()}
-                                                 </div>
-                                               </div>
-                                             )}
-                                           </div>
-                                         </div>
-                                       )}
-                                     </div>
-                                   ) : (
-                                     <div className="text-center py-3">
-                                       <Icon
-                                         icon="solar:danger-circle-bold"
-                                         width="32"
-                                         height="32"
-                                         className="text-danger mb-2"
-                                       />
-                                      <p className="text-danger fw-semibold mb-1 small">
-                                        Image generation failed
-                                      </p>
-                                      <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
-                                        {imageData.freepik_result.error ||
-                                          "Unknown error"}
-                                      </p>
-                                     </div>
-                                   )}
-                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center py-4 text-muted">
+                                <Icon
+                                  icon="solar:gallery-bold"
+                                  width="32"
+                                  height="32"
+                                  className="text-muted mb-2"
+                                />
+                                <p className="fw-medium mb-1 small">No images generated yet</p>
+                                <p className="small" style={{ fontSize: '0.75rem' }}>
+                                  Images will appear here after generation
+                                  completes
+                                </p>
                               </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-4 text-muted">
-                               <Icon
-                                 icon="solar:gallery-bold"
-                                 width="32"
-                                 height="32"
-                                 className="text-muted mb-2"
-                               />
-                               <p className="fw-medium mb-1 small">No images generated yet</p>
-                               <p className="small" style={{ fontSize: '0.75rem' }}>
-                                 Images will appear here after generation
-                                 completes
-                               </p>
-                            </div>
+                            )
                           )}
                         </div>
                       </div>

@@ -48,6 +48,8 @@ export default function CreateContentPage() {
 
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [contentTypeFilter, setContentTypeFilter] = useState("all"); // "all", "image", "video"
+  const [playingVideoId, setPlayingVideoId] = useState(null); // Track which video is playing
   
   // State for edit functionality
   const [editingImageId, setEditingImageId] = useState(null);
@@ -55,12 +57,58 @@ export default function CreateContentPage() {
   const [isSendingEdit, setIsSendingEdit] = useState(false);
   const [editErrors, setEditErrors] = useState({});
 
+  // Helper function to normalize preview URLs
+  const normalizePreviewUrl = (url) => {
+    if (!url) return null;
+    // If it's already an absolute URL, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // If it starts with /api/content/preview, convert to Python backend URL
+    if (url.startsWith('/api/content/preview')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    // If it's a relative path, prepend Python backend base URL
+    if (url.startsWith('/')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    // Otherwise return as is (might be a full URL without protocol)
+    return url;
+  };
+
+  // Helper function to normalize video URLs
+  const normalizeVideoUrl = (url) => {
+    if (!url) return null;
+    // If it's already an absolute URL, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // If it starts with /api/content/video, convert to Python backend URL
+    if (url.startsWith('/api/content/video')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    // If it's a relative path, prepend Python backend base URL
+    if (url.startsWith('/')) {
+      return `${config.pythonApi.baseURL}${url}`;
+    }
+    // Otherwise return as is
+    return url;
+  };
+
   // Fetch generated content from API
   const fetchGeneratedContent = useCallback(async () => {
     setIsLoadingContent(true);
     try {
       const response = await getGeneratedContent();
-      setGeneratedContent(response.content || []);
+      // Normalize preview URLs and video URLs in the response
+      const normalizedContent = (response.content || []).map(item => ({
+        ...item,
+        preview_url: item.preview_url ? normalizePreviewUrl(item.preview_url) : null,
+        local_url: item.local_url ? normalizePreviewUrl(item.local_url) : item.local_url,
+        video_url: item.video_url ? normalizeVideoUrl(item.video_url) : null,
+        download_url: item.download_url ? normalizeVideoUrl(item.download_url) : item.download_url,
+      }));
+      setGeneratedContent(normalizedContent);
     } catch (error) {
       console.error("Error fetching generated content:", error);
       setGeneratedContent([]);
@@ -436,6 +484,40 @@ export default function CreateContentPage() {
     }
   };
 
+  const downloadVideo = async (item, filename) => {
+    try {
+      let downloadUrl;
+
+      // Check if download_url is available from API (for videos)
+      if (item.download_url) {
+        // Use the download_url from API (e.g., /api/content/download-video/run_id/clip_id/filename)
+        downloadUrl = item.download_url.startsWith('http') 
+          ? item.download_url 
+          : `${config.pythonApi.baseURL}${item.download_url}`;
+      } 
+      // If not, try to construct from run_id, clip_id, and filename
+      else if (item.run_id && item.clip_id) {
+        const videoFilename = filename || `${item.clip_id}_video.mp4`;
+        downloadUrl = `${config.pythonApi.baseURL}/api/content/download-video/${item.run_id}/${item.clip_id}/${videoFilename}`;
+      }
+      // Fallback to video_url
+      else if (item.video_url) {
+        downloadUrl = item.video_url.startsWith('http') 
+          ? item.video_url 
+          : `${config.pythonApi.baseURL}${item.video_url}`;
+      }
+
+      // If we have a download URL, open it in a new window
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank');
+      } else {
+        console.error('No download method available for video:', item);
+      }
+    } catch (error) {
+      console.error('Failed to download video:', error);
+    }
+  };
+
   // Edit image handlers
   const handleEditClick = (imageId) => {
     setEditingImageId(imageId);
@@ -689,13 +771,6 @@ export default function CreateContentPage() {
                           </div>
                           <h6 className="fw-semibold text-dark mb-2">Upload images</h6>
                           <p className="text-muted mb-3">Drag and drop or click to select</p>
-                          <div className="text-muted small">
-                            <span>Supports: JPG, PNG, GIF, WebP</span>
-                            <span className="mx-2">•</span>
-                            <span>Max 3 images</span>
-                            <span className="mx-2">•</span>
-                            <span>Max 4MB per image</span>
-                          </div>
                         </div>
                         <input
                           type="file"
@@ -776,12 +851,28 @@ export default function CreateContentPage() {
 
                   {/* Brief Form */}
                   <div>
+                    <style dangerouslySetInnerHTML={{__html: `
+                      .form-control::placeholder {
+                        color: #9ca3af !important;
+                        opacity: 1;
+                      }
+                      .form-control::-webkit-input-placeholder {
+                        color: #9ca3af !important;
+                      }
+                      .form-control::-moz-placeholder {
+                        color: #9ca3af !important;
+                        opacity: 1;
+                      }
+                      .form-control:-ms-input-placeholder {
+                        color: #9ca3af !important;
+                      }
+                    `}} />
                     <div className="mb-3">
                       <label className="form-label fw-semibold">Product Name *</label>
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="e.g., Skin Microbiome Shampoo"
+                        placeholder="Skin Microbiome Shampoo"
                         value={formData.productName}
                         onChange={(e) =>
                           handleInputChange("productName", e.target.value)
@@ -794,7 +885,7 @@ export default function CreateContentPage() {
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Brief product description (max 200 characters)"
+                        placeholder="A concise overview of your product"
                         value={formData.shortDescription}
                         onChange={(e) =>
                           handleInputChange("shortDescription", e.target.value)
@@ -808,7 +899,7 @@ export default function CreateContentPage() {
                       <textarea
                         className="form-control"
                         rows="4"
-                        placeholder="Detailed product description, benefits, and target audience..."
+                        placeholder="Detailed product description including key features, benefits, and target audience"
                         value={formData.longDescription}
                         onChange={(e) =>
                           handleInputChange("longDescription", e.target.value)
@@ -1228,10 +1319,89 @@ export default function CreateContentPage() {
             <div className="tab-pane fade show active">
               <div className="card">
                 <div className="card-header border-bottom p-24">
-                  <h5 className="card-title mb-2">Generated Content</h5>
-                  <p className="card-subtitle text-muted mb-0">
-                    View and manage your generated content organized by product and time
-                  </p>
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="card-title mb-2">Generated Content</h5>
+                      <p className="card-subtitle text-muted mb-0">
+                        View and manage your generated content organized by product and time
+                      </p>
+                    </div>
+                    {/* Content Type Filter - Icon Only */}
+                    <div className="d-flex align-items-center gap-1">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${
+                          contentTypeFilter === "all"
+                            ? "btn-dark"
+                            : "btn-outline-secondary"
+                        }`}
+                        onClick={() => setContentTypeFilter("all")}
+                        title="All"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon
+                          icon="solar:widget-4-bold"
+                          width="16"
+                          height="16"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${
+                          contentTypeFilter === "image"
+                            ? "btn-dark"
+                            : "btn-outline-secondary"
+                        }`}
+                        onClick={() => setContentTypeFilter("image")}
+                        title="Images"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon
+                          icon="solar:gallery-bold"
+                          width="16"
+                          height="16"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${
+                          contentTypeFilter === "video"
+                            ? "btn-dark"
+                            : "btn-outline-secondary"
+                        }`}
+                        onClick={() => setContentTypeFilter("video")}
+                        title="Videos"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon
+                          icon="solar:video-library-bold"
+                          width="16"
+                          height="16"
+                        />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="card-body p-24">
                   {isLoadingContent ? (
@@ -1248,9 +1418,17 @@ export default function CreateContentPage() {
                     </div>
                   ) : (
                     <div className="mb-4">
+
                       {/* Group by product */}
                       {Array.from(
-                        new Set(generatedContent.map((item) => item.product))
+                        new Set(
+                          generatedContent
+                            .filter((item) => {
+                              if (contentTypeFilter === "all") return true;
+                              return item.content_type === contentTypeFilter;
+                            })
+                            .map((item) => item.product)
+                        )
                       ).map((product) => (
                         <div key={product} className="mb-4">
                           <div className="d-flex align-items-center gap-2 mb-3">
@@ -1263,9 +1441,12 @@ export default function CreateContentPage() {
                             <h6 className="mb-0">{product}</h6>
                             <span className="badge bg-secondary small">
                               {
-                                generatedContent.filter(
-                                  (item) => item.product === product
-                                ).length
+                                generatedContent
+                                  .filter((item) => {
+                                    if (item.product !== product) return false;
+                                    if (contentTypeFilter === "all") return true;
+                                    return item.content_type === contentTypeFilter;
+                                  }).length
                               }{" "}
                               items
                             </span>
@@ -1273,7 +1454,11 @@ export default function CreateContentPage() {
 
                           <div className="row g-3">
                             {generatedContent
-                              .filter((item) => item.product === product)
+                              .filter((item) => {
+                                if (item.product !== product) return false;
+                                if (contentTypeFilter === "all") return true;
+                                return item.content_type === contentTypeFilter;
+                              })
                               .map((item) => (
                                 <div key={item.id} className="col-md-4">
                                   <div className="card">
@@ -1284,45 +1469,213 @@ export default function CreateContentPage() {
                                         backgroundColor: "#f8f9fa",
                                       }}
                                     >
-                                      {item.image_url || item.local_url ? (
-                                        <img
-                                          src={item.image_url || item.local_url}
-                                          alt={item.title}
-                                          className="card-img-top"
-                                          style={{
-                                            height: "100%",
-                                            objectFit: "cover",
-                                          }}
-                                          onError={(e) => {
-                                            // If external URL failed, try local URL
-                                            if (
-                                              e.target.src.includes(
-                                                "cdn-magnific.freepik.com"
-                                              ) &&
-                                              item.local_url
-                                            ) {
-                                              e.target.src = `${config.pythonApi.baseURL}${item.local_url}`;
-                                            }
-                                          }}
-                                        />
+                                      {/* Video Display */}
+                                      {item.content_type === "video" ? (
+                                        <>
+                                          {item.video_url ? (
+                                            <div className="w-100 h-100 position-relative">
+                                              <video
+                                                src={item.video_url}
+                                                poster={item.preview_url || undefined}
+                                                className="card-img-top"
+                                                style={{
+                                                  width: "100%",
+                                                  height: "100%",
+                                                  objectFit: "cover",
+                                                }}
+                                                controls={playingVideoId === item.id}
+                                                preload="metadata"
+                                                onPlay={() => setPlayingVideoId(item.id)}
+                                                onPause={() => setPlayingVideoId(null)}
+                                                onEnded={() => setPlayingVideoId(null)}
+                                              >
+                                                Your browser does not support the video tag.
+                                              </video>
+                                              {/* Play button overlay - show when video is not playing */}
+                                              {playingVideoId !== item.id && (
+                                                <div
+                                                  className="position-absolute top-50 start-50 translate-middle"
+                                                  style={{
+                                                    cursor: "pointer",
+                                                    zIndex: 2,
+                                                  }}
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const container = e.currentTarget.closest('.position-relative');
+                                                    const video = container?.querySelector('video');
+                                                    if (video) {
+                                                      video.play().catch(err => {
+                                                        console.error('Error playing video:', err);
+                                                      });
+                                                      setPlayingVideoId(item.id);
+                                                    }
+                                                  }}
+                                                >
+                                                  <div
+                                                    className="rounded-circle d-flex align-items-center justify-content-center"
+                                                    style={{
+                                                      width: "60px",
+                                                      height: "60px",
+                                                      backgroundColor: "rgba(0, 0, 0, 0.7)",
+                                                      backdropFilter: "blur(4px)",
+                                                      transition: "all 0.2s ease",
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+                                                      e.currentTarget.style.transform = "scale(1.1)";
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+                                                      e.currentTarget.style.transform = "scale(1)";
+                                                    }}
+                                                  >
+                                                    <Icon
+                                                      icon="solar:play-bold"
+                                                      width="32"
+                                                      height="32"
+                                                      className="text-white"
+                                                      style={{ marginLeft: "4px" }}
+                                                    />
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {/* Video duration badge */}
+                                              {item.duration && (
+                                                <div className="position-absolute bottom-0 end-0 m-2">
+                                                  <span className="badge bg-dark bg-opacity-75">
+                                                    {item.duration}s
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : item.preview_url ? (
+                                            <div className="w-100 h-100 position-relative">
+                                              <img
+                                                src={item.preview_url}
+                                                alt={item.title}
+                                                className="card-img-top"
+                                                style={{
+                                                  width: "100%",
+                                                  height: "100%",
+                                                  objectFit: "cover",
+                                                }}
+                                              />
+                                              {/* Play button overlay */}
+                                              <div
+                                                className="position-absolute top-50 start-50 translate-middle"
+                                                style={{
+                                                  cursor: "pointer",
+                                                  zIndex: 2,
+                                                }}
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  // If video_url is available, we can try to load and play it
+                                                  // For now, clicking on preview will just show the video when it loads
+                                                  if (item.video_url) {
+                                                    // The video element will be created when video_url is available
+                                                    // This is a fallback for when only preview is shown
+                                                  }
+                                                }}
+                                              >
+                                                <div
+                                                  className="rounded-circle d-flex align-items-center justify-content-center"
+                                                  style={{
+                                                    width: "60px",
+                                                    height: "60px",
+                                                    backgroundColor: "rgba(0, 0, 0, 0.7)",
+                                                    backdropFilter: "blur(4px)",
+                                                    transition: "all 0.2s ease",
+                                                  }}
+                                                  onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+                                                    e.currentTarget.style.transform = "scale(1.1)";
+                                                  }}
+                                                  onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+                                                    e.currentTarget.style.transform = "scale(1)";
+                                                  }}
+                                                >
+                                                  <Icon
+                                                    icon="solar:play-bold"
+                                                    width="32"
+                                                    height="32"
+                                                    className="text-white"
+                                                    style={{ marginLeft: "4px" }}
+                                                  />
+                                                </div>
+                                              </div>
+                                              {item.duration && (
+                                                <div className="position-absolute bottom-0 end-0 m-2">
+                                                  <span className="badge bg-dark bg-opacity-75">
+                                                    {item.duration}s
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <div className="d-flex align-items-center justify-content-center h-100">
+                                              <Icon
+                                                icon="solar:video-library-bold"
+                                                width="32"
+                                                height="32"
+                                                className="text-muted"
+                                              />
+                                            </div>
+                                          )}
+                                        </>
                                       ) : (
-                                        <div className="d-flex align-items-center justify-content-center h-100">
-                                          {item.type === "video" ? (
-                                            <Icon
-                                              icon="solar:video-library-bold"
-                                              width="32"
-                                              height="32"
-                                              className="text-muted"
+                                        /* Image Display */
+                                        <>
+                                          {item.image_url || item.local_url || item.preview_url ? (
+                                            <img
+                                              src={item.image_url || item.local_url || item.preview_url}
+                                              alt={item.title}
+                                              className="card-img-top"
+                                              style={{
+                                                height: "100%",
+                                                objectFit: "cover",
+                                              }}
+                                              onError={(e) => {
+                                                // Try fallback URLs in order
+                                                const currentSrc = e.target.src;
+                                                
+                                                // If external URL failed, try local URL
+                                                if (
+                                                  currentSrc.includes("cdn-magnific.freepik.com") &&
+                                                  item.local_url
+                                                ) {
+                                                  e.target.src = item.local_url;
+                                                }
+                                                // If local URL failed, try preview URL
+                                                else if (
+                                                  item.preview_url &&
+                                                  !currentSrc.includes(item.preview_url)
+                                                ) {
+                                                  e.target.src = item.preview_url;
+                                                }
+                                                // If all failed, hide image and show placeholder
+                                                else {
+                                                  e.target.style.display = 'none';
+                                                  const placeholder = e.target.parentElement.querySelector('.image-placeholder');
+                                                  if (placeholder) {
+                                                    placeholder.style.display = 'flex';
+                                                  }
+                                                }
+                                              }}
                                             />
                                           ) : (
-                                            <Icon
-                                              icon="solar:gallery-bold"
-                                              width="32"
-                                              height="32"
-                                              className="text-muted"
-                                            />
+                                            <div className="d-flex align-items-center justify-content-center h-100">
+                                              <Icon
+                                                icon="solar:gallery-bold"
+                                                width="32"
+                                                height="32"
+                                                className="text-muted"
+                                              />
+                                            </div>
                                           )}
-                                        </div>
+                                        </>
                                       )}
                                       {/* Status overlay */}
                                       <div className="position-absolute top-0 end-0 m-2">
@@ -1334,8 +1687,9 @@ export default function CreateContentPage() {
                                         <h6 className="card-title small mb-0">
                                           {item.title}
                                         </h6>
-                                        {(item.image_url || item.local_url) && (
-                                          <div className="d-flex gap-1">
+                                        <div className="d-flex gap-1">
+                                          {/* Edit button - only for images */}
+                                          {item.content_type === "image" && (item.image_url || item.local_url) && (
                                             <button
                                               className="btn btn-sm btn-outline-info"
                                               onClick={() => handleEditClick(item.id)}
@@ -1347,18 +1701,26 @@ export default function CreateContentPage() {
                                                 height="12"
                                               />
                                             </button>
+                                          )}
+                                          {/* Download button - for both images and videos */}
+                                          {(item.content_type === "image" && (item.image_url || item.local_url)) ||
+                                           (item.content_type === "video" && item.video_url) ? (
                                             <button
                                               className="btn btn-sm btn-outline-secondary"
-                                              onClick={() =>
-                                                downloadImage(
-                                                  item,
-                                                  `${item.title.replace(
-                                                    /\s+/g,
-                                                    "_"
-                                                  )}.jpg`
-                                                )
-                                              }
-                                              title="Download this image"
+                                              onClick={() => {
+                                                if (item.content_type === "video") {
+                                                  downloadVideo(
+                                                    item,
+                                                    `${item.title.replace(/\s+/g, "_")}.mp4`
+                                                  );
+                                                } else {
+                                                  downloadImage(
+                                                    item,
+                                                    `${item.title.replace(/\s+/g, "_")}.jpg`
+                                                  );
+                                                }
+                                              }}
+                                              title={`Download this ${item.content_type === "video" ? "video" : "image"}`}
                                             >
                                               <Icon
                                                 icon="solar:download-bold"
@@ -1366,8 +1728,8 @@ export default function CreateContentPage() {
                                                 height="12"
                                               />
                                             </button>
-                                          </div>
-                                        )}
+                                          ) : null}
+                                        </div>
                                       </div>
                                       <div className="d-flex align-items-center gap-2 small text-muted">
                                         <Icon
@@ -1473,7 +1835,10 @@ export default function CreateContentPage() {
                       ))}
 
                       {/* No content message */}
-                      {generatedContent.length === 0 && (
+                      {generatedContent.filter((item) => {
+                        if (contentTypeFilter === "all") return true;
+                        return item.content_type === contentTypeFilter;
+                      }).length === 0 && (
                         <div className="text-center p-4 text-muted">
                           <Icon
                             icon="solar:package-bold"
@@ -1481,10 +1846,19 @@ export default function CreateContentPage() {
                             height="48"
                             className="text-muted mb-3"
                           />
-                          <p className="h5 mb-2">No generated content yet</p>
+                          <p className="h5 mb-2">
+                            {contentTypeFilter === "all"
+                              ? "No generated content yet"
+                              : contentTypeFilter === "image"
+                              ? "No images yet"
+                              : "No videos yet"}
+                          </p>
                           <p className="small">
-                            Create your first content generation to see results
-                            here
+                            {contentTypeFilter === "all"
+                              ? "Create your first content generation to see results here"
+                              : contentTypeFilter === "image"
+                              ? "Generate images to see them here"
+                              : "Generate videos to see them here"}
                           </p>
                         </div>
                       )}
