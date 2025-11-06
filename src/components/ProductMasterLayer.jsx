@@ -25,12 +25,14 @@ const ProductMasterLayer = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Infinite scroll state
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const tableContainerRef = useRef(null);
   const itemsPerPage = 20;
+  // Track if page change is from infinite scroll (should not trigger replacement)
+  const isInfiniteScrollRef = useRef(false);
 
   // Form validation errors
   const [formErrors, setFormErrors] = useState({});
@@ -144,6 +146,7 @@ const ProductMasterLayer = () => {
     // If filters changed, reset to page 1 and load
     if (filtersChanged) {
       prevFiltersRef.current = currentFilters;
+      isInfiniteScrollRef.current = false; // Reset flag
       if (currentPage !== 1) {
         // Reset page first, let the page change trigger reload
         prevPageRef.current = currentPage;
@@ -156,10 +159,15 @@ const ProductMasterLayer = () => {
       return;
     }
 
-    // If only page changed (not filters), load that page
-    if (pageChanged && currentPage > 0) {
+    // If only page changed (not filters), and it's NOT from infinite scroll, load that page
+    // Skip if page change is from infinite scroll (data already loaded via append)
+    if (pageChanged && currentPage > 0 && !isInfiniteScrollRef.current) {
       prevPageRef.current = currentPage;
       loadProducts(currentPage, false);
+    } else if (pageChanged && isInfiniteScrollRef.current) {
+      // Page changed from infinite scroll, just update the ref and reset flag
+      prevPageRef.current = currentPage;
+      isInfiniteScrollRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -180,6 +188,7 @@ const ProductMasterLayer = () => {
     setSortDirection("asc");
     setCurrentPage(1);
     setDisplayedItemsCount(20);
+    isInfiniteScrollRef.current = false; // Reset flag
   };
 
   // Get displayed data for infinite scroll
@@ -188,26 +197,40 @@ const ProductMasterLayer = () => {
   };
 
   // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length || currentPage < totalPages;
-  }, [displayedItemsCount, currentPage, totalPages]);
+  const hasMoreData = useCallback(
+    (dataArray) => {
+      return displayedItemsCount < dataArray.length || currentPage < totalPages;
+    },
+    [displayedItemsCount, currentPage, totalPages]
+  );
 
   // Load more data callback
   const loadMoreData = useCallback(async () => {
     if (isLoadingMore || isLoading) return;
-    
+
     setIsLoadingMore(true);
     // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     // Check if we need to fetch more from API
     if (displayedItemsCount >= products.length && currentPage < totalPages) {
+      // Set flag to indicate this page change is from infinite scroll
+      isInfiniteScrollRef.current = true;
       await loadProducts(currentPage + 1, false, true);
     }
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
+
+    setDisplayedItemsCount((prev) => prev + itemsPerPage);
     setIsLoadingMore(false);
-  }, [isLoadingMore, isLoading, displayedItemsCount, products.length, currentPage, totalPages, itemsPerPage, loadProducts]);
+  }, [
+    isLoadingMore,
+    isLoading,
+    displayedItemsCount,
+    products.length,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    loadProducts,
+  ]);
 
   // Reset displayed items when search term or filters change
   useEffect(() => {
@@ -226,24 +249,24 @@ const ProductMasterLayer = () => {
       const clientHeight = container.clientHeight;
       const isAtTop = scrollTop <= 1;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
+
       if (e.deltaY > 0 && isAtBottom) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       } else if (e.deltaY < 0 && isAtTop) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       }
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
+    container.addEventListener("wheel", handleWheel, { passive: true });
+
     return () => {
-      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -711,7 +734,7 @@ const ProductMasterLayer = () => {
           className="text-muted ms-auto"
           style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
         >
-          Showing {products.length} of {totalRecords} products
+          Showing {getDisplayedData(products).length} of {totalRecords} products
         </span>
 
         {/* Sync Button */}
@@ -785,7 +808,7 @@ const ProductMasterLayer = () => {
           const scrollTop = target.scrollTop;
           const scrollHeight = target.scrollHeight;
           const clientHeight = target.clientHeight;
-          
+
           if (scrollTop + clientHeight >= scrollHeight * 0.8) {
             if (hasMoreData(products) && !isLoadingMore && !isLoading) {
               loadMoreData();
@@ -799,16 +822,16 @@ const ProductMasterLayer = () => {
           const clientHeight = target.clientHeight;
           const isAtTop = scrollTop <= 1;
           const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-          
+
           if (e.deltaY > 0 && isAtBottom) {
             window.scrollBy({
               top: e.deltaY,
-              behavior: 'auto'
+              behavior: "auto",
             });
           } else if (e.deltaY < 0 && isAtTop) {
             window.scrollBy({
               top: e.deltaY,
-              behavior: 'auto'
+              behavior: "auto",
             });
           }
         }}
@@ -889,7 +912,8 @@ const ProductMasterLayer = () => {
                             height: "20px",
                             backgroundColor: "#e5e7eb",
                             borderRadius: "4px",
-                            animation: "skeletonPulse 1.5s ease-in-out infinite",
+                            animation:
+                              "skeletonPulse 1.5s ease-in-out infinite",
                           }}
                         />
                       </td>
@@ -914,9 +938,7 @@ const ProductMasterLayer = () => {
                 {getDisplayedData(products).map((product, index) => (
                   <tr key={product.product_id}>
                     <td>
-                      <span className="text-secondary-light">
-                        {index + 1}
-                      </span>
+                      <span className="text-secondary-light">{index + 1}</span>
                     </td>
                     <td>
                       <span className="text-secondary-light fw-medium">
@@ -983,7 +1005,8 @@ const ProductMasterLayer = () => {
                                 height: "20px",
                                 backgroundColor: "#e5e7eb",
                                 borderRadius: "4px",
-                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                                animation:
+                                  "skeletonPulse 1.5s ease-in-out infinite",
                               }}
                             />
                           </td>

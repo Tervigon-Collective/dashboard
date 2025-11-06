@@ -1382,6 +1382,8 @@ const ReceivingManagementLayer = () => {
   const [docPreviewName, setDocPreviewName] = useState("");
   const [purchaseOrderInfo, setPurchaseOrderInfo] = useState(null);
   const [isDownloadingPO, setIsDownloadingPO] = useState(false);
+  const [grnInfo, setGrnInfo] = useState(null);
+  const [isDownloadingGrn, setIsDownloadingGrn] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -1436,6 +1438,26 @@ const ReceivingManagementLayer = () => {
       } catch (e) {
         console.error("Error checking Purchase Order:", e);
         setPurchaseOrderInfo(null);
+      }
+
+      // Check if GRN PDF exists
+      try {
+        const grnExists = await qualityCheckApi.checkGrnExists(
+          request.request_id
+        );
+        if (grnExists) {
+          const grnInfoResult = await qualityCheckApi.getGrnInfo(
+            request.request_id
+          );
+          if (grnInfoResult.success) {
+            setGrnInfo(grnInfoResult.data);
+          }
+        } else {
+          setGrnInfo(null);
+        }
+      } catch (e) {
+        console.error("Error checking GRN:", e);
+        setGrnInfo(null);
       }
 
       setViewModalOpen(true);
@@ -1878,6 +1900,7 @@ const ReceivingManagementLayer = () => {
                     onClick={() => {
                       setViewModalOpen(false);
                       setPurchaseOrderInfo(null);
+                      setGrnInfo(null);
                     }}
                   ></button>
                 </div>
@@ -2038,6 +2061,96 @@ const ReceivingManagementLayer = () => {
                             }}
                           >
                             {isDownloadingPO ? (
+                              <>
+                                <span
+                                  className="spinner-border spinner-border-sm me-2"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Icon
+                                  icon="mdi:download"
+                                  className="me-1"
+                                  width="16"
+                                  height="16"
+                                />
+                                Download PDF
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* GRN PDF Section */}
+                  {grnInfo && (
+                    <div className="mb-3">
+                      <h6 className="text-muted mb-3">
+                        <Icon
+                          icon="mdi:file-pdf-box"
+                          className="me-2"
+                          style={{ color: "#16a34a" }}
+                        />
+                        GRN (Goods Receipt Note)
+                      </h6>
+                      <div
+                        className="p-3 border rounded"
+                        style={{ backgroundColor: "#f8f9fa" }}
+                      >
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                          <div>
+                            <div className="fw-medium">
+                              GRN Number: {grnInfo.grn_number}
+                            </div>
+                            <small className="text-muted">
+                              Generated:{" "}
+                              {new Date(grnInfo.generated_at).toLocaleString()}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{
+                              backgroundColor: "#16a34a",
+                              color: "white",
+                            }}
+                            disabled={isDownloadingGrn}
+                            onClick={async () => {
+                              if (!selectedRequest) return;
+                              setIsDownloadingGrn(true);
+                              try {
+                                const blob =
+                                  await qualityCheckApi.downloadGrnPdf(
+                                    selectedRequest.request_id
+                                  );
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download =
+                                  grnInfo.file_name ||
+                                  `${grnInfo.grn_number}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              } catch (error) {
+                                console.error(
+                                  "Error downloading GRN PDF:",
+                                  error
+                                );
+                                alert(
+                                  "Failed to download GRN PDF. Please try again."
+                                );
+                              } finally {
+                                setIsDownloadingGrn(false);
+                              }
+                            }}
+                          >
+                            {isDownloadingGrn ? (
                               <>
                                 <span
                                   className="spinner-border spinner-border-sm me-2"
@@ -4337,6 +4450,162 @@ const QualityCheckTab = ({
   hasMoreData,
   loadMoreData,
 }) => {
+  const [downloadingGrn, setDownloadingGrn] = useState({});
+  const [grnInfoCache, setGrnInfoCache] = useState({});
+  const [generatingGrn, setGeneratingGrn] = useState({});
+
+  // Check if GRN exists for a request
+  const checkGrnExists = async (requestId) => {
+    if (grnInfoCache[requestId] !== undefined) {
+      return grnInfoCache[requestId];
+    }
+    try {
+      const exists = await qualityCheckApi.checkGrnExists(requestId);
+      if (exists) {
+        const info = await qualityCheckApi.getGrnInfo(requestId);
+        setGrnInfoCache((prev) => ({
+          ...prev,
+          [requestId]: info.success ? info.data : null,
+        }));
+        return info.success ? info.data : null;
+      } else {
+        setGrnInfoCache((prev) => ({
+          ...prev,
+          [requestId]: null,
+        }));
+        return null;
+      }
+    } catch (error) {
+      console.error("Error checking GRN:", error);
+      setGrnInfoCache((prev) => ({
+        ...prev,
+        [requestId]: null,
+      }));
+      return null;
+    }
+  };
+
+  // Generate and download GRN PDF
+  const handleGenerateAndDownloadGrn = async (request) => {
+    const requestId = request.request_id;
+    setGeneratingGrn((prev) => ({ ...prev, [requestId]: true }));
+
+    try {
+      // First, generate the GRN PDF
+      const generateResult = await qualityCheckApi.generateGrnPdf(requestId);
+
+      if (generateResult.success) {
+        // Update cache
+        setGrnInfoCache((prev) => ({
+          ...prev,
+          [requestId]: generateResult.data,
+        }));
+
+        // Then download it
+        await handleDownloadGrn(request);
+      } else {
+        alert(
+          `Error: ${generateResult.message || "Failed to generate GRN PDF"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error generating GRN PDF:", error);
+      alert("Failed to generate GRN PDF. Please try again.");
+    } finally {
+      setGeneratingGrn((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  // Download GRN PDF handler
+  const handleDownloadGrn = async (request) => {
+    const requestId = request.request_id;
+    setDownloadingGrn((prev) => ({ ...prev, [requestId]: true }));
+
+    try {
+      const blob = await qualityCheckApi.downloadGrnPdf(requestId);
+      const grnInfo = grnInfoCache[requestId];
+      const fileName = grnInfo?.file_name || `GRN-${requestId}.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading GRN PDF:", error);
+      alert(
+        "Failed to download GRN PDF. Please try again or generate it first."
+      );
+    } finally {
+      setDownloadingGrn((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  // Check if quality check is completed (has quality check data)
+  // We need to check via API since items don't include QC data by default
+  const [qcStatusCache, setQcStatusCache] = useState({});
+
+  const hasQualityCheckCompleted = async (request) => {
+    const requestId = request.request_id;
+
+    // Check cache first
+    if (qcStatusCache[requestId] !== undefined) {
+      return qcStatusCache[requestId];
+    }
+
+    try {
+      const qcResult = await qualityCheckApi.getQualityChecksByRequestId(
+        requestId
+      );
+      const hasQC =
+        qcResult.success && qcResult.data && qcResult.data.length > 0;
+
+      // Update cache
+      setQcStatusCache((prev) => ({
+        ...prev,
+        [requestId]: hasQC,
+      }));
+
+      return hasQC;
+    } catch (error) {
+      console.error("Error checking quality check status:", error);
+      return false;
+    }
+  };
+
+  // Synchronous version for rendering (uses cache)
+  const hasQualityCheckCompletedSync = (request) => {
+    return qcStatusCache[request.request_id] === true;
+  };
+
+  // Check quality check status and GRN existence for all requests on mount/update
+  useEffect(() => {
+    if (requests.length > 0) {
+      requests.forEach(async (request) => {
+        const requestId = request.request_id;
+
+        // Check if quality check is completed
+        const hasQC = await hasQualityCheckCompleted(request);
+
+        // If QC is completed, check for GRN
+        if (hasQC && grnInfoCache[requestId] === undefined) {
+          checkGrnExists(requestId).then((grnInfo) => {
+            if (grnInfo) {
+              console.log(
+                `✅ GRN found for request ${requestId}:`,
+                grnInfo.grn_number
+              );
+            }
+          });
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests]);
+
   const displayedData = getDisplayedData();
 
   return (
@@ -4606,6 +4875,92 @@ const QualityCheckTab = ({
                                   style={{ color: "#f59e0b" }}
                                 />
                               </button>
+                              {/* GRN PDF Download Icon - Only show if quality check is completed */}
+                              {hasQualityCheckCompletedSync(request) && (
+                                <>
+                                  {grnInfoCache[request.request_id] ? (
+                                    <button
+                                      className="btn btn-sm"
+                                      style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        padding: 0,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: "6px",
+                                        backgroundColor: "white",
+                                      }}
+                                      title="Download GRN PDF"
+                                      onClick={() => handleDownloadGrn(request)}
+                                      disabled={
+                                        downloadingGrn[request.request_id]
+                                      }
+                                    >
+                                      {downloadingGrn[request.request_id] ? (
+                                        <span
+                                          className="spinner-border spinner-border-sm"
+                                          role="status"
+                                          aria-hidden="true"
+                                          style={{
+                                            width: "12px",
+                                            height: "12px",
+                                          }}
+                                        />
+                                      ) : (
+                                        <Icon
+                                          icon="mdi:file-pdf-box"
+                                          width="16"
+                                          height="16"
+                                          style={{ color: "#dc3545" }}
+                                        />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="btn btn-sm"
+                                      style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        padding: 0,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: "6px",
+                                        backgroundColor: "white",
+                                      }}
+                                      title="Generate and Download GRN PDF"
+                                      onClick={() =>
+                                        handleGenerateAndDownloadGrn(request)
+                                      }
+                                      disabled={
+                                        generatingGrn[request.request_id]
+                                      }
+                                    >
+                                      {generatingGrn[request.request_id] ? (
+                                        <span
+                                          className="spinner-border spinner-border-sm"
+                                          role="status"
+                                          aria-hidden="true"
+                                          style={{
+                                            width: "12px",
+                                            height: "12px",
+                                          }}
+                                        />
+                                      ) : (
+                                        <Icon
+                                          icon="mdi:file-document-outline"
+                                          width="16"
+                                          height="16"
+                                          style={{ color: "#6c757d" }}
+                                        />
+                                      )}
+                                    </button>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
