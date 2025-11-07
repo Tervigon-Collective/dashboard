@@ -31,9 +31,6 @@ jobs:
             echo "Azure Static Web Apps deployment token is missing or unavailable in this workflow context."
             exit 1
           fi
-          echo "SWA token is set."
-
-      # Let Oryx handle the Next.js SSR build; don't set output_location for SSR
       - name: Build & Deploy (Next.js SSR)
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -41,8 +38,8 @@ jobs:
           action: upload
           app_location: "/"
           api_location: ""
-          # Optional: if you really need a custom build
-          # app_build_command: "npm ci && npm run build"
+          output_location: ".next"
+          app_build_command: "npm ci && npm run build && rm -rf .next/cache"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
