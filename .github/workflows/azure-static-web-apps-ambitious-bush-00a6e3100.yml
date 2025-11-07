@@ -54,6 +54,7 @@ jobs:
           production_branch: main
           app_location: "/"
           api_location: ""
+          deployment_environment: "default"
           # Optional only if you need a custom build:
           # app_build_command: "npm ci && npm run build && rm -rf .next/cache"
 
