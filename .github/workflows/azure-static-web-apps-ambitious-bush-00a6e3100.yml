@@ -9,38 +9,37 @@ on:
 
 jobs:
   build_and_deploy_job:
-    if: |
-      github.event_name == 'push' || (
-        github.event_name == 'pull_request' &&
-        github.event.action != 'closed' &&
-        github.event.pull_request.head.repo.full_name == github.repository
-      )
+    if: github.event_name == 'push' || (
+          github.event_name == 'pull_request' &&
+          github.event.action != 'closed' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        )
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true
-          lfs: false
 
       - name: Assert SWA token available
         env:
           AZ_SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
         run: |
           if [ -z "$AZ_SWA_TOKEN" ]; then
-            echo "Azure Static Web Apps deployment token is missing or unavailable in this workflow context."
+            echo "SWA token is empty (missing or not available to this workflow context)."
             exit 1
           fi
 
-      - name: Build & Deploy (Next.js SSR)
+      - name: Build & Deploy (SSR via Oryx)
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
           action: upload
           app_location: "/"
-          api_location: ""
-          output_location: ".next"
-          app_build_command: "npm ci && npm run build && rm -rf .next/cache"
+          api_location: ""         # set if you have Azure Functions
+          # output_location: ""    # omit for SSR
+          # app_build_command: ""  # usually omit; Oryx detects Next.js
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
