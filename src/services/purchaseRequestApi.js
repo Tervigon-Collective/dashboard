@@ -228,6 +228,79 @@ class PurchaseRequestApiService {
     return response.blob();
   }
 
+  async generateQrCodes(requestId) {
+    return this.makeRequest(
+      `/receiving/purchase-request/${requestId}/generate-qr-codes`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  async downloadQrCodesZip(requestId) {
+    const token = await this.getAuthToken();
+
+    if (!token) {
+      throw new Error(
+        "No authentication token available. Please sign in again."
+      );
+    }
+
+    let response = await fetch(
+      `${this.baseURL}/receiving/purchase-request/${requestId}/qr-codes/download`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.status === 401) {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+          const newToken = await user.getIdToken(true);
+          localStorage.setItem("idToken", newToken);
+          response = await fetch(
+            `${this.baseURL}/receiving/purchase-request/${requestId}/qr-codes/download`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            }
+          );
+
+          if (response.status === 401) {
+            throw new Error("Authentication failed. Please sign in again.");
+          }
+        } else {
+          throw new Error("No authenticated user found");
+        }
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        throw new Error("Authentication failed. Please sign in again.");
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("No QR codes found for this request");
+      }
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    return response.blob();
+  }
+
+  async getQrDetail(requestId, itemId, token) {
+    return this.makeRequest(`/receiving/qr/${requestId}/${itemId}/${token}`);
+  }
+
   /**
    * Get Purchase Order metadata (without PDF data)
    * @param {number} requestId - Purchase request ID

@@ -458,139 +458,39 @@ const ReceivingManagementLayer = () => {
                       <>
                         {displayedData.map((request, index) => (
                           <tr key={request.request_id}>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {index + 1}
+                            <td className="small text-capitalize">
+                              {d.doc_type?.replace(/_/g, " ")}
                             </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {request.vendor_name || "-"}
+                            <td className="small">{d.file_name}</td>
+                            <td className="small">
+                              {Math.ceil((d.file_size_bytes || 0) / 1024)} KB
                             </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {new Date(
-                                request.order_date
-                              ).toLocaleDateString()}
+                            <td className="small">
+                              {d.uploaded_at
+                                ? new Date(d.uploaded_at).toLocaleString()
+                                : "-"}
                             </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {new Date(
-                                request.delivery_date
-                              ).toLocaleDateString()}
-                            </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {request.aggregated?.productNames || "-"}
-                            </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {request.aggregated?.totalInvoiceQty ?? 0}
-                            </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {request.aggregated?.totalSortedQty ?? 0}
-                            </td>
-                            <td
-                              style={{
-                                padding: "clamp(8px, 2vw, 12px)",
-                                color: "#374151",
-                                fontSize: "clamp(11px, 2.5vw, 14px)",
-                              }}
-                            >
-                              {request.aggregated?.totalDamageQty ?? 0}
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                                <button
-                                  className="btn btn-sm"
-                                  style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    padding: 0,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "6px",
-                                    backgroundColor: "white",
-                                  }}
-                                  title="View"
-                                  onClick={() =>
-                                    handleViewRequest(request, "quality-check")
-                                  }
-                                >
-                                  <Icon
-                                    icon="lucide:eye"
-                                    width="16"
-                                    height="16"
-                                    style={{ color: "#3b82f6" }}
-                                  />
-                                </button>
-                              </div>
+                            <td className="small">
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  color: "#dc3545",
+                                }}
+                                title="Delete"
+                                onClick={() => onDelete(d.document_id)}
+                              >
+                                <Icon
+                                  icon="mdi:delete"
+                                  width="16"
+                                  height="16"
+                                />
+                              </button>
                             </td>
                           </tr>
                         ))}
-                        {isLoadingMore && (
-                          <>
-                            {Array.from({ length: 5 }).map((_, rowIndex) => (
-                              <tr key={`skeleton-more-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map(
-                                  (_, colIndex) => (
-                                    <td
-                                      key={`skeleton-more-${rowIndex}-${colIndex}`}
-                                    >
-                                      <div
-                                        className="skeleton"
-                                        style={{
-                                          height: "20px",
-                                          backgroundColor: "#e5e7eb",
-                                          borderRadius: "4px",
-                                          animation:
-                                            "skeletonPulse 1.5s ease-in-out infinite",
-                                        }}
-                                      />
-                                    </td>
-                                  )
-                                )}
-                              </tr>
-                            ))}
-                          </>
-                        )}
                       </>
                     )}
                   </tbody>
@@ -1166,7 +1066,6 @@ const ReceivingManagementLayer = () => {
           {
             ...variant,
             quantity: 1,
-            ord_qty: 0,
             rate: 0,
             taxable_amt: 0,
             igst_percent: 0,
@@ -1199,7 +1098,6 @@ const ReceivingManagementLayer = () => {
               product_id: product.product_id,
               variant_id: variant.variant_id,
               quantity: variant.quantity || 1,
-              ord_qty: variant.ord_qty || 0,
               rate: variant.rate || 0,
               taxable_amt: variant.taxable_amt || 0,
               igst_percent: variant.igst_percent || 0,
@@ -1384,6 +1282,8 @@ const ReceivingManagementLayer = () => {
   const [isDownloadingPO, setIsDownloadingPO] = useState(false);
   const [grnInfo, setGrnInfo] = useState(null);
   const [isDownloadingGrn, setIsDownloadingGrn] = useState(false);
+  const [qrPreviewData, setQrPreviewData] = useState(null);
+  const [qrGenerationStatus, setQrGenerationStatus] = useState({});
 
   useEffect(() => {
     return () => {
@@ -1396,22 +1296,21 @@ const ReceivingManagementLayer = () => {
   }, [docPreviewUrl]);
   const handleViewRequest = async (request, sourceTab = null) => {
     try {
-      // If viewing from quality-check tab, fetch with quality check data
-      if (sourceTab === "quality-check") {
+      let fetchedRequest = request;
+      try {
         const result = await purchaseRequestApi.getPurchaseRequestById(
           request.request_id,
-          true // include_quality_check=true
+          sourceTab === "quality-check"
         );
         if (result.success) {
-          setSelectedRequest(result.data);
-        } else {
-          // Fallback to existing request data if API fails
-          setSelectedRequest(request);
+          fetchedRequest = result.data;
         }
-      } else {
-        // Default behavior - use existing request data
-        setSelectedRequest(request);
+      } catch (fetchError) {
+        console.error("Error refreshing purchase request data:", fetchError);
       }
+
+      setSelectedRequest(fetchedRequest);
+
       // Load documents for this request
       try {
         const docs = await qualityCheckApi.listDocuments(request.request_id);
@@ -1467,6 +1366,68 @@ const ReceivingManagementLayer = () => {
       setSelectedRequest(request);
       setViewModalOpen(true);
     }
+  };
+
+  const handleGenerateQrCodes = async (request) => {
+    if (!request) return;
+    const requestId = request.request_id;
+
+    if (
+      !window.confirm(
+        "Are you sure you want to generate QR codes for this request?"
+      )
+    ) {
+      return;
+    }
+
+    setQrGenerationStatus((prev) => ({ ...prev, [requestId]: true }));
+
+    try {
+      await purchaseRequestApi.generateQrCodes(requestId);
+
+      try {
+        const zipBlob = await purchaseRequestApi.downloadQrCodesZip(requestId);
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `QR-${requestId}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (downloadError) {
+        console.error("Error downloading QR codes:", downloadError);
+        alert(
+          downloadError.message ||
+            "QR codes were generated but the download failed. Please try downloading again."
+        );
+      }
+
+      await loadQualityCheckRequests();
+
+      if (selectedRequest && selectedRequest.request_id === requestId) {
+        await handleViewRequest(request, "quality-check");
+      }
+
+      alert("QR codes generated successfully.");
+    } catch (error) {
+      console.error("Error generating QR codes:", error);
+      alert(error.message || "Failed to generate QR codes. Please try again.");
+    } finally {
+      setQrGenerationStatus((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  const handleDownloadQrImage = (qrCode) => {
+    if (!qrCode?.image_base64) {
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = qrCode.image_base64;
+    link.download = qrCode.file_name || "qr-code.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Handle settings icon click (open status confirmation modal)
@@ -1849,6 +1810,8 @@ const ReceivingManagementLayer = () => {
               }
               handleInspectClick={handleInspectClick}
               handleSettingsClick={handleSettingsClick}
+              handleGenerateQrCodes={handleGenerateQrCodes}
+              qrGenerationStatus={qrGenerationStatus}
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
@@ -1901,6 +1864,7 @@ const ReceivingManagementLayer = () => {
                       setViewModalOpen(false);
                       setPurchaseOrderInfo(null);
                       setGrnInfo(null);
+                      setQrPreviewData(null);
                     }}
                   ></button>
                 </div>
@@ -2257,7 +2221,6 @@ const ReceivingManagementLayer = () => {
                                 <th className="small">Variant</th>
                                 <th className="small">SKU</th>
                                 <th className="small">Quantity</th>
-                                <th className="small">ORD Qty</th>
                                 <th className="small">Rate</th>
                                 <th className="small">Taxable Amt</th>
                                 <th className="small">IGST %</th>
@@ -2265,6 +2228,7 @@ const ReceivingManagementLayer = () => {
                                 <th className="small">CGST %</th>
                                 <th className="small">GST Amt</th>
                                 <th className="small">Net Amount</th>
+                                <th className="small">QR</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2283,7 +2247,6 @@ const ReceivingManagementLayer = () => {
                                   <td className="small">
                                     {item.quantity || 0}
                                   </td>
-                                  <td className="small">{item.ord_qty || 0}</td>
                                   <td className="small">
                                     {item.rate
                                       ? `₹${parseFloat(item.rate).toFixed(2)}`
@@ -2330,6 +2293,34 @@ const ReceivingManagementLayer = () => {
                                           2
                                         )}`
                                       : "-"}
+                                  </td>
+                                  <td className="small">
+                                    {item.qr_code ? (
+                                      <div className="d-flex flex-wrap gap-1">
+                                        <button
+                                          type="button"
+                                          className="btn btn-sm btn-outline-primary"
+                                          onClick={() =>
+                                            setQrPreviewData(item.qr_code)
+                                          }
+                                        >
+                                          View
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn btn-sm btn-outline-secondary"
+                                          onClick={() =>
+                                            handleDownloadQrImage(item.qr_code)
+                                          }
+                                        >
+                                          Download
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted">
+                                        Not generated
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
                               ))}
@@ -2456,7 +2447,6 @@ const ReceivingManagementLayer = () => {
           </div>
         )}
 
-        {/* Document Preview Modal (parent-level) */}
         {docPreviewOpen && (
           <div
             className="modal show d-block"
@@ -2499,6 +2489,51 @@ const ReceivingManagementLayer = () => {
                   >
                     Open in new tab
                   </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {qrPreviewData && (
+          <div
+            className="modal show d-block"
+            tabIndex="-1"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-md modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <Icon icon="mdi:qrcode" className="me-2" />
+                    QR Code Preview
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setQrPreviewData(null)}
+                  ></button>
+                </div>
+                <div className="modal-body d-flex justify-content-center">
+                  {qrPreviewData.image_base64 ? (
+                    <img
+                      src={qrPreviewData.image_base64}
+                      alt="QR Code"
+                      style={{ maxWidth: "100%", height: "auto" }}
+                    />
+                  ) : (
+                    <div className="text-muted">No preview available.</div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => handleDownloadQrImage(qrPreviewData)}
+                    disabled={!qrPreviewData.image_base64}
+                  >
+                    Download
+                  </button>
                 </div>
               </div>
             </div>
@@ -3781,25 +3816,6 @@ const PurchaseRequestModal = ({
                                           required
                                         />
                                       </div>
-                                      {/* ORD Qty */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          ORD Qty
-                                        </label>
-                                        <input
-                                          type="number"
-                                          className="form-control form-control-sm"
-                                          placeholder="ORD Qty"
-                                          min="0"
-                                          value={selectedVariant?.ord_qty || ""}
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "ord_qty",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                        />
-                                      </div>
                                       {/* Rate */}
                                       <div className="col-6 col-md-3">
                                         <label className="form-label small mb-1">
@@ -4440,6 +4456,8 @@ const QualityCheckTab = ({
   handleViewRequest,
   handleInspectClick,
   handleSettingsClick,
+  handleGenerateQrCodes,
+  qrGenerationStatus,
   viewModalOpen,
   setViewModalOpen,
   selectedRequest,
@@ -4775,196 +4793,249 @@ const QualityCheckTab = ({
                     </tr>
                   ) : (
                     <>
-                      {displayedData.map((request, index) => (
-                        <tr key={request.request_id}>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {index + 1}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {request.vendor_name || "-"}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {new Date(request.order_date).toLocaleDateString()}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {new Date(
-                              request.delivery_date
-                            ).toLocaleDateString()}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {request.items && request.items.length > 0
-                              ? [
-                                  ...new Set(
-                                    request.items.map(
-                                      (item) => item.product_name
-                                    )
-                                  ),
-                                ].join(", ")
-                              : "-"}
-                          </td>
-                          <td style={{ padding: "12px" }}>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="View"
-                                onClick={() => handleViewRequest(request)}
-                              >
-                                <Icon
-                                  icon="lucide:eye"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#3b82f6" }}
-                                />
-                              </button>
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="Inspect"
-                                onClick={() => handleInspectClick(request)}
-                              >
-                                <Icon
-                                  icon="mdi:clipboard-check"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#16a34a" }}
-                                />
-                              </button>
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="Settings"
-                                onClick={() =>
-                                  handleSettingsClick(request, "fulfilled")
-                                }
-                              >
-                                <Icon
-                                  icon="lucide:settings"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#f59e0b" }}
-                                />
-                              </button>
-                              {/* GRN PDF Download Icon - Only show if quality check is completed */}
-                              {hasQualityCheckCompletedSync(request) && (
-                                <>
-                                  {grnInfoCache[request.request_id] ? (
-                                    <button
-                                      className="btn btn-sm"
-                                      style={{
-                                        width: "32px",
-                                        height: "32px",
-                                        padding: 0,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        border: "1px solid #e5e7eb",
-                                        borderRadius: "6px",
-                                        backgroundColor: "white",
-                                      }}
-                                      title="Download GRN PDF"
-                                      onClick={() => handleDownloadGrn(request)}
-                                      disabled={
-                                        downloadingGrn[request.request_id]
-                                      }
-                                    >
-                                      {downloadingGrn[request.request_id] ? (
-                                        <span
-                                          className="spinner-border spinner-border-sm"
-                                          role="status"
-                                          aria-hidden="true"
-                                          style={{
-                                            width: "12px",
-                                            height: "12px",
-                                          }}
-                                        />
-                                      ) : (
-                                        <Icon
-                                          icon="mdi:file-pdf-box"
-                                          width="16"
-                                          height="16"
-                                          style={{ color: "#dc3545" }}
-                                        />
-                                      )}
-                                    </button>
+                      {displayedData.map((request, index) => {
+                        const isGeneratingQr = Boolean(
+                          qrGenerationStatus?.[request.request_id]
+                        );
+                        const qcCompleted =
+                          hasQualityCheckCompletedSync(request);
+                        const grnInfo = grnInfoCache[request.request_id];
+                        const hasGrn = !!grnInfo;
+                        const qrDisabled =
+                          isGeneratingQr || !qcCompleted || !hasGrn;
+                        const qrTitle = !qcCompleted
+                          ? "Complete quality inspection to enable QR codes"
+                          : !hasGrn
+                          ? "Generate GRN before creating QR codes"
+                          : "Generate QR codes";
+
+                        return (
+                          <tr key={request.request_id}>
+                            <td style={{ padding: "12px", color: "#374151" }}>
+                              {index + 1}
+                            </td>
+                            <td style={{ padding: "12px", color: "#374151" }}>
+                              {request.vendor_name || "-"}
+                            </td>
+                            <td style={{ padding: "12px", color: "#374151" }}>
+                              {new Date(
+                                request.order_date
+                              ).toLocaleDateString()}
+                            </td>
+                            <td style={{ padding: "12px", color: "#374151" }}>
+                              {new Date(
+                                request.delivery_date
+                              ).toLocaleDateString()}
+                            </td>
+                            <td style={{ padding: "12px", color: "#374151" }}>
+                              {request.items && request.items.length > 0
+                                ? [
+                                    ...new Set(
+                                      request.items.map(
+                                        (item) => item.product_name
+                                      )
+                                    ),
+                                  ].join(", ")
+                                : "-"}
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                              <div className="d-flex gap-2">
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="View"
+                                  onClick={() => handleViewRequest(request)}
+                                >
+                                  <Icon
+                                    icon="lucide:eye"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#3b82f6" }}
+                                  />
+                                </button>
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="Inspect"
+                                  onClick={() => handleInspectClick(request)}
+                                >
+                                  <Icon
+                                    icon="mdi:clipboard-check"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#16a34a" }}
+                                  />
+                                </button>
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title={qrTitle}
+                                  onClick={() => handleGenerateQrCodes(request)}
+                                  disabled={qrDisabled}
+                                >
+                                  {isGeneratingQr ? (
+                                    <span
+                                      className="spinner-border spinner-border-sm"
+                                      role="status"
+                                      aria-hidden="true"
+                                    />
                                   ) : (
-                                    <button
-                                      className="btn btn-sm"
-                                      style={{
-                                        width: "32px",
-                                        height: "32px",
-                                        padding: 0,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        border: "1px solid #e5e7eb",
-                                        borderRadius: "6px",
-                                        backgroundColor: "white",
-                                      }}
-                                      title="Generate and Download GRN PDF"
-                                      onClick={() =>
-                                        handleGenerateAndDownloadGrn(request)
-                                      }
-                                      disabled={
-                                        generatingGrn[request.request_id]
-                                      }
-                                    >
-                                      {generatingGrn[request.request_id] ? (
-                                        <span
-                                          className="spinner-border spinner-border-sm"
-                                          role="status"
-                                          aria-hidden="true"
-                                          style={{
-                                            width: "12px",
-                                            height: "12px",
-                                          }}
-                                        />
-                                      ) : (
-                                        <Icon
-                                          icon="mdi:file-document-outline"
-                                          width="16"
-                                          height="16"
-                                          style={{ color: "#6c757d" }}
-                                        />
-                                      )}
-                                    </button>
+                                    <Icon
+                                      icon="mdi:qrcode"
+                                      width="16"
+                                      height="16"
+                                      style={{ color: "#111827" }}
+                                    />
                                   )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                                </button>
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="Settings"
+                                  onClick={() =>
+                                    handleSettingsClick(request, "fulfilled")
+                                  }
+                                >
+                                  <Icon
+                                    icon="lucide:settings"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#f59e0b" }}
+                                  />
+                                </button>
+                                {/* GRN PDF Download Icon - Only show if quality check is completed */}
+                                {hasQualityCheckCompletedSync(request) && (
+                                  <>
+                                    {grnInfoCache[request.request_id] ? (
+                                      <button
+                                        className="btn btn-sm"
+                                        style={{
+                                          width: "32px",
+                                          height: "32px",
+                                          padding: 0,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "6px",
+                                          backgroundColor: "white",
+                                        }}
+                                        title="Download GRN PDF"
+                                        onClick={() =>
+                                          handleDownloadGrn(request)
+                                        }
+                                        disabled={
+                                          downloadingGrn[request.request_id]
+                                        }
+                                      >
+                                        {downloadingGrn[request.request_id] ? (
+                                          <span
+                                            className="spinner-border spinner-border-sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                            style={{
+                                              width: "12px",
+                                              height: "12px",
+                                            }}
+                                          />
+                                        ) : (
+                                          <Icon
+                                            icon="mdi:file-pdf-box"
+                                            width="16"
+                                            height="16"
+                                            style={{ color: "#dc3545" }}
+                                          />
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        className="btn btn-sm"
+                                        style={{
+                                          width: "32px",
+                                          height: "32px",
+                                          padding: 0,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "6px",
+                                          backgroundColor: "white",
+                                        }}
+                                        title="Generate and Download GRN PDF"
+                                        onClick={() =>
+                                          handleGenerateAndDownloadGrn(request)
+                                        }
+                                        disabled={
+                                          generatingGrn[request.request_id]
+                                        }
+                                      >
+                                        {generatingGrn[request.request_id] ? (
+                                          <span
+                                            className="spinner-border spinner-border-sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                            style={{
+                                              width: "12px",
+                                              height: "12px",
+                                            }}
+                                          />
+                                        ) : (
+                                          <Icon
+                                            icon="mdi:file-document-outline"
+                                            width="16"
+                                            height="16"
+                                            style={{ color: "#6c757d" }}
+                                          />
+                                        )}
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {isLoadingMore && (
                         <>
                           {Array.from({ length: 5 }).map((_, rowIndex) => (
