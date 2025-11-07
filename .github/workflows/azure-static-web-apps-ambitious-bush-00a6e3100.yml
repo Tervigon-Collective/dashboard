@@ -9,6 +9,7 @@ on:
 
 jobs:
   build_and_deploy_job:
+    # Skip deploy for PRs coming from forks (secrets are not exposed there)
     if: github.event_name == 'push' || (
           github.event_name == 'pull_request' &&
           github.event.action != 'closed' &&
@@ -22,24 +23,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ---- Complement step: assert token presence (fail fast if missing) ----
       - name: Assert SWA token available
         env:
           AZ_SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
         run: |
           if [ -z "$AZ_SWA_TOKEN" ]; then
             echo "SWA token is empty (missing or not available to this workflow context)."
+            echo "Ensure the repo secret AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 is set"
+            echo "and that this run is not from a forked PR (where secrets are blocked)."
             exit 1
           fi
+          echo "SWA token is set."
 
+      # Let Azure Static Web Apps (Oryx) detect and build Next.js for SSR
       - name: Build & Deploy (SSR via Oryx)
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
           action: upload
-          app_location: "/"
-          api_location: ""         # set if you have Azure Functions
-          # output_location: ""    # omit for SSR
-          # app_build_command: ""  # usually omit; Oryx detects Next.js
+          app_location: "/"     # repo root; change if your app lives elsewhere
+          api_location: ""      # set only if you have an Azure Functions API
+          # Do NOT set output_location for SSR; Oryx will handle the build
+          # Do NOT pass github_id_token; this action uses the deployment token
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
