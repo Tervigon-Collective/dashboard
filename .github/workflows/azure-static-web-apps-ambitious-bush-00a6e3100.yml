@@ -11,58 +11,28 @@ jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           lfs: false
 
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
-
-      - name: Get Id Token
-        id: idtoken
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const coredemo = require('@actions/core')
-            return await coredemo.getIDToken()
-          result-encoding: string
-
-      # Optional: quick visibility into the workspace structure
-      # - name: Debug workspace tree
-      #   run: |
-      #     pwd
-      #     ls -la
-
-      - name: Build And Deploy (Next.js static export)
-        id: builddeploy
+      - name: Build & Deploy (Next.js SSR)
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
           action: upload
-
-          ###### Repository/Build Configurations ######
-          app_location: "/" # Repo root (adjust if your app lives elsewhere)
-          api_location: "" # Only set if you have an Azure Functions API
-          output_location: ".next" # For SSR build: deploy the .next artifacts
-          app_build_command: "npm ci && npm run build" # DO NOT run 'npm run export' on Next 13+
-          github_id_token: ${{ steps.idtoken.outputs.result }}
-          ###### End of Repository/Build Configurations ######
+          app_location: "/"
+          api_location: ""
+          output_location: ".next"
+          app_build_command: "npm ci && npm run build && rm -rf .next/cache"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
-    name: Close Pull Request Job
     steps:
       - name: Close Pull Request
-        id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: close
