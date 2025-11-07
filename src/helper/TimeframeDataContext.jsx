@@ -30,11 +30,11 @@ export const TimeframeDataProvider = ({ children }) => {
     if (typeof window === "undefined") {
       return;
     }
-
+    // Wait until the auth state is resolved
     if (userLoading) {
       return;
     }
-
+    // If user is not signed in, clear cached data and stop
     if (!user) {
       localStorage.removeItem("timeframeData");
       setData(null);
