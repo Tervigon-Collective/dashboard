@@ -2,7 +2,8 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  // output: "export", // Disabled to allow dynamic routes like receiving/qr/[requestId]/[itemId]/[token]
+  output: "export", // Disabled to allow dynamic routes like receiving/qr/[requestId]/[itemId]/[token]
+  distDir: "out",
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
