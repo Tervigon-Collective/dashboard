@@ -244,7 +244,6 @@ const ReceivingManagementLayer = () => {
     });
 
     const displayedData = filteredData.slice(0, displayedItems.length);
-
     return (
       <>
         {/* Card */}
