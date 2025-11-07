@@ -9,43 +9,40 @@ on:
 
 jobs:
   build_and_deploy_job:
-    # Skip deploy for PRs coming from forks (secrets are not exposed there)
-    if: github.event_name == 'push' || (
-          github.event_name == 'pull_request' &&
-          github.event.action != 'closed' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        )
+    if: |
+      github.event_name == 'push' || (
+        github.event_name == 'pull_request' &&
+        github.event.action != 'closed' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
 
-      # ---- Complement step: assert token presence (fail fast if missing) ----
       - name: Assert SWA token available
         env:
           AZ_SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
         run: |
           if [ -z "$AZ_SWA_TOKEN" ]; then
-            echo "SWA token is empty (missing or not available to this workflow context)."
-            echo "Ensure the repo secret AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 is set"
-            echo "and that this run is not from a forked PR (where secrets are blocked)."
+            echo "Azure Static Web Apps deployment token is missing or unavailable in this workflow context."
             exit 1
           fi
           echo "SWA token is set."
 
-      # Let Azure Static Web Apps (Oryx) detect and build Next.js for SSR
-      - name: Build & Deploy (SSR via Oryx)
+      # Let Oryx handle the Next.js SSR build; don't set output_location for SSR
+      - name: Build & Deploy (Next.js SSR)
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
           action: upload
-          app_location: "/"     # repo root; change if your app lives elsewhere
-          api_location: ""      # set only if you have an Azure Functions API
-          # Do NOT set output_location for SSR; Oryx will handle the build
-          # Do NOT pass github_id_token; this action uses the deployment token
+          app_location: "/"
+          api_location: ""
+          # Optional: if you really need a custom build
+          # app_build_command: "npm ci && npm run build"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
