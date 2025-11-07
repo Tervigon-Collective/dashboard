@@ -81,7 +81,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: {
       enabled: true,
-      operations: ["read", "create", "update", "delete"], // NO change_role permission
+      operations: ["read", "create", "update", "delete", "change_role"], // NO change_role permission
     }, // Can manage users but NOT change roles
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: true, operations: ["read", "create"] },
@@ -377,6 +377,20 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     label: "Receiving Management",
     description: "Manage incoming inventory and receiving processes",
     icon: "mdi:truck-delivery",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [
+      OPERATION_TYPES.READ,
+      OPERATION_TYPES.CREATE,
+      OPERATION_TYPES.UPDATE,
+      OPERATION_TYPES.DELETE,
+    ],
+    supportsCRUD: true,
+  },
+  orderManagement: {
+    key: "orderManagement",
+    label: "Order Management",
+    description: "Track and manage outgoing orders",
+    icon: "mdi:clipboard-text",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [
       OPERATION_TYPES.READ,

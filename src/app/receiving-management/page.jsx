@@ -458,34 +458,58 @@ const ReceivingManagementLayer = () => {
                       <>
                         {displayedData.map((request, index) => (
                           <tr key={request.request_id}>
-                            <td className="small text-capitalize">
-                              {d.doc_type?.replace(/_/g, " ")}
-                            </td>
-                            <td className="small">{d.file_name}</td>
+                            <td className="small">{index + 1}</td>
                             <td className="small">
-                              {Math.ceil((d.file_size_bytes || 0) / 1024)} KB
+                              {request.vendor_name || "-"}
                             </td>
                             <td className="small">
-                              {d.uploaded_at
-                                ? new Date(d.uploaded_at).toLocaleString()
+                              {request.order_date
+                                ? new Date(
+                                    request.order_date
+                                  ).toLocaleDateString()
                                 : "-"}
                             </td>
                             <td className="small">
+                              {request.delivery_date
+                                ? new Date(
+                                    request.delivery_date
+                                  ).toLocaleDateString()
+                                : "-"}
+                            </td>
+                            <td className="small">
+                              {request.aggregated?.productNames || "-"}
+                            </td>
+                            <td className="small">
+                              {request.aggregated?.totalInvoiceQty ?? 0}
+                            </td>
+                            <td className="small">
+                              {request.aggregated?.totalSortedQty ?? 0}
+                            </td>
+                            <td className="small">
+                              {request.aggregated?.totalDamageQty ?? 0}
+                            </td>
+                            <td className="small">
                               <button
-                                type="button"
                                 className="btn btn-sm"
                                 style={{
-                                  border: "none",
-                                  background: "none",
-                                  color: "#dc3545",
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
                                 }}
-                                title="Delete"
-                                onClick={() => onDelete(d.document_id)}
+                                title="View"
+                                onClick={() => handleViewRequest(request)}
                               >
                                 <Icon
-                                  icon="mdi:delete"
+                                  icon="lucide:eye"
                                   width="16"
                                   height="16"
+                                  style={{ color: "#3b82f6" }}
                                 />
                               </button>
                             </td>
@@ -1296,11 +1320,16 @@ const ReceivingManagementLayer = () => {
   }, [docPreviewUrl]);
   const handleViewRequest = async (request, sourceTab = null) => {
     try {
+      const shouldIncludeQualityCheck =
+        sourceTab === "quality-check" ||
+        request.status === "arrived" ||
+        request.status === "fulfilled";
+
       let fetchedRequest = request;
       try {
         const result = await purchaseRequestApi.getPurchaseRequestById(
           request.request_id,
-          sourceTab === "quality-check"
+          shouldIncludeQualityCheck
         );
         if (result.success) {
           fetchedRequest = result.data;
@@ -3266,30 +3295,8 @@ const PurchaseRequestTab = ({
                             fontSize: "clamp(11px, 2.5vw, 14px)",
                           }}
                         >
-                          {new Date(request.order_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {new Date(request.delivery_date).toLocaleDateString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.items && request.items.length > 0
-                            ? [
-                                ...new Set(
-                                  request.items.map((item) => item.product_name)
-                                ),
-                              ].join(", ")
+                          {request.order_date
+                            ? new Date(request.order_date).toLocaleDateString()
                             : "-"}
                         </td>
                         <td
@@ -3299,13 +3306,29 @@ const PurchaseRequestTab = ({
                             fontSize: "clamp(11px, 2.5vw, 14px)",
                           }}
                         >
-                          {request.items && request.items.length > 0
-                            ? [
-                                ...new Set(
-                                  request.items.map((item) => item.hsn_code)
-                                ),
-                              ].join(", ")
+                          {request.delivery_date
+                            ? new Date(
+                                request.delivery_date
+                              ).toLocaleDateString()
                             : "-"}
+                        </td>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
+                          {request.aggregated?.productNames || "-"}
+                        </td>
+                        <td
+                          style={{
+                            padding: "clamp(8px, 2vw, 12px)",
+                            color: "#374151",
+                            fontSize: "clamp(11px, 2.5vw, 14px)",
+                          }}
+                        >
+                          {request.aggregated?.totalInvoiceQty ?? 0}
                         </td>
                         <td style={{ padding: "12px" }}>
                           <div className="d-flex flex-wrap gap-1 gap-sm-2">
