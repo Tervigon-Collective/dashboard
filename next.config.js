@@ -18,7 +18,7 @@ if (missingEnvVars.length > 0) {
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  output: "export", // Disabled to allow dynamic routes like receiving/qr/[requestId]/[itemId]/[token]
+  output: "export", // Enable static export for Azure Static Web Apps
   distDir: "out",
   images: { unoptimized: true },
   env: {
