@@ -6,7 +6,43 @@
     "rewrite": "/index.html",
     "exclude": ["/_next/*", "/api/*", "/assets/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
   },
+  "responseOverrides": {
+    "401": {
+      "redirect": "/sign-in/",
+      "statusCode": 302
+    },
+    "403": {
+      "redirect": "/access-denied/",
+      "statusCode": 302
+    },
+    "404": {
+      "rewrite": "/404.html"
+    }
+  },
   "routes": [
+    {
+      "route": "/",
+      "rewrite": "/index.html"
+    },
+    {
+      "route": "/_next/static/*",
+      "headers": {
+        "cache-control": "public, max-age=604800, immutable"
+      }
+    },
+    {
+      "route": "/assets/*",
+      "headers": {
+        "cache-control": "public, max-age=604800, immutable"
+      }
+    },
+    {
+      "route": "/favicon.ico",
+      "rewrite": "/icon.ico",
+      "headers": {
+        "cache-control": "public, max-age=604800, immutable"
+      }
+    },
     {
       "route": "/procurement/edit-product",
       "allowedRoles": ["anonymous", "authenticated"]
@@ -14,15 +50,29 @@
     {
       "route": "/procurement/edit-products",
       "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/api/*",
+      "allowedRoles": ["authenticated"]
     }
   ],
   "globalHeaders": {
-    "cache-control": "public, max-age=3600"
+    "cache-control": "no-cache, no-store, must-revalidate",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), display-capture=(), geolocation=(), microphone=()"
   },
   "mimeTypes": {
     ".json": "application/json",
     ".js": "text/javascript",
-    ".css": "text/css"
+    ".css": "text/css",
+    ".svg": "image/svg+xml",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".eot": "application/vnd.ms-fontobject"
   }
 }
 
