@@ -12,6 +12,7 @@ on:
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    environment: production
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
@@ -38,9 +39,9 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_PYTHON_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_PYTHON_API_BASE_URL }}
-          NEXT_PUBLIC_FALLBACK_ENABLED: ${{ secrets.NEXT_PUBLIC_FALLBACK_ENABLED }}
-          NEXT_PUBLIC_FALLBACK_ROLE: ${{ secrets.NEXT_PUBLIC_FALLBACK_ROLE }}
-          NEXT_PUBLIC_OFFLINE_MODE: ${{ secrets.NEXT_PUBLIC_OFFLINE_MODE }}
+          NEXT_PUBLIC_FALLBACK_ENABLED: ${{ vars.NEXT_PUBLIC_FALLBACK_ENABLED }}
+          NEXT_PUBLIC_FALLBACK_ROLE: ${{ vars.NEXT_PUBLIC_FALLBACK_ROLE }}
+          NEXT_PUBLIC_OFFLINE_MODE: ${{ vars.NEXT_PUBLIC_OFFLINE_MODE }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_WAVE_0F630D000 }}
           action: "upload"
