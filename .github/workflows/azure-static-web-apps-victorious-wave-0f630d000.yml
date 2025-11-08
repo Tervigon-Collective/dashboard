@@ -35,14 +35,22 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_PYTHON_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_PYTHON_API_BASE_URL }}
+          NEXT_PUBLIC_FALLBACK_ENABLED: ${{ secrets.NEXT_PUBLIC_FALLBACK_ENABLED }}
+          NEXT_PUBLIC_FALLBACK_ROLE: ${{ secrets.NEXT_PUBLIC_FALLBACK_ROLE }}
+          NEXT_PUBLIC_OFFLINE_MODE: ${{ secrets.NEXT_PUBLIC_OFFLINE_MODE }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_WAVE_0F630D000 }}
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "build" # Built app content directory - optional
+          # api_location: "" # Api source code path - optional
+          app_build_command: "npm run build"
+          output_location: "out"   # CHANGE THIS FROM ".next"
+          skip_api_build: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
@@ -56,3 +64,5 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+          
+
