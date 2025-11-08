@@ -402,28 +402,27 @@ const ProductSpendSummaryLayer = () => {
         )}
 
         <div className="card-body pb-2 pt-3 px-3">
-          <div className="row mb-3 gy-3">
-            <div
-              className="col-lg-4 col-md-6 d-flex flex-column"
-              style={{ gap: 8 }}
-            >
-              <label className="form-label fw-semibold mb-0">Search by SKU</label>
+          <div
+            className="d-flex flex-column flex-xl-row align-items-start align-items-xl-center justify-content-between mb-3"
+            style={{ gap: 24 }}
+          >
+            <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center" style={{ gap: 12 }}>
+              <label className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2">Search by SKU</label>
               <div className="d-flex align-items-center" style={{ gap: 8 }}>
                 <Icon icon="material-symbols:search" width="20" height="20" style={{ color: "#6c757d" }} />
-                <div className="flex-grow-1">
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    placeholder="Search by SKU..."
-                    value={searchSku}
-                    onChange={(e) => setSearchSku(e.target.value)}
-                    style={{
-                      width: "100%",
-                      borderRadius: 6,
-                      fontSize: 14,
-                    }}
-                  />
-                </div>
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  placeholder="Search by SKU..."
+                  value={searchSku}
+                  onChange={(e) => setSearchSku(e.target.value)}
+                  style={{
+                    borderRadius: 6,
+                    fontSize: 14,
+                    width: "100%",
+                    maxWidth: 220,
+                  }}
+                />
                 {searchSku && (
                   <button
                     className="btn btn-sm btn-outline-secondary"
@@ -440,13 +439,10 @@ const ProductSpendSummaryLayer = () => {
                 )}
               </div>
             </div>
-            <div
-              className="col-lg-6 col-md-6 d-flex flex-column"
-              style={{ gap: 8 }}
-            >
+            <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center" style={{ gap: 12 }}>
               <label
                 htmlFor="date-range-picker"
-                className="form-label mb-0 fw-semibold"
+                className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2"
               >
                 Select Date & Hour Range:
               </label>
@@ -468,10 +464,11 @@ const ProductSpendSummaryLayer = () => {
                   }}
                   placeholder="Select date and hour range"
                   style={{
-                    width: "100%",
                     borderRadius: 8,
                     border: "1px solid #ccc",
                     fontSize: 16,
+                    width: "100%",
+                    maxWidth: 320,
                   }}
                   appearance="subtle"
                   cleanable
