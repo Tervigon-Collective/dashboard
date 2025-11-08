@@ -1,3 +1,19 @@
+const requiredEnvVars = [
+  "NEXT_PUBLIC_API_BASE_URL",
+  "NEXT_PUBLIC_PYTHON_API_BASE_URL",
+];
+
+const missingEnvVars = requiredEnvVars.filter(
+  (key) => !process.env[key] || process.env[key].length === 0,
+);
+
+if (missingEnvVars.length > 0) {
+  // Fail fast so misconfigured environments do not produce broken builds
+  throw new Error(
+    `Missing required environment variables: ${missingEnvVars.join(", ")}`,
+  );
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
@@ -5,6 +21,14 @@ const nextConfig = {
   output: "export", // Enable static export for Azure Static Web Apps
   distDir: "out",
   images: { unoptimized: true },
+  env: {
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+    NEXT_PUBLIC_PYTHON_API_BASE_URL:
+      process.env.NEXT_PUBLIC_PYTHON_API_BASE_URL,
+    NEXT_PUBLIC_FALLBACK_ENABLED: process.env.NEXT_PUBLIC_FALLBACK_ENABLED,
+    NEXT_PUBLIC_FALLBACK_ROLE: process.env.NEXT_PUBLIC_FALLBACK_ROLE,
+    NEXT_PUBLIC_OFFLINE_MODE: process.env.NEXT_PUBLIC_OFFLINE_MODE,
+  },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = { ...config.resolve.fallback, fs: false };
