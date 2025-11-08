@@ -28,7 +28,7 @@ const config = {
   },
   fallback: {
     enabled: parseBoolean(process.env.NEXT_PUBLIC_FALLBACK_ENABLED, true),
-    defaultRole: process.env.NEXT_PUBLIC_FALLBACK_ROLE ?? "user",
+    defaultRole: process.env.NEXT_PUBLIC_FALLBACK_ROLE ?? "",
     offlineMode: parseBoolean(process.env.NEXT_PUBLIC_OFFLINE_MODE, true),
   },
 };

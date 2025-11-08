@@ -50,10 +50,6 @@
     {
       "route": "/procurement/edit-products",
       "allowedRoles": ["anonymous", "authenticated"]
-    },
-    {
-      "route": "/api/*",
-      "allowedRoles": ["authenticated"]
     }
   ],
   "globalHeaders": {
