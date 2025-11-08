@@ -121,7 +121,13 @@ const MasterLayout = ({ children }) => {
   };
 
   return (
-    <section className={mobileMenu ? "overlay active" : "overlay "}>
+    <section
+      className={mobileMenu ? "overlay active" : "overlay "}
+      style={{
+        position: "relative",
+        zIndex: mobileMenu ? 1500 : "auto",
+      }}
+    >
       {/* sidebar */}
       <aside
         className={
@@ -131,6 +137,9 @@ const MasterLayout = ({ children }) => {
             ? "sidebar sidebar-open"
             : "sidebar"
         }
+        style={{
+          zIndex: mobileMenu ? 1600 : undefined,
+        }}
       >
         <button
           onClick={mobileMenuControl}

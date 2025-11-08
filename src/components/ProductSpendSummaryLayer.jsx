@@ -133,6 +133,9 @@ const downloadProductSpendExcel = async (
   window.URL.revokeObjectURL(url);
 };
 
+const getIsMobile = () =>
+  typeof window !== "undefined" ? window.innerWidth < 768 : false;
+
 const ProductSpendSummaryLayer = () => {
   const [dateRange, setDateRange] = useState(getDefaultDateRange());
   const [products, setProducts] = useState([]);
@@ -140,6 +143,7 @@ const ProductSpendSummaryLayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchSku, setSearchSku] = useState("");
+  const [isMobile, setIsMobile] = useState(getIsMobile());
   
   // Infinite scroll state
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
@@ -182,6 +186,18 @@ const ProductSpendSummaryLayer = () => {
   useEffect(() => {
     setDisplayedItemsCount(20); // Reset displayed items on search change
   }, [searchSku]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(getIsMobile());
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   // Sort products by revenue descending and filter by SKU search
   const sortedProducts = useMemo(() => {
@@ -278,7 +294,10 @@ const ProductSpendSummaryLayer = () => {
 
   return (
     <CustomProvider locale={enUS}>
-      <div className="card basic-data-table border-0 rounded-4 overflow-hidden">
+      <div
+        className="card basic-data-table border-0 rounded-4"
+        style={{ overflow: "visible" }}
+      >
         <div className="card-header d-flex align-items-center justify-content-between">
           <h5 className="card-title mb-0">Product Spend Dashboard</h5>
         </div>
@@ -383,30 +402,28 @@ const ProductSpendSummaryLayer = () => {
         )}
 
         <div className="card-body pb-2 pt-3 px-3">
-          <div className="row mb-3 align-items-center">
+          <div className="row mb-3 gy-3">
             <div
-              className="col-md-6 d-flex align-items-center flex-wrap"
-              style={{ gap: 12 }}
+              className="col-lg-4 col-md-6 d-flex flex-column"
+              style={{ gap: 8 }}
             >
+              <label className="form-label fw-semibold mb-0">Search by SKU</label>
               <div className="d-flex align-items-center" style={{ gap: 8 }}>
-                <Icon
-                  icon="material-symbols:search"
-                  width="20"
-                  height="20"
-                  style={{ color: "#6c757d" }}
-                />
-                <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  placeholder="Search by SKU..."
-                  value={searchSku}
-                  onChange={(e) => setSearchSku(e.target.value)}
-                  style={{
-                    width: 180,
-                    borderRadius: 6,
-                    fontSize: 14,
-                  }}
-                />
+                <Icon icon="material-symbols:search" width="20" height="20" style={{ color: "#6c757d" }} />
+                <div className="flex-grow-1">
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    placeholder="Search by SKU..."
+                    value={searchSku}
+                    onChange={(e) => setSearchSku(e.target.value)}
+                    style={{
+                      width: "100%",
+                      borderRadius: 6,
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
                 {searchSku && (
                   <button
                     className="btn btn-sm btn-outline-secondary"
@@ -424,8 +441,8 @@ const ProductSpendSummaryLayer = () => {
               </div>
             </div>
             <div
-              className="col-md-6 d-flex justify-content-end align-items-center"
-              style={{ gap: 12 }}
+              className="col-lg-6 col-md-6 d-flex flex-column"
+              style={{ gap: 8 }}
             >
               <label
                 htmlFor="date-range-picker"
@@ -433,61 +450,64 @@ const ProductSpendSummaryLayer = () => {
               >
                 Select Date & Hour Range:
               </label>
-              <DateRangePicker
-                id="date-range-picker"
-                value={dateRange}
-                onChange={setDateRange}
-                format="yyyy-MM-dd HH:mm"
-                showMeridian={false}
-                ranges={[]}
-                defaultCalendarValue={getDefaultDateRange()}
-                disabledDate={(date) => {
-                  const now = new Date();
-                  now.setMinutes(0, 0, 0);
-                  const d = new Date(date);
-                  d.setMinutes(0, 0, 0);
-                  return d > now;
-                }}
-                placeholder="Select date and hour range"
-                style={{
-                  width: 320,
-                  borderRadius: 8,
-                  border: "1px solid #ccc",
-                  fontSize: 16,
-                }}
-                appearance="subtle"
-                cleanable
-                menuStyle={{
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-                  borderRadius: 8,
-                  padding: 8,
-                }}
-                placement="bottomEnd"
-                oneTap={false}
-              />
-              <button
-                className="btn btn-success btn-icon"
-                onClick={handleDownload}
-                disabled={
-                  loading || !sortedProducts || sortedProducts.length === 0
-                }
-                title="Download Excel Report"
-                style={{
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 8,
-                }}
-              >
-                <Icon
-                  icon="vscode-icons:file-type-excel"
-                  width="24"
-                  height="24"
+              <div className="d-flex align-items-center" style={{ gap: 12 }}>
+                <DateRangePicker
+                  id="date-range-picker"
+                  value={dateRange}
+                  onChange={setDateRange}
+                  format="yyyy-MM-dd HH:mm"
+                  showMeridian={false}
+                  ranges={[]}
+                  defaultCalendarValue={getDefaultDateRange()}
+                  disabledDate={(date) => {
+                    const now = new Date();
+                    now.setMinutes(0, 0, 0);
+                    const d = new Date(date);
+                    d.setMinutes(0, 0, 0);
+                    return d > now;
+                  }}
+                  placeholder="Select date and hour range"
+                  style={{
+                    width: "100%",
+                    borderRadius: 8,
+                    border: "1px solid #ccc",
+                    fontSize: 16,
+                  }}
+                  appearance="subtle"
+                  cleanable
+                  menuStyle={{
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                    borderRadius: 8,
+                    padding: 8,
+                    zIndex: 2000,
+                  }}
+                  placement="bottomEnd"
+                  oneTap={false}
                 />
-              </button>
+                <button
+                  className="btn btn-success btn-icon"
+                  onClick={handleDownload}
+                  disabled={
+                    loading || !sortedProducts || sortedProducts.length === 0
+                  }
+                  title="Download Excel Report"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Icon
+                    icon="vscode-icons:file-type-excel"
+                    width="24"
+                    height="24"
+                  />
+                </button>
+              </div>
             </div>
           </div>
           <div
