@@ -25,11 +25,20 @@
     },
 
     {
-
       "route": "/procurement/edit-products",
-
       "allowedRoles": ["anonymous", "authenticated"]
-
+    },
+    {
+      "route": "/_next/static/*",
+      "headers": {
+        "cache-control": "public, max-age=60, must-revalidate"
+      }
+    },
+    {
+      "route": "/assets/*",
+      "headers": {
+        "cache-control": "public, max-age=3600"
+      }
     }
 
   ],
