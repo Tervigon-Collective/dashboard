@@ -1,21 +1,35 @@
 // config.js
 
+const requiredEnvVar = (key) => {
+  const value = process.env[key];
+  if (!value) {
+    const message = `[config] Missing required environment variable: ${key}`;
+    if (typeof window === "undefined") {
+      throw new Error(message);
+    }
+    console.error(message);
+  }
+  return value ?? "";
+};
+
+const parseBoolean = (value, defaultValue) => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return ["true", "1", "yes", "on"].includes(String(value).toLowerCase());
+};
+
 const config = {
   api: {
-    baseURL:
-      "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net",
-    // "http://localhost:8080",
+    baseURL: requiredEnvVar("NEXT_PUBLIC_API_BASE_URL"),
   },
-  // Python backend URL for content generation
   pythonApi: {
-    baseURL:
-      "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net",
+    baseURL: requiredEnvVar("NEXT_PUBLIC_PYTHON_API_BASE_URL"),
   },
-  // Fallback configuration for offline mode
   fallback: {
-    enabled: true,
-    defaultRole: "user",
-    offlineMode: true,
+    enabled: parseBoolean(process.env.NEXT_PUBLIC_FALLBACK_ENABLED, true),
+    defaultRole: process.env.NEXT_PUBLIC_FALLBACK_ROLE ?? "user",
+    offlineMode: parseBoolean(process.env.NEXT_PUBLIC_OFFLINE_MODE, true),
   },
 };
 
