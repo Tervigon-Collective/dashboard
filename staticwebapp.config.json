@@ -4,7 +4,12 @@
   },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/_next/*", "/api/*", "/assets/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
+    "exclude": [
+      "/_next/*",
+      "/api/*",
+      "/assets/*",
+      "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
+    ]
   },
   "responseOverrides": {
     "401": {
@@ -45,15 +50,17 @@
     },
     {
       "route": "/procurement/edit-product",
-      "allowedRoles": ["anonymous", "authenticated"]
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
     },
     {
       "route": "/procurement/edit-products",
-      "allowedRoles": ["anonymous", "authenticated"]
-    },
-    {
-      "route": "/api/*",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
     }
   ],
   "globalHeaders": {
@@ -75,4 +82,3 @@
     ".eot": "application/vnd.ms-fontobject"
   }
 }
-
