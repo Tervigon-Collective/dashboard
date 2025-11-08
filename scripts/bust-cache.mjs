@@ -25,6 +25,20 @@ const config = JSON.parse(configRaw);
 config.navigationFallback = config.navigationFallback || {};
 config.navigationFallback.rewrite = `/${newIndexName}`;
 
+config.routes = Array.isArray(config.routes) ? config.routes : [];
+const rootRouteIndex = config.routes.findIndex(
+  (route) => route.route === '/'
+);
+const rootRoute = {
+  route: '/',
+  rewrite: `/${newIndexName}`,
+};
+if (rootRouteIndex >= 0) {
+  config.routes[rootRouteIndex] = { ...config.routes[rootRouteIndex], ...rootRoute };
+} else {
+  config.routes.unshift(rootRoute);
+}
+
 fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`);
 
 const manifestPath = path.join(OUT_DIR, 'cache-bust.json');
@@ -32,7 +46,8 @@ const manifest = {
   buildId,
   generatedAt: new Date().toISOString(),
   navigationFallback: config.navigationFallback.rewrite,
+  rootRewrite: rootRoute.rewrite,
 };
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-console.log(`Cache bust applied. navigationFallback now rewrites to /${newIndexName}`);
+console.log(`Cache bust applied. navigationFallback and "/" now rewrite to /${newIndexName}`);
