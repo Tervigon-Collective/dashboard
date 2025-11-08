@@ -44,9 +44,7 @@
   ],
 
   "globalHeaders": {
-
-    "cache-control": "public, max-age=3600"
-
+    "cache-control": "no-cache, no-store, must-revalidate"
   },
 
   "mimeTypes": {
