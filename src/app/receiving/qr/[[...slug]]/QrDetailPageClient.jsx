@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -9,10 +9,66 @@ import purchaseRequestApi from "@/services/purchaseRequestApi";
 
 const QR_REDIRECT_URL = "https://www.tiltingheads.com/";
 
-const QrDetailPage = () => {
-  const params = useParams();
+const extractParams = (slugSegments, searchParams) => {
+  if (slugSegments?.length >= 3) {
+    const [requestId, itemId, token] = slugSegments;
+    return { requestId, itemId, token };
+  }
+
+  if (searchParams) {
+    const requestId = searchParams.requestId ?? "";
+    const itemId = searchParams.itemId ?? "";
+    const token = searchParams.token ?? "";
+
+    if (requestId && itemId && token) {
+      return { requestId, itemId, token };
+    }
+  }
+
+  return { requestId: undefined, itemId: undefined, token: undefined };
+};
+
+const QrDetailPageClient = ({ params, searchParams }) => {
   const router = useRouter();
-  const { requestId, itemId, token } = params || {};
+
+  const slug = useMemo(() => {
+    if (!params) return [];
+
+    if (Array.isArray(params.slug)) {
+      return params.slug;
+    }
+
+    if (typeof params.slug === "string") {
+      return [params.slug];
+    }
+
+    return [];
+  }, [params]);
+
+  const searchParamValues = useMemo(() => {
+    if (!searchParams) {
+      return null;
+    }
+
+    const entries = Object.entries(searchParams);
+
+    if (entries.length === 0) {
+      return null;
+    }
+
+    return entries.reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  }, [searchParams]);
+
+  const { requestId, itemId, token } = useMemo(
+    () => extractParams(slug, searchParamValues),
+    [slug, searchParamValues]
+  );
+
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -280,4 +336,4 @@ const QrDetailPage = () => {
   );
 };
 
-export default QrDetailPage;
+export default QrDetailPageClient;
