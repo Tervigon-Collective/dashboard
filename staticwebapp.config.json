@@ -3,7 +3,7 @@
     "apiRuntime": "node:18"
   },
   "navigationFallback": {
-    "rewrite": "/index-1762604198758.html",
+    "rewrite": "/index.html",
     "exclude": [
       "/_next/*",
       "/api/*",
@@ -14,7 +14,7 @@
   "routes": [
     {
       "route": "/",
-      "rewrite": "/index-1762604198758.html"
+      "rewrite": "/index.html"
     },
     {
       "route": "/procurement/edit-product",
