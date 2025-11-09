@@ -712,121 +712,131 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                           {/* Generated Images Display - Only show for non-video content */}
                           {results.plan_type !== "video" && (
                             results.generated_images && results.generated_images.length > 0 ? (
-                              results.generated_images.map((imageData, index) => (
-                                <div key={imageData.artifact_id} className="card mb-2">
-                                  <div className="card-header bg-light p-2">
-                                    <div className="d-flex align-items-center justify-content-between">
-                                      <h6 className="card-title mb-0 fw-semibold small">
-                                        Generated Image {index + 1}
-                                      </h6>
-                                      {imageData.freepik_result.success && (
-                                        <button
-                                          className="btn btn-sm btn-outline-primary"
-                                          onClick={() =>
-                                            downloadImage(
-                                              imageData.freepik_result,
-                                              imageData.artifact_id
-                                            )
-                                          }
-                                        >
-                                          <Icon
-                                            icon="solar:download-bold"
-                                            width="12"
-                                            height="12"
-                                            className="me-1"
-                                          />
-                                          Download
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="card-body p-3">
-                                    {imageData.freepik_result.success ? (
-                                      <div>
-                                        {imageData.freepik_result.url ||
-                                        imageData.freepik_result.local_url ||
-                                        imageData.freepik_result.base64 ? (
-                                          <div className="text-center mb-4">
-                                            <img
-                                              src={
-                                                imageData.freepik_result.url ||
-                                                imageData.freepik_result
-                                                  .local_url ||
-                                                `data:image/jpeg;base64,${imageData.freepik_result.base64}`
-                                              }
-                                              alt={`Generated image ${index + 1}`}
-                                              className="img-fluid rounded shadow"
-                                              style={{ maxHeight: "400px", width: "auto" }}
-                                            />
-                                          </div>
-                                        ) : (
-                                          <div className="text-center py-5 text-muted">
-                                            <Icon
-                                              icon="solar:gallery-bold"
-                                              width="48"
-                                              height="48"
-                                              className="text-muted mb-2"
-                                            />
-                                            <p>Image not available</p>
-                                          </div>
-                                        )}
+                              results.generated_images.map((imageData, index) => {
+                                const freepikResult = imageData.freepik_result || {};
+                                const metadata = freepikResult.metadata || {};
+                                const resolution = metadata.resolution;
+                                const style = metadata.style;
+                                const generatedAt = metadata.generated_at;
+                                const showGenerationDetails = Boolean(
+                                  resolution || style || generatedAt
+                                );
 
-                                        {imageData.freepik_result.metadata && (
-                                          <div className="bg-light p-3 rounded mt-3">
-                                            <h6 className="fw-semibold mb-2 text-secondary d-flex align-items-center small">
-                                              <Icon
-                                                icon="solar:info-circle-bold"
-                                                width="14"
-                                                height="14"
-                                                className="me-1"
-                                              />
-                                              Generation Details
-                                            </h6>
-                                            <div className="row">
-                                              <div className="col-md-6 mb-2">
-                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Freepik ID</div>
-                                                <div className="fw-medium small">{imageData.freepik_result.id || "N/A"}</div>
-                                              </div>
-                                              <div className="col-md-6 mb-2">
-                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Resolution</div>
-                                                <div className="fw-medium small">{imageData.freepik_result.metadata.resolution || "N/A"}</div>
-                                              </div>
-                                              <div className="col-md-6 mb-2">
-                                                <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Style</div>
-                                                <div className="fw-medium small">{imageData.freepik_result.metadata.style || "N/A"}</div>
-                                              </div>
-                                              {imageData.freepik_result.metadata.generated_at && (
-                                                <div className="col-md-6 mb-2">
-                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Generated</div>
-                                                  <div className="fw-medium small">
-                                                    {new Date(imageData.freepik_result.metadata.generated_at).toLocaleString()}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
+                                return (
+                                  <div key={imageData.artifact_id} className="card mb-2">
+                                    <div className="card-header bg-light p-2">
+                                      <div className="d-flex align-items-center justify-content-between">
+                                        <h6 className="card-title mb-0 fw-semibold small">
+                                          Generated Image {index + 1}
+                                        </h6>
+                                        {freepikResult.success && (
+                                          <button
+                                            className="btn btn-sm btn-outline-primary"
+                                            onClick={() =>
+                                              downloadImage(
+                                                imageData.freepik_result,
+                                                imageData.artifact_id
+                                              )
+                                            }
+                                          >
+                                            <Icon
+                                              icon="solar:download-bold"
+                                              width="12"
+                                              height="12"
+                                              className="me-1"
+                                            />
+                                            Download
+                                          </button>
                                         )}
                                       </div>
-                                    ) : (
-                                      <div className="text-center py-3">
-                                        <Icon
-                                          icon="solar:danger-circle-bold"
-                                          width="32"
-                                          height="32"
-                                          className="text-danger mb-2"
-                                        />
-                                        <p className="text-danger fw-semibold mb-1 small">
-                                          Image generation failed
-                                        </p>
-                                        <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
-                                          {imageData.freepik_result.error ||
-                                            "Unknown error"}
-                                        </p>
-                                      </div>
-                                    )}
+                                    </div>
+                                    <div className="card-body p-3">
+                                      {freepikResult.success ? (
+                                        <div>
+                                          {freepikResult.url ||
+                                          freepikResult.local_url ||
+                                          freepikResult.base64 ? (
+                                            <div className="text-center mb-4">
+                                              <img
+                                                src={
+                                                  freepikResult.url ||
+                                                  freepikResult.local_url ||
+                                                  `data:image/jpeg;base64,${freepikResult.base64}`
+                                                }
+                                                alt={`Generated image ${index + 1}`}
+                                                className="img-fluid rounded shadow"
+                                                style={{ maxHeight: "400px", width: "auto" }}
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="text-center py-5 text-muted">
+                                              <Icon
+                                                icon="solar:gallery-bold"
+                                                width="48"
+                                                height="48"
+                                                className="text-muted mb-2"
+                                              />
+                                              <p>Image not available</p>
+                                            </div>
+                                          )}
+
+                                          {showGenerationDetails && (
+                                            <div className="bg-light p-3 rounded mt-3">
+                                              <h6 className="fw-semibold mb-2 text-secondary d-flex align-items-center small">
+                                                <Icon
+                                                  icon="solar:info-circle-bold"
+                                                  width="14"
+                                                  height="14"
+                                                  className="me-1"
+                                                />
+                                                Generation Details
+                                              </h6>
+                                              <div className="row">
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Freepik ID</div>
+                                                  <div className="fw-medium small">{freepikResult.id || "N/A"}</div>
+                                                </div>
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Resolution</div>
+                                                  <div className="fw-medium small">{resolution || "N/A"}</div>
+                                                </div>
+                                                <div className="col-md-6 mb-2">
+                                                  <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Style</div>
+                                                  <div className="fw-medium small">{style || "N/A"}</div>
+                                                </div>
+                                                {generatedAt && (
+                                                  <div className="col-md-6 mb-2">
+                                                    <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Generated</div>
+                                                    <div className="fw-medium small">
+                                                      {new Date(generatedAt).toLocaleString()}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-3">
+                                          <Icon
+                                            icon="solar:danger-circle-bold"
+                                            width="32"
+                                            height="32"
+                                            className="text-danger mb-2"
+                                          />
+                                          <p className="text-danger fw-semibold mb-1 small">
+                                            Image generation failed
+                                          </p>
+                                          <p className="small text-muted mb-2" style={{ fontSize: '0.75rem' }}>
+                                            {imageData.freepik_result.error ||
+                                              "Unknown error"}
+                                          </p>
+                                        </div>
+                                      )}
                                   </div>
-                                </div>
-                              ))
+                                  </div>
+                                );
+                              })
                             ) : (
                               <div className="text-center py-4 text-muted">
                                 <Icon

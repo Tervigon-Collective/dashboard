@@ -46,10 +46,19 @@ export default function QuickContentForm() {
       }
 
       if (field === "number_of_variants") {
+        if (value === "") {
+          return {
+            ...prev,
+            number_of_variants: "",
+          };
+        }
+
         const parsedValue = parseInt(value, 10);
-        const sanitizedValue = Number.isNaN(parsedValue)
-          ? 1
-          : Math.min(10, Math.max(1, parsedValue));
+        if (Number.isNaN(parsedValue)) {
+          return prev;
+        }
+
+        const sanitizedValue = Math.min(10, Math.max(1, parsedValue));
         return {
           ...prev,
           number_of_variants: sanitizedValue,
@@ -119,7 +128,7 @@ export default function QuickContentForm() {
         number_of_variants:
           formData.content_channel === "Video"
             ? 1
-            : formData.number_of_variants,
+            : parseInt(formData.number_of_variants, 10) || 1,
         uploaded_images: imageUrls,
       });
 
@@ -461,7 +470,11 @@ export default function QuickContentForm() {
                   className="form-control"
                   min="1"
                   max="10"
-                  value={formData.number_of_variants}
+                  value={
+                    formData.number_of_variants === ""
+                      ? ""
+                      : formData.number_of_variants
+                  }
                   onChange={(e) =>
                     handleInputChange("number_of_variants", e.target.value)
                   }

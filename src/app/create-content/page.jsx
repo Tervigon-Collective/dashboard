@@ -158,10 +158,19 @@ export default function CreateContentPage() {
       }
 
       if (field === "variantGoal") {
+        if (value === "") {
+          return {
+            ...prev,
+            variantGoal: "",
+          };
+        }
+
         const parsedValue = parseInt(value, 10);
-        const sanitizedValue = Number.isNaN(parsedValue)
-          ? 1
-          : Math.min(10, Math.max(1, parsedValue));
+        if (Number.isNaN(parsedValue)) {
+          return prev;
+        }
+
+        const sanitizedValue = Math.min(10, Math.max(1, parsedValue));
         return {
           ...prev,
           variantGoal: sanitizedValue,
@@ -251,7 +260,9 @@ export default function CreateContentPage() {
         tone: mapTone(formData.tone || "Emotional"),
         call_to_action: formData.cta || "Let nature lead",
         number_of_variants:
-          (formData.channel || "Image") === "Video" ? 1 : formData.variantGoal,
+          (formData.channel || "Image") === "Video"
+            ? 1
+            : parseInt(formData.variantGoal, 10) || 1,
         uploaded_images: imageUrls,
       });
 
@@ -1025,7 +1036,11 @@ export default function CreateContentPage() {
                           className="form-control"
                           min="1"
                           max="10"
-                          value={formData.variantGoal}
+                        value={
+                          formData.variantGoal === ""
+                            ? ""
+                            : formData.variantGoal
+                        }
                           onChange={(e) =>
                             handleInputChange("variantGoal", e.target.value)
                           }
