@@ -43,7 +43,7 @@ export default function CreateContentPage() {
     channel: "",
     tone: "",
     cta: "",
-    variantGoal: 4,
+    variantGoal: 1,
   });
 
   const [generatedContent, setGeneratedContent] = useState([]);
@@ -147,10 +147,32 @@ export default function CreateContentPage() {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      if (field === "channel") {
+        const nextChannel = value;
+        return {
+          ...prev,
+          channel: nextChannel,
+          variantGoal: nextChannel === "Video" ? 1 : prev.variantGoal || 1,
+        };
+      }
+
+      if (field === "variantGoal") {
+        const parsedValue = parseInt(value, 10);
+        const sanitizedValue = Number.isNaN(parsedValue)
+          ? 1
+          : Math.min(10, Math.max(1, parsedValue));
+        return {
+          ...prev,
+          variantGoal: sanitizedValue,
+        };
+      }
+
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
   };
 
   const handleGenerate = async () => {
@@ -228,7 +250,8 @@ export default function CreateContentPage() {
         content_channel: formData.channel || "Image",
         tone: mapTone(formData.tone || "Emotional"),
         call_to_action: formData.cta || "Let nature lead",
-        number_of_variants: formData.variantGoal,
+        number_of_variants:
+          (formData.channel || "Image") === "Video" ? 1 : formData.variantGoal,
         uploaded_images: imageUrls,
       });
 
@@ -992,19 +1015,23 @@ export default function CreateContentPage() {
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Number of Variants</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        min="1"
-                        max="10"
-                        value={formData.variantGoal}
-                        onChange={(e) =>
-                          handleInputChange("variantGoal", e.target.value)
-                        }
-                      />
-                    </div>
+                    {formData.channel !== "Video" && (
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">
+                          Number of Variants
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          min="1"
+                          max="10"
+                          value={formData.variantGoal}
+                          onChange={(e) =>
+                            handleInputChange("variantGoal", e.target.value)
+                          }
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Error Message */}

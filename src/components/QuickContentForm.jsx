@@ -19,7 +19,7 @@ export default function QuickContentForm() {
     content_channel: "Image",
     tone: "Emotional",
     call_to_action: "Let nature lead",
-    number_of_variants: 4,
+    number_of_variants: 1,
   });
 
   const [uploadedImages, setUploadedImages] = useState([]);
@@ -30,10 +30,37 @@ export default function QuickContentForm() {
 
   // Handle input changes
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      if (field === "content_channel") {
+        const nextChannel = value;
+        return {
+          ...prev,
+          content_channel: nextChannel,
+          number_of_variants:
+            nextChannel === "Video"
+              ? 1
+              : prev.number_of_variants && prev.number_of_variants >= 1
+              ? prev.number_of_variants
+              : 1,
+        };
+      }
+
+      if (field === "number_of_variants") {
+        const parsedValue = parseInt(value, 10);
+        const sanitizedValue = Number.isNaN(parsedValue)
+          ? 1
+          : Math.min(10, Math.max(1, parsedValue));
+        return {
+          ...prev,
+          number_of_variants: sanitizedValue,
+        };
+      }
+
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
   };
 
   // Handle image upload
@@ -89,6 +116,10 @@ export default function QuickContentForm() {
       toast.info("Starting content generation...");
       const response = await contentApi.quickGenerate({
         ...formData,
+        number_of_variants:
+          formData.content_channel === "Video"
+            ? 1
+            : formData.number_of_variants,
         uploaded_images: imageUrls,
       });
 
@@ -422,25 +453,24 @@ export default function QuickContentForm() {
               </select>
             </div>
 
-            <div className="col-md-6">
-              <label className="form-label">Number of Variants</label>
-              <input
-                type="number"
-                className="form-control"
-                min="1"
-                max="10"
-                value={formData.number_of_variants}
-                onChange={(e) =>
-                  handleInputChange(
-                    "number_of_variants",
-                    parseInt(e.target.value) || 1
-                  )
-                }
-              />
-              <small className="form-text text-muted">
-                Between 1 and 10 variants
-              </small>
-            </div>
+            {formData.content_channel !== "Video" && (
+              <div className="col-md-6">
+                <label className="form-label">Number of Variants</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="1"
+                  max="10"
+                  value={formData.number_of_variants}
+                  onChange={(e) =>
+                    handleInputChange("number_of_variants", e.target.value)
+                  }
+                />
+                <small className="form-text text-muted">
+                  Between 1 and 10 variants
+                </small>
+              </div>
+            )}
           </div>
 
           {/* Generate Button */}
