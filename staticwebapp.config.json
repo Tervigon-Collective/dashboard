@@ -3,7 +3,7 @@
     "apiRuntime": "node:18"
   },
   "navigationFallback": {
-    "rewrite": "/index.html",
+    "rewrite": "index.html",
     "exclude": [
       "/_next/*",
       "/api/*",
