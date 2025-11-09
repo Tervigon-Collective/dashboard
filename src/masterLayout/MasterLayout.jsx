@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../helper/ThemeToggleButton";
+import AskSelericLauncher from "@/components/askSeleric/AskSelericLauncher";
 import Link from "next/link";
 import { useUser } from "@/helper/UserContext";
 import { useRole } from "@/hook/useRole";
@@ -1570,6 +1571,7 @@ const MasterLayout = ({ children }) => {
               <div className="d-flex flex-wrap align-items-center gap-3">
                 {/* ThemeToggleButton */}
                 <ThemeToggleButton />
+                <AskSelericLauncher />
                 {/* <div className="dropdown">
                   <button
                     className="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
