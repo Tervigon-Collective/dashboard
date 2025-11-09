@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import ExcelJS from "exceljs";
@@ -1924,10 +1924,14 @@ const EntityReportLayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(initialState.data);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  // Infinite scroll state
+  const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const itemsPerPage = 20; // Items to load per scroll
   const [filters, setFilters] = useState(initialState.filters);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  // Ref for scrollable table container
+  const tableContainerRef = useRef(null);
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -1953,6 +1957,8 @@ const EntityReportLayer = () => {
       direction = "desc";
     }
     setSortConfig({ key, direction });
+    // Reset infinite scroll when sorting changes
+    setDisplayedItemsCount(20);
   };
 
   // Search and filter function
@@ -2235,8 +2241,8 @@ const EntityReportLayer = () => {
       // Save to sessionStorage after successful fetch
       saveToSessionStorage(updatedData, filters, activeTab);
 
-      // Reset pagination when new data is loaded
-      setCurrentPage(1);
+      // Reset infinite scroll when new data is loaded
+      setDisplayedItemsCount(20);
     } catch (err) {
       setError(err.message || `Failed to fetch ${reportType} report`);
       console.error(`${reportType} report error:`, err);
@@ -2370,7 +2376,7 @@ const EntityReportLayer = () => {
 
           setData(updatedData);
           saveToSessionStorage(updatedData, filters, activeTab);
-          setCurrentPage(1);
+          setDisplayedItemsCount(20);
         } catch (err) {
           setError(err.message || `Failed to fetch ${activeTab} report`);
           console.error(`${activeTab} report error:`, err);
@@ -2386,8 +2392,8 @@ const EntityReportLayer = () => {
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setError(null);
-    // Reset pagination when switching tabs
-    setCurrentPage(1);
+    // Reset infinite scroll when switching tabs
+    setDisplayedItemsCount(20);
     // Save active tab to sessionStorage
     if (typeof window !== "undefined") {
       sessionStorage.setItem("entityReportActiveTab", tabName);
@@ -2488,184 +2494,138 @@ const EntityReportLayer = () => {
     return `${numericValue.toFixed(2)}%`;
   };
 
-  // Pagination helper functions
-  const getPaginatedData = (dataArray) => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return dataArray.slice(startIndex, endIndex);
+  // Infinite scroll helper functions
+  const getDisplayedData = (dataArray) => {
+    if (!dataArray || dataArray.length === 0) return [];
+    return dataArray.slice(0, displayedItemsCount);
   };
 
-  const getTotalPages = (dataArray) => {
-    return Math.ceil(dataArray.length / itemsPerPage);
+  const hasMoreData = (dataArray) => {
+    return dataArray && dataArray.length > displayedItemsCount;
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  // Load more data when scrolling
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, itemsPerPage]);
 
-  const renderPagination = (dataArray) => {
-    const totalPages = getTotalPages(dataArray);
-    if (totalPages <= 1) return null;
+  // Reset displayed items when search term changes
+  useEffect(() => {
+    setDisplayedItemsCount(20);
+  }, [searchTerm]);
 
-    const pages = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  // Scroll detection for infinite scroll - listens to table container scroll
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
 
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
 
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <li
-          key={i}
-          className={`page-item ${currentPage === i ? "active" : ""}`}
-        >
-          <button
-            className="page-link"
-            onClick={() => handlePageChange(i)}
-            style={{
-              backgroundColor: currentPage === i ? "#007bff" : "#fff",
-              color: currentPage === i ? "#fff" : "#007bff",
-              border: "1px solid #dee2e6",
-              borderRadius: "6px",
-              padding: "6px 12px",
-              marginRight: "2px",
-            }}
-          >
-            {i}
-          </button>
-        </li>
-      );
-    }
+      // Trigger load more when user scrolls to 80% of the container
+      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+        const currentData = activeTab === "meta" 
+          ? (data.metaHierarchy ? Object.values(data.metaHierarchy).flat() : [])
+          : (data[activeTab] || []);
+        const filteredData = getFilteredAndSortedData(currentData);
+        
+        if (hasMoreData(filteredData) && !isLoadingMore && !loading) {
+          loadMoreData();
+        }
+      }
+    };
 
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1; // Allow small tolerance
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1; // -1 for rounding issues
+      
+      // If scrolling down and at bottom, or scrolling up and at top
+      // Scroll the window to allow page scrolling
+      if (e.deltaY > 0 && isAtBottom) {
+        // Scrolling down at bottom - scroll window down
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        // Scrolling up at top - scroll window up
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [displayedItemsCount, isLoadingMore, loading, activeTab, data, searchTerm, sortConfig, loadMoreData]);
+
+  // Skeleton loading component for table rows
+  const TableSkeleton = ({ rows = 5, columns = 10 }) => {
     return (
-      <nav aria-label="Table pagination">
-        <ul className="pagination justify-content-end">
-          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
+      <>
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <tr key={`skeleton-${rowIndex}`}>
+            {Array.from({ length: columns }).map((_, colIndex) => (
+              <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                <div
+                  className="skeleton"
               style={{
-                backgroundColor: currentPage === 1 ? "#f8f9fa" : "#fff",
-                color: currentPage === 1 ? "#6c757d" : "#007bff",
-                border: "1px solid #dee2e6",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                marginRight: "2px",
-              }}
+                    height: "20px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </>
+    );
+  };
+
+  // Render loading more indicator
+  const renderLoadingMore = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <tr>
+        <td colSpan={10} className="text-center py-3">
+          <div className="d-flex align-items-center justify-content-center">
+            <div
+              className="spinner-border spinner-border-sm me-2"
+              role="status"
             >
-              «
-            </button>
-          </li>
-          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              style={{
-                backgroundColor: currentPage === 1 ? "#f8f9fa" : "#fff",
-                color: currentPage === 1 ? "#6c757d" : "#007bff",
-                border: "1px solid #dee2e6",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                marginRight: "2px",
-              }}
-            >
-              ‹
-            </button>
-          </li>
-          {pages}
-          {endPage < totalPages && (
-            <li className="page-item disabled">
-              <span
-                className="page-link"
-                style={{
-                  backgroundColor: "#f8f9fa",
-                  color: "#6c757d",
-                  border: "1px solid #dee2e6",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  marginRight: "2px",
-                }}
-              >
-                ...
-              </span>
-            </li>
-          )}
-          {endPage < totalPages && (
-            <li className="page-item">
-              <button
-                className="page-link"
-                onClick={() => handlePageChange(totalPages)}
-                style={{
-                  backgroundColor: "#fff",
-                  color: "#007bff",
-                  border: "1px solid #dee2e6",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  marginRight: "2px",
-                }}
-              >
-                {totalPages}
-              </button>
-            </li>
-          )}
-          <li
-            className={`page-item ${
-              currentPage === totalPages ? "disabled" : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              style={{
-                backgroundColor:
-                  currentPage === totalPages ? "#f8f9fa" : "#fff",
-                color: currentPage === totalPages ? "#6c757d" : "#007bff",
-                border: "1px solid #dee2e6",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                marginRight: "2px",
-              }}
-            >
-              ›
-            </button>
-          </li>
-          <li
-            className={`page-item ${
-              currentPage === totalPages ? "disabled" : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              style={{
-                backgroundColor:
-                  currentPage === totalPages ? "#f8f9fa" : "#fff",
-                color: currentPage === totalPages ? "#6c757d" : "#007bff",
-                border: "1px solid #dee2e6",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                marginRight: "2px",
-              }}
-            >
-              »
-            </button>
-          </li>
-        </ul>
-      </nav>
+              <span className="visually-hidden">Loading more...</span>
+            </div>
+            <span className="text-muted">Loading more data...</span>
+          </div>
+        </td>
+      </tr>
     );
   };
 
   const renderGoogleAdsTable = () => {
     const googleData = data.google || [];
     const filteredAndSortedData = getFilteredAndSortedData(googleData);
-    const paginatedData = getPaginatedData(filteredAndSortedData);
+    const displayedData = getDisplayedData(filteredAndSortedData);
 
     // Helper functions for color styling
     const getProfitColor = (profit) => {
@@ -2682,9 +2642,30 @@ const EntityReportLayer = () => {
 
     return (
       <>
-        <div className="table-responsive">
-          <table className="table table-hover">
-            <thead className="table-light">
+        <div 
+          ref={tableContainerRef}
+          className="table-responsive table-scroll-container"
+          style={{
+            maxHeight: "calc(100vh - 400px)",
+            overflowY: "auto",
+            overflowX: "auto",
+            position: "relative",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            scrollBehavior: "smooth",
+            overscrollBehavior: "auto"
+          }}
+        >
+          <table className="table table-hover" style={{ width: "100%", marginBottom: 0 }}>
+            <thead 
+              className="table-light"
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                backgroundColor: "#f8f9fa"
+              }}
+            >
               <tr>
                 <th
                   style={{ cursor: "pointer" }}
@@ -2850,7 +2831,11 @@ const EntityReportLayer = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((row, index) => (
+              {loading && displayedData.length === 0 ? (
+                <TableSkeleton rows={10} columns={11} />
+              ) : (
+                <>
+                  {displayedData.map((row, index) => (
                 <tr key={index}>
                   <td>{row.campaign_name}</td>
                   <td>{formatNumber(row.impressions)}</td>
@@ -2897,10 +2882,31 @@ const EntityReportLayer = () => {
                   </td>
                 </tr>
               ))}
+                  {renderLoadingMore()}
+                  {isLoadingMore && <TableSkeleton rows={5} columns={11} />}
+                </>
+              )}
             </tbody>
           </table>
+          {!loading && displayedData.length > 0 && (
+            <div 
+              className="text-center py-3"
+              style={{
+                position: "sticky",
+                bottom: 0,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #e5e7eb",
+                zIndex: 5,
+                margin: 0
+              }}
+            >
+              <small className="text-muted">
+                Showing {displayedData.length} of {filteredAndSortedData.length} results
+                {hasMoreData(filteredAndSortedData) && " - Scroll down to load more"}
+              </small>
         </div>
-        {renderPagination(filteredAndSortedData)}
+          )}
+        </div>
       </>
     );
   };
@@ -3043,7 +3049,7 @@ const EntityReportLayer = () => {
 
     // Apply filtering and sorting using the user's preferences
     const filteredAndSortedData = getFilteredAndSortedData(campaignsArray);
-    const paginatedCampaigns = getPaginatedData(filteredAndSortedData);
+    const displayedCampaigns = getDisplayedData(filteredAndSortedData);
 
     // Calculate metrics for an adset (used in download function)
     const calculateAdsetMetrics = (adset) => {
@@ -3237,12 +3243,33 @@ const EntityReportLayer = () => {
 
     return (
       <>
-        <div className="table-responsive">
-          <table className="table table-hover">
-            <thead className="table-light">
+        <div 
+          ref={tableContainerRef}
+          className="table-responsive table-scroll-container"
+          style={{
+            maxHeight: "calc(100vh - 400px)",
+            overflowY: "auto",
+            overflowX: "auto",
+            position: "relative",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            scrollBehavior: "smooth",
+            overscrollBehavior: "auto"
+          }}
+        >
+          <table className="table table-hover" style={{ width: "100%", marginBottom: 0 }}>
+            <thead 
+              className="table-light"
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                backgroundColor: "#f8f9fa"
+              }}
+            >
               <tr>
                 <th
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer", backgroundColor: "#f8f9fa" }}
                   onClick={() => handleSort("campaign_name")}
                 >
                   Name
@@ -3453,7 +3480,11 @@ const EntityReportLayer = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedCampaigns.map((campaign) => {
+              {loading && displayedCampaigns.length === 0 ? (
+                <TableSkeleton rows={10} columns={13} />
+              ) : (
+                <>
+                  {displayedCampaigns.map((campaign) => {
                 const campaignMetrics = calculateCampaignMetrics(campaign);
 
                 // Helper functions for color styling
@@ -3546,10 +3577,31 @@ const EntityReportLayer = () => {
                   </tr>
                 );
               })}
+                  {renderLoadingMore()}
+                  {isLoadingMore && <TableSkeleton rows={5} columns={13} />}
+                </>
+              )}
             </tbody>
           </table>
+          {!loading && displayedCampaigns.length > 0 && (
+            <div 
+              className="text-center py-3"
+              style={{
+                position: "sticky",
+                bottom: 0,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #e5e7eb",
+                zIndex: 5,
+                margin: 0
+              }}
+            >
+              <small className="text-muted">
+                Showing {displayedCampaigns.length} of {filteredAndSortedData.length} results
+                {hasMoreData(filteredAndSortedData) && " - Scroll down to load more"}
+              </small>
         </div>
-        {renderPagination(filteredAndSortedData)}
+          )}
+        </div>
       </>
     );
   };
@@ -3557,7 +3609,7 @@ const EntityReportLayer = () => {
   const renderOrganicTable = () => {
     const organicData = data.organic || [];
     const filteredAndSortedData = getFilteredAndSortedData(organicData);
-    const paginatedData = getPaginatedData(filteredAndSortedData);
+    const displayedData = getDisplayedData(filteredAndSortedData);
 
     // Helper functions for color styling
     const getProfitColor = (profit) => {
@@ -3574,12 +3626,33 @@ const EntityReportLayer = () => {
 
     return (
       <>
-        <div className="table-responsive">
-          <table className="table table-hover">
-            <thead className="table-light">
+        <div 
+          ref={tableContainerRef}
+          className="table-responsive table-scroll-container"
+          style={{
+            maxHeight: "calc(100vh - 400px)",
+            overflowY: "auto",
+            overflowX: "auto",
+            position: "relative",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            scrollBehavior: "smooth",
+            overscrollBehavior: "auto"
+          }}
+        >
+          <table className="table table-hover" style={{ width: "100%", marginBottom: 0 }}>
+            <thead 
+              className="table-light"
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                backgroundColor: "#f8f9fa"
+              }}
+            >
               <tr>
                 <th
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer", backgroundColor: "#f8f9fa" }}
                   onClick={() => handleSort("campaign_name")}
                 >
                   Campaign
@@ -3662,7 +3735,11 @@ const EntityReportLayer = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((row, index) => (
+              {loading && displayedData.length === 0 ? (
+                <TableSkeleton rows={10} columns={6} />
+              ) : (
+                <>
+                  {displayedData.map((row, index) => (
                 <tr key={index}>
                   <td>{row.campaign_name}</td>
                   <td
@@ -3690,10 +3767,31 @@ const EntityReportLayer = () => {
                   </td>
                 </tr>
               ))}
+                  {renderLoadingMore()}
+                  {isLoadingMore && <TableSkeleton rows={5} columns={6} />}
+                </>
+              )}
             </tbody>
           </table>
+          {!loading && displayedData.length > 0 && (
+            <div 
+              className="text-center py-3"
+              style={{
+                position: "sticky",
+                bottom: 0,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #e5e7eb",
+                zIndex: 5,
+                margin: 0
+              }}
+            >
+              <small className="text-muted">
+                Showing {displayedData.length} of {filteredAndSortedData.length} results
+                {hasMoreData(filteredAndSortedData) && " - Scroll down to load more"}
+              </small>
         </div>
-        {renderPagination(filteredAndSortedData)}
+          )}
+        </div>
       </>
     );
   };
@@ -3701,7 +3799,7 @@ const EntityReportLayer = () => {
   const renderAmazonAdsTable = () => {
     const amazonData = data.amazon || [];
     const filteredAndSortedData = getFilteredAndSortedData(amazonData);
-    const paginatedData = getPaginatedData(filteredAndSortedData);
+    const displayedData = getDisplayedData(filteredAndSortedData);
 
     // Helper functions for color styling
     const getRoasColor = (roas) => {
@@ -3734,14 +3832,34 @@ const EntityReportLayer = () => {
 
     return (
       <>
-        {paginatedData.length > 0 ? (
+        {displayedData.length > 0 ? (
           <>
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead className="table-light">
+            <div 
+              ref={tableContainerRef}
+              className="table-responsive table-scroll-container"
+              style={{
+                maxHeight: "calc(100vh - 400px)",
+                overflowY: "auto",
+                overflowX: "auto",
+                position: "relative",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                scrollBehavior: "smooth"
+              }}
+            >
+              <table className="table table-hover" style={{ width: "100%", marginBottom: 0 }}>
+                <thead 
+                  className="table-light"
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
+                    backgroundColor: "#f8f9fa"
+                  }}
+                >
                   <tr>
                     <th
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: "pointer", backgroundColor: "#f8f9fa" }}
                       onClick={() => handleSort("campaign_name")}
                     >
                       Campaign Name
@@ -3920,7 +4038,11 @@ const EntityReportLayer = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedData.map((row, index) => (
+                  {loading && displayedData.length === 0 ? (
+                    <TableSkeleton rows={10} columns={11} />
+                  ) : (
+                    <>
+                      {displayedData.map((row, index) => (
                     <tr
                       key={`${row.campaign_id}-${index}`}
                       style={{ cursor: "pointer" }}
@@ -4009,10 +4131,31 @@ const EntityReportLayer = () => {
                       </td>
                     </tr>
                   ))}
+                      {renderLoadingMore()}
+                      {isLoadingMore && <TableSkeleton rows={5} columns={11} />}
+                    </>
+                  )}
                 </tbody>
               </table>
+              {!loading && displayedData.length > 0 && (
+                <div 
+                  className="text-center py-3"
+                  style={{
+                    position: "sticky",
+                    bottom: 0,
+                    backgroundColor: "#fff",
+                    borderTop: "1px solid #e5e7eb",
+                    zIndex: 5,
+                    margin: 0
+                  }}
+                >
+                  <small className="text-muted">
+                    Showing {displayedData.length} of {filteredAndSortedData.length} results
+                    {hasMoreData(filteredAndSortedData) && " - Scroll down to load more"}
+                  </small>
             </div>
-            {renderPagination(filteredAndSortedData)}
+              )}
+            </div>
           </>
         ) : (
           <div className="text-center py-5">

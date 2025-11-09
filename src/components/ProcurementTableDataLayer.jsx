@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Modal from "react-modal";
@@ -58,14 +58,18 @@ const ProcurementTableDataLayer = () => {
     useState(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Search and pagination states
+  // Search state
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  // Infinite scroll state
+  const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const tableContainerRef = useRef(null);
+  const itemsPerPage = 20;
 
   // Fetch data from API
   const fetchData = async () => {
@@ -175,9 +179,9 @@ const ProcurementTableDataLayer = () => {
     fetchData();
   }, []);
 
-  // Reset to page 1 when filters change
+  // Reset displayed items when filters change
   useEffect(() => {
-    setCurrentPage(1);
+    setDisplayedItemsCount(20);
   }, [searchTerm, statusFilter, categoryFilter]);
 
   // Define all possible Product Price Categories
@@ -220,26 +224,67 @@ const ProcurementTableDataLayer = () => {
     });
   }, [productData, searchTerm, statusFilter, categoryFilter]);
 
-  // Pagination calculations
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
+  };
 
-  // Pagination handlers
-  const goToFirst = () => setCurrentPage(1);
-  const goToPrevious = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
-  const goToNext = () =>
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  const goToLast = () => setCurrentPage(totalPages);
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length;
+  }, [displayedItemsCount]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || isLoading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, isLoading, itemsPerPage]);
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   // Reset all filters and search
   const handleReset = () => {
     setSearchTerm("");
     setStatusFilter("all");
     setCategoryFilter("all");
-    setCurrentPage(1);
+    setDisplayedItemsCount(20);
     fetchData(); // Refresh data
   };
 
@@ -600,18 +645,6 @@ const ProcurementTableDataLayer = () => {
     </tr>
   );
 
-  if (isLoading) {
-    return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
 
   // Show authentication error if present
   if (authError) {
@@ -727,7 +760,7 @@ const ProcurementTableDataLayer = () => {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
-                  setCurrentPage(1); // Reset to first page when filtering
+                  setDisplayedItemsCount(20); // Reset displayed items when filtering
                 }}
               >
                 <option value="all">All Status</option>
@@ -742,7 +775,7 @@ const ProcurementTableDataLayer = () => {
                 value={categoryFilter}
                 onChange={(e) => {
                   setCategoryFilter(e.target.value);
-                  setCurrentPage(1); // Reset to first page when filtering
+                  setDisplayedItemsCount(20); // Reset displayed items when filtering
                 }}
               >
                 <option value="all">All Categories</option>
@@ -751,18 +784,6 @@ const ProcurementTableDataLayer = () => {
                     Category {category}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="col-6 col-md-2">
-              <select
-                className="form-select"
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              >
-                <option value={5}>5 Items</option>
-                <option value={10}>10 Items</option>
-                <option value={25}>25 Items</option>
-                <option value={50}>50 Items</option>
               </select>
             </div>
             <div className="col-6 col-md-3">
@@ -782,190 +803,259 @@ const ProcurementTableDataLayer = () => {
             </div>
           </div>
 
-          {/* Showing entries count */}
-          <div className="mb-3">
-            <small className="text-muted">
-              Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
-              {totalItems} entries
-            </small>
-          </div>
-
           {/* Table */}
-          <div className="table-responsive">
-            <table className="table table-hover" style={{ fontSize: "14px" }}>
-              <thead
+          <div
+            ref={tableContainerRef}
+            className="table-scroll-container"
+            style={{
+              maxHeight: "600px",
+              overflowY: "auto",
+              overflowX: "auto",
+              scrollBehavior: "smooth",
+              overscrollBehavior: "auto",
+            }}
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+
+              if (
+                scrollTop + clientHeight >= scrollHeight - 10 &&
+                hasMoreData(filteredData) &&
+                !isLoadingMore &&
+                !isLoading
+              ) {
+                loadMoreData();
+              }
+            }}
+            onWheel={(e) => {
+              const target = e.currentTarget;
+              const scrollTop = target.scrollTop;
+              const scrollHeight = target.scrollHeight;
+              const clientHeight = target.clientHeight;
+              const isAtTop = scrollTop <= 1;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+              if (e.deltaY > 0 && isAtBottom) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              } else if (e.deltaY < 0 && isAtTop) {
+                window.scrollBy({
+                  top: e.deltaY,
+                  behavior: "auto",
+                });
+              }
+            }}
+          >
+            <div className="table-responsive">
+              <table className="table table-hover" style={{ fontSize: "14px" }}>
+                <thead
+                  style={{
+                    backgroundColor: "#f9fafb",
+                    borderBottom: "2px solid #e5e7eb",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
+                  }}
+                >
+                  <tr>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Product Name
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Product Category
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Status
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Product Price Category
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Variants
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Selling Price Range
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      COGS Range
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Total Quantity
+                    </th>
+                    <th
+                      style={{
+                        fontWeight: "600",
+                        color: "#374151",
+                        padding: "12px",
+                      }}
+                    >
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <>
+                      {Array.from({ length: 5 }).map((_, rowIndex) => (
+                        <tr key={`skeleton-${rowIndex}`}>
+                          {Array.from({ length: 9 }).map((_, colIndex) => (
+                            <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                              <div
+                                className="skeleton"
+                                style={{
+                                  height: "20px",
+                                  backgroundColor: "#e5e7eb",
+                                  borderRadius: "4px",
+                                  animation:
+                                    "skeletonPulse 1.5s ease-in-out infinite",
+                                }}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ) : filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="text-center py-4">
+                        <div className="d-flex flex-column align-items-center">
+                          <Icon
+                            icon="lucide:package"
+                            width="48"
+                            height="48"
+                            className="text-muted mb-2"
+                          />
+                          <p className="text-muted mb-0">No products found</p>
+                          {searchTerm && (
+                            <small className="text-muted">
+                              Try adjusting your search terms
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {getDisplayedData(filteredData).map((product, index) => (
+                        <TableRow
+                          key={`${product.product_id}-${index}`}
+                          product={product}
+                          onEdit={handleEdit}
+                          onView={handleView}
+                          onDelete={(product) => {
+                            setDeleteProductId(product.product_id);
+                            setConfirmModalIsOpen(true);
+                          }}
+                          uniqueKey={`${product.product_id}-${
+                            product.variant_id || "no-variant"
+                          }-${index}`}
+                        />
+                      ))}
+                      {isLoadingMore && (
+                        <>
+                          {Array.from({ length: 5 }).map((_, rowIndex) => (
+                            <tr key={`skeleton-more-${rowIndex}`}>
+                              {Array.from({ length: 9 }).map((_, colIndex) => (
+                                <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                  <div
+                                    className="skeleton"
+                                    style={{
+                                      height: "20px",
+                                      backgroundColor: "#e5e7eb",
+                                      borderRadius: "4px",
+                                      animation:
+                                        "skeletonPulse 1.5s ease-in-out infinite",
+                                    }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Infinite Scroll Footer */}
+            {filteredData.length > 0 && (
+              <div
+                className="d-flex justify-content-between align-items-center px-3 py-2"
                 style={{
-                  backgroundColor: "#f9fafb",
-                  borderBottom: "2px solid #e5e7eb",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "0 0 8px 8px",
+                  marginTop: "0",
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 5,
                 }}
               >
-                <tr>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Product Name
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Product Category
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Status
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Product Price Category
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Variants
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Selling Price Range
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    COGS Range
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Total Quantity
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "12px",
-                    }}
-                  >
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentData.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <Icon
-                          icon="lucide:package"
-                          width="48"
-                          height="48"
-                          className="text-muted mb-2"
-                        />
-                        <p className="text-muted mb-0">No products found</p>
-                        {searchTerm && (
-                          <small className="text-muted">
-                            Try adjusting your search terms
-                          </small>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  currentData.map((product, index) => (
-                    <TableRow
-                      key={`${product.product_id}-${index}`}
-                      product={product}
-                      onEdit={handleEdit}
-                      onView={handleView}
-                      onDelete={(product) => {
-                        setDeleteProductId(product.product_id);
-                        setConfirmModalIsOpen(true);
-                      }}
-                      uniqueKey={`${product.product_id}-${
-                        product.variant_id || "no-variant"
-                      }-${index}`}
-                    />
-                  ))
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Showing <strong>{getDisplayedData(filteredData).length}</strong> of{" "}
+                  <strong>{filteredData.length}</strong> entries
+                </div>
+                {hasMoreData(filteredData) && (
+                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                    Scroll down to load more
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-between align-items-center mt-3">
-              <div className="text-muted">
-                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
-                {totalItems} entries
-              </div>
-              <div className="d-flex gap-1">
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={goToFirst}
-                  disabled={currentPage === 1}
-                >
-                  <Icon icon="lucide:chevrons-left" width="16" height="16" />
-                </button>
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={goToPrevious}
-                  disabled={currentPage === 1}
-                >
-                  <Icon icon="lucide:chevron-left" width="16" height="16" />
-                </button>
-                <span className="btn btn-outline-primary btn-sm disabled">
-                  {currentPage} of {totalPages}
-                </span>
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={goToNext}
-                  disabled={currentPage === totalPages}
-                >
-                  <Icon icon="lucide:chevron-right" width="16" height="16" />
-                </button>
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={goToLast}
-                  disabled={currentPage === totalPages}
-                >
-                  <Icon icon="lucide:chevrons-right" width="16" height="16" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Delete Confirmation Modal - Full Screen */}

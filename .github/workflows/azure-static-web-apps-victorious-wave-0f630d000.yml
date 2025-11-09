@@ -2,57 +2,50 @@ name: Azure Static Web Apps CI/CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    environment: production
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
-      id-token: write
-      contents: read
-
+       id-token: write
+       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
-
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
-
       - name: Get Id Token
-        id: idtoken
         uses: actions/github-script@v6
+        id: idtoken
         with:
-          script: |
-            const coredemo = require('@actions/core')
-            return await coredemo.getIDToken()
-          result-encoding: string
-
-      # Optional: quick visibility into the workspace structure
-      # - name: Debug workspace tree
-      #   run: |
-      #     pwd
-      #     ls -la
-
-      - name: Build And Deploy (Next.js static export)
+           script: |
+               const coredemo = require('@actions/core')
+               return await coredemo.getIDToken()
+           result-encoding: string
+      - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BUSH_00A6E3100 }}
-          action: upload
-
-          ###### Repository/Build Configurations ######
-          app_location: "/"           # Repo root (adjust if your app lives elsewhere)
-          api_location: ""             # Only set if you have an Azure Functions API
-          output_location: "out"       # Next.js (output: 'export') writes static site to /out
-          app_build_command: "npm ci && npm run build"   # DO NOT run 'npm run export' on Next 13+
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_WAVE_0F630D000 }}
+          action: "upload"
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          app_location: "/" # App source code path
+          # api_location: "" # Api source code path - optional
+          app_build_command: "npm run build"
+          output_location: "out"   # CHANGE THIS FROM ".next"
+          skip_api_build: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
@@ -65,6 +58,6 @@ jobs:
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
-          action: close
-
+          action: "close"
+          
 

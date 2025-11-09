@@ -105,3 +105,23 @@
     transform: rotate(360deg);
   }
 }
+
+/* Skeleton loading animation */
+@keyframes skeletonPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Table scroll container - hide scrollbars */
+.table-scroll-container {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  display: none;
+}

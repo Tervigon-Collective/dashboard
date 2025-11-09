@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import {
   setUserRole,
@@ -38,8 +38,12 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showPermissionsPanel, setShowPermissionsPanel] = useState(false);
   const [sortBy, setSortBy] = useState("name");
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
+  
+  // Infinite scroll state
+  const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const tableContainerRef = useRef(null);
+  const itemsPerPage = 20;
 
   const validRoles = getValidRoles();
 
@@ -434,11 +438,65 @@ const UserManagement = () => {
     }
   });
 
-  // Pagination
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
+  // Get displayed data for infinite scroll
+  const getDisplayedData = (dataArray) => {
+    return dataArray.slice(0, displayedItemsCount);
+  };
+
+  // Check if there's more data to load
+  const hasMoreData = useCallback((dataArray) => {
+    return displayedItemsCount < dataArray.length;
+  }, [displayedItemsCount]);
+
+  // Load more data callback
+  const loadMoreData = useCallback(async () => {
+    if (isLoadingMore || loading) return;
+    
+    setIsLoadingMore(true);
+    // Simulate loading delay for skeleton effect
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    setIsLoadingMore(false);
+  }, [isLoadingMore, loading, itemsPerPage]);
+
+  // Reset displayed items when search term, sort, or role filter changes
+  useEffect(() => {
+    setDisplayedItemsCount(20);
+  }, [searchTerm, sortBy, selectedRole]);
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    // Handle wheel events to allow page scrolling when table reaches boundaries
+    const handleWheel = (e) => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtTop = scrollTop <= 1;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      if (e.deltaY > 0 && isAtBottom) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      } else if (e.deltaY < 0 && isAtTop) {
+        window.scrollBy({
+          top: e.deltaY,
+          behavior: 'auto'
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   if (!user) {
     return (
@@ -836,19 +894,65 @@ const UserManagement = () => {
               </div>
 
               {/* Users Table */}
-              {loading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                </div>
-              ) : (
+              <div
+                ref={tableContainerRef}
+                className="table-scroll-container"
+                style={{
+                  maxHeight: "600px",
+                  overflowY: "auto",
+                  overflowX: "auto",
+                  scrollBehavior: "smooth",
+                  overscrollBehavior: "auto",
+                }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const scrollTop = target.scrollTop;
+                  const scrollHeight = target.scrollHeight;
+                  const clientHeight = target.clientHeight;
+
+                  if (
+                    scrollTop + clientHeight >= scrollHeight - 10 &&
+                    hasMoreData(sortedUsers) &&
+                    !isLoadingMore &&
+                    !loading
+                  ) {
+                    loadMoreData();
+                  }
+                }}
+                onWheel={(e) => {
+                  const target = e.currentTarget;
+                  const scrollTop = target.scrollTop;
+                  const scrollHeight = target.scrollHeight;
+                  const clientHeight = target.clientHeight;
+                  const isAtTop = scrollTop <= 1;
+                  const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+                  if (e.deltaY > 0 && isAtBottom) {
+                    window.scrollBy({
+                      top: e.deltaY,
+                      behavior: "auto",
+                    });
+                  } else if (e.deltaY < 0 && isAtTop) {
+                    window.scrollBy({
+                      top: e.deltaY,
+                      behavior: "auto",
+                    });
+                  }
+                }}
+              >
                 <div className="table-responsive">
                   <table
                     className="table table-hover align-middle mb-0"
                     style={{ fontSize: "0.9rem" }}
                   >
-                    <thead style={{ backgroundColor: "#f9fafb" }}>
+                    <thead
+                      style={{
+                        backgroundColor: "#f9fafb",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 10,
+                      }}
+                    >
                       <tr>
                         <th
                           className="border-0 fw-semibold text-muted py-4 px-3"
@@ -903,7 +1007,40 @@ const UserManagement = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {currentUsers.map((userData) => {
+                      {loading ? (
+                        <>
+                          {Array.from({ length: 5 }).map((_, rowIndex) => (
+                            <tr key={`skeleton-${rowIndex}`}>
+                              {Array.from({ length: 5 }).map((_, colIndex) => (
+                                <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                                  <div
+                                    className="skeleton"
+                                    style={{
+                                      height: "20px",
+                                      backgroundColor: "#e5e7eb",
+                                      borderRadius: "4px",
+                                      animation:
+                                        "skeletonPulse 1.5s ease-in-out infinite",
+                                    }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
+                      ) : sortedUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-4 text-muted">
+                            <div className="d-flex flex-column align-items-center">
+                              <p className="text-muted mb-0">
+                                No users found matching your criteria
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        <>
+                          {getDisplayedData(sortedUsers).map((userData, index) => {
                         const status = getStatusBadge(userData);
                         return (
                           <tr
@@ -1064,126 +1201,59 @@ const UserManagement = () => {
                           </tr>
                         );
                       })}
+                          {isLoadingMore && (
+                            <>
+                              {Array.from({ length: 5 }).map((_, rowIndex) => (
+                                <tr key={`skeleton-more-${rowIndex}`}>
+                                  {Array.from({ length: 5 }).map((_, colIndex) => (
+                                    <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                      <div
+                                        className="skeleton"
+                                        style={{
+                                          height: "20px",
+                                          backgroundColor: "#e5e7eb",
+                                          borderRadius: "4px",
+                                          animation:
+                                            "skeletonPulse 1.5s ease-in-out infinite",
+                                        }}
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </>
+                          )}
+                        </>
+                      )}
                     </tbody>
                   </table>
-
-                  {/* Pagination */}
-                  {!loading && sortedUsers.length > 0 && (
-                    <div className="d-flex justify-content-between align-items-center mt-4 px-3 pb-3">
-                      <div
-                        className="text-muted"
-                        style={{ fontSize: "0.85rem" }}
-                      >
-                        Showing {indexOfFirstUser + 1} to{" "}
-                        {Math.min(indexOfLastUser, sortedUsers.length)} of{" "}
-                        {sortedUsers.length} users
-                      </div>
-                      <nav>
-                        <ul className="pagination pagination-sm mb-0">
-                          <li
-                            className={`page-item ${
-                              currentPage === 1 ? "disabled" : ""
-                            }`}
-                          >
-                            <button
-                              className="page-link border-0 shadow-sm"
-                              onClick={() => setCurrentPage(currentPage - 1)}
-                              disabled={currentPage === 1}
-                              style={{
-                                backgroundColor:
-                                  currentPage === 1 ? "#f9fafb" : "#fff",
-                                color: "#6b7280",
-                                padding: "8px 12px",
-                              }}
-                            >
-                              <Icon
-                                icon="mdi:chevron-left"
-                                style={{ fontSize: "1rem" }}
-                              />
-                            </button>
-                          </li>
-                          {[...Array(totalPages)].map((_, index) => (
-                            <li
-                              key={index}
-                              className={`page-item ${
-                                currentPage === index + 1 ? "active" : ""
-                              }`}
-                            >
-                              <button
-                                className="page-link border-0 shadow-sm mx-1"
-                                onClick={() => setCurrentPage(index + 1)}
-                                style={{
-                                  backgroundColor:
-                                    currentPage === index + 1
-                                      ? "#3b82f6"
-                                      : "#fff",
-                                  color:
-                                    currentPage === index + 1
-                                      ? "#fff"
-                                      : "#6b7280",
-                                  fontWeight:
-                                    currentPage === index + 1 ? "500" : "400",
-                                  padding: "8px 12px",
-                                  minWidth: "36px",
-                                }}
-                              >
-                                {index + 1}
-                              </button>
-                            </li>
-                          ))}
-                          <li
-                            className={`page-item ${
-                              currentPage === totalPages ? "disabled" : ""
-                            }`}
-                          >
-                            <button
-                              className="page-link border-0 shadow-sm"
-                              onClick={() => setCurrentPage(currentPage + 1)}
-                              disabled={currentPage === totalPages}
-                              style={{
-                                backgroundColor:
-                                  currentPage === totalPages
-                                    ? "#f9fafb"
-                                    : "#fff",
-                                color: "#6b7280",
-                                padding: "8px 12px",
-                              }}
-                            >
-                              <Icon
-                                icon="mdi:chevron-right"
-                                style={{ fontSize: "1rem" }}
-                              />
-                            </button>
-                          </li>
-                        </ul>
-                      </nav>
-                    </div>
-                  )}
                 </div>
-              )}
 
-              {/* No Users Message */}
-              {!loading && sortedUsers.length === 0 && (
-                <div className="text-center py-5">
+                {/* Infinite Scroll Footer */}
+                {sortedUsers.length > 0 && (
                   <div
-                    className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    className="d-flex justify-content-between align-items-center px-3 py-2"
                     style={{
-                      width: "64px",
-                      height: "64px",
-                      backgroundColor: "#f9fafb",
+                      backgroundColor: "#f8f9fa",
+                      borderRadius: "0 0 8px 8px",
+                      marginTop: "0",
+                      position: "sticky",
+                      bottom: 0,
+                      zIndex: 5,
                     }}
                   >
-                    <Icon
-                      icon="mdi:account-search"
-                      className="text-muted"
-                      style={{ fontSize: "2rem" }}
-                    />
+                    <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                      Showing <strong>{getDisplayedData(sortedUsers).length}</strong> of{" "}
+                      <strong>{sortedUsers.length}</strong> users
+                    </div>
+                    {hasMoreData(sortedUsers) && (
+                      <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                        Scroll down to load more
+                      </div>
+                    )}
                   </div>
-                  <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
-                    No users found matching your criteria
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  output: "export", // Enable static export for Azure Static Web Apps
+  output: "export", 
   images: { unoptimized: true },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {

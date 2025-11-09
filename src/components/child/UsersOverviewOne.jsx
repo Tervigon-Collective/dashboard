@@ -54,9 +54,10 @@ const UsersOverviewOne = () => {
         `/api/order_sales_by_province?start_date=${startDate}&end_date=${endDate}`
       )
       .then((res) => {
-        setData(res.data);
-        setSeries(res.data.map((item) => item.total_sales));
-        setLabels(res.data.map((item) => item.province));
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setData(rows);
+        setSeries(rows.map((item) => item.total_sales || 0));
+        setLabels(rows.map((item) => item.province || "Unknown"));
         setLoading(false);
       })
       .catch(() => {

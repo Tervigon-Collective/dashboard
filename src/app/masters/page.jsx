@@ -1,84 +1,92 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
-import { useRouter } from "next/navigation";
+import VendorMasterLayer from "../../components/VendorMasterLayer";
+import ProductMasterLayer from "../../components/ProductMasterLayer";
 
 const MastersLayer = () => {
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("vendor");
 
-  const masterCards = [
+  const tabs = [
     {
       id: "vendor",
-      label: "Vendor",
+      label: "VENDOR",
       icon: "mdi:storefront",
     },
     {
       id: "product",
-      label: "Product",
+      label: "PRODUCT",
       icon: "mdi:package-variant",
     },
   ];
 
-  const handleCardClick = (cardId) => {
-    if (cardId === "vendor") {
-      router.push("/masters/vendor");
-    } else if (cardId === "product") {
-      router.push("/masters/product");
-    }
+  const getActiveTabLabel = () => {
+    const activeTabData = tabs.find((tab) => tab.id === activeTab);
+    return activeTabData ? activeTabData.label : "";
   };
 
   return (
     <div className="card h-100 radius-8 border">
       <div className="card-body p-24">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-20">
+        {/* Header with Dynamic Title */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
           <div className="d-flex align-items-center">
-            <h6 className="mb-0 me-2">Manage Master</h6>
+            <h5 className="mb-0 fw-semibold">
+              Manage Master - {getActiveTabLabel()}
+            </h5>
           </div>
         </div>
 
-        {/* Master Cards Grid */}
-        <div className="row g-3">
-          {masterCards.map((card) => (
-            <div key={card.id} className="col-lg-2 col-md-3 col-sm-4 col-6">
+        {/* Tab Navigation - Responsive */}
+        <div
+          className="mb-4 border-bottom pb-0"
+          style={{ overflowX: "auto", overflowY: "hidden" }}
+        >
+          <div
+            className="d-flex gap-2 gap-md-4"
+            style={{ minWidth: "max-content", flexWrap: "nowrap" }}
+          >
+            {tabs.map((tab) => (
               <div
-                className="master-card d-flex flex-column align-items-center justify-content-center p-3 border rounded cursor-pointer"
-                onClick={() => handleCardClick(card.id)}
-                style={{
-                  minHeight: "120px",
-                  backgroundColor: "#fff",
-                  border: "1px solid #e9ecef",
-                  borderRadius: "8px",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                  e.target.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-                  e.target.style.transform = "translateY(0)";
-                }}
+                key={tab.id}
+                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
+                  activeTab === tab.id ? "text-primary" : "text-muted"
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 <Icon
-                  icon={card.icon}
-                  className="mb-2"
-                  style={{ fontSize: "32px", color: "#495057" }}
+                  icon={tab.icon}
+                  className="icon"
+                  style={{ flexShrink: 0 }}
                 />
                 <span
-                  className="text-center fw-medium"
-                  style={{ fontSize: "14px", color: "#495057" }}
+                  className="fw-medium"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
                 >
-                  {card.label}
+                  {tab.label}
                 </span>
+                {activeTab === tab.id && (
+                  <div
+                    className="position-absolute bottom-0 start-0 end-0"
+                    style={{
+                      height: "2px",
+                      backgroundColor: "#0d6efd",
+                    }}
+                  />
+                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="tab-content">
+          {activeTab === "vendor" && <VendorMasterLayer />}
+          {activeTab === "product" && <ProductMasterLayer />}
         </div>
       </div>
     </div>

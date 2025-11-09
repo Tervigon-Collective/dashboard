@@ -1,7 +1,13 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
-  }
+    },
+    "jsx": "preserve",
+    "strict": false,
+    "target": "ES2021",
+    "module": "ESNext"
+  },
+  "exclude": ["node_modules", ".next", "out"]
 }
