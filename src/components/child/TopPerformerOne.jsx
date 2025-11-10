@@ -49,7 +49,8 @@ const TopPerformerOne = () => {
         `/api/top_skus_by_sales?n=6&start_date=${startDate}&end_date=${endDate}`
       )
       .then((res) => {
-        setSkus(res.data);
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setSkus(rows);
         setLoading(false);
       })
       .catch(() => {

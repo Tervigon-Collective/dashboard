@@ -121,7 +121,13 @@ const MasterLayout = ({ children }) => {
   };
 
   return (
-    <section className={mobileMenu ? "overlay active" : "overlay "}>
+    <section
+      className={mobileMenu ? "overlay active" : "overlay "}
+      style={{
+        position: "relative",
+        zIndex: mobileMenu ? 1500 : "auto",
+      }}
+    >
       {/* sidebar */}
       <aside
         className={
@@ -131,6 +137,9 @@ const MasterLayout = ({ children }) => {
             ? "sidebar sidebar-open"
             : "sidebar"
         }
+        style={{
+          zIndex: mobileMenu ? 1600 : undefined,
+        }}
       >
         <button
           onClick={mobileMenuControl}
@@ -537,6 +546,43 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
+                    {hasSidebarPermission("orderManagement") && (
+                      <li>
+                        <Link
+                          href="/order-management"
+                          className={
+                            pathname === "/order-management"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:clipboard-text"
+                            className="menu-icon"
+                          />
+                          <span>Order Management</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("stockManagement") && (
+                      <li>
+                        <Link
+                          href="/stock-management"
+                          className={
+                            pathname === "/stock-management"
+                              ? "active-page"
+                              : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:package-variant"
+                            className="menu-icon"
+                          />
+                          <span>Stock Management</span>
+                        </Link>
+                      </li>
+                    )}
+
                     {hasSidebarPermission("masters") && (
                       <li>
                         <Link

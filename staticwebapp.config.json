@@ -4,20 +4,47 @@
   },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/_next/*", "/api/*", "/assets/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
+    "exclude": [
+      "/_next/*",
+      "/api/*",
+      "/assets/*",
+      "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
+    ]
   },
   "routes": [
     {
+      "route": "/",
+      "rewrite": "/index.html"
+    },
+    {
       "route": "/procurement/edit-product",
-      "allowedRoles": ["anonymous", "authenticated"]
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
     },
     {
       "route": "/procurement/edit-products",
-      "allowedRoles": ["anonymous", "authenticated"]
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/_next/static/*",
+      "headers": {
+        "cache-control": "public, max-age=60, must-revalidate"
+      }
+    },
+    {
+      "route": "/assets/*",
+      "headers": {
+        "cache-control": "public, max-age=3600"
+      }
     }
   ],
   "globalHeaders": {
-    "cache-control": "public, max-age=3600"
+    "cache-control": "no-cache, no-store, must-revalidate"
   },
   "mimeTypes": {
     ".json": "application/json",
@@ -25,4 +52,3 @@
     ".css": "text/css"
   }
 }
-

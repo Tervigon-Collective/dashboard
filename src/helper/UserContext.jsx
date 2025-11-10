@@ -264,12 +264,22 @@ export const UserProvider = ({ children }) => {
 
         setRole(cachedRole);
         setToken(cachedToken);
-        setUser({
-          uid: cachedUserData.uid,
-          email: cachedUserData.email,
-          displayName: cachedUserData.displayName,
-          emailVerified: cachedUserData.emailVerified,
-        });
+
+        if (cachedUserData) {
+          setUser({
+            uid: cachedUserData.uid,
+            email: cachedUserData.email,
+            displayName: cachedUserData.displayName,
+            emailVerified: cachedUserData.emailVerified,
+          });
+        } else {
+          console.warn(
+            "Cached user data missing; clearing stale authentication cache"
+          );
+          localStorageUtils.clearAll();
+          setLoading(false);
+          return false;
+        }
 
         // Don't load cached sidebar permissions - always fetch fresh from server
 

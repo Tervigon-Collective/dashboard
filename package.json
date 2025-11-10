@@ -44,6 +44,7 @@
     "firebase-admin": "^13.5.0",
     "flatpickr": "^4.6.13",
     "highlight.js": "^11.10.0",
+    "html5-qrcode": "^2.3.8",
     "isotope-layout": "^3.0.6",
     "jquery": "^3.7.1",
     "jsvectormap": "^1.7.0",
@@ -91,7 +92,7 @@
     "webpack": "^5.90.3"
   },
   "engines": {
-    "node": ">=18.17.0",
+    "node": "20.x",
     "npm": ">=8.0.0"
   }
 }

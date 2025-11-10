@@ -1,21 +1,24 @@
 // config.js
 
+const DEFAULT_API_BASE_URL =
+  "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net";
+const DEFAULT_PYTHON_API_BASE_URL =
+  "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net";
+const DEFAULT_FALLBACK_ENABLED = true;
+const DEFAULT_FALLBACK_ROLE = "";
+const DEFAULT_OFFLINE_MODE = true;
+
 const config = {
   api: {
-    baseURL:
-      "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net",
-      //"http://localhost:8080",
+    baseURL: DEFAULT_API_BASE_URL,
   },
-  // Python backend URL for content generation
   pythonApi: {
-    baseURL:
-      "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net",
+    baseURL: DEFAULT_PYTHON_API_BASE_URL,
   },
-  // Fallback configuration for offline mode
   fallback: {
-    enabled: true,
-    defaultRole: "user",
-    offlineMode: true,
+    enabled: DEFAULT_FALLBACK_ENABLED,
+    defaultRole: DEFAULT_FALLBACK_ROLE,
+    offlineMode: DEFAULT_OFFLINE_MODE,
   },
 };
 
