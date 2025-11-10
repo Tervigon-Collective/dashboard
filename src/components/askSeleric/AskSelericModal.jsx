@@ -43,7 +43,8 @@ const FALLBACK_SUGGESTIONS = [
 
 const INITIAL_MESSAGE = {
   role: "assistant",
-  content: "Hi! Ask me anything about your business metrics, operations, or data.",
+  content:
+    "Hi! Ask me anything about your business metrics, operations, or data.",
   metadata: null,
 };
 
@@ -165,7 +166,9 @@ const AskSelericModal = ({ open, onClose }) => {
     try {
       const authToken = await ensureToken();
       if (!authToken) {
-        throw new Error("Authentication token unavailable. Please sign in again.");
+        throw new Error(
+          "Authentication token unavailable. Please sign in again."
+        );
       }
 
       const response = await fetch(apiUrl, {
@@ -179,7 +182,9 @@ const AskSelericModal = ({ open, onClose }) => {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(text || `Request failed with status ${response.status}`);
+        throw new Error(
+          text || `Request failed with status ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -244,7 +249,7 @@ const AskSelericModal = ({ open, onClose }) => {
               />
             </div>
             <div>
-              <h3>Ask Seleric 2.0</h3>
+              <h4>Ask BOS</h4>
             </div>
           </div>
           <button
@@ -279,7 +284,9 @@ const AskSelericModal = ({ open, onClose }) => {
               {message.metadata && !message.metadata.typing && (
                 <div className="ask-seleric-metadata">
                   {message.metadata.confidence !== undefined && (
-                    <span>Confidence: {message.metadata.confidence ?? "n/a"}</span>
+                    <span>
+                      Confidence: {message.metadata.confidence ?? "n/a"}
+                    </span>
                   )}
                   {message.metadata.agents && (
                     <span>Agents: {message.metadata.agents.join(", ")}</span>
