@@ -5,27 +5,36 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useUser } from "@/helper/UserContext";
-import config from "@/config";
+import { apiClient } from "@/api/api";
 
 const ROLE_SUGGESTIONS = {
   super_admin: [
-    "Give me today’s company-wide KPI summary",
-    "Highlight risks or anomalies I should know about",
-    "What’s our blended ROAS versus target this month?",
+    "Show me the count of orders from Maharashtra in the last month.",
+    "What were total orders and revenue last week versus the week before",
+    "Give me a weekly trend of net profit and margin percentage for this quarter.",
+    "List customers with repeat purchases in the last 60 days.",
   ],
   admin: [
+    "Show me the count of orders from Maharashtra in the last month.",
+    "What were total orders and revenue last week versus the week before",
+    "Give me a weekly trend of net profit and margin percentage for this quarter.",
+    "List customers with repeat purchases in the last 60 days.",
     "Show me net profit and orders week over week",
     "Which campaigns are below ROAS 1.0 right now?",
-    "Summarize yesterday’s shipping performance",
   ],
   manager: [
-    "Which products need restocking this week?",
+    "Show me the count of orders from Maharashtra in the last month.",
+    "What were total orders and revenue last week versus the week before",
+    "Give me a weekly trend of net profit and margin percentage for this quarter.",
+    "List customers with repeat purchases in the last 60 days.",
     "Give me the top 5 SKUs by sales in the last 14 days",
-    "List orders pending dispatch for more than 24 hours",
   ],
   user: [
     "How many orders came from Maharashtra last month?",
-    "Show me sales and ad spend for my assigned marketplace",
+    "Show me the count of orders from Maharashtra in the last month.",
+    "What were total orders and revenue last week versus the week before",
+    "Give me a weekly trend of net profit and margin percentage for this quarter.",
+    "List customers with repeat purchases in the last 60 days.",
     "What’s the current gross ROAS?",
   ],
   none: [
@@ -49,7 +58,7 @@ const INITIAL_MESSAGE = {
 };
 
 const AskSelericModal = ({ open, onClose }) => {
-  const { token, refreshToken, role, user } = useUser();
+  const { role, user } = useUser();
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,11 +74,6 @@ const AskSelericModal = ({ open, onClose }) => {
     }
     return [...base, ...FALLBACK_SUGGESTIONS].slice(0, 3);
   }, [role]);
-
-  const apiUrl = useMemo(() => {
-    const base = config.api.baseURL;
-    return `${base}/api/ask-seleric/query`;
-  }, []);
 
   useEffect(() => {
     if (!modalRootRef.current) {
@@ -110,13 +114,6 @@ const AskSelericModal = ({ open, onClose }) => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open]);
-
-  const ensureToken = async () => {
-    if (token) {
-      return token;
-    }
-    return refreshToken ? await refreshToken() : null;
-  };
 
   const closeModal = () => {
     if (onClose) {
@@ -164,30 +161,11 @@ const AskSelericModal = ({ open, onClose }) => {
     setInputValue("");
 
     try {
-      const authToken = await ensureToken();
-      if (!authToken) {
-        throw new Error(
-          "Authentication token unavailable. Please sign in again."
-        );
-      }
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(
-          text || `Request failed with status ${response.status}`
-        );
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post(
+        "/api/ask-seleric/query",
+        requestPayload
+      );
+      const data = response.data;
       setMessages((prev) => {
         const updated = [...prev];
         const typingIndex = updated.findIndex(
@@ -211,7 +189,18 @@ const AskSelericModal = ({ open, onClose }) => {
         ];
       });
     } catch (err) {
-      setError(err.message || "Unable to contact Ask Seleric service");
+      const normalizedMessage = (err?.message || "").toLowerCase();
+      const isTimeout =
+        err?.code === "ECONNABORTED" || normalizedMessage.includes("timeout");
+      const isAuthExpired = err?.response?.status === 401;
+
+      const userFriendlyError = isTimeout
+        ? "Ask BOS took too long to respond this time. Nothing changed on your side—please try again in a moment."
+        : isAuthExpired
+        ? "Your session expired. Please sign in again to continue."
+        : "Ask BOS isn't reachable right now. Please try again soon.";
+
+      setError(userFriendlyError);
       setMessages((prev) => {
         const updated = prev.filter(
           (msg) => !(msg.role === "assistant" && msg.metadata?.typing)
@@ -220,8 +209,7 @@ const AskSelericModal = ({ open, onClose }) => {
           ...updated,
           {
             role: "assistant",
-            content:
-              "I ran into an issue fetching that answer. Please try again in a moment.",
+            content: userFriendlyError,
             metadata: null,
           },
         ];
