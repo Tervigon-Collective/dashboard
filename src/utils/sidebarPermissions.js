@@ -20,6 +20,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: false, operations: [] },
     receivingManagement: { enabled: false, operations: [] },
+    stockManagement: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
   user: {
@@ -37,6 +38,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: false, operations: [] },
     receivingManagement: { enabled: false, operations: [] },
+    stockManagement: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
   manager: {
@@ -57,6 +59,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: true, operations: ["read", "create"] },
     receivingManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
+    stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
@@ -89,6 +95,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
+    stockManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
     masters: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
@@ -118,6 +128,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     },
     createContent: { enabled: true, operations: ["read", "create"] },
     receivingManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    }, // Full CRUD
+    stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
@@ -391,6 +405,20 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     label: "Order Management",
     description: "Track and manage outgoing orders",
     icon: "mdi:clipboard-text",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [
+      OPERATION_TYPES.READ,
+      OPERATION_TYPES.CREATE,
+      OPERATION_TYPES.UPDATE,
+      OPERATION_TYPES.DELETE,
+    ],
+    supportsCRUD: true,
+  },
+  stockManagement: {
+    key: "stockManagement",
+    label: "Stock Management",
+    description: "Monitor and adjust on-hand inventory levels",
+    icon: "mdi:warehouse",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [
       OPERATION_TYPES.READ,

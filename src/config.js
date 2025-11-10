@@ -2,7 +2,7 @@
 
 const DEFAULT_API_BASE_URL =
   // "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net";
-  "http://localhost:8080"; 
+  "http://localhost:8080";
 const DEFAULT_PYTHON_API_BASE_URL =
   "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net";
 const DEFAULT_FALLBACK_ENABLED = true;
