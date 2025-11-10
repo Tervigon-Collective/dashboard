@@ -146,6 +146,24 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
     return url;
   };
 
+  const getFallbackVideoSources = (clip) => {
+    if (!clip) return [];
+
+    const candidates = [
+      clip.cdn_url,
+      clip.download_url,
+      clip.file_url,
+      clip.presigned_url,
+      clip.video_presigned_url,
+      ...(Array.isArray(clip.alt_urls) ? clip.alt_urls : []),
+      ...(Array.isArray(clip.urls) ? clip.urls : []),
+    ];
+
+    return candidates
+      .map((candidate) => normalizeVideoUrl(candidate))
+      .filter(Boolean);
+  };
+
   const getVideoUrl = (clip) => {
     // Use enhanced video structure if available
     if (clip.video_url) {
@@ -561,11 +579,57 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                                                     onPlay={() => setPlayingVideoId(clipId)}
                                                     onPause={() => setPlayingVideoId(null)}
                                                     onEnded={() => setPlayingVideoId(null)}
-                                                    onError={(e) => {
-                                                      console.error("Video load error:", e);
-                                                      // Try CDN URL if available
-                                                      if (clip.cdn_url && e.target.src !== clip.cdn_url) {
-                                                        e.target.src = clip.cdn_url;
+                                                    onError={(event) => {
+                                                      const target = event.currentTarget;
+                                                      const videoError = target?.error;
+                                                      const currentSrc = target?.currentSrc || target?.src;
+
+                                                      const diagnostics = {
+                                                        code: videoError?.code,
+                                                        message: videoError?.message,
+                                                        networkState: target?.networkState,
+                                                        readyState: target?.readyState,
+                                                        src: currentSrc,
+                                                      };
+
+                                                      console.error("Video load error:", diagnostics, videoError);
+
+                                                      const trackedFailures = new Set(
+                                                        (target?.dataset?.failedSources || "")
+                                                          .split("|")
+                                                          .filter(Boolean)
+                                                      );
+
+                                                      if (currentSrc) {
+                                                        trackedFailures.add(currentSrc);
+                                                      }
+
+                                                      target.dataset.failedSources = Array.from(trackedFailures).join("|");
+
+                                                      const fallbackSources = getFallbackVideoSources(clip).filter(
+                                                        (src) => !trackedFailures.has(src)
+                                                      );
+
+                                                      if (fallbackSources.length > 0) {
+                                                        const nextSrc = fallbackSources[0];
+                                                        console.info("Retrying video load with fallback source:", nextSrc);
+                                                        target.src = nextSrc;
+                                                        target.load();
+                                                        const shouldAutoplay = playingVideoId === clipId;
+                                                        if (shouldAutoplay) {
+                                                          target
+                                                            .play()
+                                                            .then(() => setPlayingVideoId(clipId))
+                                                            .catch((err) => {
+                                                              console.error("Failed to autoplay fallback video:", err);
+                                                            });
+                                                        }
+                                                      } else {
+                                                        setPlayingVideoId(null);
+                                                        if (!target.dataset.reportedFailure) {
+                                                          target.dataset.reportedFailure = "true";
+                                                          toast.error("Unable to load this video clip. Please try downloading it instead.");
+                                                        }
                                                       }
                                                     }}
                                                   >
