@@ -2,17 +2,23 @@
 import React from "react";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-const Breadcrumb = ({ title }) => {
+const Breadcrumb = ({
+  title,
+  rootLabel = "Dashboard",
+  rootIcon = "solar:widget-5-bold",
+  rootBreadcrumbLabel,
+}) => {
+  const breadcrumbLabel = rootBreadcrumbLabel ?? rootLabel;
   return (
     <div className='d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24'>
       <h6 className='fw-semibold mb-0 d-flex align-items-center gap-2'>
         <Icon
-          icon='solar:magic-stick-3-bold'
+          icon={rootIcon}
           width="20"
           height="20"
           style={{ color: '#000000' }}
         />
-        Content Craft
+        {rootLabel}
       </h6>
       <ul className='d-flex align-items-center gap-2'>
         <li className='fw-medium'>
@@ -24,7 +30,7 @@ const Breadcrumb = ({ title }) => {
               icon='solar:home-smile-angle-outline'
               className='icon text-lg'
             />
-            Content Craft
+            {breadcrumbLabel}
           </Link>
         </li>
         <li> - </li>

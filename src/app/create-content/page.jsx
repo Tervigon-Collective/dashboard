@@ -638,7 +638,12 @@ export default function CreateContentPage() {
   return (
     <SidebarPermissionGuard requiredSidebar="createContent">
       {/* Breadcrumb */}
-      <Breadcrumb title="Create Content" />
+      <Breadcrumb
+        title="Create Content"
+        rootLabel="Content Craft"
+        rootIcon="solar:magic-stick-3-bold"
+        rootBreadcrumbLabel="Dashboard"
+      />
 
       <div className="container-fluid">
         {/* Tabs */}
