@@ -35,7 +35,6 @@ const VendorMasterLayer = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [companyNameFilter, setCompanyNameFilter] = useState("all"); // all, with, without
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -47,6 +46,50 @@ const VendorMasterLayer = () => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  const sortVendorData = useCallback(
+    (dataArray, field = sortField, direction = sortDirection) => {
+      if (!field || !Array.isArray(dataArray)) {
+        return dataArray || [];
+      }
+
+      const sortedData = [...dataArray].sort((a, b) => {
+        const valueA = a?.[field];
+        const valueB = b?.[field];
+
+        if (valueA === valueB) return 0;
+        if (valueA == null) return -1;
+        if (valueB == null) return 1;
+
+        if (/_at$/.test(field)) {
+          const dateA = new Date(valueA).getTime();
+          const dateB = new Date(valueB).getTime();
+          return dateA - dateB;
+        }
+
+        const numA = Number(valueA);
+        const numB = Number(valueB);
+        const bothNumbers = !Number.isNaN(numA) && !Number.isNaN(numB);
+
+        if (bothNumbers) {
+          return numA - numB;
+        }
+
+        return String(valueA)
+          .toLocaleLowerCase()
+          .localeCompare(String(valueB).toLocaleLowerCase(), undefined, {
+            sensitivity: "base",
+          });
+      });
+
+      if (direction === "desc") {
+        sortedData.reverse();
+      }
+
+      return sortedData;
+    },
+    [sortField, sortDirection]
+  );
 
   // Load vendors from API with server-side search, filters, and pagination
   const loadVendors = async (page = 1, resetPage = false, append = false) => {
@@ -60,8 +103,6 @@ const VendorMasterLayer = () => {
       const options = {
         search: debouncedSearchTerm || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        companyNameFilter:
-          companyNameFilter !== "all" ? companyNameFilter : undefined,
         sortField: sortField || undefined,
         sortDirection: sortDirection || undefined,
       };
@@ -74,9 +115,12 @@ const VendorMasterLayer = () => {
 
       if (result.success) {
         if (append) {
-          setVendors((prev) => [...prev, ...(result.data || [])]);
+          setVendors((prev) => {
+            const combined = [...prev, ...(result.data || [])];
+            return sortVendorData(combined);
+          });
         } else {
-          setVendors(result.data || []);
+          setVendors(sortVendorData(result.data || []));
           setDisplayedItemsCount(20); // Reset displayed items
         }
         setCurrentPage(result.pagination?.page || targetPage);
@@ -104,7 +148,6 @@ const VendorMasterLayer = () => {
   const prevFiltersRef = useRef({
     search: "",
     status: "all",
-    companyName: "all",
     sort: null,
     sortDir: "asc",
   });
@@ -126,7 +169,6 @@ const VendorMasterLayer = () => {
     const currentFilters = {
       search: debouncedSearchTerm,
       status: statusFilter,
-      companyName: companyNameFilter,
       sort: sortField,
       sortDir: sortDirection,
     };
@@ -138,7 +180,6 @@ const VendorMasterLayer = () => {
     const filtersChanged =
       prevFilters.search !== currentFilters.search ||
       prevFilters.status !== currentFilters.status ||
-      prevFilters.companyName !== currentFilters.companyName ||
       prevFilters.sort !== currentFilters.sort ||
       prevFilters.sortDir !== currentFilters.sortDir;
 
@@ -176,7 +217,6 @@ const VendorMasterLayer = () => {
     isMounted,
     debouncedSearchTerm,
     statusFilter,
-    companyNameFilter,
     sortField,
     sortDirection,
     currentPage,
@@ -187,7 +227,6 @@ const VendorMasterLayer = () => {
     setSearchTerm("");
     setDebouncedSearchTerm("");
     setStatusFilter("all");
-    setCompanyNameFilter("all");
     setSortField(null);
     setSortDirection("asc");
     setCurrentPage(1);
@@ -238,13 +277,7 @@ const VendorMasterLayer = () => {
   // Reset displayed items when search term or filters change
   useEffect(() => {
     setDisplayedItemsCount(20);
-  }, [
-    debouncedSearchTerm,
-    statusFilter,
-    companyNameFilter,
-    sortField,
-    sortDirection,
-  ]);
+  }, [debouncedSearchTerm, statusFilter, sortField, sortDirection]);
 
   // Scroll detection for infinite scroll (using event listeners in addition to onScroll/onWheel)
   useEffect(() => {
@@ -286,6 +319,33 @@ const VendorMasterLayer = () => {
     } else {
       setSortField(field);
       setSortDirection("asc");
+      setDisplayedItemsCount(20);
+      isInfiniteScrollRef.current = false;
+      if (currentPage !== 1) {
+        prevPageRef.current = currentPage;
+        setCurrentPage(1);
+      }
+    }
+  };
+
+  const handleSortFieldSelect = (value) => {
+    const newSortField = value || null;
+    setSortField(newSortField);
+    setDisplayedItemsCount(20);
+    isInfiniteScrollRef.current = false;
+    if (currentPage !== 1) {
+      prevPageRef.current = currentPage;
+      setCurrentPage(1);
+    }
+  };
+
+  const handleSortDirectionSelect = (value) => {
+    setSortDirection(value);
+    setDisplayedItemsCount(20);
+    isInfiniteScrollRef.current = false;
+    if (currentPage !== 1) {
+      prevPageRef.current = currentPage;
+      setCurrentPage(1);
     }
   };
 
@@ -541,20 +601,41 @@ const VendorMasterLayer = () => {
           <option value="Inactive">Inactive</option>
         </select>
 
+        {/* Sort Field */}
         <select
           className="form-select form-select-sm"
-          value={companyNameFilter}
-          onChange={(e) => setCompanyNameFilter(e.target.value)}
+          value={sortField || ""}
+          onChange={(e) => handleSortFieldSelect(e.target.value)}
           style={{
             height: "36px",
             width: "auto",
-            minWidth: "150px",
+            minWidth: "170px",
             fontSize: "0.875rem",
           }}
         >
-          <option value="all">All Company Names</option>
-          <option value="with">With Company Name</option>
-          <option value="without">Without Company Name</option>
+          <option value="">Sort By</option>
+          <option value="vendor_name">Vendor Name</option>
+          <option value="vendor_phone_no">Phone No.</option>
+          <option value="vendor_status">Status</option>
+          <option value="company_name">Company Name</option>
+          <option value="created_at">Created At</option>
+          <option value="updated_at">Updated At</option>
+        </select>
+
+        {/* Sort Order */}
+        <select
+          className="form-select form-select-sm"
+          value={sortDirection}
+          onChange={(e) => handleSortDirectionSelect(e.target.value)}
+          style={{
+            height: "36px",
+            width: "auto",
+            minWidth: "130px",
+            fontSize: "0.875rem",
+          }}
+        >
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
         </select>
 
         {/* Reset Button */}
@@ -774,9 +855,7 @@ const VendorMasterLayer = () => {
                 <td colSpan="7" className="text-center py-4 text-muted">
                   <div className="d-flex flex-column align-items-center">
                     <p className="text-muted mb-0">
-                      {searchTerm ||
-                      statusFilter !== "all" ||
-                      companyNameFilter !== "all"
+                      {searchTerm || statusFilter !== "all"
                         ? "No vendors match your search criteria."
                         : 'No vendors found. Click "Add New Vendor" to get started.'}
                     </p>
@@ -1014,7 +1093,7 @@ const VendorMasterLayer = () => {
                     </div>
                     <div className="col-md-6 mb-3">
                       <label htmlFor="companyName" className="form-label">
-                        Company Name
+                        Company Name <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
@@ -1025,6 +1104,7 @@ const VendorMasterLayer = () => {
                         name="companyName"
                         value={formData.companyName}
                         onChange={handleInputChange}
+                        required
                       />
                       {formErrors.companyName && (
                         <div className="invalid-feedback d-block">

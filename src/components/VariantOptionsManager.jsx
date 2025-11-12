@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 
 /**
@@ -13,6 +13,10 @@ const VariantOptionsManager = ({
   hideHeader = false,
 }) => {
   const [variantOptions, setVariantOptions] = useState(initialOptions);
+
+  useEffect(() => {
+    setVariantOptions(initialOptions);
+  }, [initialOptions]);
 
   // Predefined variant types
   const VARIANT_TYPES = [
@@ -227,9 +231,9 @@ const VariantOptionsManager = ({
         )}
 
         {variantOptions.length === 0 && (
-          <div className="alert alert-info">
-            <Icon icon="mdi:information" className="me-2" />
-            Select variant types above to get started
+          <div className="border rounded px-3 py-2 bg-white text-muted small d-flex align-items-center gap-2">
+            <Icon icon="mdi:information" width="16" />
+            <span>Select variant types above to get started.</span>
           </div>
         )}
       </div>
