@@ -1,10 +1,6 @@
-// config.js
-
 const DEFAULT_API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net"
-    : "http://localhost:8080");
+  // "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net";
+  "http://localhost:8080";
 const DEFAULT_PYTHON_API_BASE_URL =
   "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net";
 const DEFAULT_FALLBACK_ENABLED = true;
