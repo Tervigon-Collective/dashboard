@@ -3235,7 +3235,7 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    #
+                    Sr No
                   </th>
                   <th
                     style={{
@@ -4385,280 +4385,354 @@ const ToBeDeliveredTab = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requests]);
 
+  const displayedData = getDisplayedData();
+
   return (
-    <>
-      {/* Table */}
-      <div
-        className="border rounded overflow-hidden"
-        style={{ backgroundColor: "white" }}
-      >
-        <div className="table-responsive">
-          <table className="table mb-0">
-            <thead style={{ backgroundColor: "#f8f9fa" }}>
-              <tr>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Sr No
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Company Name
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Order Date
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Delivery Date
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Product Name
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Operate
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
+    <div className="card basic-data-table">
+      <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+        <h5 className="card-title mb-0">To Be Delivered</h5>
+      </div>
+
+      <div className="card-body">
+        <div
+          ref={containerRef}
+          className="table-scroll-container"
+          style={{
+            maxHeight: "600px",
+            overflowY: "auto",
+            overflowX: "auto",
+            scrollBehavior: "smooth",
+            overscrollBehavior: "auto",
+          }}
+          onScroll={(e) => {
+            const target = e.currentTarget;
+            const scrollTop = target.scrollTop;
+            const scrollHeight = target.scrollHeight;
+            const clientHeight = target.clientHeight;
+
+            if (
+              scrollTop + clientHeight >= scrollHeight - 10 &&
+              hasMoreData() &&
+              !isLoadingMore &&
+              !isLoading
+            ) {
+              loadMoreData();
+            }
+          }}
+          onWheel={(e) => {
+            const target = e.currentTarget;
+            const scrollTop = target.scrollTop;
+            const scrollHeight = target.scrollHeight;
+            const clientHeight = target.clientHeight;
+            const isAtTop = scrollTop <= 1;
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+            if (e.deltaY > 0 && isAtBottom) {
+              window.scrollBy({
+                top: e.deltaY,
+                behavior: "auto",
+              });
+            } else if (e.deltaY < 0 && isAtTop) {
+              window.scrollBy({
+                top: e.deltaY,
+                behavior: "auto",
+              });
+            }
+          }}
+        >
+          <div className="table-responsive">
+            <table
+              className="table table-hover"
+              style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+            >
+              <thead
+                style={{
+                  backgroundColor: "#f9fafb",
+                  borderBottom: "2px solid #e5e7eb",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
+                }}
+              >
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    <div className="d-flex justify-content-center align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      Loading delivery requests...
-                    </div>
-                  </td>
-                </tr>
-              ) : requests.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4 text-muted">
-                    <div className="d-flex flex-column align-items-center">
-                      <Icon
-                        icon="mdi:truck-delivery"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-2"
-                      />
-                      No delivery requests found.
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                requests.map((request, index) => (
-                  <tr
-                    key={request.request_id}
-                    style={{ borderBottom: "1px solid #e9ecef" }}
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
                   >
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {index + 1}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {request.company_name || request.vendor_name || "-"}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {new Date(request.order_date).toLocaleDateString()}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {new Date(request.delivery_date).toLocaleDateString()}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {request.items && request.items.length > 0
-                        ? [
-                            ...new Set(
-                              request.items.map((item) => item.product_name)
-                            ),
-                          ].join(", ")
-                        : "-"}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      <div className="d-flex gap-2">
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            padding: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "6px",
-                            backgroundColor: "white",
-                          }}
-                          title="View"
-                          onClick={() => handleViewRequest(request)}
-                        >
-                          <Icon
-                            icon="lucide:eye"
-                            width="16"
-                            height="16"
-                            style={{ color: "#3b82f6" }}
-                          />
-                        </button>
-                        {poInfoCache[request.request_id] ? (
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              backgroundColor: "white",
-                            }}
-                            title={`Download Purchase Order PDF (${
-                              poInfoCache[request.request_id]
-                                ?.purchase_order_number
-                            })`}
-                            onClick={() => handleDownloadPdf(request)}
-                            disabled={downloadingPdf[request.request_id]}
-                          >
-                            {downloadingPdf[request.request_id] ? (
-                              <span
-                                className="spinner-border spinner-border-sm"
-                                role="status"
-                                aria-hidden="true"
-                              ></span>
-                            ) : (
-                              <Icon
-                                icon="mdi:file-pdf-box"
-                                width="16"
-                                height="16"
-                                style={{ color: "#dc3545" }}
-                              />
-                            )}
-                          </button>
-                        ) : poInfoCache[request.request_id] === undefined ? (
-                          <span
-                            className="spinner-border spinner-border-sm"
-                            style={{
-                              width: "16px",
-                              height: "16px",
-                              borderWidth: "2px",
-                            }}
-                            role="status"
-                            aria-hidden="true"
-                            title="Checking for PDF..."
-                          ></span>
-                        ) : null}
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            padding: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "6px",
-                            backgroundColor: "white",
-                          }}
-                          title="Settings"
-                          onClick={() =>
-                            handleSettingsClick(request, "arrived")
-                          }
-                        >
-                          <Icon
-                            icon="lucide:settings"
-                            width="16"
-                            height="16"
-                            style={{ color: "#f59e0b" }}
-                          />
-                        </button>
+                    Sr No
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Company Name
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Order Date
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Delivery Date
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Product Name
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "12px",
+                    }}
+                  >
+                    Operate
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-${rowIndex}`}>
+                        {Array.from({ length: 6 }).map((_, colIndex) => (
+                          <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                ) : displayedData.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4">
+                      <div className="d-flex flex-column align-items-center">
+                        <Icon
+                          icon="mdi:truck-delivery"
+                          width="48"
+                          height="48"
+                          className="text-muted mb-2"
+                        />
+                        <p className="text-muted mb-0">
+                          No delivery requests found
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))
+                ) : (
+                  <>
+                    {displayedData.map((request, index) => {
+                      const productNames =
+                        request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items.map((item) => item.product_name)
+                              ),
+                            ].join(", ")
+                          : "-";
+
+                      return (
+                        <tr key={request.request_id}>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {index + 1}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {request.company_name || request.vendor_name || "-"}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {new Date(request.order_date).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {new Date(request.delivery_date).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "12px", color: "#374151" }}>
+                            {productNames}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="View"
+                                onClick={() => handleViewRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:eye"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                              {poInfoCache[request.request_id] ? (
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title={`Download Purchase Order PDF (${
+                                    poInfoCache[request.request_id]
+                                      ?.purchase_order_number
+                                  })`}
+                                  onClick={() => handleDownloadPdf(request)}
+                                  disabled={downloadingPdf[request.request_id]}
+                                >
+                                  {downloadingPdf[request.request_id] ? (
+                                    <span
+                                      className="spinner-border spinner-border-sm"
+                                      role="status"
+                                      aria-hidden="true"
+                                    ></span>
+                                  ) : (
+                                    <Icon
+                                      icon="mdi:file-pdf-box"
+                                      width="16"
+                                      height="16"
+                                      style={{ color: "#dc3545" }}
+                                    />
+                                  )}
+                                </button>
+                              ) : poInfoCache[request.request_id] === undefined ? (
+                                <span
+                                  className="spinner-border spinner-border-sm"
+                                  style={{
+                                    width: "16px",
+                                    height: "16px",
+                                    borderWidth: "2px",
+                                  }}
+                                  role="status"
+                                  aria-hidden="true"
+                                  title="Checking for PDF..."
+                                ></span>
+                              ) : null}
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Settings"
+                                onClick={() => handleSettingsClick(request, "arrived")}
+                              >
+                                <Icon
+                                  icon="lucide:settings"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#f59e0b" }}
+                                />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {isLoadingMore && (
+                      <>
+                        {Array.from({ length: 5 }).map((_, rowIndex) => (
+                          <tr key={`skeleton-more-${rowIndex}`}>
+                            {Array.from({ length: 6 }).map((_, colIndex) => (
+                              <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                <div
+                                  className="skeleton"
+                                  style={{
+                                    height: "20px",
+                                    backgroundColor: "#e5e7eb",
+                                    borderRadius: "4px",
+                                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                                  }}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Infinite Scroll Footer */}
+          {requests.length > 0 && (
+            <div
+              className="d-flex justify-content-between align-items-center px-3 py-2"
+              style={{
+                backgroundColor: "#f8f9fa",
+                borderRadius: "0 0 8px 8px",
+                marginTop: "0",
+                position: "sticky",
+                bottom: 0,
+                zIndex: 5,
+              }}
+            >
+              <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                Showing <strong>{displayedData.length}</strong> of{" "}
+                <strong>{requests.length}</strong> entries
+              </div>
+              {hasMoreData() && (
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Scroll down to load more
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
