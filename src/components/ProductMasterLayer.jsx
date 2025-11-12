@@ -1125,10 +1125,11 @@ const ProductMasterLayer = () => {
           value={sortField || ""}
           onChange={(e) => handleSortFieldSelect(e.target.value)}
           style={{
-            height: "36px",
+            height: "34px",
             width: "auto",
-            minWidth: "170px",
-            fontSize: "0.875rem",
+            minWidth: "160px",
+            fontSize: "0.8125rem",
+            lineHeight: "1.1",
           }}
         >
           <option value="">Sort By</option>
@@ -1145,10 +1146,11 @@ const ProductMasterLayer = () => {
           value={sortDirection}
           onChange={(e) => handleSortDirectionSelect(e.target.value)}
           style={{
-            height: "36px",
+            height: "34px",
             width: "auto",
-            minWidth: "130px",
-            fontSize: "0.875rem",
+            minWidth: "110px",
+            fontSize: "0.8125rem",
+            lineHeight: "1.1",
           }}
         >
           <option value="asc">Ascending</option>
