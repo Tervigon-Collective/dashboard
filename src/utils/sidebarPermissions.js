@@ -20,6 +20,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: false, operations: [] },
     receivingManagement: { enabled: false, operations: [] },
+    orderManagement: { enabled: false, operations: [] },
     stockManagement: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
@@ -38,6 +39,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     systemSettings: { enabled: false, operations: [] },
     createContent: { enabled: false, operations: [] },
     receivingManagement: { enabled: false, operations: [] },
+    orderManagement: { enabled: false, operations: [] },
     stockManagement: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
@@ -62,10 +64,14 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
+    orderManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    },
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
-    }, // Full CRUD
+    },
     masters: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
@@ -95,10 +101,14 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
+    orderManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    },
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
-    }, // Full CRUD
+    },
     masters: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
@@ -131,10 +141,14 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
     }, // Full CRUD
+    orderManagement: {
+      enabled: true,
+      operations: ["read", "create", "update", "delete"],
+    },
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
-    }, // Full CRUD
+    },
     masters: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
@@ -403,7 +417,7 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
   orderManagement: {
     key: "orderManagement",
     label: "Order Management",
-    description: "Track and manage outgoing orders",
+    description: "Manage dispatch queue and outbound orders",
     icon: "mdi:clipboard-text",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [
@@ -417,7 +431,7 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
   stockManagement: {
     key: "stockManagement",
     label: "Stock Management",
-    description: "Monitor and adjust on-hand inventory levels",
+    description: "Track inventory availability, commitments and returns",
     icon: "mdi:warehouse",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [

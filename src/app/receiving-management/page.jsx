@@ -8,13 +8,15 @@ import purchaseRequestApi from "../../services/purchaseRequestApi";
 import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
+import { useUser } from "@/helper/UserContext";
 
 const QualityCheckDocumentsSection = ({ requestId }) => {
-  const [docType, setDocType] = useState("invoice");
+  const [docType] = useState("invoice");
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [error, setError] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   const refresh = async () => {
     try {
@@ -36,6 +38,10 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 
   const onUpload = async () => {
     if (!files.length) return;
+    if (docType === "invoice" && !invoiceNumber.trim()) {
+      setError("Invoice number is required for invoice documents.");
+      return;
+    }
     setIsUploading(true);
     setError("");
     try {
@@ -44,9 +50,11 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
           docType,
           itemId: null,
           file: f,
+          invoiceNumber: invoiceNumber.trim() || null,
         });
       }
       setFiles([]);
+      setInvoiceNumber("");
       await refresh();
     } catch (e) {
       console.error(e);
@@ -70,18 +78,9 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
       <div className="row g-2 align-items-end">
         <div className="col-md-3">
           <label className="form-label small mb-1">Document Type</label>
-          <select
-            className="form-select form-select-sm"
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-          >
-            <option value="invoice">Invoice</option>
-            <option value="purchase_order">Purchase Order</option>
-            <option value="delivery_challan">Delivery Challan</option>
-            <option value="other">Other</option>
-          </select>
+          <div className="form-control form-control-sm bg-light">Invoice</div>
         </div>
-        <div className="col-md-6">
+        <div className="col-md-5">
           <label className="form-label small mb-1">Select Files</label>
           <input
             type="file"
@@ -91,7 +90,24 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
             onChange={onFileChange}
           />
         </div>
-        <div className="col-md-3 d-flex gap-2">
+        <div className="col-md-2">
+          <label className="form-label small mb-1">
+            Invoice Number <span className="text-danger">*</span>
+          </label>
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Enter invoice no."
+            value={invoiceNumber}
+            onChange={(e) => {
+              setInvoiceNumber(e.target.value);
+              if (error) {
+                setError("");
+              }
+            }}
+          />
+        </div>
+        <div className="col-md-2 d-flex gap-2 align-items-end">
           <button
             type="button"
             className="btn btn-sm btn-primary"
@@ -125,6 +141,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
             <tr>
               <th className="small">Type</th>
               <th className="small">Name</th>
+              <th className="small">Invoice No.</th>
               <th className="small">Size</th>
               <th className="small">Uploaded</th>
               <th className="small">Action</th>
@@ -133,7 +150,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
           <tbody>
             {documents.length === 0 ? (
               <tr>
-                <td className="small text-center" colSpan="5">
+                <td className="small text-center" colSpan="6">
                   No documents uploaded
                 </td>
               </tr>
@@ -144,6 +161,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
                     {d.doc_type?.replace(/_/g, " ")}
                   </td>
                   <td className="small">{d.file_name}</td>
+                  <td className="small">{d.invoice_number || "-"}</td>
                   <td className="small">
                     {Math.ceil((d.file_size_bytes || 0) / 1024)} KB
                   </td>
@@ -178,6 +196,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 };
 
 const ReceivingManagementLayer = () => {
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState("purchase-request");
   const [modalOpen, setModalOpen] = useState(false);
   const [requests, setRequests] = useState([]);
@@ -204,6 +223,8 @@ const ReceivingManagementLayer = () => {
     orderDate: "",
     deliveryDate: "",
   });
+  const [productSearchTerms, setProductSearchTerms] = useState([""]);
+  const [vendorSearchTerm, setVendorSearchTerm] = useState("");
 
   // Receipt Details Tab Component (one row per request, aggregated totals)
   const ReceiptDetailsTab = ({
@@ -226,8 +247,13 @@ const ReceivingManagementLayer = () => {
     const filteredData = requests.filter((request) => {
       if (!searchTerm) return true;
       const search = searchTerm.toLowerCase();
-      // Search by vendor name
-      if (request.vendor_name?.toLowerCase().includes(search)) {
+      // Search by company or vendor name
+      const supplierName = `${request.company_name || ""} ${
+        request.vendor_name || ""
+      }`
+        .trim()
+        .toLowerCase();
+      if (supplierName && supplierName.includes(search)) {
         return true;
       }
       // Search by aggregated product names (if present)
@@ -263,7 +289,7 @@ const ReceivingManagementLayer = () => {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Search by vendor or product..."
+                    placeholder="Search by company or product..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -348,7 +374,7 @@ const ReceivingManagementLayer = () => {
                           padding: "12px",
                         }}
                       >
-                        Vendor Name
+                        Company Name
                       </th>
                       <th
                         style={{
@@ -459,7 +485,9 @@ const ReceivingManagementLayer = () => {
                           <tr key={request.request_id}>
                             <td className="small">{index + 1}</td>
                             <td className="small">
-                              {request.vendor_name || "-"}
+                              {request.company_name ||
+                                request.vendor_name ||
+                                "-"}
                             </td>
                             <td className="small">
                               {request.order_date
@@ -616,6 +644,7 @@ const ReceivingManagementLayer = () => {
 
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
+    companyName: "",
     vendorName: "",
     vendorPhoneNo: "",
     vendorGSTNumber: "",
@@ -1016,6 +1045,7 @@ const ReceivingManagementLayer = () => {
     if (vendor) {
       setFormData({ ...formData, selectedVendor: vendorId });
       setVendorData({
+        companyName: vendor.company_name || vendor.vendor_name || "",
         vendorName: vendor.vendor_name,
         vendorPhoneNo: vendor.vendor_phone_no,
         vendorGSTNumber: vendor.vendor_gst_number,
@@ -1054,6 +1084,7 @@ const ReceivingManagementLayer = () => {
       ...prev,
       products: [...prev.products, { product_id: null, selectedVariants: [] }],
     }));
+    setProductSearchTerms((prev) => [...prev, ""]);
   };
 
   // Remove product entry
@@ -1062,6 +1093,7 @@ const ReceivingManagementLayer = () => {
       ...prev,
       products: prev.products.filter((_, i) => i !== index),
     }));
+    setProductSearchTerms((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Handle variant selection (can select multiple) - now works with product index
@@ -1212,7 +1244,10 @@ const ReceivingManagementLayer = () => {
       orderDate: "",
       deliveryDate: "",
     });
+    setProductSearchTerms([""]);
+    setVendorSearchTerm("");
     setVendorData({
+      companyName: "",
       vendorName: "",
       vendorPhoneNo: "",
       vendorGSTNumber: "",
@@ -1264,6 +1299,7 @@ const ReceivingManagementLayer = () => {
 
     // Set vendor data
     setVendorData({
+      companyName: request.company_name || request.vendor_name || "",
       vendorName: request.vendor_name,
       vendorPhoneNo: request.vendor_phone_no,
       vendorGSTNumber: request.vendor_gst_number,
@@ -1271,6 +1307,13 @@ const ReceivingManagementLayer = () => {
     });
 
     setModalOpen(true);
+    const initialTerms = productsArray.map((product) => {
+      const current = products.find((p) => p.product_id === product.product_id);
+      return current?.product_name || "";
+    });
+    setProductSearchTerms(initialTerms.length ? initialTerms : [""]);
+    const vendor = vendors.find((v) => v.vendor_id === request.vendor_id);
+    setVendorSearchTerm(vendor?.company_name || vendor?.vendor_name || "");
   };
 
   // Handle delete purchase request
@@ -1592,7 +1635,13 @@ const ReceivingManagementLayer = () => {
           };
         });
         setInspectionData(inspectionItems);
-        setQualityCheckerName(result.data[0]?.quality_checker_name || "");
+        const defaultCheckerName =
+          user?.displayName?.trim() ||
+          user?.email?.split("@")[0] ||
+          "Quality Checker";
+        setQualityCheckerName(
+          result.data[0]?.quality_checker_name?.trim() || defaultCheckerName
+        );
         setInspectionDate(
           result.data[0]?.inspection_date ||
             new Date().toISOString().split("T")[0]
@@ -1608,7 +1657,11 @@ const ReceivingManagementLayer = () => {
           notes: "",
         }));
         setInspectionData(inspectionItems);
-        setQualityCheckerName("");
+        const defaultCheckerName =
+          user?.displayName?.trim() ||
+          user?.email?.split("@")[0] ||
+          "Quality Checker";
+        setQualityCheckerName(defaultCheckerName);
         setInspectionDate(new Date().toISOString().split("T")[0]);
       }
     } catch (error) {
@@ -1623,6 +1676,11 @@ const ReceivingManagementLayer = () => {
         notes: "",
       }));
       setInspectionData(inspectionItems);
+      const defaultCheckerName =
+        user?.displayName?.trim() ||
+        user?.email?.split("@")[0] ||
+        "Quality Checker";
+      setQualityCheckerName(defaultCheckerName);
     }
   };
 
@@ -1902,12 +1960,19 @@ const ReceivingManagementLayer = () => {
                 >
                   <div className="row mb-4">
                     <div className="col-12 col-md-6 mb-3 mb-md-0">
-                      <h6 className="text-muted mb-3">Vendor Information</h6>
+                      <h6 className="text-muted mb-3">Company Information</h6>
                       <div className="d-flex flex-column gap-2">
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
-                          <span className="text-muted">Vendor Name:</span>
+                          <span className="text-muted">Company Name:</span>
                           <span className="fw-medium text-break">
-                            {selectedRequest.vendor_name}
+                            {selectedRequest.company_name ||
+                              selectedRequest.vendor_name}
+                          </span>
+                        </div>
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                          <span className="text-muted">Contact Person:</span>
+                          <span className="fw-medium text-break">
+                            {selectedRequest.vendor_name || "-"}
                           </span>
                         </div>
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
@@ -2770,9 +2835,16 @@ const ReceivingManagementLayer = () => {
                       <h6 className="text-muted mb-3">Request Information</h6>
                       <div className="d-flex flex-column gap-2">
                         <div className="d-flex justify-content-between">
-                          <span className="text-muted">Vendor:</span>
+                          <span className="text-muted">Company:</span>
                           <span className="fw-medium">
-                            {requestToInspect.vendor_name}
+                            {requestToInspect.company_name ||
+                              requestToInspect.vendor_name}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Contact Person:</span>
+                          <span className="fw-medium">
+                            {requestToInspect.vendor_name || "-"}
                           </span>
                         </div>
                         <div className="d-flex justify-content-between">
@@ -3035,8 +3107,13 @@ const PurchaseRequestTab = ({
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
 
-    // Search by vendor name
-    if (request.vendor_name?.toLowerCase().includes(search)) {
+    // Search by company or vendor name
+    const supplierName = `${request.company_name || ""} ${
+      request.vendor_name || ""
+    }`
+      .trim()
+      .toLowerCase();
+    if (supplierName && supplierName.includes(search)) {
       return true;
     }
 
@@ -3081,7 +3158,7 @@ const PurchaseRequestTab = ({
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Search by vendor or product..."
+                  placeholder="Search by company or product..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -3168,7 +3245,7 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    Vendor Name
+                    Company Name
                   </th>
                   <th
                     style={{
@@ -3267,142 +3344,94 @@ const PurchaseRequestTab = ({
                   </tr>
                 ) : (
                   <>
-                    {displayedData.map((request, index) => (
-                      <tr key={request.request_id}>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {index + 1}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.vendor_name || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.order_date
-                            ? new Date(request.order_date).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.delivery_date
-                            ? new Date(
-                                request.delivery_date
-                              ).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.productNames || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalInvoiceQty ?? 0}
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="View"
-                              onClick={() => handleViewRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:eye"
-                                width="16"
-                                height="16"
-                                style={{ color: "#3b82f6" }}
-                              />
-                            </button>
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="Edit"
-                              onClick={() => handleEditRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:edit"
-                                width="16"
-                                height="16"
-                                style={{ color: "#3b82f6" }}
-                              />
-                            </button>
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="Delete"
-                              onClick={() => handleDeleteRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:trash-2"
-                                width="16"
-                                height="16"
-                                style={{ color: "#ef4444" }}
-                              />
-                            </button>
-                            {/* Only show Settings icon if status is "Pending" */}
-                            {(request.status === "Pending" ||
-                              request.status?.toLowerCase() === "pending") && (
+                    {displayedData.map((request, index) => {
+                      const productNames =
+                        request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items
+                                  .map((item) => item.product_name)
+                                  .filter(Boolean)
+                              ),
+                            ].join(", ")
+                          : "-";
+                      const hsnCodes =
+                        request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items
+                                  .map((item) => item.hsn_code)
+                                  .filter(Boolean)
+                              ),
+                            ].join(", ")
+                          : "-";
+
+                      return (
+                        <tr key={request.request_id}>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {index + 1}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.company_name || request.vendor_name || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.order_date
+                              ? new Date(
+                                  request.order_date
+                                ).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.delivery_date
+                              ? new Date(
+                                  request.delivery_date
+                                ).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {productNames}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {hsnCodes}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex flex-wrap gap-1 gap-sm-2">
                               <button
                                 className="btn btn-sm"
                                 style={{
@@ -3416,21 +3445,95 @@ const PurchaseRequestTab = ({
                                   borderRadius: "6px",
                                   backgroundColor: "white",
                                 }}
-                                title="Settings"
-                                onClick={() => handleSettingsClick(request)}
+                                title="View"
+                                onClick={() => handleViewRequest(request)}
                               >
                                 <Icon
-                                  icon="lucide:settings"
+                                  icon="lucide:eye"
                                   width="16"
                                   height="16"
-                                  style={{ color: "#f59e0b" }}
+                                  style={{ color: "#3b82f6" }}
                                 />
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Edit"
+                                onClick={() => handleEditRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:edit"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Delete"
+                                onClick={() => handleDeleteRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:trash-2"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#ef4444" }}
+                                />
+                              </button>
+                              {/* Only show Settings icon if status is "Pending" */}
+                              {(request.status === "Pending" ||
+                                request.status?.toLowerCase() ===
+                                  "pending") && (
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="Settings"
+                                  onClick={() => handleSettingsClick(request)}
+                                >
+                                  <Icon
+                                    icon="lucide:settings"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#f59e0b" }}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {isLoadingMore && (
                       <>
                         {Array.from({ length: 5 }).map((_, rowIndex) => (
@@ -3494,6 +3597,8 @@ const PurchaseRequestTab = ({
           vendorData={vendorData}
           vendors={vendors}
           products={products}
+          productSearchTerms={productSearchTerms}
+          setProductSearchTerms={setProductSearchTerms}
           handleVendorSelect={handleVendorSelect}
           handleProductSelect={handleProductSelect}
           handleVariantSelect={handleVariantSelect}
@@ -3515,6 +3620,8 @@ const PurchaseRequestModal = ({
   vendorData,
   vendors,
   products,
+  productSearchTerms,
+  setProductSearchTerms,
   handleVendorSelect,
   handleProductSelect,
   handleVariantSelect,
@@ -3549,32 +3656,78 @@ const PurchaseRequestModal = ({
           </div>
           <div className="modal-body">
             <form onSubmit={handleSubmit}>
-              {/* Vendor Section */}
+              {/* Company Section */}
               <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Vendor Details</h6>
+                <h6 className="fw-semibold mb-3">Company Details</h6>
                 <div className="row">
                   <div className="col-md-6 mb-3">
+                    <label className="form-label">Search Company</label>
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      placeholder="Type to filter..."
+                      value={vendorSearchTerm}
+                      onChange={(e) => setVendorSearchTerm(e.target.value)}
+                    />
                     <label className="form-label">
-                      Vendor Name <span className="text-danger">*</span>
+                      Company Name <span className="text-danger">*</span>
                     </label>
-                    <select
-                      className="form-select"
-                      value={formData.selectedVendor || ""}
-                      onChange={(e) =>
-                        handleVendorSelect(parseInt(e.target.value))
-                      }
-                      required
-                    >
-                      <option value="">Select vendor...</option>
-                      {vendors.map((vendor) => (
-                        <option key={vendor.vendor_id} value={vendor.vendor_id}>
-                          {vendor.vendor_name}
-                        </option>
-                      ))}
-                    </select>
+                    {(() => {
+                      const searchTerm = vendorSearchTerm.toLowerCase().trim();
+                      const filteredVendors = searchTerm
+                        ? vendors.filter((vendor) => {
+                            const label = vendor.company_name
+                              ? `${vendor.company_name} (${vendor.vendor_name})`
+                              : vendor.vendor_name;
+                            return label.toLowerCase().includes(searchTerm);
+                          })
+                        : vendors;
+                      return (
+                        <select
+                          className="form-select"
+                          value={formData.selectedVendor || ""}
+                          onChange={(e) =>
+                            handleVendorSelect(parseInt(e.target.value, 10))
+                          }
+                          required
+                        >
+                          <option value="">Select company...</option>
+                          {filteredVendors.length === 0 ? (
+                            <option value="" disabled>
+                              No companies found
+                            </option>
+                          ) : (
+                            filteredVendors.map((vendor) => {
+                              const label = vendor.company_name
+                                ? `${vendor.company_name} (${vendor.vendor_name})`
+                                : vendor.vendor_name;
+                              return (
+                                <option
+                                  key={vendor.vendor_id}
+                                  value={vendor.vendor_id}
+                                >
+                                  {label}
+                                </option>
+                              );
+                            })
+                          )}
+                        </select>
+                      );
+                    })()}
                   </div>
                   <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor Phone No.</label>
+                    <label className="form-label">Contact Person</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={vendorData.vendorName}
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone No.</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3582,10 +3735,8 @@ const PurchaseRequestModal = ({
                       disabled
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor GST Number</label>
+                    <label className="form-label">GST Number</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3593,8 +3744,10 @@ const PurchaseRequestModal = ({
                       disabled
                     />
                   </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor Address</label>
+                </div>
+                <div className="row">
+                  <div className="col-12 mb-3">
+                    <label className="form-label">Address</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3651,30 +3804,68 @@ const PurchaseRequestModal = ({
                       {/* Product Name Dropdown */}
                       <div className="row mb-3">
                         <div className="col-md-12">
+                          <label className="form-label">Search Product</label>
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Type to filter..."
+                            value={productSearchTerms[productIndex] || ""}
+                            onChange={(e) => {
+                              const term = e.target.value;
+                              setProductSearchTerms((prev) => {
+                                const copy = [...prev];
+                                copy[productIndex] = term;
+                                return copy;
+                              });
+                            }}
+                          />
                           <label className="form-label">
                             Product Name <span className="text-danger">*</span>
                           </label>
-                          <select
-                            className="form-select"
-                            value={productEntry.product_id || ""}
-                            onChange={(e) =>
-                              handleProductSelect(
-                                parseInt(e.target.value),
-                                productIndex
-                              )
-                            }
-                            required
-                          >
-                            <option value="">Select product...</option>
-                            {products.map((product) => (
-                              <option
-                                key={product.product_id}
-                                value={product.product_id}
+                          {(() => {
+                            const searchTerm = (
+                              productSearchTerms[productIndex] || ""
+                            )
+                              .toLowerCase()
+                              .trim();
+                            const filteredProducts = searchTerm
+                              ? products.filter((product) =>
+                                  product.product_name
+                                    ?.toLowerCase()
+                                    .includes(searchTerm)
+                                )
+                              : products;
+
+                            return (
+                              <select
+                                className="form-select"
+                                value={productEntry.product_id || ""}
+                                onChange={(e) =>
+                                  handleProductSelect(
+                                    parseInt(e.target.value),
+                                    productIndex
+                                  )
+                                }
+                                required
                               >
-                                {product.product_name}
-                              </option>
-                            ))}
-                          </select>
+                                <option value="">Select product...</option>
+                                {filteredProducts.length === 0 ? (
+                                  <option value="" disabled>
+                                    No products found
+                                  </option>
+                                ) : (
+                                  filteredProducts.map((product) => (
+                                    <option
+                                      key={product.product_id}
+                                      value={product.product_id}
+                                    >
+                                      {product.product_name}
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -4223,7 +4414,7 @@ const ToBeDeliveredTab = ({
                     color: "#495057",
                   }}
                 >
-                  Vendor Name
+                  Company Name
                 </th>
                 <th
                   style={{
@@ -4318,7 +4509,7 @@ const ToBeDeliveredTab = ({
                         color: "#495057",
                       }}
                     >
-                      {request.vendor_name || "-"}
+                      {request.company_name || request.vendor_name || "-"}
                     </td>
                     <td
                       style={{
@@ -4584,65 +4775,75 @@ const QualityCheckTab = ({
     }
   };
 
-  // Check if quality check is completed (has quality check data)
-  // We need to check via API since items don't include QC data by default
   const [qcStatusCache, setQcStatusCache] = useState({});
-
-  const hasQualityCheckCompleted = async (request) => {
-    const requestId = request.request_id;
-
-    // Check cache first
-    if (qcStatusCache[requestId] !== undefined) {
-      return qcStatusCache[requestId];
-    }
-
-    try {
-      const qcResult = await qualityCheckApi.getQualityChecksByRequestId(
-        requestId
-      );
-      const hasQC =
-        qcResult.success && qcResult.data && qcResult.data.length > 0;
-
-      // Update cache
-      setQcStatusCache((prev) => ({
-        ...prev,
-        [requestId]: hasQC,
-      }));
-
-      return hasQC;
-    } catch (error) {
-      console.error("Error checking quality check status:", error);
-      return false;
-    }
-  };
-
-  // Synchronous version for rendering (uses cache)
   const hasQualityCheckCompletedSync = (request) => {
     return qcStatusCache[request.request_id] === true;
   };
 
-  // Check quality check status and GRN existence for all requests on mount/update
+  // Refresh quality check status and GRN metadata whenever the list changes
   useEffect(() => {
-    if (requests.length > 0) {
-      requests.forEach(async (request) => {
-        const requestId = request.request_id;
+    let isMounted = true;
 
-        // Check if quality check is completed
-        const hasQC = await hasQualityCheckCompleted(request);
-
-        // If QC is completed, check for GRN
-        if (hasQC && grnInfoCache[requestId] === undefined) {
-          checkGrnExists(requestId).then((grnInfo) => {
-            if (grnInfo) {
-              console.log(
-                `✅ GRN found for request ${requestId}:`,
-                grnInfo.grn_number
-              );
-            }
-          });
+    const refreshStatuses = async () => {
+      if (requests.length === 0) {
+        if (isMounted) {
+          setQcStatusCache({});
+          setGrnInfoCache({});
         }
+        return;
+      }
+
+      const results = await Promise.all(
+        requests.map(async (request) => {
+          const requestId = request.request_id;
+          let hasQC = false;
+          let grnInfo = null;
+
+          try {
+            const qcResult = await qualityCheckApi.getQualityChecksByRequestId(
+              requestId
+            );
+            hasQC = qcResult.success && qcResult.data?.length > 0;
+
+            if (hasQC) {
+              const exists = await qualityCheckApi.checkGrnExists(requestId);
+              if (exists) {
+                const info = await qualityCheckApi.getGrnInfo(requestId);
+                grnInfo = info.success ? info.data : null;
+              } else {
+                grnInfo = null;
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error refreshing QC/GRN status for request",
+              requestId,
+              error
+            );
+          }
+
+          return { requestId, hasQC, grnInfo };
+        })
+      );
+
+      if (!isMounted) return;
+
+      const newQcStatus = {};
+      const newGrnInfo = {};
+      results.forEach(({ requestId, hasQC, grnInfo }) => {
+        newQcStatus[requestId] = hasQC;
+        newGrnInfo[requestId] = grnInfo;
       });
-    }
+
+      setQcStatusCache(newQcStatus);
+      setGrnInfoCache(newGrnInfo);
+    };
+
+    refreshStatuses();
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requests]);
 
@@ -4735,7 +4936,7 @@ const QualityCheckTab = ({
                         padding: "12px",
                       }}
                     >
-                      Vendor Name
+                      Company Name
                     </th>
                     <th
                       style={{
@@ -4837,7 +5038,9 @@ const QualityCheckTab = ({
                               {index + 1}
                             </td>
                             <td style={{ padding: "12px", color: "#374151" }}>
-                              {request.vendor_name || "-"}
+                              {request.company_name ||
+                                request.vendor_name ||
+                                "-"}
                             </td>
                             <td style={{ padding: "12px", color: "#374151" }}>
                               {new Date(
