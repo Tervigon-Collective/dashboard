@@ -9,6 +9,7 @@ import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 import { useUser } from "@/helper/UserContext";
+import { Combobox } from "@headlessui/react";
 
 const QualityCheckDocumentsSection = ({ requestId }) => {
   const [docType] = useState("invoice");
@@ -223,8 +224,6 @@ const ReceivingManagementLayer = () => {
     orderDate: "",
     deliveryDate: "",
   });
-  const [productSearchTerms, setProductSearchTerms] = useState([""]);
-  const [vendorSearchTerm, setVendorSearchTerm] = useState("");
 
   // Receipt Details Tab Component (one row per request, aggregated totals)
   const ReceiptDetailsTab = ({
@@ -1041,6 +1040,17 @@ const ReceivingManagementLayer = () => {
 
   // Handle vendor selection
   const handleVendorSelect = (vendorId) => {
+    if (!vendorId) {
+      setFormData({ ...formData, selectedVendor: null });
+      setVendorData({
+        companyName: "",
+        vendorName: "",
+        vendorPhoneNo: "",
+        vendorGSTNumber: "",
+        vendorAddress: "",
+      });
+      return;
+    }
     const vendor = vendors.find((v) => v.vendor_id === vendorId);
     if (vendor) {
       setFormData({ ...formData, selectedVendor: vendorId });
@@ -1056,6 +1066,16 @@ const ReceivingManagementLayer = () => {
 
   // Handle product selection - add product to the array
   const handleProductSelect = (productId, index) => {
+    if (!productId) {
+      setFormData((prev) => {
+        const newProducts = [...prev.products];
+        if (index >= 0 && index < newProducts.length) {
+          newProducts[index] = { product_id: null, selectedVariants: [] };
+        }
+        return { ...prev, products: newProducts };
+      });
+      return;
+    }
     const product = products.find((p) => p.product_id === productId);
     if (product) {
       setFormData((prev) => {
@@ -1084,7 +1104,6 @@ const ReceivingManagementLayer = () => {
       ...prev,
       products: [...prev.products, { product_id: null, selectedVariants: [] }],
     }));
-    setProductSearchTerms((prev) => [...prev, ""]);
   };
 
   // Remove product entry
@@ -1093,7 +1112,6 @@ const ReceivingManagementLayer = () => {
       ...prev,
       products: prev.products.filter((_, i) => i !== index),
     }));
-    setProductSearchTerms((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Handle variant selection (can select multiple) - now works with product index
@@ -1143,6 +1161,23 @@ const ReceivingManagementLayer = () => {
     setIsSubmitting(true);
 
     try {
+      if (!formData.selectedVendor) {
+        alert("Please select a company before submitting.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const missingProductIndex = formData.products.findIndex(
+        (product) => !product.product_id
+      );
+      if (missingProductIndex !== -1) {
+        alert(
+          `Please select a product for Product #${missingProductIndex + 1}.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       // Prepare items from all products
       const items = [];
       formData.products.forEach((product) => {
@@ -1244,8 +1279,6 @@ const ReceivingManagementLayer = () => {
       orderDate: "",
       deliveryDate: "",
     });
-    setProductSearchTerms([""]);
-    setVendorSearchTerm("");
     setVendorData({
       companyName: "",
       vendorName: "",
@@ -1307,13 +1340,6 @@ const ReceivingManagementLayer = () => {
     });
 
     setModalOpen(true);
-    const initialTerms = productsArray.map((product) => {
-      const current = products.find((p) => p.product_id === product.product_id);
-      return current?.product_name || "";
-    });
-    setProductSearchTerms(initialTerms.length ? initialTerms : [""]);
-    const vendor = vendors.find((v) => v.vendor_id === request.vendor_id);
-    setVendorSearchTerm(vendor?.company_name || vendor?.vendor_name || "");
   };
 
   // Handle delete purchase request
@@ -3597,8 +3623,6 @@ const PurchaseRequestTab = ({
           vendorData={vendorData}
           vendors={vendors}
           products={products}
-          productSearchTerms={productSearchTerms}
-          setProductSearchTerms={setProductSearchTerms}
           handleVendorSelect={handleVendorSelect}
           handleProductSelect={handleProductSelect}
           handleVariantSelect={handleVariantSelect}
@@ -3620,8 +3644,6 @@ const PurchaseRequestModal = ({
   vendorData,
   vendors,
   products,
-  productSearchTerms,
-  setProductSearchTerms,
   handleVendorSelect,
   handleProductSelect,
   handleVariantSelect,
@@ -3632,6 +3654,36 @@ const PurchaseRequestModal = ({
   handleModalClose,
   isEditMode,
 }) => {
+  const [vendorQuery, setVendorQuery] = useState("");
+  const [productQueries, setProductQueries] = useState(() =>
+    formData.products.map(() => "")
+  );
+
+  useEffect(() => {
+    setProductQueries((prev) =>
+      formData.products.map((_, idx) => prev[idx] || "")
+    );
+  }, [formData.products]);
+
+  useEffect(() => {
+    setVendorQuery("");
+  }, [formData.selectedVendor]);
+
+  const selectedVendor =
+    vendors.find((vendor) => vendor.vendor_id === formData.selectedVendor) ||
+    null;
+
+  const filteredVendors =
+    vendorQuery.trim() === ""
+      ? vendors
+      : vendors.filter((vendor) => {
+          const label = vendor.company_name
+            ? `${vendor.company_name} (${vendor.vendor_name})`
+            : vendor.vendor_name;
+          return label
+            ?.toLowerCase()
+            .includes(vendorQuery.trim().toLowerCase());
+        });
   return (
     <div
       className="modal show d-block"
@@ -3661,59 +3713,73 @@ const PurchaseRequestModal = ({
                 <h6 className="fw-semibold mb-3">Company Details</h6>
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label">Search Company</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      placeholder="Type to filter..."
-                      value={vendorSearchTerm}
-                      onChange={(e) => setVendorSearchTerm(e.target.value)}
-                    />
                     <label className="form-label">
                       Company Name <span className="text-danger">*</span>
                     </label>
-                    {(() => {
-                      const searchTerm = vendorSearchTerm.toLowerCase().trim();
-                      const filteredVendors = searchTerm
-                        ? vendors.filter((vendor) => {
-                            const label = vendor.company_name
-                              ? `${vendor.company_name} (${vendor.vendor_name})`
-                              : vendor.vendor_name;
-                            return label.toLowerCase().includes(searchTerm);
-                          })
-                        : vendors;
-                      return (
-                        <select
-                          className="form-select"
-                          value={formData.selectedVendor || ""}
-                          onChange={(e) =>
-                            handleVendorSelect(parseInt(e.target.value, 10))
-                          }
-                          required
-                        >
-                          <option value="">Select company...</option>
-                          {filteredVendors.length === 0 ? (
-                            <option value="" disabled>
-                              No companies found
-                            </option>
-                          ) : (
-                            filteredVendors.map((vendor) => {
-                              const label = vendor.company_name
+                    <Combobox
+                      value={selectedVendor}
+                      onChange={(vendor) => {
+                        setVendorQuery("");
+                        handleVendorSelect(vendor ? vendor.vendor_id : null);
+                      }}
+                    >
+                      <div className="position-relative">
+                        <Combobox.Input
+                          className="form-control"
+                          placeholder="Select company..."
+                          displayValue={(vendor) =>
+                            vendor
+                              ? vendor.company_name
                                 ? `${vendor.company_name} (${vendor.vendor_name})`
-                                : vendor.vendor_name;
-                              return (
-                                <option
-                                  key={vendor.vendor_id}
-                                  value={vendor.vendor_id}
-                                >
-                                  {label}
-                                </option>
-                              );
-                            })
+                                : vendor.vendor_name
+                              : ""
+                          }
+                          onChange={(event) =>
+                            setVendorQuery(event.target.value)
+                          }
+                        />
+                        <Combobox.Options
+                          className="list-group position-absolute w-100 shadow-sm mt-1"
+                          style={{
+                            maxHeight: "240px",
+                            overflowY: "auto",
+                            zIndex: 1050,
+                          }}
+                        >
+                          {filteredVendors.length === 0 ? (
+                            <Combobox.Option
+                              value={null}
+                              disabled
+                              className="list-group-item disabled"
+                            >
+                              No companies found
+                            </Combobox.Option>
+                          ) : (
+                            filteredVendors.map((vendor) => (
+                              <Combobox.Option
+                                key={vendor.vendor_id}
+                                value={vendor}
+                                className={({ active }) =>
+                                  `list-group-item list-group-item-action ${
+                                    active ? "active" : ""
+                                  }`
+                                }
+                              >
+                                {vendor.company_name
+                                  ? `${vendor.company_name} (${vendor.vendor_name})`
+                                  : vendor.vendor_name}
+                              </Combobox.Option>
+                            ))
                           )}
-                        </select>
-                      );
-                    })()}
+                        </Combobox.Options>
+                      </div>
+                    </Combobox>
+                    <input
+                      type="hidden"
+                      value={formData.selectedVendor || ""}
+                      required
+                      readOnly
+                    />
                   </div>
                   <div className="col-md-6 mb-3">
                     <label className="form-label">Contact Person</label>
@@ -3778,6 +3844,15 @@ const PurchaseRequestModal = ({
                     (p) => p.product_id === productEntry.product_id
                   );
                   const productVariants = selectedProduct?.variants || [];
+                  const productQuery = productQueries[productIndex] || "";
+                  const filteredProducts =
+                    productQuery.trim() === ""
+                      ? products
+                      : products.filter((product) =>
+                          product.product_name
+                            ?.toLowerCase()
+                            .includes(productQuery.trim().toLowerCase())
+                        );
 
                   return (
                     <div
@@ -3804,68 +3879,79 @@ const PurchaseRequestModal = ({
                       {/* Product Name Dropdown */}
                       <div className="row mb-3">
                         <div className="col-md-12">
-                          <label className="form-label">Search Product</label>
-                          <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="Type to filter..."
-                            value={productSearchTerms[productIndex] || ""}
-                            onChange={(e) => {
-                              const term = e.target.value;
-                              setProductSearchTerms((prev) => {
-                                const copy = [...prev];
-                                copy[productIndex] = term;
-                                return copy;
-                              });
-                            }}
-                          />
                           <label className="form-label">
                             Product Name <span className="text-danger">*</span>
                           </label>
-                          {(() => {
-                            const searchTerm = (
-                              productSearchTerms[productIndex] || ""
-                            )
-                              .toLowerCase()
-                              .trim();
-                            const filteredProducts = searchTerm
-                              ? products.filter((product) =>
-                                  product.product_name
-                                    ?.toLowerCase()
-                                    .includes(searchTerm)
-                                )
-                              : products;
-
-                            return (
-                              <select
-                                className="form-select"
-                                value={productEntry.product_id || ""}
-                                onChange={(e) =>
-                                  handleProductSelect(
-                                    parseInt(e.target.value),
-                                    productIndex
-                                  )
+                          <Combobox
+                            value={selectedProduct || null}
+                            onChange={(product) => {
+                              handleProductSelect(
+                                product ? product.product_id : null,
+                                productIndex
+                              );
+                              setProductQueries((prev) => {
+                                const copy = [...prev];
+                                copy[productIndex] = "";
+                                return copy;
+                              });
+                            }}
+                          >
+                            <div className="position-relative">
+                              <Combobox.Input
+                                className="form-control"
+                                placeholder="Select product..."
+                                displayValue={(product) =>
+                                  product?.product_name || ""
                                 }
-                                required
+                                onChange={(event) => {
+                                  const term = event.target.value;
+                                  setProductQueries((prev) => {
+                                    const copy = [...prev];
+                                    copy[productIndex] = term;
+                                    return copy;
+                                  });
+                                }}
+                              />
+                              <Combobox.Options
+                                className="list-group position-absolute w-100 shadow-sm mt-1"
+                                style={{
+                                  maxHeight: "240px",
+                                  overflowY: "auto",
+                                  zIndex: 1050,
+                                }}
                               >
-                                <option value="">Select product...</option>
                                 {filteredProducts.length === 0 ? (
-                                  <option value="" disabled>
+                                  <Combobox.Option
+                                    value={null}
+                                    disabled
+                                    className="list-group-item disabled"
+                                  >
                                     No products found
-                                  </option>
+                                  </Combobox.Option>
                                 ) : (
                                   filteredProducts.map((product) => (
-                                    <option
+                                    <Combobox.Option
                                       key={product.product_id}
-                                      value={product.product_id}
+                                      value={product}
+                                      className={({ active }) =>
+                                        `list-group-item list-group-item-action ${
+                                          active ? "active" : ""
+                                        }`
+                                      }
                                     >
                                       {product.product_name}
-                                    </option>
+                                    </Combobox.Option>
                                   ))
                                 )}
-                              </select>
-                            );
-                          })()}
+                              </Combobox.Options>
+                            </div>
+                          </Combobox>
+                          <input
+                            type="hidden"
+                            value={productEntry.product_id || ""}
+                            required
+                            readOnly
+                          />
                         </div>
                       </div>
 
@@ -4459,7 +4545,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Sr No
@@ -4468,7 +4555,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Company Name
@@ -4477,7 +4565,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Order Date
@@ -4486,7 +4575,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Delivery Date
@@ -4495,7 +4585,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Product Name
@@ -4504,7 +4595,8 @@ const ToBeDeliveredTab = ({
                     style={{
                       fontWeight: "600",
                       color: "#374151",
-                      padding: "12px",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
                     Operate
@@ -4524,7 +4616,8 @@ const ToBeDeliveredTab = ({
                                 height: "20px",
                                 backgroundColor: "#e5e7eb",
                                 borderRadius: "4px",
-                                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                                animation:
+                                  "skeletonPulse 1.5s ease-in-out infinite",
                               }}
                             />
                           </td>
@@ -4532,9 +4625,9 @@ const ToBeDeliveredTab = ({
                       </tr>
                     ))}
                   </>
-                ) : displayedData.length === 0 ? (
+                ) : requests.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
+                    <td colSpan="6" className="text-center py-4 text-muted">
                       <div className="d-flex flex-column align-items-center">
                         <Icon
                           icon="mdi:truck-delivery"
@@ -4542,171 +4635,172 @@ const ToBeDeliveredTab = ({
                           height="48"
                           className="text-muted mb-2"
                         />
-                        <p className="text-muted mb-0">
-                          No delivery requests found
-                        </p>
+                        No delivery requests found.
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  <>
-                    {displayedData.map((request, index) => {
-                      const productNames =
-                        request.items && request.items.length > 0
+                  requests.map((request, index) => (
+                    <tr key={request.request_id}>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {index + 1}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {request.company_name || request.vendor_name || "-"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {new Date(request.order_date).toLocaleDateString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {new Date(request.delivery_date).toLocaleDateString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {request.items && request.items.length > 0
                           ? [
                               ...new Set(
                                 request.items.map((item) => item.product_name)
                               ),
                             ].join(", ")
-                          : "-";
-
-                      return (
-                        <tr key={request.request_id}>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {index + 1}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {request.company_name || request.vendor_name || "-"}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {new Date(request.order_date).toLocaleDateString()}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {new Date(request.delivery_date).toLocaleDateString()}
-                          </td>
-                          <td style={{ padding: "12px", color: "#374151" }}>
-                            {productNames}
-                          </td>
-                          <td style={{ padding: "12px" }}>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="View"
-                                onClick={() => handleViewRequest(request)}
-                              >
-                                <Icon
-                                  icon="lucide:eye"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#3b82f6" }}
-                                />
-                              </button>
-                              {poInfoCache[request.request_id] ? (
-                                <button
-                                  className="btn btn-sm"
-                                  style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    padding: 0,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "6px",
-                                    backgroundColor: "white",
-                                  }}
-                                  title={`Download Purchase Order PDF (${
-                                    poInfoCache[request.request_id]
-                                      ?.purchase_order_number
-                                  })`}
-                                  onClick={() => handleDownloadPdf(request)}
-                                  disabled={downloadingPdf[request.request_id]}
-                                >
-                                  {downloadingPdf[request.request_id] ? (
-                                    <span
-                                      className="spinner-border spinner-border-sm"
-                                      role="status"
-                                      aria-hidden="true"
-                                    ></span>
-                                  ) : (
-                                    <Icon
-                                      icon="mdi:file-pdf-box"
-                                      width="16"
-                                      height="16"
-                                      style={{ color: "#dc3545" }}
-                                    />
-                                  )}
-                                </button>
-                              ) : poInfoCache[request.request_id] === undefined ? (
+                          : "-"}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex gap-2">
+                          <button
+                            className="btn btn-sm"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
+                            }}
+                            title="View"
+                            onClick={() => handleViewRequest(request)}
+                          >
+                            <Icon
+                              icon="lucide:eye"
+                              width="16"
+                              height="16"
+                              style={{ color: "#3b82f6" }}
+                            />
+                          </button>
+                          {poInfoCache[request.request_id] ? (
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "6px",
+                                backgroundColor: "white",
+                              }}
+                              title={`Download Purchase Order PDF (${
+                                poInfoCache[request.request_id]
+                                  ?.purchase_order_number
+                              })`}
+                              onClick={() => handleDownloadPdf(request)}
+                              disabled={downloadingPdf[request.request_id]}
+                            >
+                              {downloadingPdf[request.request_id] ? (
                                 <span
                                   className="spinner-border spinner-border-sm"
-                                  style={{
-                                    width: "16px",
-                                    height: "16px",
-                                    borderWidth: "2px",
-                                  }}
                                   role="status"
                                   aria-hidden="true"
-                                  title="Checking for PDF..."
                                 ></span>
-                              ) : null}
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="Settings"
-                                onClick={() => handleSettingsClick(request, "arrived")}
-                              >
+                              ) : (
                                 <Icon
-                                  icon="lucide:settings"
+                                  icon="mdi:file-pdf-box"
                                   width="16"
                                   height="16"
-                                  style={{ color: "#f59e0b" }}
+                                  style={{ color: "#dc3545" }}
                                 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {isLoadingMore && (
-                      <>
-                        {Array.from({ length: 5 }).map((_, rowIndex) => (
-                          <tr key={`skeleton-more-${rowIndex}`}>
-                            {Array.from({ length: 6 }).map((_, colIndex) => (
-                              <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                                <div
-                                  className="skeleton"
-                                  style={{
-                                    height: "20px",
-                                    backgroundColor: "#e5e7eb",
-                                    borderRadius: "4px",
-                                    animation: "skeletonPulse 1.5s ease-in-out infinite",
-                                  }}
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </>
-                    )}
-                  </>
+                              )}
+                            </button>
+                          ) : poInfoCache[request.request_id] === undefined ? (
+                            <span
+                              className="spinner-border spinner-border-sm"
+                              style={{
+                                width: "16px",
+                                height: "16px",
+                                borderWidth: "2px",
+                              }}
+                              role="status"
+                              aria-hidden="true"
+                              title="Checking for PDF..."
+                            ></span>
+                          ) : null}
+                          <button
+                            className="btn btn-sm"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
+                            }}
+                            title="Settings"
+                            onClick={() =>
+                              handleSettingsClick(request, "arrived")
+                            }
+                          >
+                            <Icon
+                              icon="lucide:settings"
+                              width="16"
+                              height="16"
+                              style={{ color: "#f59e0b" }}
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Infinite Scroll Footer */}
           {requests.length > 0 && (
             <div
               className="d-flex justify-content-between align-items-center px-3 py-2"
@@ -4720,8 +4814,7 @@ const ToBeDeliveredTab = ({
               }}
             >
               <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                Showing <strong>{displayedData.length}</strong> of{" "}
-                <strong>{requests.length}</strong> entries
+                Showing <strong>{requests.length}</strong> entries
               </div>
               {hasMoreData() && (
                 <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
