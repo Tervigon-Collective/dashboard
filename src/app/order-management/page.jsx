@@ -23,15 +23,24 @@ const parseQrToken = (rawValue) => {
   if (rawValue.startsWith("http")) {
     try {
       const url = new URL(rawValue);
-      const segments = url.pathname.split("/").filter(Boolean);
-      // Expecting .../receiving/qr/:requestId/:itemId/:token
-      const qrIndex = segments.findIndex((segment) => segment === "qr");
-      if (qrIndex !== -1 && segments[qrIndex + 3]) {
-        return segments[qrIndex + 3];
+      const tokenFromQuery = url.searchParams.get("token");
+      if (tokenFromQuery) {
+        return tokenFromQuery;
       }
+
+      const segments = url.pathname.split("/").filter(Boolean);
       return segments[segments.length - 1];
     } catch (error) {
       console.warn("Failed to parse QR URL, falling back to raw value", error);
+    }
+  }
+
+  const queryIndex = rawValue.indexOf("token=");
+  if (queryIndex !== -1) {
+    const params = new URLSearchParams(rawValue.slice(queryIndex));
+    const tokenFromQuery = params.get("token");
+    if (tokenFromQuery) {
+      return tokenFromQuery;
     }
   }
 
