@@ -3,7 +3,11 @@ import { useUser } from "@/helper/UserContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader } from "./child/GeneratedContent";
-import { isUserAuthenticated, clearAuthData, logAuthEvent } from "@/utils/authUtils";
+import {
+  isUserAuthenticated,
+  clearAuthData,
+  logAuthEvent,
+} from "@/utils/authUtils";
 
 /**
  * AuthGuard protects routes from unauthenticated access.
@@ -33,7 +37,10 @@ export default function AuthGuard({ children }) {
     "/terms-condition/",
   ];
 
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const isQrPublicRoute =
+    typeof pathname === "string" &&
+    (pathname === "/receiving/qr" || pathname.startsWith("/receiving/qr/"));
+  const isPublicRoute = publicRoutes.includes(pathname) || isQrPublicRoute;
 
   // Check if user is authenticated through Firebase (regardless of role)
   const isAuthenticated = !!user;
@@ -42,7 +49,7 @@ export default function AuthGuard({ children }) {
   useEffect(() => {
     const validateAuth = async () => {
       setIsValidating(true);
-      
+
       // If it's a public route, allow access
       if (isPublicRoute) {
         setIsValidating(false);
@@ -56,28 +63,37 @@ export default function AuthGuard({ children }) {
 
       // Check authentication status
       if (!isAuthenticated) {
-        logAuthEvent('AUTH_GUARD_FAILED', { 
-          pathname, 
-          hasUser: !!user, 
-          hasToken: !!token, 
-          role 
+        logAuthEvent("AUTH_GUARD_FAILED", {
+          pathname,
+          hasUser: !!user,
+          hasToken: !!token,
+          role,
         });
-        
+
         // Clear any invalid authentication data
         clearAuthData();
-        
+
         // Redirect to sign-in
         router.replace("/sign-in");
         return;
       }
 
-      logAuthEvent('AUTH_GUARD_SUCCESS', { pathname });
+      logAuthEvent("AUTH_GUARD_SUCCESS", { pathname });
 
       setIsValidating(false);
     };
 
     validateAuth();
-  }, [isAuthenticated, loading, pathname, router, isPublicRoute, user, role, token]);
+  }, [
+    isAuthenticated,
+    loading,
+    pathname,
+    router,
+    isPublicRoute,
+    user,
+    role,
+    token,
+  ]);
 
   // Show loading while validating authentication
   if (loading || isValidating) {
@@ -88,12 +104,12 @@ export default function AuthGuard({ children }) {
   if (isPublicRoute) {
     return children;
   }
-  
+
   // If not authenticated and not a public route, show loading (redirect will happen)
   if (!isAuthenticated) {
     return <Loader />;
   }
-  
+
   // User is authenticated, render protected content
   return children;
 }
