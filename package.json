@@ -20,7 +20,7 @@
     "@fullcalendar/interaction": "^6.1.10",
     "@fullcalendar/react": "^6.1.10",
     "@fullcalendar/timegrid": "^6.1.10",
-    "@headlessui/react": "^2.2.4",
+    "@headlessui/react": "^2.2.9",
     "@hello-pangea/dnd": "^17.0.0",
     "@iconify-json/solar": "^1.2.0",
     "@netlify/plugin-nextjs": "^5.12.0",
