@@ -1074,11 +1074,14 @@ const UnitCountOne = ({ dateRange }) => {
                 },
               ].map((item) => (
                 <div
-                  className="d-flex align-items-center justify-content-between w-100"
+                  className="d-flex align-items-center justify-content-between w-100 flex-wrap"
                   style={{ gap: 8 }}
                   key={item.label}
                 >
-                  <div className="d-flex align-items-center" style={{ gap: 6 }}>
+                  <div
+                    className="d-flex align-items-center"
+                    style={{ gap: 6, minWidth: 0 }}
+                  >
                     {item.icon}
                     <span
                       className="fw-medium text-black"
@@ -1086,45 +1089,26 @@ const UnitCountOne = ({ dateRange }) => {
                         fontWeight: 600,
                         fontSize: 14,
                         color: "#222",
-                        minWidth: 120,
                       }}
                     >
                       {item.label}
                     </span>
                   </div>
-                  <div
-                    className="d-flex align-items-baseline"
-                    style={{ gap: 8 }}
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 16,
+                      color: "#0d47a1",
+                      textAlign: "right",
+                    }}
                   >
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        fontSize: 16,
-                        color: "#0d47a1",
-                        minWidth: 60,
-                        textAlign: "right",
-                      }}
-                    >
-                      {getCardContent(
-                        item.count,
-                        loading,
-                        error.inventoryEvents,
-                        (v) => Number(v).toLocaleString()
-                      )}
-                    </span>
-                    <span
-                      className="text-muted"
-                      style={{ fontSize: 12, minWidth: 70 }}
-                    >
-                      Qty:{" "}
-                      {getCardContent(
-                        item.quantity,
-                        loading,
-                        error.inventoryEvents,
-                        (v) => Number(v).toLocaleString()
-                      )}
-                    </span>
-                  </div>
+                    {getCardContent(
+                      item.count,
+                      loading,
+                      error.inventoryEvents,
+                      (v) => Number(v).toLocaleString()
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
