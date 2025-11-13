@@ -283,9 +283,8 @@ class ProductMasterApiService {
       params.append("search", options.search.trim());
     }
 
-    // Add filter parameters
-    if (options.hsnCodeFilter && options.hsnCodeFilter !== "all") {
-      params.append("hsnCodeFilter", options.hsnCodeFilter);
+    if (options.sku && options.sku.trim()) {
+      params.append("sku", options.sku.trim());
     }
 
     // Add sorting parameters

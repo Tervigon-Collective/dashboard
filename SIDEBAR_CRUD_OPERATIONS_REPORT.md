@@ -234,7 +234,142 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 8. **User Management** (`userManagement`)
+### 8. **Content Craft** (`createContent`)
+
+**Route:** `/create-content`
+
+**Component:** `CreateContentPage`
+
+**CRUD Operations:**
+
+- ✅ **READ** - View previously generated briefs, results, and generation history
+- ✅ **CREATE** - Launch new AI generation jobs (text, image, video variants)
+- ❌ **UPDATE** - Cannot directly edit existing jobs (regenerate instead)
+- ❌ **DELETE** - No delete endpoint exposed (jobs auto-expire via backend retention)
+
+**Features:**
+
+- Compose briefs (product name, tone, channels)
+- Submit quick-generate or advanced jobs
+- Upload reference imagery and retrieve generated assets
+- Review prior jobs with filters and status indicators
+- Export generated copy/imagery
+
+**Access Level:** Manager, Admin, Super Admin
+
+**Note:** This is a **CREATE-FOCUSED** sidebar – users generate new assets but can't mutate old jobs
+
+---
+
+### 9. **Receiving Management** (`receivingManagement`)
+
+**Route:** `/receiving-management`
+
+**Component:** `ReceivingManagementPage`
+
+**CRUD Operations:**
+
+- ✅ **CREATE** - Log inbound shipments and ASN details
+- ✅ **READ** - View receiving queue, statuses, discrepancies
+- ✅ **UPDATE** - Reconcile shipments, adjust quantities, close receipts
+- ✅ **DELETE** - Remove staging entries or cancel receipts (with audit trail)
+
+**Features:**
+
+- Multi-step receiving workflow with status tracking
+- Item-level discrepancy management
+- Vendor and PO cross-references
+- Bulk import/export of receiving data
+- Activity log and user attribution
+
+**Access Level:** Manager, Admin, Super Admin
+
+**Note:** This is a **FULL CRUD** sidebar – end-to-end receiving orchestration
+
+---
+
+### 10. **Order Management** (`orderManagement`)
+
+**Route:** `/order-management`
+
+**Component:** `OrderManagementPage`
+
+**CRUD Operations:**
+
+- ✅ **CREATE** - Manually create fulfillment orders or exceptions
+- ✅ **READ** - Review outgoing orders, pick/pack status, SLAs
+- ✅ **UPDATE** - Advance order stages, assign pickers, edit allocations
+- ✅ **DELETE** - Void or cancel outbound orders (permission controlled)
+
+**Features:**
+
+- Order queue with filtering by warehouse / priority
+- Bulk actions (mark as picked/packed/shipped)
+- Carrier assignment and label triggers
+- Exception management with notes
+- KPI widgets (aging orders, SLA risk)
+
+**Access Level:** Manager, Admin, Super Admin
+
+**Note:** This is a **FULL CRUD** sidebar – central hub for fulfillment execution
+
+---
+
+### 11. **Stock Management** (`stockManagement`)
+
+**Route:** `/stock-management`
+
+**Component:** `StockManagementPage`
+
+**CRUD Operations:**
+
+- ✅ **CREATE** - Register cycle counts, adjustments, transfers
+- ✅ **READ** - Monitor on-hand, reserved, and available inventory
+- ✅ **UPDATE** - Adjust stock levels, reconcile variances, move stock
+- ✅ **DELETE** - Rollback pending adjustments (with permission gates)
+
+**Features:**
+
+- Real-time inventory dashboard by SKU/location
+- Cycle count workflows with approvals
+- Audit history for every adjustment
+- Threshold alerts and low-stock warnings
+- Exportable inventory snapshots
+
+**Access Level:** Manager, Admin, Super Admin
+
+**Note:** This is a **FULL CRUD** sidebar – inventory control and governance
+
+---
+
+### 12. **Manage Masters** (`masters`)
+
+**Route:** `/masters`
+
+**Component:** `MastersPage`
+
+**CRUD Operations:**
+
+- ✅ **CREATE** - Add master data records (vendors, warehouses, categories, etc.)
+- ✅ **READ** - View complete master datasets
+- ✅ **UPDATE** - Edit master attributes, enable/disable records
+- ✅ **DELETE** - Archive/remove master entries (subject to referential checks)
+
+**Features:**
+
+- Centralized catalogue for reference data
+- Validation rules per master type
+- Bulk import/export with templates
+- Dependency checks before deletes
+- Change history and ownership metadata
+
+**Access Level:** Manager, Admin, Super Admin
+
+**Note:** This is a **FULL CRUD** sidebar – foundation for shared reference data
+
+---
+
+### 13. **User Management** (`userManagement`)
 
 **Route:** `/user-management`, `/create-user`, `/assign-role`, `/user-role-info`
 
@@ -280,7 +415,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 9. **System Settings** (`systemSettings`)
+### 14. **System Settings** (`systemSettings`)
 
 **Route:** Not implemented yet
 
@@ -301,11 +436,16 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 ### **Full CRUD (Create + Read + Update + Delete):**
 
 1. ✅ **Procurement** - Complete product management
-2. ✅ **User Management** - Complete user administration
+2. ✅ **Receiving Management** - Inbound logistics
+3. ✅ **Order Management** - Fulfillment execution
+4. ✅ **Stock Management** - Inventory control
+5. ✅ **Manage Masters** - Reference data catalogues
+6. ✅ **User Management** - Complete user administration
 
 ### **Limited CRUD (Read + Create/Update):**
 
 1. ⚠️ **Shipping** - Read orders + Generate waybills + Track shipments
+2. ⚠️ **Content Craft** - Generate new assets, review history
 
 ### **Read-Only:**
 
@@ -323,17 +463,22 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ## 🎨 **Detailed Functionality Matrix**
 
-| Sidebar               | Create   | Read   | Update   | Delete | Export | Search | Filter | Pagination |
-| --------------------- | -------- | ------ | -------- | ------ | ------ | ------ | ------ | ---------- |
-| Dashboard             | ❌       | ✅     | ❌       | ❌     | ❌     | ❌     | ✅     | ❌         |
-| SKU List              | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
-| Product Spend Summary | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
-| Entity Report         | ❌       | ✅     | ❌       | ❌     | ✅     | ✅     | ✅     | ✅         |
-| **Procurement**       | **✅**   | **✅** | **✅**   | **✅** | ❌     | ✅     | ✅     | ✅         |
-| Customer Data         | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
-| **Shipping**          | **✅\*** | **✅** | **✅\*** | ❌     | ✅     | ✅     | ✅     | ✅         |
-| **User Management**   | **✅**   | **✅** | **✅**   | **✅** | ❌     | ✅     | ✅     | ✅         |
-| System Settings       | ⏳       | ⏳     | ⏳       | ⏳     | ⏳     | ⏳     | ⏳     | ⏳         |
+| Sidebar                  | Create   | Read   | Update   | Delete | Export | Search | Filter | Pagination |
+| ------------------------ | -------- | ------ | -------- | ------ | ------ | ------ | ------ | ---------- |
+| Dashboard                | ❌       | ✅     | ❌       | ❌     | ❌     | ❌     | ✅     | ❌         |
+| SKU List                 | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
+| Product Spend Summary    | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
+| Entity Report            | ❌       | ✅     | ❌       | ❌     | ✅     | ✅     | ✅     | ✅         |
+| **Procurement**          | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
+| Customer Data            | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
+| **Shipping**             | **✅\*** | **✅** | **✅\*** | ❌     | ✅     | ✅     | ✅     | ✅         |
+| Content Craft            | ✅       | ✅     | ❌       | ❌     | ✅     | ✅     | ✅     | ✅         |
+| **Receiving Management** | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
+| **Order Management**     | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
+| **Stock Management**     | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
+| **Manage Masters**       | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
+| **User Management**      | **✅**   | **✅** | **✅**   | **✅** | ❌     | ✅     | ✅     | ✅         |
+| System Settings          | ⏳       | ⏳     | ⏳       | ⏳     | ⏳     | ⏳     | ⏳     | ⏳         |
 
 **Legend:**
 
@@ -362,10 +507,15 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 - ✅ Procurement (Full CRUD)
 - ✅ Customer Data (Read)
 - ✅ Shipping (Read + Waybill Generation)
+- ✅ Content Craft (Create + Read)
+- ✅ Receiving Management (Full CRUD)
+- ✅ Order Management (Full CRUD)
+- ✅ Stock Management (Full CRUD)
+- ✅ Manage Masters (Full CRUD)
 
 ### **Admin Role:**
 
-- ✅ All Manager permissions +
+- ✅ All Manager permissions, plus
 - ✅ User Management (Full CRUD)
 
 ### **Super Admin Role:**
@@ -414,12 +564,12 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ## ✅ **Conclusion**
 
-**Total Sidebars:** 9
+**Total Sidebars:** 14
 
-- **Full CRUD:** 2 (Procurement, User Management)
-- **Limited CRUD:** 1 (Shipping)
+- **Full CRUD:** 6 (Procurement, Receiving Management, Order Management, Stock Management, Manage Masters, User Management)
+- **Limited CRUD:** 2 (Shipping, Content Craft)
 - **Read-Only:** 5 (Dashboard, SKU List, Product Spend Summary, Entity Report, Customer Data)
 - **Planned:** 1 (System Settings)
 
-**Primary Management Sidebars:** Procurement and User Management
-**Primary Viewing Sidebars:** All analytics and reporting sidebars
+**Primary Management Sidebars:** Procurement, Receiving, Order, Stock, Masters, User Management
+**Primary Viewing Sidebars:** Analytics, reporting, and Shopify data surfaces

@@ -8,13 +8,16 @@ import purchaseRequestApi from "../../services/purchaseRequestApi";
 import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
+import { useUser } from "@/helper/UserContext";
+import { Combobox } from "@headlessui/react";
 
 const QualityCheckDocumentsSection = ({ requestId }) => {
-  const [docType, setDocType] = useState("invoice");
+  const [docType] = useState("invoice");
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [error, setError] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   const refresh = async () => {
     try {
@@ -36,6 +39,10 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 
   const onUpload = async () => {
     if (!files.length) return;
+    if (docType === "invoice" && !invoiceNumber.trim()) {
+      setError("Invoice number is required for invoice documents.");
+      return;
+    }
     setIsUploading(true);
     setError("");
     try {
@@ -44,9 +51,11 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
           docType,
           itemId: null,
           file: f,
+          invoiceNumber: invoiceNumber.trim() || null,
         });
       }
       setFiles([]);
+      setInvoiceNumber("");
       await refresh();
     } catch (e) {
       console.error(e);
@@ -70,18 +79,9 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
       <div className="row g-2 align-items-end">
         <div className="col-md-3">
           <label className="form-label small mb-1">Document Type</label>
-          <select
-            className="form-select form-select-sm"
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-          >
-            <option value="invoice">Invoice</option>
-            <option value="purchase_order">Purchase Order</option>
-            <option value="delivery_challan">Delivery Challan</option>
-            <option value="other">Other</option>
-          </select>
+          <div className="form-control form-control-sm bg-light">Invoice</div>
         </div>
-        <div className="col-md-6">
+        <div className="col-md-5">
           <label className="form-label small mb-1">Select Files</label>
           <input
             type="file"
@@ -91,7 +91,24 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
             onChange={onFileChange}
           />
         </div>
-        <div className="col-md-3 d-flex gap-2">
+        <div className="col-md-2">
+          <label className="form-label small mb-1">
+            Invoice Number <span className="text-danger">*</span>
+          </label>
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Enter invoice no."
+            value={invoiceNumber}
+            onChange={(e) => {
+              setInvoiceNumber(e.target.value);
+              if (error) {
+                setError("");
+              }
+            }}
+          />
+        </div>
+        <div className="col-md-2 d-flex gap-2 align-items-end">
           <button
             type="button"
             className="btn btn-sm btn-primary"
@@ -125,6 +142,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
             <tr>
               <th className="small">Type</th>
               <th className="small">Name</th>
+              <th className="small">Invoice No.</th>
               <th className="small">Size</th>
               <th className="small">Uploaded</th>
               <th className="small">Action</th>
@@ -133,7 +151,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
           <tbody>
             {documents.length === 0 ? (
               <tr>
-                <td className="small text-center" colSpan="5">
+                <td className="small text-center" colSpan="6">
                   No documents uploaded
                 </td>
               </tr>
@@ -144,6 +162,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
                     {d.doc_type?.replace(/_/g, " ")}
                   </td>
                   <td className="small">{d.file_name}</td>
+                  <td className="small">{d.invoice_number || "-"}</td>
                   <td className="small">
                     {Math.ceil((d.file_size_bytes || 0) / 1024)} KB
                   </td>
@@ -178,6 +197,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 };
 
 const ReceivingManagementLayer = () => {
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState("purchase-request");
   const [modalOpen, setModalOpen] = useState(false);
   const [requests, setRequests] = useState([]);
@@ -226,8 +246,13 @@ const ReceivingManagementLayer = () => {
     const filteredData = requests.filter((request) => {
       if (!searchTerm) return true;
       const search = searchTerm.toLowerCase();
-      // Search by vendor name
-      if (request.vendor_name?.toLowerCase().includes(search)) {
+      // Search by company or vendor name
+      const supplierName = `${request.company_name || ""} ${
+        request.vendor_name || ""
+      }`
+        .trim()
+        .toLowerCase();
+      if (supplierName && supplierName.includes(search)) {
         return true;
       }
       // Search by aggregated product names (if present)
@@ -263,7 +288,7 @@ const ReceivingManagementLayer = () => {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Search by vendor or product..."
+                    placeholder="Search by company or product..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -348,7 +373,7 @@ const ReceivingManagementLayer = () => {
                           padding: "12px",
                         }}
                       >
-                        Vendor Name
+                        Company Name
                       </th>
                       <th
                         style={{
@@ -459,7 +484,9 @@ const ReceivingManagementLayer = () => {
                           <tr key={request.request_id}>
                             <td className="small">{index + 1}</td>
                             <td className="small">
-                              {request.vendor_name || "-"}
+                              {request.company_name ||
+                                request.vendor_name ||
+                                "-"}
                             </td>
                             <td className="small">
                               {request.order_date
@@ -616,6 +643,7 @@ const ReceivingManagementLayer = () => {
 
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
+    companyName: "",
     vendorName: "",
     vendorPhoneNo: "",
     vendorGSTNumber: "",
@@ -1012,10 +1040,22 @@ const ReceivingManagementLayer = () => {
 
   // Handle vendor selection
   const handleVendorSelect = (vendorId) => {
+    if (!vendorId) {
+      setFormData({ ...formData, selectedVendor: null });
+      setVendorData({
+        companyName: "",
+        vendorName: "",
+        vendorPhoneNo: "",
+        vendorGSTNumber: "",
+        vendorAddress: "",
+      });
+      return;
+    }
     const vendor = vendors.find((v) => v.vendor_id === vendorId);
     if (vendor) {
       setFormData({ ...formData, selectedVendor: vendorId });
       setVendorData({
+        companyName: vendor.company_name || vendor.vendor_name || "",
         vendorName: vendor.vendor_name,
         vendorPhoneNo: vendor.vendor_phone_no,
         vendorGSTNumber: vendor.vendor_gst_number,
@@ -1026,6 +1066,16 @@ const ReceivingManagementLayer = () => {
 
   // Handle product selection - add product to the array
   const handleProductSelect = (productId, index) => {
+    if (!productId) {
+      setFormData((prev) => {
+        const newProducts = [...prev.products];
+        if (index >= 0 && index < newProducts.length) {
+          newProducts[index] = { product_id: null, selectedVariants: [] };
+        }
+        return { ...prev, products: newProducts };
+      });
+      return;
+    }
     const product = products.find((p) => p.product_id === productId);
     if (product) {
       setFormData((prev) => {
@@ -1111,6 +1161,23 @@ const ReceivingManagementLayer = () => {
     setIsSubmitting(true);
 
     try {
+      if (!formData.selectedVendor) {
+        alert("Please select a company before submitting.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const missingProductIndex = formData.products.findIndex(
+        (product) => !product.product_id
+      );
+      if (missingProductIndex !== -1) {
+        alert(
+          `Please select a product for Product #${missingProductIndex + 1}.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       // Prepare items from all products
       const items = [];
       formData.products.forEach((product) => {
@@ -1213,6 +1280,7 @@ const ReceivingManagementLayer = () => {
       deliveryDate: "",
     });
     setVendorData({
+      companyName: "",
       vendorName: "",
       vendorPhoneNo: "",
       vendorGSTNumber: "",
@@ -1264,6 +1332,7 @@ const ReceivingManagementLayer = () => {
 
     // Set vendor data
     setVendorData({
+      companyName: request.company_name || request.vendor_name || "",
       vendorName: request.vendor_name,
       vendorPhoneNo: request.vendor_phone_no,
       vendorGSTNumber: request.vendor_gst_number,
@@ -1592,7 +1661,13 @@ const ReceivingManagementLayer = () => {
           };
         });
         setInspectionData(inspectionItems);
-        setQualityCheckerName(result.data[0]?.quality_checker_name || "");
+        const defaultCheckerName =
+          user?.displayName?.trim() ||
+          user?.email?.split("@")[0] ||
+          "Quality Checker";
+        setQualityCheckerName(
+          result.data[0]?.quality_checker_name?.trim() || defaultCheckerName
+        );
         setInspectionDate(
           result.data[0]?.inspection_date ||
             new Date().toISOString().split("T")[0]
@@ -1608,7 +1683,11 @@ const ReceivingManagementLayer = () => {
           notes: "",
         }));
         setInspectionData(inspectionItems);
-        setQualityCheckerName("");
+        const defaultCheckerName =
+          user?.displayName?.trim() ||
+          user?.email?.split("@")[0] ||
+          "Quality Checker";
+        setQualityCheckerName(defaultCheckerName);
         setInspectionDate(new Date().toISOString().split("T")[0]);
       }
     } catch (error) {
@@ -1623,6 +1702,11 @@ const ReceivingManagementLayer = () => {
         notes: "",
       }));
       setInspectionData(inspectionItems);
+      const defaultCheckerName =
+        user?.displayName?.trim() ||
+        user?.email?.split("@")[0] ||
+        "Quality Checker";
+      setQualityCheckerName(defaultCheckerName);
     }
   };
 
@@ -1902,12 +1986,19 @@ const ReceivingManagementLayer = () => {
                 >
                   <div className="row mb-4">
                     <div className="col-12 col-md-6 mb-3 mb-md-0">
-                      <h6 className="text-muted mb-3">Vendor Information</h6>
+                      <h6 className="text-muted mb-3">Company Information</h6>
                       <div className="d-flex flex-column gap-2">
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
-                          <span className="text-muted">Vendor Name:</span>
+                          <span className="text-muted">Company Name:</span>
                           <span className="fw-medium text-break">
-                            {selectedRequest.vendor_name}
+                            {selectedRequest.company_name ||
+                              selectedRequest.vendor_name}
+                          </span>
+                        </div>
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                          <span className="text-muted">Contact Person:</span>
+                          <span className="fw-medium text-break">
+                            {selectedRequest.vendor_name || "-"}
                           </span>
                         </div>
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
@@ -2770,9 +2861,16 @@ const ReceivingManagementLayer = () => {
                       <h6 className="text-muted mb-3">Request Information</h6>
                       <div className="d-flex flex-column gap-2">
                         <div className="d-flex justify-content-between">
-                          <span className="text-muted">Vendor:</span>
+                          <span className="text-muted">Company:</span>
                           <span className="fw-medium">
-                            {requestToInspect.vendor_name}
+                            {requestToInspect.company_name ||
+                              requestToInspect.vendor_name}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span className="text-muted">Contact Person:</span>
+                          <span className="fw-medium">
+                            {requestToInspect.vendor_name || "-"}
                           </span>
                         </div>
                         <div className="d-flex justify-content-between">
@@ -3035,8 +3133,13 @@ const PurchaseRequestTab = ({
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
 
-    // Search by vendor name
-    if (request.vendor_name?.toLowerCase().includes(search)) {
+    // Search by company or vendor name
+    const supplierName = `${request.company_name || ""} ${
+      request.vendor_name || ""
+    }`
+      .trim()
+      .toLowerCase();
+    if (supplierName && supplierName.includes(search)) {
       return true;
     }
 
@@ -3081,7 +3184,7 @@ const PurchaseRequestTab = ({
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Search by vendor or product..."
+                  placeholder="Search by company or product..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -3158,7 +3261,7 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    #
+                    Sr No
                   </th>
                   <th
                     style={{
@@ -3168,7 +3271,7 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    Vendor Name
+                    Company Name
                   </th>
                   <th
                     style={{
@@ -3267,142 +3370,94 @@ const PurchaseRequestTab = ({
                   </tr>
                 ) : (
                   <>
-                    {displayedData.map((request, index) => (
-                      <tr key={request.request_id}>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {index + 1}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.vendor_name || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.order_date
-                            ? new Date(request.order_date).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.delivery_date
-                            ? new Date(
-                                request.delivery_date
-                              ).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.productNames || "-"}
-                        </td>
-                        <td
-                          style={{
-                            padding: "clamp(8px, 2vw, 12px)",
-                            color: "#374151",
-                            fontSize: "clamp(11px, 2.5vw, 14px)",
-                          }}
-                        >
-                          {request.aggregated?.totalInvoiceQty ?? 0}
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div className="d-flex flex-wrap gap-1 gap-sm-2">
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="View"
-                              onClick={() => handleViewRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:eye"
-                                width="16"
-                                height="16"
-                                style={{ color: "#3b82f6" }}
-                              />
-                            </button>
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="Edit"
-                              onClick={() => handleEditRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:edit"
-                                width="16"
-                                height="16"
-                                style={{ color: "#3b82f6" }}
-                              />
-                            </button>
-                            <button
-                              className="btn btn-sm"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                              }}
-                              title="Delete"
-                              onClick={() => handleDeleteRequest(request)}
-                            >
-                              <Icon
-                                icon="lucide:trash-2"
-                                width="16"
-                                height="16"
-                                style={{ color: "#ef4444" }}
-                              />
-                            </button>
-                            {/* Only show Settings icon if status is "Pending" */}
-                            {(request.status === "Pending" ||
-                              request.status?.toLowerCase() === "pending") && (
+                    {displayedData.map((request, index) => {
+                      const productNames =
+                        request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items
+                                  .map((item) => item.product_name)
+                                  .filter(Boolean)
+                              ),
+                            ].join(", ")
+                          : "-";
+                      const hsnCodes =
+                        request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items
+                                  .map((item) => item.hsn_code)
+                                  .filter(Boolean)
+                              ),
+                            ].join(", ")
+                          : "-";
+
+                      return (
+                        <tr key={request.request_id}>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {index + 1}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.company_name || request.vendor_name || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.order_date
+                              ? new Date(
+                                  request.order_date
+                                ).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {request.delivery_date
+                              ? new Date(
+                                  request.delivery_date
+                                ).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {productNames}
+                          </td>
+                          <td
+                            style={{
+                              padding: "clamp(8px, 2vw, 12px)",
+                              color: "#374151",
+                              fontSize: "clamp(11px, 2.5vw, 14px)",
+                            }}
+                          >
+                            {hsnCodes}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex flex-wrap gap-1 gap-sm-2">
                               <button
                                 className="btn btn-sm"
                                 style={{
@@ -3416,21 +3471,95 @@ const PurchaseRequestTab = ({
                                   borderRadius: "6px",
                                   backgroundColor: "white",
                                 }}
-                                title="Settings"
-                                onClick={() => handleSettingsClick(request)}
+                                title="View"
+                                onClick={() => handleViewRequest(request)}
                               >
                                 <Icon
-                                  icon="lucide:settings"
+                                  icon="lucide:eye"
                                   width="16"
                                   height="16"
-                                  style={{ color: "#f59e0b" }}
+                                  style={{ color: "#3b82f6" }}
                                 />
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Edit"
+                                onClick={() => handleEditRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:edit"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#3b82f6" }}
+                                />
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  backgroundColor: "white",
+                                }}
+                                title="Delete"
+                                onClick={() => handleDeleteRequest(request)}
+                              >
+                                <Icon
+                                  icon="lucide:trash-2"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#ef4444" }}
+                                />
+                              </button>
+                              {/* Only show Settings icon if status is "Pending" */}
+                              {(request.status === "Pending" ||
+                                request.status?.toLowerCase() ===
+                                  "pending") && (
+                                <button
+                                  className="btn btn-sm"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "6px",
+                                    backgroundColor: "white",
+                                  }}
+                                  title="Settings"
+                                  onClick={() => handleSettingsClick(request)}
+                                >
+                                  <Icon
+                                    icon="lucide:settings"
+                                    width="16"
+                                    height="16"
+                                    style={{ color: "#f59e0b" }}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {isLoadingMore && (
                       <>
                         {Array.from({ length: 5 }).map((_, rowIndex) => (
@@ -3525,6 +3654,36 @@ const PurchaseRequestModal = ({
   handleModalClose,
   isEditMode,
 }) => {
+  const [vendorQuery, setVendorQuery] = useState("");
+  const [productQueries, setProductQueries] = useState(() =>
+    formData.products.map(() => "")
+  );
+
+  useEffect(() => {
+    setProductQueries((prev) =>
+      formData.products.map((_, idx) => prev[idx] || "")
+    );
+  }, [formData.products]);
+
+  useEffect(() => {
+    setVendorQuery("");
+  }, [formData.selectedVendor]);
+
+  const selectedVendor =
+    vendors.find((vendor) => vendor.vendor_id === formData.selectedVendor) ||
+    null;
+
+  const filteredVendors =
+    vendorQuery.trim() === ""
+      ? vendors
+      : vendors.filter((vendor) => {
+          const label = vendor.company_name
+            ? `${vendor.company_name} (${vendor.vendor_name})`
+            : vendor.vendor_name;
+          return label
+            ?.toLowerCase()
+            .includes(vendorQuery.trim().toLowerCase());
+        });
   return (
     <div
       className="modal show d-block"
@@ -3549,32 +3708,92 @@ const PurchaseRequestModal = ({
           </div>
           <div className="modal-body">
             <form onSubmit={handleSubmit}>
-              {/* Vendor Section */}
+              {/* Company Section */}
               <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Vendor Details</h6>
+                <h6 className="fw-semibold mb-3">Company Details</h6>
                 <div className="row">
                   <div className="col-md-6 mb-3">
                     <label className="form-label">
-                      Vendor Name <span className="text-danger">*</span>
+                      Company Name <span className="text-danger">*</span>
                     </label>
-                    <select
-                      className="form-select"
-                      value={formData.selectedVendor || ""}
-                      onChange={(e) =>
-                        handleVendorSelect(parseInt(e.target.value))
-                      }
-                      required
+                    <Combobox
+                      value={selectedVendor}
+                      onChange={(vendor) => {
+                        setVendorQuery("");
+                        handleVendorSelect(vendor ? vendor.vendor_id : null);
+                      }}
                     >
-                      <option value="">Select vendor...</option>
-                      {vendors.map((vendor) => (
-                        <option key={vendor.vendor_id} value={vendor.vendor_id}>
-                          {vendor.vendor_name}
-                        </option>
-                      ))}
-                    </select>
+                      <div className="position-relative">
+                        <Combobox.Input
+                          className="form-control"
+                          placeholder="Select company..."
+                          displayValue={(vendor) =>
+                            vendor
+                              ? vendor.company_name
+                                ? `${vendor.company_name} (${vendor.vendor_name})`
+                                : vendor.vendor_name
+                              : ""
+                          }
+                          onChange={(event) =>
+                            setVendorQuery(event.target.value)
+                          }
+                        />
+                        <Combobox.Options
+                          className="list-group position-absolute w-100 shadow-sm mt-1"
+                          style={{
+                            maxHeight: "240px",
+                            overflowY: "auto",
+                            zIndex: 1050,
+                          }}
+                        >
+                          {filteredVendors.length === 0 ? (
+                            <Combobox.Option
+                              value={null}
+                              disabled
+                              className="list-group-item disabled"
+                            >
+                              No companies found
+                            </Combobox.Option>
+                          ) : (
+                            filteredVendors.map((vendor) => (
+                              <Combobox.Option
+                                key={vendor.vendor_id}
+                                value={vendor}
+                                className={({ active }) =>
+                                  `list-group-item list-group-item-action ${
+                                    active ? "active" : ""
+                                  }`
+                                }
+                              >
+                                {vendor.company_name
+                                  ? `${vendor.company_name} (${vendor.vendor_name})`
+                                  : vendor.vendor_name}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      </div>
+                    </Combobox>
+                    <input
+                      type="hidden"
+                      value={formData.selectedVendor || ""}
+                      required
+                      readOnly
+                    />
                   </div>
                   <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor Phone No.</label>
+                    <label className="form-label">Contact Person</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={vendorData.vendorName}
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone No.</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3582,10 +3801,8 @@ const PurchaseRequestModal = ({
                       disabled
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor GST Number</label>
+                    <label className="form-label">GST Number</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3593,8 +3810,10 @@ const PurchaseRequestModal = ({
                       disabled
                     />
                   </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Vendor Address</label>
+                </div>
+                <div className="row">
+                  <div className="col-12 mb-3">
+                    <label className="form-label">Address</label>
                     <input
                       type="text"
                       className="form-control"
@@ -3625,6 +3844,15 @@ const PurchaseRequestModal = ({
                     (p) => p.product_id === productEntry.product_id
                   );
                   const productVariants = selectedProduct?.variants || [];
+                  const productQuery = productQueries[productIndex] || "";
+                  const filteredProducts =
+                    productQuery.trim() === ""
+                      ? products
+                      : products.filter((product) =>
+                          product.product_name
+                            ?.toLowerCase()
+                            .includes(productQuery.trim().toLowerCase())
+                        );
 
                   return (
                     <div
@@ -3654,27 +3882,76 @@ const PurchaseRequestModal = ({
                           <label className="form-label">
                             Product Name <span className="text-danger">*</span>
                           </label>
-                          <select
-                            className="form-select"
-                            value={productEntry.product_id || ""}
-                            onChange={(e) =>
+                          <Combobox
+                            value={selectedProduct || null}
+                            onChange={(product) => {
                               handleProductSelect(
-                                parseInt(e.target.value),
+                                product ? product.product_id : null,
                                 productIndex
-                              )
-                            }
-                            required
+                              );
+                              setProductQueries((prev) => {
+                                const copy = [...prev];
+                                copy[productIndex] = "";
+                                return copy;
+                              });
+                            }}
                           >
-                            <option value="">Select product...</option>
-                            {products.map((product) => (
-                              <option
-                                key={product.product_id}
-                                value={product.product_id}
+                            <div className="position-relative">
+                              <Combobox.Input
+                                className="form-control"
+                                placeholder="Select product..."
+                                displayValue={(product) =>
+                                  product?.product_name || ""
+                                }
+                                onChange={(event) => {
+                                  const term = event.target.value;
+                                  setProductQueries((prev) => {
+                                    const copy = [...prev];
+                                    copy[productIndex] = term;
+                                    return copy;
+                                  });
+                                }}
+                              />
+                              <Combobox.Options
+                                className="list-group position-absolute w-100 shadow-sm mt-1"
+                                style={{
+                                  maxHeight: "240px",
+                                  overflowY: "auto",
+                                  zIndex: 1050,
+                                }}
                               >
-                                {product.product_name}
-                              </option>
-                            ))}
-                          </select>
+                                {filteredProducts.length === 0 ? (
+                                  <Combobox.Option
+                                    value={null}
+                                    disabled
+                                    className="list-group-item disabled"
+                                  >
+                                    No products found
+                                  </Combobox.Option>
+                                ) : (
+                                  filteredProducts.map((product) => (
+                                    <Combobox.Option
+                                      key={product.product_id}
+                                      value={product}
+                                      className={({ active }) =>
+                                        `list-group-item list-group-item-action ${
+                                          active ? "active" : ""
+                                        }`
+                                      }
+                                    >
+                                      {product.product_name}
+                                    </Combobox.Option>
+                                  ))
+                                )}
+                              </Combobox.Options>
+                            </div>
+                          </Combobox>
+                          <input
+                            type="hidden"
+                            value={productEntry.product_id || ""}
+                            required
+                            readOnly
+                          />
                         </div>
                       </div>
 
@@ -4194,197 +4471,230 @@ const ToBeDeliveredTab = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requests]);
 
+  const displayedData = getDisplayedData();
+
   return (
-    <>
-      {/* Table */}
-      <div
-        className="border rounded overflow-hidden"
-        style={{ backgroundColor: "white" }}
-      >
-        <div className="table-responsive">
-          <table className="table mb-0">
-            <thead style={{ backgroundColor: "#f8f9fa" }}>
-              <tr>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Sr No
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Vendor Name
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Order Date
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Delivery Date
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Product Name
-                </th>
-                <th
-                  style={{
-                    border: "none",
-                    padding: "12px 16px",
-                    fontWeight: "600",
-                    color: "#495057",
-                  }}
-                >
-                  Operate
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
+    <div className="card basic-data-table">
+      <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+        <h5 className="card-title mb-0">To Be Delivered</h5>
+      </div>
+
+      <div className="card-body">
+        <div
+          ref={containerRef}
+          className="table-scroll-container"
+          style={{
+            maxHeight: "600px",
+            overflowY: "auto",
+            overflowX: "auto",
+            scrollBehavior: "smooth",
+            overscrollBehavior: "auto",
+          }}
+          onScroll={(e) => {
+            const target = e.currentTarget;
+            const scrollTop = target.scrollTop;
+            const scrollHeight = target.scrollHeight;
+            const clientHeight = target.clientHeight;
+
+            if (
+              scrollTop + clientHeight >= scrollHeight - 10 &&
+              hasMoreData() &&
+              !isLoadingMore &&
+              !isLoading
+            ) {
+              loadMoreData();
+            }
+          }}
+          onWheel={(e) => {
+            const target = e.currentTarget;
+            const scrollTop = target.scrollTop;
+            const scrollHeight = target.scrollHeight;
+            const clientHeight = target.clientHeight;
+            const isAtTop = scrollTop <= 1;
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+            if (e.deltaY > 0 && isAtBottom) {
+              window.scrollBy({
+                top: e.deltaY,
+                behavior: "auto",
+              });
+            } else if (e.deltaY < 0 && isAtTop) {
+              window.scrollBy({
+                top: e.deltaY,
+                behavior: "auto",
+              });
+            }
+          }}
+        >
+          <div className="table-responsive">
+            <table
+              className="table table-hover"
+              style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+            >
+              <thead
+                style={{
+                  backgroundColor: "#f9fafb",
+                  borderBottom: "2px solid #e5e7eb",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
+                }}
+              >
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    <div className="d-flex justify-content-center align-items-center">
-                      <div
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      >
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      Loading delivery requests...
-                    </div>
-                  </td>
-                </tr>
-              ) : requests.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4 text-muted">
-                    <div className="d-flex flex-column align-items-center">
-                      <Icon
-                        icon="mdi:truck-delivery"
-                        width="48"
-                        height="48"
-                        className="text-muted mb-2"
-                      />
-                      No delivery requests found.
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                requests.map((request, index) => (
-                  <tr
-                    key={request.request_id}
-                    style={{ borderBottom: "1px solid #e9ecef" }}
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
                   >
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {index + 1}
+                    Sr No
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
+                  >
+                    Company Name
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
+                  >
+                    Order Date
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
+                  >
+                    Delivery Date
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
+                  >
+                    Product Name
+                  </th>
+                  <th
+                    style={{
+                      fontWeight: "600",
+                      color: "#374151",
+                      padding: "clamp(8px, 2vw, 12px)",
+                      fontSize: "clamp(11px, 2.5vw, 14px)",
+                    }}
+                  >
+                    Operate
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <>
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-${rowIndex}`}>
+                        {Array.from({ length: 6 }).map((_, colIndex) => (
+                          <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                            <div
+                              className="skeleton"
+                              style={{
+                                height: "20px",
+                                backgroundColor: "#e5e7eb",
+                                borderRadius: "4px",
+                                animation:
+                                  "skeletonPulse 1.5s ease-in-out infinite",
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                ) : requests.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4 text-muted">
+                      <div className="d-flex flex-column align-items-center">
+                        <Icon
+                          icon="mdi:truck-delivery"
+                          width="48"
+                          height="48"
+                          className="text-muted mb-2"
+                        />
+                        No delivery requests found.
+                      </div>
                     </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {request.vendor_name || "-"}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {new Date(request.order_date).toLocaleDateString()}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {new Date(request.delivery_date).toLocaleDateString()}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      {request.items && request.items.length > 0
-                        ? [
-                            ...new Set(
-                              request.items.map((item) => item.product_name)
-                            ),
-                          ].join(", ")
-                        : "-"}
-                    </td>
-                    <td
-                      style={{
-                        border: "none",
-                        padding: "12px 16px",
-                        color: "#495057",
-                      }}
-                    >
-                      <div className="d-flex gap-2">
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            padding: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "6px",
-                            backgroundColor: "white",
-                          }}
-                          title="View"
-                          onClick={() => handleViewRequest(request)}
-                        >
-                          <Icon
-                            icon="lucide:eye"
-                            width="16"
-                            height="16"
-                            style={{ color: "#3b82f6" }}
-                          />
-                        </button>
-                        {poInfoCache[request.request_id] ? (
+                  </tr>
+                ) : (
+                  requests.map((request, index) => (
+                    <tr key={request.request_id}>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {index + 1}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {request.company_name || request.vendor_name || "-"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {new Date(request.order_date).toLocaleDateString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {new Date(request.delivery_date).toLocaleDateString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: "clamp(8px, 2vw, 12px)",
+                          color: "#374151",
+                          fontSize: "clamp(11px, 2.5vw, 14px)",
+                        }}
+                      >
+                        {request.items && request.items.length > 0
+                          ? [
+                              ...new Set(
+                                request.items.map((item) => item.product_name)
+                              ),
+                            ].join(", ")
+                          : "-"}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex gap-2">
                           <button
                             className="btn btn-sm"
                             style={{
@@ -4398,76 +4708,124 @@ const ToBeDeliveredTab = ({
                               borderRadius: "6px",
                               backgroundColor: "white",
                             }}
-                            title={`Download Purchase Order PDF (${
-                              poInfoCache[request.request_id]
-                                ?.purchase_order_number
-                            })`}
-                            onClick={() => handleDownloadPdf(request)}
-                            disabled={downloadingPdf[request.request_id]}
+                            title="View"
+                            onClick={() => handleViewRequest(request)}
                           >
-                            {downloadingPdf[request.request_id] ? (
-                              <span
-                                className="spinner-border spinner-border-sm"
-                                role="status"
-                                aria-hidden="true"
-                              ></span>
-                            ) : (
-                              <Icon
-                                icon="mdi:file-pdf-box"
-                                width="16"
-                                height="16"
-                                style={{ color: "#dc3545" }}
-                              />
-                            )}
+                            <Icon
+                              icon="lucide:eye"
+                              width="16"
+                              height="16"
+                              style={{ color: "#3b82f6" }}
+                            />
                           </button>
-                        ) : poInfoCache[request.request_id] === undefined ? (
-                          <span
-                            className="spinner-border spinner-border-sm"
+                          {poInfoCache[request.request_id] ? (
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "6px",
+                                backgroundColor: "white",
+                              }}
+                              title={`Download Purchase Order PDF (${
+                                poInfoCache[request.request_id]
+                                  ?.purchase_order_number
+                              })`}
+                              onClick={() => handleDownloadPdf(request)}
+                              disabled={downloadingPdf[request.request_id]}
+                            >
+                              {downloadingPdf[request.request_id] ? (
+                                <span
+                                  className="spinner-border spinner-border-sm"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
+                              ) : (
+                                <Icon
+                                  icon="mdi:file-pdf-box"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#dc3545" }}
+                                />
+                              )}
+                            </button>
+                          ) : poInfoCache[request.request_id] === undefined ? (
+                            <span
+                              className="spinner-border spinner-border-sm"
+                              style={{
+                                width: "16px",
+                                height: "16px",
+                                borderWidth: "2px",
+                              }}
+                              role="status"
+                              aria-hidden="true"
+                              title="Checking for PDF..."
+                            ></span>
+                          ) : null}
+                          <button
+                            className="btn btn-sm"
                             style={{
-                              width: "16px",
-                              height: "16px",
-                              borderWidth: "2px",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
                             }}
-                            role="status"
-                            aria-hidden="true"
-                            title="Checking for PDF..."
-                          ></span>
-                        ) : null}
-                        <button
-                          className="btn btn-sm"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            padding: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "6px",
-                            backgroundColor: "white",
-                          }}
-                          title="Settings"
-                          onClick={() =>
-                            handleSettingsClick(request, "arrived")
-                          }
-                        >
-                          <Icon
-                            icon="lucide:settings"
-                            width="16"
-                            height="16"
-                            style={{ color: "#f59e0b" }}
-                          />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            title="Settings"
+                            onClick={() =>
+                              handleSettingsClick(request, "arrived")
+                            }
+                          >
+                            <Icon
+                              icon="lucide:settings"
+                              width="16"
+                              height="16"
+                              style={{ color: "#f59e0b" }}
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {requests.length > 0 && (
+            <div
+              className="d-flex justify-content-between align-items-center px-3 py-2"
+              style={{
+                backgroundColor: "#f8f9fa",
+                borderRadius: "0 0 8px 8px",
+                marginTop: "0",
+                position: "sticky",
+                bottom: 0,
+                zIndex: 5,
+              }}
+            >
+              <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                Showing <strong>{requests.length}</strong> entries
+              </div>
+              {hasMoreData() && (
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Scroll down to load more
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -4584,65 +4942,75 @@ const QualityCheckTab = ({
     }
   };
 
-  // Check if quality check is completed (has quality check data)
-  // We need to check via API since items don't include QC data by default
   const [qcStatusCache, setQcStatusCache] = useState({});
-
-  const hasQualityCheckCompleted = async (request) => {
-    const requestId = request.request_id;
-
-    // Check cache first
-    if (qcStatusCache[requestId] !== undefined) {
-      return qcStatusCache[requestId];
-    }
-
-    try {
-      const qcResult = await qualityCheckApi.getQualityChecksByRequestId(
-        requestId
-      );
-      const hasQC =
-        qcResult.success && qcResult.data && qcResult.data.length > 0;
-
-      // Update cache
-      setQcStatusCache((prev) => ({
-        ...prev,
-        [requestId]: hasQC,
-      }));
-
-      return hasQC;
-    } catch (error) {
-      console.error("Error checking quality check status:", error);
-      return false;
-    }
-  };
-
-  // Synchronous version for rendering (uses cache)
   const hasQualityCheckCompletedSync = (request) => {
     return qcStatusCache[request.request_id] === true;
   };
 
-  // Check quality check status and GRN existence for all requests on mount/update
+  // Refresh quality check status and GRN metadata whenever the list changes
   useEffect(() => {
-    if (requests.length > 0) {
-      requests.forEach(async (request) => {
-        const requestId = request.request_id;
+    let isMounted = true;
 
-        // Check if quality check is completed
-        const hasQC = await hasQualityCheckCompleted(request);
-
-        // If QC is completed, check for GRN
-        if (hasQC && grnInfoCache[requestId] === undefined) {
-          checkGrnExists(requestId).then((grnInfo) => {
-            if (grnInfo) {
-              console.log(
-                `✅ GRN found for request ${requestId}:`,
-                grnInfo.grn_number
-              );
-            }
-          });
+    const refreshStatuses = async () => {
+      if (requests.length === 0) {
+        if (isMounted) {
+          setQcStatusCache({});
+          setGrnInfoCache({});
         }
+        return;
+      }
+
+      const results = await Promise.all(
+        requests.map(async (request) => {
+          const requestId = request.request_id;
+          let hasQC = false;
+          let grnInfo = null;
+
+          try {
+            const qcResult = await qualityCheckApi.getQualityChecksByRequestId(
+              requestId
+            );
+            hasQC = qcResult.success && qcResult.data?.length > 0;
+
+            if (hasQC) {
+              const exists = await qualityCheckApi.checkGrnExists(requestId);
+              if (exists) {
+                const info = await qualityCheckApi.getGrnInfo(requestId);
+                grnInfo = info.success ? info.data : null;
+              } else {
+                grnInfo = null;
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error refreshing QC/GRN status for request",
+              requestId,
+              error
+            );
+          }
+
+          return { requestId, hasQC, grnInfo };
+        })
+      );
+
+      if (!isMounted) return;
+
+      const newQcStatus = {};
+      const newGrnInfo = {};
+      results.forEach(({ requestId, hasQC, grnInfo }) => {
+        newQcStatus[requestId] = hasQC;
+        newGrnInfo[requestId] = grnInfo;
       });
-    }
+
+      setQcStatusCache(newQcStatus);
+      setGrnInfoCache(newGrnInfo);
+    };
+
+    refreshStatuses();
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requests]);
 
@@ -4735,7 +5103,7 @@ const QualityCheckTab = ({
                         padding: "12px",
                       }}
                     >
-                      Vendor Name
+                      Company Name
                     </th>
                     <th
                       style={{
@@ -4837,7 +5205,9 @@ const QualityCheckTab = ({
                               {index + 1}
                             </td>
                             <td style={{ padding: "12px", color: "#374151" }}>
-                              {request.vendor_name || "-"}
+                              {request.company_name ||
+                                request.vendor_name ||
+                                "-"}
                             </td>
                             <td style={{ padding: "12px", color: "#374151" }}>
                               {new Date(

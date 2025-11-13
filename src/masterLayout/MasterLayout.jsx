@@ -583,7 +583,6 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-
                     {hasSidebarPermission("masters") && (
                       <li>
                         <Link
