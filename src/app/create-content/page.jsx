@@ -6,8 +6,13 @@ import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
 import ReviewPromptsModal from "@/components/ReviewPromptsModal";
+import BrandkitSelector from "@/components/BrandkitSelector";
+import BrandkitFormModal from "@/components/BrandkitFormModal";
+import BrandkitManagementModal from "@/components/BrandkitManagementModal";
+import BrandkitLogoUpload from "@/components/BrandkitLogoUpload";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
+import { useBrandkit } from "@/contexts/BrandkitContext";
 import {
   getGeneratedContent,
   getGenerationJobs,
@@ -16,6 +21,7 @@ import {
   getGenerationStatus,
   editImage,
   getGenerationResults,
+  getBrandkit,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -45,6 +51,16 @@ export default function CreateContentPage() {
     cta: "",
     variantGoal: 1,
   });
+
+  // Brandkit modal states
+  const [showBrandkitFormModal, setShowBrandkitFormModal] = useState(false);
+  const [showBrandkitManagementModal, setShowBrandkitManagementModal] = useState(false);
+  const [showLogoUploadModal, setShowLogoUploadModal] = useState(false);
+  const [editingBrandkit, setEditingBrandkit] = useState(null);
+  const [uploadingLogoBrandkit, setUploadingLogoBrandkit] = useState(null);
+
+  // Get brandkit context
+  const { activeBrandkit, refresh: refreshBrandkit } = useBrandkit();
 
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
@@ -635,6 +651,48 @@ export default function CreateContentPage() {
     }
   };
 
+  // Brandkit modal handlers
+  const handleCreateNewBrandkit = () => {
+    setEditingBrandkit(null);
+    setShowBrandkitFormModal(true);
+  };
+
+  const handleManageBrandkits = () => {
+    setShowBrandkitManagementModal(true);
+  };
+
+  const handleEditBrandkit = async (brandkitSummary) => {
+    try {
+      // Show management modal is closing but don't close it yet to prevent flash
+      // Fetch full brandkit data before editing
+      const fullBrandkit = await getBrandkit(brandkitSummary.brand_id);
+      setEditingBrandkit(fullBrandkit);
+      setShowBrandkitManagementModal(false);
+      setShowBrandkitFormModal(true);
+    } catch (error) {
+      console.error("Error loading brandkit for edit:", error);
+      alert("Failed to load brandkit details: " + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleUploadLogo = (brandkit) => {
+    setUploadingLogoBrandkit(brandkit);
+    setShowLogoUploadModal(true);
+    setShowBrandkitManagementModal(false);
+  };
+
+  const handleBrandkitFormSuccess = async () => {
+    await refreshBrandkit();
+    setShowBrandkitFormModal(false);
+    setEditingBrandkit(null);
+  };
+
+  const handleLogoUploadSuccess = async () => {
+    await refreshBrandkit();
+    setShowLogoUploadModal(false);
+    setUploadingLogoBrandkit(null);
+  };
+
   return (
     <SidebarPermissionGuard requiredSidebar="createContent">
       {/* Breadcrumb */}
@@ -646,6 +704,27 @@ export default function CreateContentPage() {
       />
 
       <div className="container-fluid">
+        {/* Brandkit Selector Section */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            {activeBrandkit && (
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-light text-dark border">
+                  <Icon icon="solar:palette-bold" width="14" height="14" className="me-1" />
+                  Active: {activeBrandkit.brand_name}
+                </span>
+                {activeBrandkit.tagline && (
+                  <small className="text-muted">"{activeBrandkit.tagline}"</small>
+                )}
+              </div>
+            )}
+          </div>
+          <BrandkitSelector
+            onCreateNew={handleCreateNewBrandkit}
+            onManage={handleManageBrandkits}
+          />
+        </div>
+
         {/* Tabs */}
         <div className="mb-3">
           <ul
@@ -1942,6 +2021,36 @@ export default function CreateContentPage() {
           }}
         />
       )}
+
+      {/* Brandkit Form Modal */}
+      <BrandkitFormModal
+        isOpen={showBrandkitFormModal}
+        onClose={() => {
+          setShowBrandkitFormModal(false);
+          setEditingBrandkit(null);
+        }}
+        onSuccess={handleBrandkitFormSuccess}
+        editBrandkit={editingBrandkit}
+      />
+
+      {/* Brandkit Management Modal */}
+      <BrandkitManagementModal
+        isOpen={showBrandkitManagementModal}
+        onClose={() => setShowBrandkitManagementModal(false)}
+        onEdit={handleEditBrandkit}
+        onUploadLogo={handleUploadLogo}
+      />
+
+      {/* Logo Upload Modal */}
+      <BrandkitLogoUpload
+        isOpen={showLogoUploadModal}
+        onClose={() => {
+          setShowLogoUploadModal(false);
+          setUploadingLogoBrandkit(null);
+        }}
+        brandkit={uploadingLogoBrandkit}
+        onSuccess={handleLogoUploadSuccess}
+      />
     </SidebarPermissionGuard>
   );
 }

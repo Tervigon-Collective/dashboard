@@ -1,4 +1,5 @@
 import MasterLayout from "@/masterLayout/MasterLayout";
+import { BrandkitProvider } from "@/contexts/BrandkitContext";
 
 export const metadata = {
   title: "Create Content - AI Content Generator",
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function CreateContentLayout({ children }) {
-  return <MasterLayout>{children}</MasterLayout>;
+  return (
+    <MasterLayout>
+      <BrandkitProvider>{children}</BrandkitProvider>
+    </MasterLayout>
+  );
 }
