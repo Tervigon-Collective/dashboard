@@ -145,6 +145,12 @@ const ProductSpendSummaryLayer = () => {
   const [searchSku, setSearchSku] = useState("");
   const [isMobile, setIsMobile] = useState(getIsMobile());
   
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({
+    key: "revenue",
+    direction: "desc",
+  });
+  
   // Infinite scroll state
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -199,7 +205,16 @@ const ProductSpendSummaryLayer = () => {
     };
   }, []);
 
-  // Sort products by revenue descending and filter by SKU search
+  // Handle sorting
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort products and filter by SKU search
   const sortedProducts = useMemo(() => {
     if (!products) {
       return [];
@@ -213,11 +228,42 @@ const ProductSpendSummaryLayer = () => {
       );
     }
 
-    // Sort by revenue descending
-    return [...filteredProducts].sort(
-      (a, b) => (b.revenue || 0) - (a.revenue || 0)
-    );
-  }, [products, searchSku]);
+    // Apply sorting
+    if (sortConfig.key) {
+      return [...filteredProducts].sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Handle numeric fields
+        if (
+          sortConfig.key === "spend" ||
+          sortConfig.key === "revenue" ||
+          sortConfig.key === "quantity" ||
+          sortConfig.key === "cogs"
+        ) {
+          aValue = Number(aValue || 0);
+          bValue = Number(bValue || 0);
+          return sortConfig.direction === "asc"
+            ? aValue - bValue
+            : bValue - aValue;
+        }
+
+        // Handle string fields (sku, product_title)
+        aValue = (aValue || "").toString().toLowerCase();
+        bValue = (bValue || "").toString().toLowerCase();
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === "asc" ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === "asc" ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return filteredProducts;
+  }, [products, searchSku, sortConfig]);
 
   // Get displayed data for infinite scroll
   const getDisplayedData = (dataArray) => {
@@ -564,12 +610,120 @@ const ProductSpendSummaryLayer = () => {
                   }}
                 >
                   <tr>
-                    <th style={{ minWidth: 120 }}>SKU</th>
-                    <th style={{ minWidth: 220 }}>Product Title</th>
-                    <th style={{ minWidth: 120 }}>Ad Spend</th>
-                    <th style={{ minWidth: 120 }}>Revenue</th>
-                    <th style={{ minWidth: 100 }}>Quantity</th>
-                    <th style={{ minWidth: 120 }}>COGS</th>
+                    <th
+                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("sku")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        SKU
+                        {sortConfig.key === "sku" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      style={{ minWidth: 220, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("product_title")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        Product Title
+                        {sortConfig.key === "product_title" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("spend")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        Ad Spend
+                        {sortConfig.key === "spend" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("revenue")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        Revenue
+                        {sortConfig.key === "revenue" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      style={{ minWidth: 100, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("quantity")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        Quantity
+                        {sortConfig.key === "quantity" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      onClick={() => handleSort("cogs")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        COGS
+                        {sortConfig.key === "cogs" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
