@@ -156,7 +156,8 @@
 }
 
 .ask-seleric-drawer {
-  width: min(480px, 100%);
+  width: min(50vw, 100%);
+  min-width: 50vw;
   height: 100vh;
   background: var(--bs-body-bg, #fff);
   color: inherit;
@@ -339,6 +340,11 @@
   color: inherit;
 }
 
+.ask-seleric-message-with-table {
+  max-width: 100% !important;
+  width: 100%;
+}
+
 .ask-seleric-metadata {
   margin-top: 10px;
   font-size: 0.78rem;
@@ -402,9 +408,143 @@
   box-shadow: 0 16px 24px rgba(99, 102, 241, 0.35);
 }
 
-@media (max-width: 640px) {
+.ask-seleric-table thead th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: rgba(71, 85, 105, 0.95);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.3);
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.ask-seleric-download-header-cell {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  padding: 10px 8px !important;
+  text-align: center !important;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.ask-seleric-download-cell {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  padding: 10px 8px !important;
+  border-left: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.ask-seleric-download-btn-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(71, 85, 105, 0.8);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.ask-seleric-download-btn-header:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+  transform: scale(1.1);
+}
+
+.ask-seleric-download-btn-header:active {
+  transform: scale(1.05);
+}
+
+.ask-seleric-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.95);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.ask-seleric-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: max-content;
+}
+
+.ask-seleric-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f1f5f9;
+}
+
+.ask-seleric-table tbody tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  transition: background-color 0.15s ease;
+}
+
+.ask-seleric-table tbody tr:hover {
+  background-color: rgba(148, 163, 184, 0.08);
+}
+
+.ask-seleric-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ask-seleric-table tbody td {
+  padding: 10px 12px;
+  color: rgba(51, 65, 85, 0.9);
+  white-space: nowrap;
+  vertical-align: top;
+  font-size: 0.85rem;
+}
+
+.ask-seleric-table tbody td:first-child {
+  font-weight: 500;
+}
+
+.ask-seleric-chart-container {
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.95);
+  overflow-x: auto;
+}
+
+.ask-seleric-chart-analysis {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 8px;
+  border-left: 3px solid #487FFF;
+}
+
+.ask-seleric-chart-analysis p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(51, 65, 85, 0.9);
+}
+
+.ask-seleric-chart-analysis strong {
+  color: rgba(51, 65, 85, 1);
+  font-weight: 600;
+}
+
+.ask-seleric-message-with-graph {
+  padding-bottom: 20px;
+}
+
+@media (max-width: 768px) {
   .ask-seleric-drawer {
-    width: min(100%, 420px);
+    width: 100%;
+    min-width: 100%;
     border-radius: 0;
   }
 
