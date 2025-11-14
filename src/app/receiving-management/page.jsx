@@ -10,6 +10,7 @@ import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 import { useUser } from "@/helper/UserContext";
 import { Combobox } from "@headlessui/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const QualityCheckDocumentsSection = ({ requestId }) => {
   const [docType] = useState("invoice");
@@ -198,6 +199,10 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 
 const ReceivingManagementLayer = () => {
   const { user } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const qrHandledRef = useRef(false);
+  const [highlightedItemId, setHighlightedItemId] = useState(null);
   const [activeTab, setActiveTab] = useState("purchase-request");
   const [modalOpen, setModalOpen] = useState(false);
   const [requests, setRequests] = useState([]);
@@ -1386,31 +1391,52 @@ const ReceivingManagementLayer = () => {
       }
     };
   }, [docPreviewUrl]);
-  const handleViewRequest = async (request, sourceTab = null) => {
+  const handleViewRequest = async (request, sourceTab = null, options = {}) => {
+    const { highlightItemId = undefined, skipFetch = false } = options;
+    // Normalize highlighted row tracking so comparisons are string-safe
+    const normalizedHighlight =
+      highlightItemId === undefined || highlightItemId === null
+        ? null
+        : String(highlightItemId);
+    setHighlightedItemId(normalizedHighlight);
+
     try {
       const shouldIncludeQualityCheck =
         sourceTab === "quality-check" ||
-        request.status === "arrived" ||
-        request.status === "fulfilled";
+        request?.status === "arrived" ||
+        request?.status === "fulfilled";
 
       let fetchedRequest = request;
-      try {
-        const result = await purchaseRequestApi.getPurchaseRequestById(
-          request.request_id,
-          shouldIncludeQualityCheck
-        );
-        if (result.success) {
-          fetchedRequest = result.data;
+      if (!skipFetch && request?.request_id) {
+        try {
+          const result = await purchaseRequestApi.getPurchaseRequestById(
+            request.request_id,
+            shouldIncludeQualityCheck
+          );
+          if (result.success) {
+            fetchedRequest = result.data;
+          }
+        } catch (fetchError) {
+          console.error("Error refreshing purchase request data:", fetchError);
         }
-      } catch (fetchError) {
-        console.error("Error refreshing purchase request data:", fetchError);
+      }
+
+      if (!fetchedRequest && request?.request_id) {
+        fetchedRequest = request;
+      }
+
+      if (!fetchedRequest) {
+        console.error("No purchase request data available to display");
+        return;
       }
 
       setSelectedRequest(fetchedRequest);
 
       // Load documents for this request
       try {
-        const docs = await qualityCheckApi.listDocuments(request.request_id);
+        const docs = await qualityCheckApi.listDocuments(
+          fetchedRequest.request_id
+        );
         setViewDocuments(docs.success ? docs.data : []);
       } catch (e) {
         setViewDocuments([]);
@@ -1419,11 +1445,11 @@ const ReceivingManagementLayer = () => {
       // Check if Purchase Order PDF exists
       try {
         const poExists = await purchaseRequestApi.checkPurchaseOrderExists(
-          request.request_id
+          fetchedRequest.request_id
         );
         if (poExists) {
           const poInfo = await purchaseRequestApi.getPurchaseOrderInfo(
-            request.request_id
+            fetchedRequest.request_id
           );
           if (poInfo.success) {
             setPurchaseOrderInfo(poInfo.data);
@@ -1439,11 +1465,11 @@ const ReceivingManagementLayer = () => {
       // Check if GRN PDF exists
       try {
         const grnExists = await qualityCheckApi.checkGrnExists(
-          request.request_id
+          fetchedRequest.request_id
         );
         if (grnExists) {
           const grnInfoResult = await qualityCheckApi.getGrnInfo(
-            request.request_id
+            fetchedRequest.request_id
           );
           if (grnInfoResult.success) {
             setGrnInfo(grnInfoResult.data);
@@ -1460,10 +1486,91 @@ const ReceivingManagementLayer = () => {
     } catch (error) {
       console.error("Error loading request details:", error);
       // Fallback to existing request data if API call fails
-      setSelectedRequest(request);
+      if (request) {
+        setSelectedRequest(request);
+      }
       setViewModalOpen(true);
     }
   };
+
+  useEffect(() => {
+    if (!searchParams) return;
+    if (qrHandledRef.current) return;
+
+    const fromQr = searchParams.get("fromQr");
+    const requestIdParam = searchParams.get("requestId");
+    const itemIdParam = searchParams.get("itemId");
+
+    if (!fromQr || !requestIdParam || !itemIdParam) {
+      return;
+    }
+
+    const requestIdNum = Number(requestIdParam);
+    const itemIdNum = Number(itemIdParam);
+
+    if (!Number.isFinite(requestIdNum) || !Number.isFinite(itemIdNum)) {
+      qrHandledRef.current = true;
+      return;
+    }
+
+    qrHandledRef.current = true;
+
+    const openFromQr = async () => {
+      setActiveTab("purchase-request");
+
+      let requestToOpen =
+        requests.find((req) => Number(req.request_id) === requestIdNum) ||
+        qualityCheckRequests.find(
+          (req) => Number(req.request_id) === requestIdNum
+        ) ||
+        receiptRequests.find(
+          (req) => Number(req.request_id) === requestIdNum
+        ) ||
+        toBeDeliveredRequests.find(
+          (req) => Number(req.request_id) === requestIdNum
+        );
+
+      let shouldSkipFetch = false;
+
+      if (!requestToOpen) {
+        try {
+          const result = await purchaseRequestApi.getPurchaseRequestById(
+            requestIdNum,
+            true
+          );
+          if (result.success) {
+            requestToOpen = result.data;
+            shouldSkipFetch = true;
+          }
+        } catch (error) {
+          console.error("Failed to load request for QR deep link:", error);
+        }
+      }
+
+      if (requestToOpen) {
+        await handleViewRequest(requestToOpen, null, {
+          highlightItemId: itemIdNum,
+          skipFetch: shouldSkipFetch,
+        });
+      } else {
+        await handleViewRequest({ request_id: requestIdNum, items: [] }, null, {
+          highlightItemId: itemIdNum,
+        });
+      }
+
+      router.replace("/receiving-management", { scroll: false });
+    };
+
+    openFromQr();
+  }, [
+    searchParams,
+    requests,
+    qualityCheckRequests,
+    receiptRequests,
+    toBeDeliveredRequests,
+    handleViewRequest,
+    router,
+  ]);
 
   const handleGenerateQrCodes = async (request) => {
     if (!request) return;
@@ -1977,6 +2084,7 @@ const ReceivingManagementLayer = () => {
                       setPurchaseOrderInfo(null);
                       setGrnInfo(null);
                       setQrPreviewData(null);
+                      setHighlightedItemId(null);
                     }}
                   ></button>
                 </div>
@@ -2352,7 +2460,15 @@ const ReceivingManagementLayer = () => {
                             </thead>
                             <tbody>
                               {selectedRequest.items.map((item, index) => (
-                                <tr key={index}>
+                                <tr
+                                  key={index}
+                                  className={
+                                    highlightedItemId &&
+                                    String(item.item_id) === highlightedItemId
+                                      ? "table-warning"
+                                      : ""
+                                  }
+                                >
                                   <td className="small">
                                     {item.product_name || "-"}
                                   </td>
@@ -2492,7 +2608,16 @@ const ReceivingManagementLayer = () => {
                                 .map((item, index) => {
                                   const qc = item.quality_check || {};
                                   return (
-                                    <tr key={index}>
+                                    <tr
+                                      key={index}
+                                      className={
+                                        highlightedItemId &&
+                                        String(item.item_id) ===
+                                          highlightedItemId
+                                          ? "table-warning"
+                                          : ""
+                                      }
+                                    >
                                       <td className="small">
                                         {item.product_name || "-"}
                                       </td>
