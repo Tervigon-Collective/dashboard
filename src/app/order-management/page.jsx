@@ -246,6 +246,29 @@ const OrderManagementPage = () => {
     [scannerState.lineItem, scannerState.isDispatching, loadQueue, queue]
   );
 
+  // Group queue items by order_id
+  const groupedOrders = useMemo(() => {
+    const groups = {};
+    queue.forEach((line) => {
+      const orderId = line.order_id;
+      if (!groups[orderId]) {
+        groups[orderId] = {
+          order_id: orderId,
+          order_name: line.order_name,
+          created_at: line.created_at,
+          display_fulfillment_status: line.display_fulfillment_status,
+          lineItems: [],
+          totalItems: 0,
+          totalRemaining: 0,
+        };
+      }
+      groups[orderId].lineItems.push(line);
+      groups[orderId].totalItems += Number(line.quantity || 0);
+      groups[orderId].totalRemaining += Number(line.remaining_to_dispatch || 0);
+    });
+    return Object.values(groups);
+  }, [queue]);
+
   const tableBody = useMemo(() => {
     if (loading) {
       return (
@@ -279,51 +302,99 @@ const OrderManagementPage = () => {
       );
     }
 
-    return queue.map((line) => {
-      const remaining = Number(line.remaining_to_dispatch || 0);
-      const isDisabled = remaining <= 0;
-      return (
-        <tr key={`${line.order_id}-${line.item_id}`}>
+    const rows = [];
+    groupedOrders.forEach((orderGroup) => {
+      // Order summary row
+      rows.push(
+        <tr
+          key={`order-${orderGroup.order_id}`}
+          style={{ backgroundColor: "#f8f9fa", fontWeight: "600" }}
+        >
           <td>
             <div className="fw-semibold">
-              {line.order_name || line.order_id}
+              Order: {orderGroup.order_name || orderGroup.order_id}
             </div>
             <div className="small text-muted">
-              {formatDateTime(line.created_at)}
+              {formatDateTime(orderGroup.created_at)}
             </div>
           </td>
           <td className="text-center">
             <span className="badge bg-light text-secondary border">
-              {line.display_fulfillment_status || "Unknown"}
+              Status: {orderGroup.display_fulfillment_status || "Unknown"}
             </span>
           </td>
           <td>
-            <div className="fw-semibold">{line.title}</div>
-            <div className="small text-muted">
-              {line.product_title || "Unknown product"}
+            <div className="fw-semibold">
+              Items: {orderGroup.lineItems.length}
             </div>
           </td>
-          <td>{line.sku || "-"}</td>
-          <td className="text-center">{line.quantity}</td>
-          <td className="text-center">{line.dispatched_quantity || 0}</td>
-          <td className="text-center fw-semibold text-primary">{remaining}</td>
-          <td className="text-center">{line.available_quantity ?? "-"}</td>
-          <td className="text-center">{line.committed_quantity ?? "-"}</td>
-          <td className="text-end">
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-              onClick={() => handleOpenScanner(line)}
-              disabled={isDisabled}
-            >
-              <Icon icon="mdi:barcode-scan" width={18} height={18} />
-              Dispatch
-            </button>
+          <td>-</td>
+          <td className="text-center">{orderGroup.totalItems}</td>
+          <td className="text-center">-</td>
+          <td className="text-center fw-semibold text-primary">
+            Remaining: {orderGroup.totalRemaining}
           </td>
+          <td className="text-center">-</td>
+          <td className="text-center">-</td>
+          <td className="text-end">-</td>
         </tr>
       );
+
+      // Line item rows with tree structure
+      orderGroup.lineItems.forEach((line, index) => {
+        const remaining = Number(line.remaining_to_dispatch || 0);
+        const isDisabled = remaining <= 0;
+        const isLast = index === orderGroup.lineItems.length - 1;
+        const treePrefix = isLast ? "└─" : "├─";
+
+        rows.push(
+          <tr key={`${line.order_id}-${line.item_id}`}>
+            <td>
+              <div className="d-flex align-items-center gap-2 ps-3">
+                <span style={{ color: "#6b7280", fontFamily: "monospace" }}>
+                  {treePrefix}
+                </span>
+                <div>
+                  <div className="fw-semibold" style={{ fontSize: "0.9em" }}>
+                    {line.sku || "-"}
+                  </div>
+                  <div className="small text-muted">Remaining: {remaining}</div>
+                </div>
+              </div>
+            </td>
+            <td className="text-center">-</td>
+            <td>
+              <div className="fw-semibold">{line.title}</div>
+              <div className="small text-muted">
+                {line.product_title || "Unknown product"}
+              </div>
+            </td>
+            <td>{line.sku || "-"}</td>
+            <td className="text-center">{line.quantity}</td>
+            <td className="text-center">{line.dispatched_quantity || 0}</td>
+            <td className="text-center fw-semibold text-primary">
+              {remaining}
+            </td>
+            <td className="text-center">{line.available_quantity ?? "-"}</td>
+            <td className="text-center">{line.committed_quantity ?? "-"}</td>
+            <td className="text-end">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                onClick={() => handleOpenScanner(line)}
+                disabled={isDisabled}
+              >
+                <Icon icon="mdi:barcode-scan" width={18} height={18} />
+                Dispatch
+              </button>
+            </td>
+          </tr>
+        );
+      });
     });
-  }, [queue, loading, error, handleOpenScanner]);
+
+    return rows;
+  }, [groupedOrders, loading, error, queue.length, handleOpenScanner]);
 
   return (
     <SidebarPermissionGuard requiredSidebar="orderManagement">
