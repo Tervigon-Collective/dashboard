@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@iconify/react";
 import { Modal, Button } from "react-bootstrap";
@@ -139,6 +139,12 @@ const OrderManagementPage = () => {
     scanError: "",
     isDispatching: false,
   });
+  // Track last scanned token and timestamp to prevent duplicate scans
+  const lastScanRef = useRef({
+    token: null,
+    timestamp: 0,
+    orderLineItemId: null,
+  });
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -160,6 +166,8 @@ const OrderManagementPage = () => {
   }, [loadQueue]);
 
   const handleOpenScanner = useCallback((lineItem) => {
+    // Reset scan tracking when opening scanner for a new line item
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
     setScannerState({
       isOpen: true,
       lineItem,
@@ -169,6 +177,8 @@ const OrderManagementPage = () => {
   }, []);
 
   const handleCloseScanner = useCallback(() => {
+    // Reset scan tracking when closing scanner
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
     setScannerState({
       isOpen: false,
       lineItem: null,
@@ -202,12 +212,33 @@ const OrderManagementPage = () => {
         return;
       }
 
+      // Prevent duplicate scans: same token + same order line item within 2 seconds
+      const currentOrderLineItemId = `${scannerState.lineItem.order_id}-${scannerState.lineItem.item_id}`;
+      const now = Date.now();
+      const timeSinceLastScan = now - lastScanRef.current.timestamp;
+      const isDuplicate =
+        lastScanRef.current.token === token &&
+        lastScanRef.current.orderLineItemId === currentOrderLineItemId &&
+        timeSinceLastScan < 2000; // 2 second debounce
+
+      if (isDuplicate) {
+        console.log("Duplicate scan ignored", { token, timeSinceLastScan });
+        return;
+      }
+
       try {
         setScannerState((prev) => ({
           ...prev,
           isDispatching: true,
           scanError: "",
         }));
+
+        // Update last scan reference immediately to prevent duplicates
+        lastScanRef.current = {
+          token,
+          timestamp: now,
+          orderLineItemId: currentOrderLineItemId,
+        };
 
         const response = await inventoryManagementApi.dispatchScan(
           scannerState.lineItem.order_id,
@@ -219,9 +250,16 @@ const OrderManagementPage = () => {
         );
 
         toast.success("Item dispatched");
-        await loadQueue();
 
-        const updatedLine = queue.find(
+        // Reload queue to get updated data
+        const queueResponse = await inventoryManagementApi.listDispatchQueue(
+          limit
+        );
+        const updatedQueue = queueResponse?.data || queueResponse || [];
+        setQueue(updatedQueue);
+
+        // Find the updated line item from the fresh queue data
+        const updatedLine = updatedQueue.find(
           (line) =>
             line.order_id === scannerState.lineItem.order_id &&
             line.item_id === scannerState.lineItem.item_id
@@ -235,6 +273,12 @@ const OrderManagementPage = () => {
         }));
       } catch (err) {
         console.error("Dispatch failed", err);
+        // Reset last scan on error so user can retry
+        lastScanRef.current = {
+          token: null,
+          timestamp: 0,
+          orderLineItemId: null,
+        };
         setScannerState((prev) => ({
           ...prev,
           isDispatching: false,
@@ -243,7 +287,7 @@ const OrderManagementPage = () => {
         toast.error(err.message || "Failed to dispatch");
       }
     },
-    [scannerState.lineItem, scannerState.isDispatching, loadQueue, queue]
+    [scannerState.lineItem, scannerState.isDispatching, limit]
   );
 
   // Group queue items by order_id
