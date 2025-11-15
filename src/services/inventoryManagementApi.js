@@ -69,7 +69,9 @@ class InventoryManagementApiService {
       try {
         await waitForOnline(10000); // Wait up to 10 seconds for network
       } catch (networkError) {
-        throw new Error("Network error: Unable to connect. Please check your internet connection.");
+        throw new Error(
+          "Network error: Unable to connect. Please check your internet connection."
+        );
       }
     }
 
@@ -77,9 +79,11 @@ class InventoryManagementApiService {
     const token = await this.getAuthToken();
 
     if (!token) {
-      const error = new Error("No authentication token available. Please sign in again.");
+      const error = new Error(
+        "No authentication token available. Please sign in again."
+      );
       error.code = "auth/no-token";
-      
+
       // Handle auth error with consistent error handling
       if (typeof window !== "undefined") {
         await handleAuthError(error, {
@@ -87,7 +91,7 @@ class InventoryManagementApiService {
           showNotification: true,
         });
       }
-      
+
       throw error;
     }
 
