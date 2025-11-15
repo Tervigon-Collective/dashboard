@@ -65,6 +65,52 @@ const INITIAL_MESSAGE = {
   metadata: null,
 };
 
+// Extended color palette for multi-series charts
+// Colors are selected for visual distinction, accessibility, and professional appearance
+const CHART_COLORS = [
+  "#487FFF", // Primary Blue
+  "#FFC107", // Amber/Yellow
+  "#02BCAF", // Teal/Cyan
+  "#F0437D", // Pink/Magenta
+  "#1C52F6", // Deep Blue
+  "#43DCFF", // Light Cyan
+  "#FF6B35", // Orange
+  "#4ECDC4", // Turquoise
+  "#95E1D3", // Mint Green
+  "#F38181", // Coral
+  "#AA96DA", // Lavender
+  "#FCBAD3", // Light Pink
+  "#A8DADC", // Sky Blue
+  "#457B9D", // Steel Blue
+  "#E63946", // Red
+  "#F77F00", // Dark Orange
+  "#FCBF49", // Golden Yellow
+  "#06FFA5", // Bright Green
+  "#8338EC", // Purple
+  "#3A86FF", // Bright Blue
+  "#FF006E", // Hot Pink
+  "#FB5607", // Burnt Orange
+  "#FFBE0B", // Yellow
+  "#118AB2", // Ocean Blue
+  "#06D6A0", // Emerald
+  "#EF476F", // Rose
+  "#FFD166", // Light Yellow
+  "#26547C", // Navy Blue
+  "#F72585", // Magenta
+  "#7209B7", // Deep Purple
+  "#4361EE", // Indigo
+  "#4CC9F0", // Sky Blue
+  "#8B5CF6", // Violet
+  "#EC4899", // Fuchsia
+  "#10B981", // Green
+  "#F59E0B", // Amber
+  "#6366F1", // Indigo Blue
+  "#14B8A6", // Teal
+  "#EF4444", // Red
+  "#8B5A2B", // Brown
+  "#64748B", // Slate
+];
+
 const formatColumnName = (column) => {
   return column
     .replace(/_/g, " ")
@@ -91,31 +137,211 @@ const formatChartLabel = (value) => {
   return value;
 };
 
+/**
+ * Detects the value format type based on labels, keys, and actual data values
+ */
+const detectValueFormat = (y_label, y_axis_keys, sampleValues = []) => {
+  const labelLower = (y_label || "").toLowerCase();
+  const keysLower = (y_axis_keys || []).map(k => k.toLowerCase()).join(" ");
+  
+  // Check for explicit format hints in labels/keys
+  if (labelLower.includes('%') || labelLower.includes('percent') || 
+      keysLower.includes('rate') || keysLower.includes('percent') || keysLower.includes('%')) {
+    return 'percentage';
+  }
+  
+  if (labelLower.includes('₹') || labelLower.includes('rupee') || labelLower.includes('rs') ||
+      labelLower.includes('currency') || labelLower.includes('revenue') || 
+      labelLower.includes('sales') || labelLower.includes('price') || labelLower.includes('cost')) {
+    return 'currency';
+  }
+  
+  // Analyze sample values to infer format
+  if (sampleValues.length > 0) {
+    const avgValue = Math.abs(sampleValues.reduce((a, b) => a + Math.abs(b || 0), 0) / sampleValues.length);
+    const maxValue = Math.max(...sampleValues.map(v => Math.abs(v || 0)));
+    
+    // If values are between 0-1 and label suggests percentage, it's likely percentage
+    if (maxValue <= 1 && (labelLower.includes('rate') || keysLower.includes('rate'))) {
+      return 'percentage';
+    }
+    
+    // If values are very large, likely currency
+    if (avgValue > 1000 && (labelLower.includes('revenue') || labelLower.includes('sales') || 
+        labelLower.includes('amount') || labelLower.includes('total'))) {
+      return 'currency';
+    }
+  }
+  
+  return 'number'; // Default to plain number
+};
+
+/**
+ * Formats a value based on detected format type
+ */
+const formatValue = (value, formatType, decimals = 2) => {
+  if (value === null || value === undefined || isNaN(value)) {
+    return 'N/A';
+  }
+  
+  switch (formatType) {
+    case 'percentage':
+      // Handle both 0-1 and 0-100 formats
+      const percentageValue = Math.abs(value) <= 1 && value >= 0 ? value * 100 : value;
+      return `${percentageValue.toFixed(decimals)}%`;
+    
+    case 'currency':
+      const absValue = Math.abs(value);
+      if (absValue >= 1000000) {
+        return `₹${(value / 1000000).toFixed(decimals)}M`;
+      } else if (absValue >= 1000) {
+        return `₹${(value / 1000).toFixed(decimals)}k`;
+      }
+      return `₹${value.toFixed(decimals)}`;
+    
+    case 'number':
+    default:
+      const absNum = Math.abs(value);
+      if (absNum >= 1000000) {
+        return `${(value / 1000000).toFixed(decimals)}M`;
+      } else if (absNum >= 1000) {
+        return `${(value / 1000).toFixed(decimals)}k`;
+      }
+      return value.toFixed(decimals);
+  }
+};
+
+/**
+ * Detects data format: 'long' (y_axis keys exist), 'pivoted' (series as columns), or 'mixed'
+ */
+const detectDataFormat = (data, x_axis, y_axis_keys) => {
+  if (!data || data.length === 0) return 'long';
+  
+  const firstItem = data[0] || {};
+  const allKeys = Object.keys(firstItem);
+  const nonXAxisKeys = allKeys.filter(key => key !== x_axis);
+  
+  // Check if y_axis keys exist in data
+  const yAxisKeysExist = y_axis_keys.length > 0 && 
+    y_axis_keys.some(key => firstItem.hasOwnProperty(key));
+  
+  if (yAxisKeysExist) {
+    return 'long';
+  }
+  
+  // Check if we have other meaningful keys (potential pivoted format)
+  const potentialSeriesKeys = nonXAxisKeys.filter(key => {
+    const value = firstItem[key];
+    // Exclude null, undefined, and numeric string keys (array indices)
+    return value !== null && value !== undefined && isNaN(Number(key));
+  });
+  
+  if (potentialSeriesKeys.length > 0) {
+    return 'pivoted';
+  }
+  
+  return 'long'; // Default fallback
+};
+
+/**
+ * Extracts series data based on detected format
+ */
+const extractSeries = (data, x_axis, y_axis_keys, dataFormat) => {
+  if (!data || data.length === 0) return [];
+  
+  const firstItem = data[0] || {};
+  
+  if (dataFormat === 'pivoted') {
+    // Pivoted format: series are columns (non-x_axis keys)
+    const allKeys = Object.keys(firstItem);
+    const seriesKeys = allKeys.filter(key => {
+      if (key === x_axis) return false;
+      const value = firstItem[key];
+      return value !== null && value !== undefined && isNaN(Number(key));
+    });
+    
+    return seriesKeys.map((seriesKey) => ({
+      name: formatColumnName(seriesKey),
+      data: data.map((item) => formatChartValue(item[seriesKey])),
+    }));
+  } else {
+    // Long format: use y_axis keys
+    if (y_axis_keys.length === 0) {
+      // Fallback: try to infer from data structure
+      const allKeys = Object.keys(firstItem);
+      const fallbackKeys = allKeys.filter(key => key !== x_axis);
+      return fallbackKeys.map((key) => ({
+        name: formatColumnName(key),
+        data: data.map((item) => formatChartValue(item[key])),
+      }));
+    }
+    
+    return y_axis_keys.map((yAxisKey) => ({
+      name: formatColumnName(yAxisKey),
+      data: data.map((item) => formatChartValue(item[yAxisKey])),
+    }));
+  }
+};
+
 const prepareChartData = (graphData) => {
   if (!graphData || !graphData.data || !Array.isArray(graphData.data) || graphData.data.length === 0) {
     return null;
   }
 
-  const { chart_type, x_axis, y_axis, data, title, x_label, y_label } = graphData;
+  const { 
+    chart_type, 
+    x_axis, 
+    y_axis, 
+    data, 
+    title, 
+    x_label, 
+    y_label,
+    value_format, // Optional: explicit format hint from API ('percentage', 'currency', 'number')
+    data_format,  // Optional: explicit format hint from API ('long', 'pivoted')
+  } = graphData;
   
-  // Determine chart type for ApexCharts
-  let apexChartType = "line";
-  if (chart_type === "bar") {
-    apexChartType = "bar";
-  } else if (chart_type === "area") {
-    apexChartType = "area";
-  } else if (chart_type === "pie" || chart_type === "donut") {
-    apexChartType = chart_type;
-  }
+  // Normalize y_axis to always be an array (API may return string or array)
+  const normalizedYAxis = Array.isArray(y_axis) ? y_axis : (y_axis ? [y_axis] : []);
+  
+  // Determine chart type for ApexCharts (support more types)
+  const chartTypeMap = {
+    'bar': 'bar',
+    'line': 'line',
+    'area': 'area',
+    'pie': 'pie',
+    'donut': 'donut',
+    'scatter': 'scatter',
+    'bubble': 'bubble',
+    'heatmap': 'heatmap',
+  };
+  
+  let apexChartType = chartTypeMap[chart_type?.toLowerCase()] || 'line';
 
+  // Detect data format (use explicit hint or auto-detect)
+  const detectedDataFormat = data_format || detectDataFormat(data, x_axis, normalizedYAxis);
+  
+  // Extract series based on detected format
+  const series = extractSeries(data, x_axis, normalizedYAxis, detectedDataFormat);
+  
+  if (series.length === 0) {
+    console.warn('No series data found for chart');
+    return null;
+  }
+  
+  // Collect sample values for format detection
+  const sampleValues = series.flatMap(s => s.data).filter(v => v !== null && v !== undefined && !isNaN(v)).slice(0, 10);
+  
+  // Detect value format (use explicit hint or auto-detect)
+  const detectedValueFormat = value_format || detectValueFormat(y_label, normalizedYAxis, sampleValues);
+  
   // Handle pie/donut charts differently
   if (apexChartType === "pie" || apexChartType === "donut") {
-    // For pie charts, use the first y_axis value and x_axis as labels
+    // For pie charts, use the first series
+    const pieSeries = series[0]?.data || [];
     const labels = data.map((item) => formatChartLabel(item[x_axis] || ""));
-    const series = data.map((item) => formatChartValue(item[y_axis?.[0] || y_axis || ""]));
     
     return {
-      series,
+      series: pieSeries,
       options: {
         chart: {
           type: apexChartType,
@@ -133,25 +359,157 @@ const prepareChartData = (graphData) => {
           },
         },
         labels,
-        colors: ["#487FFF", "#FFC107", "#02BCAF", "#F0437D", "#1C52F6", "#43DCFF"],
+        colors: CHART_COLORS,
         legend: {
           show: true,
           position: "bottom",
         },
         dataLabels: {
           enabled: true,
-          formatter: (val) => `${val.toFixed(1)}%`,
+          formatter: (val) => formatValue(val, detectedValueFormat, 1),
         },
         tooltip: {
           y: {
-            formatter: (value) => {
-              if (Math.abs(value) >= 1000000) {
-                return `₹${(value / 1000000).toFixed(2)}M`;
-              } else if (Math.abs(value) >= 1000) {
-                return `₹${(value / 1000).toFixed(2)}k`;
-              }
-              return `₹${value.toFixed(2)}`;
+            formatter: (value) => formatValue(value, detectedValueFormat, 2),
+          },
+        },
+      },
+    };
+  }
+  
+  // Handle heatmap charts differently
+  if (apexChartType === "heatmap") {
+    // Extract categories (x-axis values)
+    const categories = data.map((item) => formatChartLabel(item[x_axis] || ""));
+    
+    // For heatmaps, series represent rows (y-axis), data represents values
+    // Calculate min/max for color scale
+    const allValues = series.flatMap(s => s.data).filter(v => v !== null && v !== undefined && !isNaN(v));
+    const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
+    const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
+    
+    return {
+      series: series,
+      options: {
+        chart: {
+          type: apexChartType,
+          height: 350,
+          toolbar: {
+            show: true,
+            tools: {
+              download: true,
+              selection: true,
+              zoom: true,
+              zoomin: true,
+              zoomout: true,
+              pan: true,
+              reset: true,
             },
+          },
+        },
+        title: {
+          text: title || "Chart",
+          align: "left",
+          style: {
+            fontSize: "16px",
+            fontWeight: 600,
+          },
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => formatValue(val, detectedValueFormat, 1),
+          style: {
+            fontSize: "11px",
+            fontWeight: 600,
+            colors: ["#fff"],
+          },
+        },
+        xaxis: {
+          categories,
+          title: {
+            text: x_label || formatColumnName(x_axis),
+            style: {
+              fontSize: "12px",
+              fontWeight: 600,
+            },
+          },
+          labels: {
+            rotate: categories.length > 10 ? -90 : 0,
+            rotateAlways: categories.length > 10,
+            style: {
+              fontSize: "11px",
+            },
+            offsetY: categories.length > 10 ? 5 : 0,
+          },
+        },
+        yaxis: {
+          title: {
+            text: y_label || "Categories",
+            style: {
+              fontSize: "12px",
+              fontWeight: 600,
+            },
+          },
+          labels: {
+            style: {
+              fontSize: "11px",
+            },
+          },
+        },
+        plotOptions: {
+          heatmap: {
+            shadeIntensity: 0.5,
+            radius: 0,
+            useFillColorAsStroke: false,
+            colorScale: {
+              ranges: [
+                {
+                  from: minValue,
+                  to: minValue + (maxValue - minValue) * 0.2,
+                  color: "#487FFF",
+                  name: "Low",
+                },
+                {
+                  from: minValue + (maxValue - minValue) * 0.2,
+                  to: minValue + (maxValue - minValue) * 0.4,
+                  color: "#02BCAF",
+                  name: "Medium-Low",
+                },
+                {
+                  from: minValue + (maxValue - minValue) * 0.4,
+                  to: minValue + (maxValue - minValue) * 0.6,
+                  color: "#FFC107",
+                  name: "Medium",
+                },
+                {
+                  from: minValue + (maxValue - minValue) * 0.6,
+                  to: minValue + (maxValue - minValue) * 0.8,
+                  color: "#F0437D",
+                  name: "Medium-High",
+                },
+                {
+                  from: minValue + (maxValue - minValue) * 0.8,
+                  to: maxValue,
+                  color: "#1C52F6",
+                  name: "High",
+                },
+              ],
+            },
+          },
+        },
+        tooltip: {
+          y: {
+            formatter: (value) => formatValue(value, detectedValueFormat, 2),
+          },
+        },
+        grid: {
+          borderColor: "#D1D5DB",
+          strokeDashArray: 4,
+          padding: {
+            top: 10,
+            right: 10,
+            bottom: categories.length > 10 ? 40 : 10,
+            left: 10,
           },
         },
       },
@@ -160,12 +518,6 @@ const prepareChartData = (graphData) => {
   
   // Extract categories (x-axis values) for line/bar/area charts
   const categories = data.map((item) => formatChartLabel(item[x_axis] || ""));
-
-  // Prepare series data for each y-axis metric
-  const series = (y_axis || []).map((yAxisKey) => ({
-    name: formatColumnName(yAxisKey),
-    data: data.map((item) => formatChartValue(item[yAxisKey])),
-  }));
 
   // Create chart options
   const options = {
@@ -206,15 +558,17 @@ const prepareChartData = (graphData) => {
         },
       },
       labels: {
-        rotate: categories.length > 10 ? -45 : 0,
+        rotate: categories.length > 10 ? -90 : 0,
+        rotateAlways: categories.length > 10,
         style: {
           fontSize: "11px",
         },
+        offsetY: categories.length > 10 ? 5 : 0,
       },
     },
     yaxis: {
       title: {
-        text: y_label || (y_axis.length === 1 ? formatColumnName(y_axis[0]) : "Value"),
+        text: y_label || (series.length === 1 ? series[0].name : "Value"),
         style: {
           fontSize: "12px",
           fontWeight: 600,
@@ -222,12 +576,13 @@ const prepareChartData = (graphData) => {
       },
       labels: {
         formatter: (value) => {
-          if (Math.abs(value) >= 1000000) {
-            return `₹${(value / 1000000).toFixed(1)}M`;
-          } else if (Math.abs(value) >= 1000) {
-            return `₹${(value / 1000).toFixed(1)}k`;
+          // Use detected format for consistent formatting
+          const formatted = formatValue(value, detectedValueFormat, 1);
+          // For y-axis labels, remove currency symbol if it's currency (cleaner look)
+          if (detectedValueFormat === 'currency') {
+            return formatted.replace('₹', '');
           }
-          return `₹${value.toFixed(0)}`;
+          return formatted;
         },
         style: {
           fontSize: "11px",
@@ -245,33 +600,32 @@ const prepareChartData = (graphData) => {
       opacity: apexChartType === "area" ? 0.4 : 1,
       type: apexChartType === "area" ? "gradient" : "solid",
     },
-    colors: ["#487FFF", "#FFC107", "#02BCAF", "#F0437D", "#1C52F6", "#43DCFF"],
+    colors: CHART_COLORS,
     legend: {
       show: true,
       position: "top",
       horizontalAlign: "right",
+      offsetY: -5,
+      offsetX: 0,
+      itemMargin: {
+        horizontal: 10,
+        vertical: 5,
+      },
     },
     tooltip: {
       shared: true,
       intersect: false,
       y: {
-        formatter: (value) => {
-          if (Math.abs(value) >= 1000000) {
-            return `₹${(value / 1000000).toFixed(2)}M`;
-          } else if (Math.abs(value) >= 1000) {
-            return `₹${(value / 1000).toFixed(2)}k`;
-          }
-          return `₹${value.toFixed(2)}`;
-        },
+        formatter: (value) => formatValue(value, detectedValueFormat, 2),
       },
     },
     grid: {
       borderColor: "#D1D5DB",
       strokeDashArray: 4,
       padding: {
-        top: 10,
-        right: 10,
-        bottom: 10,
+        top: series.length > 3 ? 50 : 40,
+        right: 50,
+        bottom: categories.length > 10 ? 40 : 10,
         left: 10,
       },
     },
@@ -280,7 +634,7 @@ const prepareChartData = (graphData) => {
   return { series, options };
 };
 
-const downloadTableExcel = async (tableData, question = "Ask BOS Query") => {
+const downloadTableExcel = async (tableData, question = "Ask BOSS Query") => {
   if (!tableData || !tableData.columns || !tableData.rows || tableData.rows.length === 0) {
     alert("No data available to download");
     return;
@@ -487,10 +841,10 @@ const AskSelericModal = ({ open, onClose }) => {
       const isAuthExpired = err?.response?.status === 401;
 
       const userFriendlyError = isTimeout
-        ? "Ask BOS took too long to respond this time. Nothing changed on your side—please try again in a moment."
+        ? "Ask BOSS took too long to respond this time. Nothing changed on your side—please try again in a moment."
         : isAuthExpired
         ? "Your session expired. Please sign in again to continue."
-        : "Ask BOS isn't reachable right now. Please try again soon.";
+        : "Ask BOSS isn't reachable right now. Please try again soon.";
 
       setError(userFriendlyError);
       setMessages((prev) => {
@@ -529,7 +883,7 @@ const AskSelericModal = ({ open, onClose }) => {
               />
             </div>
             <div>
-              <h4>Ask BOS</h4>
+              <h4>Ask BOSS</h4>
             </div>
           </div>
           <button
@@ -602,7 +956,7 @@ const AskSelericModal = ({ open, onClose }) => {
                                   className="ask-seleric-download-btn-header"
                                   onClick={() => {
                                     // Find the user's question from the most recent user message before this assistant message
-                                    let userQuestion = "Ask BOS Query";
+                                    let userQuestion = "Ask BOSS Query";
                                     for (let i = index - 1; i >= 0; i--) {
                                       if (messages[i].role === "user") {
                                         userQuestion = messages[i].content;
