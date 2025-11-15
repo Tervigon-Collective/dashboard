@@ -222,7 +222,6 @@ const ProductMasterLayer = () => {
 
       const options = {
         search: debouncedSearchTerm || undefined,
-        sku: debouncedSearchTerm || undefined,
         sortField: sortField || undefined,
         sortDirection: sortDirection || undefined,
       };
