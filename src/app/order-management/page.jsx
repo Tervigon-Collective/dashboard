@@ -86,12 +86,20 @@ const DispatchScannerModal = ({
           </div>
           <div className="col-6 col-md-3">
             <span className="text-muted small">Dispatched</span>
-            <div className="fw-semibold">{lineItem.dispatched_quantity}</div>
+            <div className="fw-semibold text-success">
+              {lineItem.dispatched_quantity || 0}
+            </div>
           </div>
           <div className="col-6 col-md-3">
             <span className="text-muted small">Remaining</span>
-            <div className="fw-semibold text-primary">
-              {lineItem.remaining_to_dispatch}
+            <div
+              className={`fw-semibold ${
+                lineItem.remaining_to_dispatch === 0
+                  ? "text-success"
+                  : "text-primary"
+              }`}
+            >
+              {lineItem.remaining_to_dispatch || 0}
             </div>
           </div>
           <div className="col-6 col-md-3">
@@ -102,16 +110,51 @@ const DispatchScannerModal = ({
           </div>
         </div>
         <div className="border rounded p-3 bg-light">
-          <p className="mb-2 small text-muted">
-            Scan the QR code attached to each unit. The number of scans must
-            match the remaining quantity.
-          </p>
-          <Html5QrScanner
-            className="w-100"
-            onScan={onScan}
-            onError={(message) => console.warn("QR scanner warning", message)}
-            qrbox={320}
-          />
+          {lineItem.remaining_to_dispatch === 0 ? (
+            <div className="text-center py-4">
+              <div className="text-success mb-3">
+                <Icon icon="mdi:check-circle" width={64} height={64} />
+              </div>
+              <div className="fw-semibold text-success mb-2">
+                All items dispatched successfully!
+              </div>
+              <div className="small text-muted">
+                You can close the scanner now.
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 small text-muted">
+                Scan the QR code attached to each unit.{" "}
+                <span className="fw-semibold text-primary">
+                  {lineItem.remaining_to_dispatch} item
+                  {lineItem.remaining_to_dispatch !== 1 ? "s" : ""} remaining.
+                </span>
+              </p>
+              {isDispatching && (
+                <div className="alert alert-info mb-2 py-2" role="alert">
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{ width: "1rem", height: "1rem" }}
+                    >
+                      <span className="visually-hidden">Processing...</span>
+                    </div>
+                    <span className="small">Processing scan...</span>
+                  </div>
+                </div>
+              )}
+              <Html5QrScanner
+                className="w-100"
+                onScan={onScan}
+                onError={(message) =>
+                  console.warn("QR scanner warning", message)
+                }
+                qrbox={320}
+              />
+            </>
+          )}
         </div>
         {scanError && (
           <div className="alert alert-danger mt-3" role="alert">
@@ -145,6 +188,8 @@ const OrderManagementPage = () => {
     timestamp: 0,
     orderLineItemId: null,
   });
+  // Synchronous flag to prevent concurrent processing
+  const isProcessingRef = useRef(false);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -168,6 +213,7 @@ const OrderManagementPage = () => {
   const handleOpenScanner = useCallback((lineItem) => {
     // Reset scan tracking when opening scanner for a new line item
     lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
     setScannerState({
       isOpen: true,
       lineItem,
@@ -179,6 +225,7 @@ const OrderManagementPage = () => {
   const handleCloseScanner = useCallback(() => {
     // Reset scan tracking when closing scanner
     lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
     setScannerState({
       isOpen: false,
       lineItem: null,
@@ -189,6 +236,12 @@ const OrderManagementPage = () => {
 
   const handleScan = useCallback(
     async (value) => {
+      // Synchronous check to prevent concurrent processing
+      if (isProcessingRef.current) {
+        console.log("Scan already processing, ignoring duplicate");
+        return;
+      }
+
       if (!scannerState.lineItem || scannerState.isDispatching) {
         return;
       }
@@ -226,6 +279,9 @@ const OrderManagementPage = () => {
         return;
       }
 
+      // Set processing flag immediately (synchronous)
+      isProcessingRef.current = true;
+
       try {
         setScannerState((prev) => ({
           ...prev,
@@ -249,7 +305,9 @@ const OrderManagementPage = () => {
           }
         );
 
-        toast.success("Item dispatched");
+        // Get remaining quantity from response
+        const remainingAfterScan =
+          response?.data?.remaining_to_dispatch ?? null;
 
         // Reload queue to get updated data
         const queueResponse = await inventoryManagementApi.listDispatchQueue(
@@ -265,12 +323,47 @@ const OrderManagementPage = () => {
             line.item_id === scannerState.lineItem.item_id
         );
 
+        // Get final remaining quantity (from updatedLine or response)
+        const finalRemaining =
+          updatedLine?.remaining_to_dispatch ??
+          remainingAfterScan ??
+          scannerState.lineItem.remaining_to_dispatch;
+
+        const totalQuantity = Number(
+          updatedLine?.quantity || scannerState.lineItem.quantity || 0
+        );
+        const dispatchedCount = Number(updatedLine?.dispatched_quantity || 0);
+
+        // Update scanner state with fresh data
         setScannerState((prev) => ({
           ...prev,
           lineItem: updatedLine || prev.lineItem,
           isDispatching: false,
           scanError: "",
         }));
+
+        // Show appropriate message and handle auto-close
+        if (finalRemaining === 0) {
+          // All items dispatched - show completion message and close scanner
+          toast.success(
+            `All ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } dispatched successfully!`,
+            { autoClose: 3000 }
+          );
+          // Auto-close scanner after a short delay to show the success message
+          setTimeout(() => {
+            handleCloseScanner();
+          }, 500);
+        } else {
+          // More items remaining - show progress message
+          toast.success(
+            `${dispatchedCount} of ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } scanned. ${finalRemaining} remaining.`,
+            { autoClose: 2000 }
+          );
+        }
       } catch (err) {
         console.error("Dispatch failed", err);
         // Reset last scan on error so user can retry
@@ -285,9 +378,17 @@ const OrderManagementPage = () => {
           scanError: err.message || "Failed to dispatch",
         }));
         toast.error(err.message || "Failed to dispatch");
+      } finally {
+        // Always reset processing flag to allow next scan
+        isProcessingRef.current = false;
       }
     },
-    [scannerState.lineItem, scannerState.isDispatching, limit]
+    [
+      scannerState.lineItem,
+      scannerState.isDispatching,
+      limit,
+      handleCloseScanner,
+    ]
   );
 
   // Group queue items by order_id
