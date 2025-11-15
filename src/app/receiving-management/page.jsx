@@ -1530,52 +1530,66 @@ const ReceivingManagementLayer = () => {
       return;
     }
 
-    qrHandledRef.current = true;
+    // Don't set qrHandledRef here - set it only after modal is successfully opened
 
     const openFromQr = async () => {
-      setActiveTab("purchase-request");
+      try {
+        setActiveTab("purchase-request");
 
-      let requestToOpen =
-        requests.find((req) => Number(req.request_id) === requestIdNum) ||
-        qualityCheckRequests.find(
-          (req) => Number(req.request_id) === requestIdNum
-        ) ||
-        receiptRequests.find(
-          (req) => Number(req.request_id) === requestIdNum
-        ) ||
-        toBeDeliveredRequests.find(
-          (req) => Number(req.request_id) === requestIdNum
-        );
-
-      let shouldSkipFetch = false;
-
-      if (!requestToOpen) {
-        try {
-          const result = await purchaseRequestApi.getPurchaseRequestById(
-            requestIdNum,
-            true
+        let requestToOpen =
+          requests.find((req) => Number(req.request_id) === requestIdNum) ||
+          qualityCheckRequests.find(
+            (req) => Number(req.request_id) === requestIdNum
+          ) ||
+          receiptRequests.find(
+            (req) => Number(req.request_id) === requestIdNum
+          ) ||
+          toBeDeliveredRequests.find(
+            (req) => Number(req.request_id) === requestIdNum
           );
-          if (result.success) {
-            requestToOpen = result.data;
-            shouldSkipFetch = true;
+
+        let shouldSkipFetch = false;
+
+        if (!requestToOpen) {
+          try {
+            const result = await purchaseRequestApi.getPurchaseRequestById(
+              requestIdNum,
+              true
+            );
+            if (result.success) {
+              requestToOpen = result.data;
+              shouldSkipFetch = true;
+            }
+          } catch (error) {
+            console.error("Failed to load request for QR deep link:", error);
           }
-        } catch (error) {
-          console.error("Failed to load request for QR deep link:", error);
         }
-      }
 
-      if (requestToOpen) {
-        await handleViewRequest(requestToOpen, null, {
-          highlightItemId: itemIdNum,
-          skipFetch: shouldSkipFetch,
-        });
-      } else {
-        await handleViewRequest({ request_id: requestIdNum, items: [] }, null, {
-          highlightItemId: itemIdNum,
-        });
-      }
+        if (requestToOpen) {
+          await handleViewRequest(requestToOpen, null, {
+            highlightItemId: itemIdNum,
+            skipFetch: shouldSkipFetch,
+          });
+        } else {
+          await handleViewRequest(
+            { request_id: requestIdNum, items: [] },
+            null,
+            {
+              highlightItemId: itemIdNum,
+            }
+          );
+        }
 
-      router.replace("/receiving-management", { scroll: false });
+        // Only mark as handled and remove query params AFTER modal is opened
+        // Use setTimeout to ensure modal state has updated
+        setTimeout(() => {
+          qrHandledRef.current = true;
+          router.replace("/receiving-management", { scroll: false });
+        }, 100);
+      } catch (error) {
+        console.error("Error opening QR deep link:", error);
+        // Don't mark as handled on error, so it can retry if needed
+      }
     };
 
     openFromQr();
