@@ -308,7 +308,15 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasAnyApplicationPermission =
+                hasSidebarPermission("skuList") ||
+                hasSidebarPermission("productSpendSummary") ||
+                hasSidebarPermission("procurement") ||
+                hasSidebarPermission("entityReport") ||
+                hasSidebarPermission("userManagement");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasAnyApplicationPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">Application</li>
@@ -472,7 +480,11 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasContentGeneratorPermission =
+                hasSidebarPermission("createContent");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasContentGeneratorPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">
@@ -523,7 +535,14 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasAnyInventoryPermission =
+                hasSidebarPermission("receivingManagement") ||
+                hasSidebarPermission("orderManagement") ||
+                hasSidebarPermission("stockManagement") ||
+                hasSidebarPermission("masters");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasAnyInventoryPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">
