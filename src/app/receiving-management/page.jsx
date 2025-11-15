@@ -865,24 +865,29 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  // Load products for dropdown
-  const loadProducts = async () => {
+  // Load products for dropdown - initial load without search
+  const loadProducts = async (searchTerm = "", limit = 100) => {
     try {
-      const result = await productMasterApi.getAllProducts(1, 100);
+      const result = await productMasterApi.getAllProducts(1, limit, {
+        search: searchTerm,
+      });
       if (result.success) {
-        setProducts(result.data);
+        return result.data;
       }
+      return [];
     } catch (error) {
       console.error("Error loading products:", error);
-      // Set empty array to prevent errors
-      setProducts([]);
+      return [];
     }
   };
 
   useEffect(() => {
     loadPurchaseRequests();
     loadVendors();
-    loadProducts();
+    // Load initial products without search (first 100)
+    loadProducts("", 100).then((productsList) => {
+      setProducts(productsList);
+    });
   }, []);
 
   // Load to-be-delivered requests when switching to that tab
@@ -1070,7 +1075,7 @@ const ReceivingManagementLayer = () => {
   };
 
   // Handle product selection - add product to the array
-  const handleProductSelect = (productId, index) => {
+  const handleProductSelect = (productId, index, productObject = null) => {
     if (!productId) {
       setFormData((prev) => {
         const newProducts = [...prev.products];
@@ -1081,7 +1086,13 @@ const ReceivingManagementLayer = () => {
       });
       return;
     }
-    const product = products.find((p) => p.product_id === productId);
+
+    // If product object is provided (from search results), use it; otherwise try to find in products array
+    // This maintains backward compatibility - existing calls without productObject work the same way
+    const product =
+      productObject || products.find((p) => p.product_id === productId);
+
+    // Original logic: only proceed if product is found (maintains exact same behavior)
     if (product) {
       setFormData((prev) => {
         const newProducts = [...prev.products];
@@ -1100,6 +1111,12 @@ const ReceivingManagementLayer = () => {
         }
         return { ...prev, products: newProducts };
       });
+
+      // If product was from search results and not in initial products, add it to products array
+      // so it can be found later when displaying selected product
+      if (productObject && !products.find((p) => p.product_id === productId)) {
+        setProducts((prev) => [...prev, productObject]);
+      }
     }
   };
 
@@ -3783,16 +3800,94 @@ const PurchaseRequestModal = ({
   const [productQueries, setProductQueries] = useState(() =>
     formData.products.map(() => "")
   );
+  // Store search results for each product input (index -> products array)
+  const [productSearchResults, setProductSearchResults] = useState({});
+  // Track loading state for each product search
+  const [productSearchLoading, setProductSearchLoading] = useState({});
+  // Debounce timers for each product search
+  const searchTimersRef = useRef({});
 
   useEffect(() => {
     setProductQueries((prev) =>
       formData.products.map((_, idx) => prev[idx] || "")
     );
+    // Initialize search results for new products
+    setProductSearchResults((prev) => {
+      const newResults = { ...prev };
+      formData.products.forEach((_, idx) => {
+        if (!newResults[idx]) {
+          newResults[idx] = [];
+        }
+      });
+      return newResults;
+    });
   }, [formData.products]);
 
   useEffect(() => {
     setVendorQuery("");
   }, [formData.selectedVendor]);
+
+  // Debounced product search function
+  const searchProducts = useCallback(async (searchTerm, productIndex) => {
+    // Clear existing timer for this product index
+    if (searchTimersRef.current[productIndex]) {
+      clearTimeout(searchTimersRef.current[productIndex]);
+    }
+
+    // Set loading state
+    setProductSearchLoading((prev) => ({
+      ...prev,
+      [productIndex]: true,
+    }));
+
+    // Debounce the API call
+    searchTimersRef.current[productIndex] = setTimeout(async () => {
+      try {
+        // Use productMasterApi directly for server-side search
+        const result = await productMasterApi.getAllProducts(1, 100, {
+          search: searchTerm.trim(),
+        });
+
+        if (result.success) {
+          setProductSearchResults((prev) => ({
+            ...prev,
+            [productIndex]: result.data || [],
+          }));
+        } else {
+          setProductSearchResults((prev) => ({
+            ...prev,
+            [productIndex]: [],
+          }));
+        }
+      } catch (error) {
+        console.error("Error searching products:", error);
+        setProductSearchResults((prev) => ({
+          ...prev,
+          [productIndex]: [],
+        }));
+      } finally {
+        setProductSearchLoading((prev) => ({
+          ...prev,
+          [productIndex]: false,
+        }));
+      }
+    }, 300); // 300ms debounce
+  }, []);
+
+  // Effect to trigger search when product query changes
+  useEffect(() => {
+    formData.products.forEach((_, productIndex) => {
+      const query = productQueries[productIndex] || "";
+      searchProducts(query, productIndex);
+    });
+
+    // Cleanup timers on unmount
+    return () => {
+      Object.values(searchTimersRef.current).forEach((timer) => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, [productQueries, formData.products, searchProducts]);
 
   const selectedVendor =
     vendors.find((vendor) => vendor.vendor_id === formData.selectedVendor) ||
@@ -3965,19 +4060,21 @@ const PurchaseRequestModal = ({
                 </div>
 
                 {formData.products.map((productEntry, productIndex) => {
-                  const selectedProduct = products.find(
-                    (p) => p.product_id === productEntry.product_id
-                  );
+                  // Use search results if available, otherwise fall back to initial products
+                  const searchResults = productSearchResults[productIndex];
+                  const productsToShow =
+                    searchResults !== undefined ? searchResults : products;
+                  const selectedProduct =
+                    productsToShow.find(
+                      (p) => p.product_id === productEntry.product_id
+                    ) ||
+                    products.find(
+                      (p) => p.product_id === productEntry.product_id
+                    );
                   const productVariants = selectedProduct?.variants || [];
                   const productQuery = productQueries[productIndex] || "";
-                  const filteredProducts =
-                    productQuery.trim() === ""
-                      ? products
-                      : products.filter((product) =>
-                          product.product_name
-                            ?.toLowerCase()
-                            .includes(productQuery.trim().toLowerCase())
-                        );
+                  const isLoadingSearch = productSearchLoading[productIndex];
+                  const filteredProducts = productsToShow;
 
                   return (
                     <div
@@ -4010,15 +4107,27 @@ const PurchaseRequestModal = ({
                           <Combobox
                             value={selectedProduct || null}
                             onChange={(product) => {
-                              handleProductSelect(
-                                product ? product.product_id : null,
-                                productIndex
-                              );
-                              setProductQueries((prev) => {
-                                const copy = [...prev];
-                                copy[productIndex] = "";
-                                return copy;
-                              });
+                              if (product) {
+                                handleProductSelect(
+                                  product.product_id,
+                                  productIndex,
+                                  product
+                                );
+                                // Clear search query and reset search results for this product
+                                setProductQueries((prev) => {
+                                  const copy = [...prev];
+                                  copy[productIndex] = "";
+                                  return copy;
+                                });
+                                // Clear search results so it falls back to showing all products
+                                setProductSearchResults((prev) => {
+                                  const newResults = { ...prev };
+                                  delete newResults[productIndex];
+                                  return newResults;
+                                });
+                              } else {
+                                handleProductSelect(null, productIndex);
+                              }
                             }}
                           >
                             <div className="position-relative">
@@ -4045,13 +4154,37 @@ const PurchaseRequestModal = ({
                                   zIndex: 1050,
                                 }}
                               >
-                                {filteredProducts.length === 0 ? (
+                                {isLoadingSearch ? (
                                   <Combobox.Option
                                     value={null}
                                     disabled
                                     className="list-group-item disabled"
                                   >
-                                    No products found
+                                    <div className="d-flex align-items-center gap-2">
+                                      <div
+                                        className="spinner-border spinner-border-sm"
+                                        role="status"
+                                        style={{
+                                          width: "1rem",
+                                          height: "1rem",
+                                        }}
+                                      >
+                                        <span className="visually-hidden">
+                                          Loading...
+                                        </span>
+                                      </div>
+                                      Searching products...
+                                    </div>
+                                  </Combobox.Option>
+                                ) : filteredProducts.length === 0 ? (
+                                  <Combobox.Option
+                                    value={null}
+                                    disabled
+                                    className="list-group-item disabled"
+                                  >
+                                    {productQuery.trim()
+                                      ? `No products found matching "${productQuery}"`
+                                      : "No products found"}
                                   </Combobox.Option>
                                 ) : (
                                   filteredProducts.map((product) => (

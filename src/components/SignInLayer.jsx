@@ -43,10 +43,11 @@ const SignInLayer = () => {
     setError("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Wait for user context to update with permissions, then redirect
+      // The dashboard page will handle the redirect based on permissions
       router.push("/");
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -60,10 +61,11 @@ const SignInLayer = () => {
       const result = await signInWithPopup(auth, provider);
 
       await syncUserToFirestore(result.user);
+      // Wait for user context to update with permissions, then redirect
+      // The dashboard page will handle the redirect based on permissions
       router.push("/");
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -76,10 +78,11 @@ const SignInLayer = () => {
       // await signInWithPopup(auth, provider);
       const result = await signInWithPopup(auth, provider);
       await syncUserToFirestore(result.user);
+      // Wait for user context to update with permissions, then redirect
+      // The dashboard page will handle the redirect based on permissions
       router.push("/");
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@iconify/react";
 import { Modal, Button } from "react-bootstrap";
@@ -86,12 +86,20 @@ const DispatchScannerModal = ({
           </div>
           <div className="col-6 col-md-3">
             <span className="text-muted small">Dispatched</span>
-            <div className="fw-semibold">{lineItem.dispatched_quantity}</div>
+            <div className="fw-semibold text-success">
+              {lineItem.dispatched_quantity || 0}
+            </div>
           </div>
           <div className="col-6 col-md-3">
             <span className="text-muted small">Remaining</span>
-            <div className="fw-semibold text-primary">
-              {lineItem.remaining_to_dispatch}
+            <div
+              className={`fw-semibold ${
+                lineItem.remaining_to_dispatch === 0
+                  ? "text-success"
+                  : "text-primary"
+              }`}
+            >
+              {lineItem.remaining_to_dispatch || 0}
             </div>
           </div>
           <div className="col-6 col-md-3">
@@ -102,16 +110,51 @@ const DispatchScannerModal = ({
           </div>
         </div>
         <div className="border rounded p-3 bg-light">
-          <p className="mb-2 small text-muted">
-            Scan the QR code attached to each unit. The number of scans must
-            match the remaining quantity.
-          </p>
-          <Html5QrScanner
-            className="w-100"
-            onScan={onScan}
-            onError={(message) => console.warn("QR scanner warning", message)}
-            qrbox={320}
-          />
+          {lineItem.remaining_to_dispatch === 0 ? (
+            <div className="text-center py-4">
+              <div className="text-success mb-3">
+                <Icon icon="mdi:check-circle" width={64} height={64} />
+              </div>
+              <div className="fw-semibold text-success mb-2">
+                All items dispatched successfully!
+              </div>
+              <div className="small text-muted">
+                You can close the scanner now.
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 small text-muted">
+                Scan the QR code attached to each unit.{" "}
+                <span className="fw-semibold text-primary">
+                  {lineItem.remaining_to_dispatch} item
+                  {lineItem.remaining_to_dispatch !== 1 ? "s" : ""} remaining.
+                </span>
+              </p>
+              {isDispatching && (
+                <div className="alert alert-info mb-2 py-2" role="alert">
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{ width: "1rem", height: "1rem" }}
+                    >
+                      <span className="visually-hidden">Processing...</span>
+                    </div>
+                    <span className="small">Processing scan...</span>
+                  </div>
+                </div>
+              )}
+              <Html5QrScanner
+                className="w-100"
+                onScan={onScan}
+                onError={(message) =>
+                  console.warn("QR scanner warning", message)
+                }
+                qrbox={320}
+              />
+            </>
+          )}
         </div>
         {scanError && (
           <div className="alert alert-danger mt-3" role="alert">
@@ -139,6 +182,14 @@ const OrderManagementPage = () => {
     scanError: "",
     isDispatching: false,
   });
+  // Track last scanned token and timestamp to prevent duplicate scans
+  const lastScanRef = useRef({
+    token: null,
+    timestamp: 0,
+    orderLineItemId: null,
+  });
+  // Synchronous flag to prevent concurrent processing
+  const isProcessingRef = useRef(false);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -160,6 +211,9 @@ const OrderManagementPage = () => {
   }, [loadQueue]);
 
   const handleOpenScanner = useCallback((lineItem) => {
+    // Reset scan tracking when opening scanner for a new line item
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
     setScannerState({
       isOpen: true,
       lineItem,
@@ -169,6 +223,9 @@ const OrderManagementPage = () => {
   }, []);
 
   const handleCloseScanner = useCallback(() => {
+    // Reset scan tracking when closing scanner
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
     setScannerState({
       isOpen: false,
       lineItem: null,
@@ -179,6 +236,12 @@ const OrderManagementPage = () => {
 
   const handleScan = useCallback(
     async (value) => {
+      // Synchronous check to prevent concurrent processing
+      if (isProcessingRef.current) {
+        console.log("Scan already processing, ignoring duplicate");
+        return;
+      }
+
       if (!scannerState.lineItem || scannerState.isDispatching) {
         return;
       }
@@ -202,12 +265,36 @@ const OrderManagementPage = () => {
         return;
       }
 
+      // Prevent duplicate scans: same token + same order line item within 2 seconds
+      const currentOrderLineItemId = `${scannerState.lineItem.order_id}-${scannerState.lineItem.item_id}`;
+      const now = Date.now();
+      const timeSinceLastScan = now - lastScanRef.current.timestamp;
+      const isDuplicate =
+        lastScanRef.current.token === token &&
+        lastScanRef.current.orderLineItemId === currentOrderLineItemId &&
+        timeSinceLastScan < 2000; // 2 second debounce
+
+      if (isDuplicate) {
+        console.log("Duplicate scan ignored", { token, timeSinceLastScan });
+        return;
+      }
+
+      // Set processing flag immediately (synchronous)
+      isProcessingRef.current = true;
+
       try {
         setScannerState((prev) => ({
           ...prev,
           isDispatching: true,
           scanError: "",
         }));
+
+        // Update last scan reference immediately to prevent duplicates
+        lastScanRef.current = {
+          token,
+          timestamp: now,
+          orderLineItemId: currentOrderLineItemId,
+        };
 
         const response = await inventoryManagementApi.dispatchScan(
           scannerState.lineItem.order_id,
@@ -218,33 +305,114 @@ const OrderManagementPage = () => {
           }
         );
 
-        toast.success("Item dispatched");
-        await loadQueue();
+        // Get remaining quantity from response
+        const remainingAfterScan =
+          response?.data?.remaining_to_dispatch ?? null;
 
-        const updatedLine = queue.find(
+        // Reload queue to get updated data
+        const queueResponse = await inventoryManagementApi.listDispatchQueue(
+          limit
+        );
+        const updatedQueue = queueResponse?.data || queueResponse || [];
+        setQueue(updatedQueue);
+
+        // Find the updated line item from the fresh queue data
+        const updatedLine = updatedQueue.find(
           (line) =>
             line.order_id === scannerState.lineItem.order_id &&
             line.item_id === scannerState.lineItem.item_id
         );
 
+        // Get final remaining quantity (from updatedLine or response)
+        const finalRemaining =
+          updatedLine?.remaining_to_dispatch ??
+          remainingAfterScan ??
+          scannerState.lineItem.remaining_to_dispatch;
+
+        const totalQuantity = Number(
+          updatedLine?.quantity || scannerState.lineItem.quantity || 0
+        );
+        const dispatchedCount = Number(updatedLine?.dispatched_quantity || 0);
+
+        // Update scanner state with fresh data
         setScannerState((prev) => ({
           ...prev,
           lineItem: updatedLine || prev.lineItem,
           isDispatching: false,
           scanError: "",
         }));
+
+        // Show appropriate message and handle auto-close
+        if (finalRemaining === 0) {
+          // All items dispatched - show completion message and close scanner
+          toast.success(
+            `All ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } dispatched successfully!`,
+            { autoClose: 3000 }
+          );
+          // Auto-close scanner after a short delay to show the success message
+          setTimeout(() => {
+            handleCloseScanner();
+          }, 500);
+        } else {
+          // More items remaining - show progress message
+          toast.success(
+            `${dispatchedCount} of ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } scanned. ${finalRemaining} remaining.`,
+            { autoClose: 2000 }
+          );
+        }
       } catch (err) {
         console.error("Dispatch failed", err);
+        // Reset last scan on error so user can retry
+        lastScanRef.current = {
+          token: null,
+          timestamp: 0,
+          orderLineItemId: null,
+        };
         setScannerState((prev) => ({
           ...prev,
           isDispatching: false,
           scanError: err.message || "Failed to dispatch",
         }));
         toast.error(err.message || "Failed to dispatch");
+      } finally {
+        // Always reset processing flag to allow next scan
+        isProcessingRef.current = false;
       }
     },
-    [scannerState.lineItem, scannerState.isDispatching, loadQueue, queue]
+    [
+      scannerState.lineItem,
+      scannerState.isDispatching,
+      limit,
+      handleCloseScanner,
+    ]
   );
+
+  // Group queue items by order_id
+  const groupedOrders = useMemo(() => {
+    const groups = {};
+    queue.forEach((line) => {
+      const orderId = line.order_id;
+      if (!groups[orderId]) {
+        groups[orderId] = {
+          order_id: orderId,
+          order_name: line.order_name,
+          created_at: line.created_at,
+          display_fulfillment_status: line.display_fulfillment_status,
+          lineItems: [],
+          totalItems: 0,
+          totalRemaining: 0,
+        };
+      }
+      groups[orderId].lineItems.push(line);
+      groups[orderId].totalItems += Number(line.quantity || 0);
+      groups[orderId].totalRemaining += Number(line.remaining_to_dispatch || 0);
+    });
+    return Object.values(groups);
+  }, [queue]);
 
   const tableBody = useMemo(() => {
     if (loading) {
@@ -279,51 +447,99 @@ const OrderManagementPage = () => {
       );
     }
 
-    return queue.map((line) => {
-      const remaining = Number(line.remaining_to_dispatch || 0);
-      const isDisabled = remaining <= 0;
-      return (
-        <tr key={`${line.order_id}-${line.item_id}`}>
+    const rows = [];
+    groupedOrders.forEach((orderGroup) => {
+      // Order summary row
+      rows.push(
+        <tr
+          key={`order-${orderGroup.order_id}`}
+          style={{ backgroundColor: "#f8f9fa", fontWeight: "600" }}
+        >
           <td>
             <div className="fw-semibold">
-              {line.order_name || line.order_id}
+              Order: {orderGroup.order_name || orderGroup.order_id}
             </div>
             <div className="small text-muted">
-              {formatDateTime(line.created_at)}
+              {formatDateTime(orderGroup.created_at)}
             </div>
           </td>
           <td className="text-center">
             <span className="badge bg-light text-secondary border">
-              {line.display_fulfillment_status || "Unknown"}
+              Status: {orderGroup.display_fulfillment_status || "Unknown"}
             </span>
           </td>
           <td>
-            <div className="fw-semibold">{line.title}</div>
-            <div className="small text-muted">
-              {line.product_title || "Unknown product"}
+            <div className="fw-semibold">
+              Items: {orderGroup.lineItems.length}
             </div>
           </td>
-          <td>{line.sku || "-"}</td>
-          <td className="text-center">{line.quantity}</td>
-          <td className="text-center">{line.dispatched_quantity || 0}</td>
-          <td className="text-center fw-semibold text-primary">{remaining}</td>
-          <td className="text-center">{line.available_quantity ?? "-"}</td>
-          <td className="text-center">{line.committed_quantity ?? "-"}</td>
-          <td className="text-end">
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-              onClick={() => handleOpenScanner(line)}
-              disabled={isDisabled}
-            >
-              <Icon icon="mdi:barcode-scan" width={18} height={18} />
-              Dispatch
-            </button>
+          <td>-</td>
+          <td className="text-center">{orderGroup.totalItems}</td>
+          <td className="text-center">-</td>
+          <td className="text-center fw-semibold text-primary">
+            Remaining: {orderGroup.totalRemaining}
           </td>
+          <td className="text-center">-</td>
+          <td className="text-center">-</td>
+          <td className="text-end">-</td>
         </tr>
       );
+
+      // Line item rows with tree structure
+      orderGroup.lineItems.forEach((line, index) => {
+        const remaining = Number(line.remaining_to_dispatch || 0);
+        const isDisabled = remaining <= 0;
+        const isLast = index === orderGroup.lineItems.length - 1;
+        const treePrefix = isLast ? "└─" : "├─";
+
+        rows.push(
+          <tr key={`${line.order_id}-${line.item_id}`}>
+            <td>
+              <div className="d-flex align-items-center gap-2 ps-3">
+                <span style={{ color: "#6b7280", fontFamily: "monospace" }}>
+                  {treePrefix}
+                </span>
+                <div>
+                  <div className="fw-semibold" style={{ fontSize: "0.9em" }}>
+                    {line.sku || "-"}
+                  </div>
+                  <div className="small text-muted">Remaining: {remaining}</div>
+                </div>
+              </div>
+            </td>
+            <td className="text-center">-</td>
+            <td>
+              <div className="fw-semibold">{line.title}</div>
+              <div className="small text-muted">
+                {line.product_title || "Unknown product"}
+              </div>
+            </td>
+            <td>{line.sku || "-"}</td>
+            <td className="text-center">{line.quantity}</td>
+            <td className="text-center">{line.dispatched_quantity || 0}</td>
+            <td className="text-center fw-semibold text-primary">
+              {remaining}
+            </td>
+            <td className="text-center">{line.available_quantity ?? "-"}</td>
+            <td className="text-center">{line.committed_quantity ?? "-"}</td>
+            <td className="text-end">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                onClick={() => handleOpenScanner(line)}
+                disabled={isDisabled}
+              >
+                <Icon icon="mdi:barcode-scan" width={18} height={18} />
+                Dispatch
+              </button>
+            </td>
+          </tr>
+        );
+      });
     });
-  }, [queue, loading, error, handleOpenScanner]);
+
+    return rows;
+  }, [groupedOrders, loading, error, queue.length, handleOpenScanner]);
 
   return (
     <SidebarPermissionGuard requiredSidebar="orderManagement">

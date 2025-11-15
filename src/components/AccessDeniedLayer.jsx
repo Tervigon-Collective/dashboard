@@ -1,15 +1,37 @@
+"use client";
 import Link from "next/link";
 import React from "react";
+import { useUser } from "@/helper/UserContext";
+import { getFirstAccessiblePage } from "@/utils/getFirstAccessiblePage";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const AccessDeniedLayer = () => {
+  const { hasSidebarPermission, loading } = useUser();
+  const router = useRouter();
+
+  // Get the first accessible page for the user
+  const firstAccessiblePage = !loading ? getFirstAccessiblePage(hasSidebarPermission) : "/";
+
+  // Auto-redirect to first accessible page after a short delay
+  useEffect(() => {
+    if (!loading && firstAccessiblePage !== "/") {
+      const timer = setTimeout(() => {
+        router.push(firstAccessiblePage);
+      }, 3000); // Redirect after 3 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, firstAccessiblePage, router]);
+
   return (
     <div className="custom-bg">
       <div className="container container--xl">
         <div className="d-flex align-items-center justify-content-between py-24">
-          <Link href="/" className="">
+          <Link href={firstAccessiblePage} className="">
             <img src="/assets/images/logo.png" alt="" />
           </Link>
-          <Link href="/" className="btn btn-outline-primary-600 text-sm">
+          <Link href={firstAccessiblePage} className="btn btn-outline-primary-600 text-sm">
             {" "}
             Go To Home{" "}
           </Link>
@@ -26,11 +48,16 @@ const AccessDeniedLayer = () => {
               much trouble, contact your site executive to demand access.
             </p>
             <Link
-              href="/"
+              href={firstAccessiblePage}
               className="btn btn-primary-600 px-32 py-16 flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-8 mt-28"
             >
               <i className="ri-home-4-line" /> Go Back To Home
             </Link>
+            {firstAccessiblePage !== "/" && (
+              <p className="text-sm text-neutral-400 mt-3">
+                Redirecting to your accessible page in a few seconds...
+              </p>
+            )}
           </div>
         </div>
       </div>
