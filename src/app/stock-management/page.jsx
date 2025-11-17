@@ -1,1152 +1,672 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Icon } from "@iconify/react/dist/iconify.js";
-import Breadcrumb from "../../components/Breadcrumb";
-import MasterLayout from "../../masterLayout/MasterLayout";
-import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
-import stockManagementApi from "../../services/stockManagementApi";
 
-const StockManagementLayer = () => {
-  const [activeTab, setActiveTab] = useState("inventory");
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@iconify/react";
+import { Modal, Button } from "react-bootstrap";
+import { toast } from "react-toastify";
 
-  // Inventory Tab State
-  const [inventoryData, setInventoryData] = useState([]);
-  const [inventoryLoading, setInventoryLoading] = useState(true);
-  const [inventoryCurrentPage, setInventoryCurrentPage] = useState(1);
-  const [inventoryTotalPages, setInventoryTotalPages] = useState(1);
-  const [inventoryTotalRecords, setInventoryTotalRecords] = useState(0);
-  const [inventorySearchTerm, setInventorySearchTerm] = useState("");
-  const [inventoryDisplayedItemsCount, setInventoryDisplayedItemsCount] = useState(20);
-  const [inventoryLoadingMore, setInventoryLoadingMore] = useState(false);
-  const inventoryContainerRef = useRef(null);
-  const inventoryItemsPerPage = 20;
+import MasterLayout from "@/masterLayout/MasterLayout";
+import Breadcrumb from "@/components/Breadcrumb";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
+import inventoryManagementApi from "@/services/inventoryManagementApi";
 
-  // Returns Management Tab State
-  const [returnsData, setReturnsData] = useState([]);
-  const [returnsLoading, setReturnsLoading] = useState(true);
-  const [returnsCurrentPage, setReturnsCurrentPage] = useState(1);
-  const [returnsTotalPages, setReturnsTotalPages] = useState(1);
-  const [returnsTotalRecords, setReturnsTotalRecords] = useState(0);
-  const [returnsStatusFilter, setReturnsStatusFilter] = useState("pending"); // pending, approved, rejected
-  const [returnsDisplayedItemsCount, setReturnsDisplayedItemsCount] = useState(20);
-  const [returnsLoadingMore, setReturnsLoadingMore] = useState(false);
-  const returnsContainerRef = useRef(null);
-  const returnsItemsPerPage = 20;
+const formatNumber = (value) => {
+  if (value === null || value === undefined) return "-";
+  return Number(value).toLocaleString();
+};
 
-  // Load inventory data
-  const loadInventory = async (page = 1, append = false) => {
-    try {
-      if (!append) {
-        setInventoryLoading(true);
-      }
-      const result = await stockManagementApi.getAllVariantsInventory(page, 50);
-      if (result.success) {
-        if (append) {
-          setInventoryData((prev) => [...prev, ...result.data]);
-        } else {
-          setInventoryData(result.data);
-          setInventoryDisplayedItemsCount(20); // Reset displayed items
-        }
-        setInventoryCurrentPage(result.pagination.page);
-        setInventoryTotalPages(result.pagination.totalPages);
-        setInventoryTotalRecords(result.pagination.total);
-      }
-    } catch (error) {
-      console.error("Error loading inventory:", error);
-      if (!append) {
-        setInventoryData([]);
-      }
-    } finally {
-      setInventoryLoading(false);
-    }
-  };
-
-  // Load returns data
-  const loadReturns = async (page = 1, status = null, append = false) => {
-    try {
-      if (!append) {
-        setReturnsLoading(true);
-      }
-      const result = await stockManagementApi.getAllReturns(page, 50, status);
-      if (result.success) {
-        if (append) {
-          setReturnsData((prev) => [...prev, ...result.data]);
-        } else {
-          setReturnsData(result.data);
-          setReturnsDisplayedItemsCount(20); // Reset displayed items
-        }
-        setReturnsCurrentPage(result.pagination.page);
-        setReturnsTotalPages(result.pagination.totalPages);
-        setReturnsTotalRecords(result.pagination.total);
-      }
-    } catch (error) {
-      console.error("Error loading returns:", error);
-      if (!append) {
-        setReturnsData([]);
-      }
-    } finally {
-      setReturnsLoading(false);
-    }
-  };
-
-  // Handle return approval
-  const handleApproveReturn = async (eventId) => {
-    if (
-      !confirm(
-        "Are you sure you want to approve this return? This will add the quantity back to inventory."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const result = await stockManagementApi.approveReturn(eventId);
-      if (result.success) {
-        alert("Return approved successfully!");
-        await loadReturns(returnsCurrentPage, returnsStatusFilter);
-      }
-    } catch (error) {
-      console.error("Error approving return:", error);
-      const errorMessage = error.message || "Failed to approve return";
-      alert(`Error: ${errorMessage}`);
-    }
-  };
-
-  // Handle return rejection
-  const handleRejectReturn = async (eventId) => {
-    const reason = prompt("Please enter reason for rejection (optional):");
-    if (reason === null) return; // User cancelled
-
-    if (
-      !confirm(
-        "Are you sure you want to reject this return? This will NOT add the quantity back to inventory."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const result = await stockManagementApi.rejectReturn(
-        eventId,
-        reason || null
-      );
-      if (result.success) {
-        alert("Return rejected successfully!");
-        await loadReturns(returnsCurrentPage, returnsStatusFilter);
-      }
-    } catch (error) {
-      console.error("Error rejecting return:", error);
-      const errorMessage = error.message || "Failed to reject return";
-      alert(`Error: ${errorMessage}`);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "inventory") {
-      loadInventory();
-      setInventoryDisplayedItemsCount(20);
-    } else if (activeTab === "returns") {
-      loadReturns(1, returnsStatusFilter);
-      setReturnsDisplayedItemsCount(20);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === "returns") {
-      loadReturns(1, returnsStatusFilter);
-      setReturnsDisplayedItemsCount(20);
-    }
-  }, [returnsStatusFilter]);
-
-  // Reset displayed items when search term changes
-  useEffect(() => {
-    setInventoryDisplayedItemsCount(20);
-  }, [inventorySearchTerm]);
-
-  const tabs = [
-    {
-      id: "inventory",
-      label: "INVENTORY",
-      icon: "mdi:package-variant",
-    },
-    {
-      id: "returns",
-      label: "RETURNS MANAGEMENT",
-      icon: "mdi:arrow-u-left-top",
-    },
-  ];
+const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
+  if (!item) return null;
 
   return (
-    <div className="card h-100 radius-8 border">
-      <div className="card-body p-24">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-20">
-          <div className="d-flex align-items-center">
-            <h6 className="mb-0 me-2">Stock Management</h6>
+    <Modal show={isOpen} onHide={onClose} size="lg" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Inventory Detail</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="row g-3 mb-3">
+          <div className="col-md-6">
+            <div className="text-muted small">Product</div>
+            <div className="fw-semibold">{item.product_name}</div>
+            <div className="small text-muted">HSN: {item.hsn_code || "-"}</div>
+          </div>
+          <div className="col-md-6">
+            <div className="text-muted small">Variant</div>
+            <div className="fw-semibold">{item.variant_display_name}</div>
+            <div className="small text-muted">SKU: {item.sku || "-"}</div>
           </div>
         </div>
+        <div className="row g-3">
+          {[
+            { label: "Available", value: item.available_quantity },
+            { label: "Committed", value: item.committed_quantity },
+            { label: "Cancelled", value: item.cancelled_quantity },
+            {
+              label: "Approved Returns",
+              value: item.approved_returns_quantity,
+            },
+            { label: "Damaged", value: item.damaged_quantity },
+            { label: "Total Received", value: item.total_received_quantity },
+          ].map((metric) => (
+            <div className="col-6 col-md-4" key={metric.label}>
+              <div className="text-muted small">{metric.label}</div>
+              <div className="fw-semibold">{formatNumber(metric.value)}</div>
+            </div>
+          ))}
+        </div>
 
-        {/* Tab Navigation */}
-        <div
-          className="mb-4 border-bottom pb-0"
-          style={{ overflowX: "auto", overflowY: "hidden" }}
-        >
-          <div
-            className="d-flex gap-2 gap-md-4"
-            style={{ minWidth: "max-content", flexWrap: "nowrap" }}
-          >
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
-                  activeTab === tab.id ? "text-primary" : "text-muted"
-                }`}
-                onClick={() => setActiveTab(tab.id)}
-                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
-              >
-                <Icon
-                  icon={tab.icon}
-                  className="icon"
-                  style={{ flexShrink: 0 }}
-                />
-                <span
-                  className="fw-medium"
-                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-                >
-                  {tab.label}
-                </span>
-                {activeTab === tab.id && (
-                  <div
-                    className="position-absolute bottom-0 start-0 end-0"
-                    style={{
-                      height: "2px",
-                      backgroundColor: "#0d6efd",
-                    }}
-                  />
-                )}
+        <div className="mt-4">
+          <h6 className="mb-3">Recent Ledger Entries</h6>
+          {loading ? (
+            <div className="d-flex justify-content-center py-4">
+              <div className="spinner-border" role="status">
+                <span className="visually-hidden">Loading...</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="tab-content">
-          {activeTab === "inventory" && (
-            <InventoryTab
-              inventoryData={inventoryData}
-              isLoading={inventoryLoading}
-              currentPage={inventoryCurrentPage}
-              totalPages={inventoryTotalPages}
-              totalRecords={inventoryTotalRecords}
-              loadInventory={loadInventory}
-              searchTerm={inventorySearchTerm}
-              setSearchTerm={setInventorySearchTerm}
-              displayedItemsCount={inventoryDisplayedItemsCount}
-              setDisplayedItemsCount={setInventoryDisplayedItemsCount}
-              isLoadingMore={inventoryLoadingMore}
-              setIsLoadingMore={setInventoryLoadingMore}
-              containerRef={inventoryContainerRef}
-              itemsPerPage={inventoryItemsPerPage}
-            />
-          )}
-
-          {activeTab === "returns" && (
-            <ReturnsManagementTab
-              returnsData={returnsData}
-              isLoading={returnsLoading}
-              currentPage={returnsCurrentPage}
-              totalPages={returnsTotalPages}
-              totalRecords={returnsTotalRecords}
-              loadReturns={loadReturns}
-              statusFilter={returnsStatusFilter}
-              setStatusFilter={setReturnsStatusFilter}
-              handleApproveReturn={handleApproveReturn}
-              handleRejectReturn={handleRejectReturn}
-              displayedItemsCount={returnsDisplayedItemsCount}
-              setDisplayedItemsCount={setReturnsDisplayedItemsCount}
-              isLoadingMore={returnsLoadingMore}
-              setIsLoadingMore={setReturnsLoadingMore}
-              containerRef={returnsContainerRef}
-              itemsPerPage={returnsItemsPerPage}
-            />
+            </div>
+          ) : !ledger?.data?.length ? (
+            <div className="text-center text-muted py-3">
+              No ledger entries found.
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-sm table-bordered">
+                <thead className="table-light">
+                  <tr>
+                    <th>Event</th>
+                    <th>Delta Available</th>
+                    <th>Delta Committed</th>
+                    <th>Source</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledger.data.map((entry) => (
+                    <tr key={entry.ledger_entry_id}>
+                      <td className="text-uppercase small fw-semibold">
+                        {entry.event_type.replace(/_/g, " ")}
+                      </td>
+                      <td>{formatNumber(entry.delta_available)}</td>
+                      <td>{formatNumber(entry.delta_committed)}</td>
+                      <td className="small text-muted">
+                        {entry.source_reference || "-"}
+                      </td>
+                      <td className="small text-muted">
+                        {new Date(entry.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-      </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+const ReturnActionButtons = ({ row, onApprove, onReject, busy }) => {
+  if (row.status !== "pending") {
+    return <span className="badge bg-light text-secondary">{row.status}</span>;
+  }
+
+  return (
+    <div className="d-flex gap-2">
+      <button
+        type="button"
+        className="btn btn-sm btn-success"
+        disabled={busy}
+        onClick={() => onApprove(row)}
+      >
+        Approve
+      </button>
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-danger"
+        disabled={busy}
+        onClick={() => onReject(row)}
+      >
+        Reject
+      </button>
     </div>
   );
 };
 
-// Inventory Tab Component
-const InventoryTab = ({
-  inventoryData,
-  isLoading,
-  currentPage,
-  totalPages,
-  totalRecords,
-  loadInventory,
-  searchTerm,
-  setSearchTerm,
-  displayedItemsCount,
-  setDisplayedItemsCount,
-  isLoadingMore,
-  setIsLoadingMore,
-  containerRef,
-  itemsPerPage,
-}) => {
-  // Filter inventory data by search term
-  const filteredInventory = inventoryData.filter((item) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      item.product_name?.toLowerCase().includes(searchLower) ||
-      item.variant_display_name?.toLowerCase().includes(searchLower) ||
-      item.sku?.toLowerCase().includes(searchLower)
-    );
+const StockManagementPage = () => {
+  const [activeTab, setActiveTab] = useState("inventory");
+
+  const [inventoryState, setInventoryState] = useState({
+    data: [],
+    pagination: { page: 1, totalPages: 1 },
+    loading: false,
+    search: "",
+    limit: 25,
+  });
+  const [inventoryDetail, setInventoryDetail] = useState({
+    item: null,
+    ledger: null,
+    loadingLedger: false,
   });
 
-  // Get displayed data for infinite scroll
-  const getDisplayedData = (dataArray) => {
-    return dataArray.slice(0, displayedItemsCount);
-  };
+  const [returnsState, setReturnsState] = useState({
+    data: [],
+    pagination: { page: 1, totalPages: 1 },
+    loading: false,
+    status: "pending",
+    busyCaseId: null,
+  });
 
-  // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length || currentPage < totalPages;
-  }, [displayedItemsCount, currentPage, totalPages]);
-
-  // Load more data callback
-  const loadMoreData = useCallback(async () => {
-    if (isLoadingMore || isLoading) return;
-    
-    setIsLoadingMore(true);
-    // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Check if we need to fetch more from API
-    if (displayedItemsCount >= filteredInventory.length && currentPage < totalPages) {
-      await loadInventory(currentPage + 1, true);
-    }
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
-    setIsLoadingMore(false);
-  }, [isLoadingMore, isLoading, displayedItemsCount, filteredInventory.length, currentPage, totalPages, itemsPerPage, loadInventory, setIsLoadingMore, setDisplayedItemsCount]);
-
-  // Scroll detection for infinite scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Handle wheel events to allow page scrolling when table reaches boundaries
-    const handleWheel = (e) => {
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const isAtTop = scrollTop <= 1;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
-      if (e.deltaY > 0 && isAtBottom) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: 'auto'
+  const loadInventory = useCallback(
+    async ({ page, limit, search } = {}) => {
+      setInventoryState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await inventoryManagementApi.listInventoryItems({
+          page: page ?? inventoryState.pagination.page,
+          limit: limit ?? inventoryState.limit,
+          search: search ?? inventoryState.search,
         });
-      } else if (e.deltaY < 0 && isAtTop) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: 'auto'
-        });
+
+        const data = Array.isArray(response?.data)
+          ? response.data
+          : response?.data?.data || [];
+        const pagination = response?.pagination ||
+          response?.data?.pagination || {
+            page: 1,
+            totalPages: 1,
+            total: data.length,
+          };
+
+        setInventoryState((prev) => ({
+          ...prev,
+          data,
+          pagination,
+          loading: false,
+          limit: limit ?? prev.limit,
+          search: search ?? prev.search,
+        }));
+      } catch (error) {
+        console.error("Failed to load inventory", error);
+        toast.error(error.message || "Failed to load inventory");
+        setInventoryState((prev) => ({ ...prev, loading: false }));
       }
-    };
+    },
+    [
+      inventoryState.limit,
+      inventoryState.pagination.page,
+      inventoryState.search,
+    ]
+  );
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-    };
+  const loadReturns = useCallback(
+    async ({ page, status } = {}) => {
+      setReturnsState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await inventoryManagementApi.listReturnCases({
+          status: status ?? returnsState.status,
+          page: page ?? returnsState.pagination.page,
+          limit: 25,
+        });
+
+        const data = Array.isArray(response?.data)
+          ? response.data
+          : response?.data?.data || [];
+        const pagination = response?.pagination ||
+          response?.data?.pagination || {
+            page: 1,
+            totalPages: 1,
+            total: data.length,
+          };
+
+        setReturnsState((prev) => ({
+          ...prev,
+          data,
+          pagination,
+          status: status ?? prev.status,
+          loading: false,
+        }));
+      } catch (error) {
+        console.error("Failed to load return cases", error);
+        toast.error(error.message || "Failed to load return cases");
+        setReturnsState((prev) => ({ ...prev, loading: false }));
+      }
+    },
+    [returnsState.pagination.page, returnsState.status]
+  );
+
+  useEffect(() => {
+    if (activeTab === "inventory") {
+      loadInventory({ page: 1 });
+    } else if (activeTab === "returns") {
+      loadReturns({ page: 1 });
+    }
+  }, [activeTab, loadInventory, loadReturns]);
+
+  const openInventoryDetail = useCallback(async (item) => {
+    setInventoryDetail({ item, ledger: null, loadingLedger: true });
+    try {
+      const [freshItem, ledger] = await Promise.all([
+        inventoryManagementApi.getInventoryItem(item.inventory_item_id),
+        inventoryManagementApi.getInventoryLedger(item.inventory_item_id, {
+          limit: 10,
+        }),
+      ]);
+      const resolvedItem = freshItem?.data || freshItem;
+      const resolvedLedger = ledger?.data ? ledger : { data: ledger };
+      setInventoryDetail({
+        item: resolvedItem,
+        ledger: resolvedLedger,
+        loadingLedger: false,
+      });
+    } catch (error) {
+      console.error("Failed to load inventory detail", error);
+      toast.error(error.message || "Failed to load inventory detail");
+      setInventoryDetail((prev) => ({ ...prev, loadingLedger: false }));
+    }
   }, []);
 
-  return (
-    <>
-      {/* Search Bar */}
-      <div className="mb-3 d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
-        <div
-          className="d-flex align-items-center gap-2 flex-grow-1"
-          style={{ maxWidth: "400px" }}
-        >
-          <div className="position-relative flex-grow-1">
-            <Icon
-              icon="mdi:magnify"
-              className="position-absolute"
-              style={{
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#6c757d",
-                fontSize: "20px",
-              }}
-            />
-            <input
-              type="text"
-              className="form-control ps-5"
-              placeholder="Search by product name, variant, or SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div
-        ref={containerRef}
-        className="table-responsive table-scroll-container"
-        style={{
-          maxHeight: "600px",
-          overflowY: "auto",
-          overflowX: "auto",
-          position: "relative",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          scrollBehavior: "smooth",
-          overscrollBehavior: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-        onScroll={(e) => {
-          const target = e.target;
-          const scrollTop = target.scrollTop;
-          const scrollHeight = target.scrollHeight;
-          const clientHeight = target.clientHeight;
-          
-          if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-            if (hasMoreData(filteredInventory) && !isLoadingMore && !isLoading) {
-              loadMoreData();
-            }
-          }
-        }}
-        onWheel={(e) => {
-          const target = e.currentTarget;
-          const scrollTop = target.scrollTop;
-          const scrollHeight = target.scrollHeight;
-          const clientHeight = target.clientHeight;
-          const isAtTop = scrollTop <= 1;
-          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-          
-          if (e.deltaY > 0 && isAtBottom) {
-            window.scrollBy({
-              top: e.deltaY,
-              behavior: 'auto'
-            });
-          } else if (e.deltaY < 0 && isAtTop) {
-            window.scrollBy({
-              top: e.deltaY,
-              behavior: 'auto'
-            });
-          }
-        }}
-      >
-        <table
-          className="table table-hover mb-0"
-          style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-        >
-          <thead
-            style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 10,
-              backgroundColor: "#f9fafb",
-              borderBottom: "2px solid #e5e7eb",
-            }}
-          >
-            <tr>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Sr No
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Product Name
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Variant
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                SKU
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Available Qty
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Stock In
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Stock Out
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Cancels
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Approved Returns
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && inventoryData.length === 0 ? (
-              <>
-                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                  <tr key={`skeleton-${rowIndex}`}>
-                    {Array.from({ length: 9 }).map((_, colIndex) => (
-                      <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "20px",
-                            backgroundColor: "#e5e7eb",
-                            borderRadius: "4px",
-                            animation: "skeletonPulse 1.5s ease-in-out infinite",
-                          }}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </>
-            ) : filteredInventory.length === 0 ? (
-              <tr>
-                <td colSpan="9" className="text-center py-4">
-                  <div className="d-flex flex-column align-items-center">
-                    <Icon
-                      icon="mdi:package-variant"
-                      width="48"
-                      height="48"
-                      className="text-muted mb-2"
-                    />
-                    <p className="text-muted mb-0">
-                      {searchTerm
-                        ? "No matching products found"
-                        : "No inventory data available"}
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              <>
-                {getDisplayedData(filteredInventory).map((item, index) => (
-                  <tr key={item.variant_id}>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {index + 1}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {item.product_name || "-"}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {item.variant_display_name || "-"}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {item.sku || "-"}
-                    </td>
-                    <td style={{ padding: "12px", textAlign: "center" }}>
-                      <span
-                        className={`badge ${
-                          item.available_quantity > 0
-                            ? "bg-success"
-                            : item.available_quantity === 0
-                            ? "bg-secondary"
-                            : "bg-danger"
-                        }`}
-                      >
-                        {item.available_quantity || 0}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        textAlign: "center",
-                        color: "#374151",
-                      }}
-                    >
-                      {item.stock_in || 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        textAlign: "center",
-                        color: "#374151",
-                      }}
-                    >
-                      {item.stock_out || 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        textAlign: "center",
-                        color: "#374151",
-                      }}
-                    >
-                      {item.cancels || 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        textAlign: "center",
-                        color: "#374151",
-                      }}
-                    >
-                      {item.approved_returns || 0}
-                    </td>
-                  </tr>
-                ))}
-                {isLoadingMore && (
-                  <>
-                    {Array.from({ length: 5 }).map((_, rowIndex) => (
-                      <tr key={`skeleton-more-${rowIndex}`}>
-                        {Array.from({ length: 9 }).map((_, colIndex) => (
-                          <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                            <div
-                              className="skeleton"
-                              style={{
-                                height: "20px",
-                                backgroundColor: "#e5e7eb",
-                                borderRadius: "4px",
-                                animation: "skeletonPulse 1.5s ease-in-out infinite",
-                              }}
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Infinite Scroll Footer */}
-      {totalRecords > 0 && filteredInventory.length > 0 && (
-        <div
-          className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top"
-          style={{
-            position: "sticky",
-            bottom: 0,
-            zIndex: 5,
-            backgroundColor: "#f8f9fa",
-          }}
-        >
-          <div style={{ fontSize: "14px", color: "#6c757d" }}>
-            Showing <strong>{getDisplayedData(filteredInventory).length}</strong>{" "}
-            {searchTerm ? "filtered" : `of ${totalRecords}`} variant
-            {getDisplayedData(filteredInventory).length !== 1 ? "s" : ""}
-          </div>
-          {hasMoreData(filteredInventory) && (
-            <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              Scroll down to load more
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  );
-};
-
-// Returns Management Tab Component
-const ReturnsManagementTab = ({
-  returnsData,
-  isLoading,
-  currentPage,
-  totalPages,
-  totalRecords,
-  loadReturns,
-  statusFilter,
-  setStatusFilter,
-  handleApproveReturn,
-  handleRejectReturn,
-  displayedItemsCount,
-  setDisplayedItemsCount,
-  isLoadingMore,
-  setIsLoadingMore,
-  containerRef,
-  itemsPerPage,
-}) => {
-  // Get displayed data for infinite scroll
-  const getDisplayedData = (dataArray) => {
-    return dataArray.slice(0, displayedItemsCount);
-  };
-
-  // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length || currentPage < totalPages;
-  }, [displayedItemsCount, currentPage, totalPages]);
-
-  // Load more data callback
-  const loadMoreData = useCallback(async () => {
-    if (isLoadingMore || isLoading) return;
-    
-    setIsLoadingMore(true);
-    // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Check if we need to fetch more from API
-    if (displayedItemsCount >= returnsData.length && currentPage < totalPages) {
-      await loadReturns(currentPage + 1, statusFilter, true);
-    }
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
-    setIsLoadingMore(false);
-  }, [isLoadingMore, isLoading, displayedItemsCount, returnsData.length, currentPage, totalPages, statusFilter, itemsPerPage, loadReturns, setIsLoadingMore, setDisplayedItemsCount]);
-
-  // Scroll detection for infinite scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Handle wheel events to allow page scrolling when table reaches boundaries
-    const handleWheel = (e) => {
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const isAtTop = scrollTop <= 1;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
-      if (e.deltaY > 0 && isAtBottom) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: 'auto'
-        });
-      } else if (e.deltaY < 0 && isAtTop) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: 'auto'
-        });
-      }
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-    };
+  const closeInventoryDetail = useCallback(() => {
+    setInventoryDetail({ item: null, ledger: null, loadingLedger: false });
   }, []);
-  return (
-    <>
-      {/* Filter Bar */}
-      <div className="mb-3 d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
-        <div className="d-flex align-items-center gap-2">
-          <label className="mb-0 small text-muted">Filter by Status:</label>
-          <select
-            className="form-select form-select-sm"
-            style={{ width: "auto", minWidth: "150px" }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-      </div>
 
-      {/* Table */}
-      <div
-        ref={containerRef}
-        className="table-responsive table-scroll-container"
-        style={{
-          maxHeight: "600px",
-          overflowY: "auto",
-          overflowX: "auto",
-          position: "relative",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          scrollBehavior: "smooth",
-          overscrollBehavior: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-        onScroll={(e) => {
-          const target = e.target;
-          const scrollTop = target.scrollTop;
-          const scrollHeight = target.scrollHeight;
-          const clientHeight = target.clientHeight;
-          
-          if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-            if (hasMoreData(returnsData) && !isLoadingMore && !isLoading) {
-              loadMoreData();
-            }
-          }
-        }}
-        onWheel={(e) => {
-          const target = e.currentTarget;
-          const scrollTop = target.scrollTop;
-          const scrollHeight = target.scrollHeight;
-          const clientHeight = target.clientHeight;
-          const isAtTop = scrollTop <= 1;
-          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-          
-          if (e.deltaY > 0 && isAtBottom) {
-            window.scrollBy({
-              top: e.deltaY,
-              behavior: 'auto'
-            });
-          } else if (e.deltaY < 0 && isAtTop) {
-            window.scrollBy({
-              top: e.deltaY,
-              behavior: 'auto'
-            });
-          }
-        }}
-      >
-        <table
-          className="table table-hover mb-0"
-          style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-        >
-          <thead
-            style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 10,
-              backgroundColor: "#f9fafb",
-              borderBottom: "2px solid #e5e7eb",
-            }}
-          >
-            <tr>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Sr No
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Order Name
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Product
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Variant
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Return Qty
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Return Date
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                  textAlign: "center",
-                }}
-              >
-                Status
-              </th>
-              <th
-                style={{
-                  fontWeight: "600",
-                  color: "#374151",
-                  padding: "12px",
-                }}
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && returnsData.length === 0 ? (
-              <>
-                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                  <tr key={`skeleton-${rowIndex}`}>
-                    {Array.from({ length: 8 }).map((_, colIndex) => (
-                      <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "20px",
-                            backgroundColor: "#e5e7eb",
-                            borderRadius: "4px",
-                            animation: "skeletonPulse 1.5s ease-in-out infinite",
-                          }}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </>
-            ) : returnsData.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="text-center py-4">
-                  <div className="d-flex flex-column align-items-center">
-                    <Icon
-                      icon="mdi:arrow-u-left-top"
-                      width="48"
-                      height="48"
-                      className="text-muted mb-2"
-                    />
-                    <p className="text-muted mb-0">No returns found</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              <>
-                {getDisplayedData(returnsData).map((returnItem, index) => (
-                  <tr key={returnItem.event_id}>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {index + 1}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {returnItem.order_name || returnItem.order_id || "-"}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {returnItem.product_title || "-"}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {returnItem.variant_title || "-"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        textAlign: "center",
-                        color: "#374151",
-                      }}
-                    >
-                      {returnItem.qty_delta || 0}
-                    </td>
-                    <td style={{ padding: "12px", color: "#374151" }}>
-                      {returnItem.return_date
-                        ? new Date(returnItem.return_date).toLocaleDateString()
-                        : "-"}
-                    </td>
-                    <td style={{ padding: "12px", textAlign: "center" }}>
-                      <span
-                        className={`badge ${
-                          returnItem.approval_status === "approved"
-                            ? "bg-success"
-                            : returnItem.approval_status === "rejected"
-                            ? "bg-danger"
-                            : "bg-warning"
-                        }`}
-                      >
-                        {returnItem.approval_status || "pending"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      {returnItem.approval_status === "pending" && (
-                        <div className="d-flex gap-2">
-                          <button
-                            className="btn btn-sm btn-success"
-                            onClick={() =>
-                              handleApproveReturn(returnItem.event_id)
-                            }
-                            title="Approve Return"
-                          >
-                            <Icon icon="mdi:check" width="16" height="16" />
-                          </button>
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() =>
-                              handleRejectReturn(returnItem.event_id)
-                            }
-                            title="Reject Return"
-                          >
-                            <Icon icon="mdi:close" width="16" height="16" />
-                          </button>
-                        </div>
-                      )}
-                      {returnItem.approval_status === "approved" && (
-                        <div className="text-muted small">
-                          <div>
-                            Approved by {returnItem.approved_by || "N/A"}
-                          </div>
-                          {returnItem.approved_at && (
-                            <div style={{ fontSize: "11px" }}>
-                              {new Date(
-                                returnItem.approved_at
-                              ).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {returnItem.approval_status === "rejected" && (
-                        <div className="text-muted small">
-                          <div>
-                            Rejected by {returnItem.rejected_by || "N/A"}
-                          </div>
-                          {returnItem.rejected_at && (
-                            <div style={{ fontSize: "11px" }}>
-                              {new Date(
-                                returnItem.rejected_at
-                              ).toLocaleDateString()}
-                            </div>
-                          )}
-                          {returnItem.rejection_reason && (
-                            <div style={{ fontSize: "11px" }}>
-                              Reason: {returnItem.rejection_reason}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {isLoadingMore && (
-                  <>
-                    {Array.from({ length: 5 }).map((_, rowIndex) => (
-                      <tr key={`skeleton-more-${rowIndex}`}>
-                        {Array.from({ length: 8 }).map((_, colIndex) => (
-                          <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                            <div
-                              className="skeleton"
-                              style={{
-                                height: "20px",
-                                backgroundColor: "#e5e7eb",
-                                borderRadius: "4px",
-                                animation: "skeletonPulse 1.5s ease-in-out infinite",
-                              }}
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Infinite Scroll Footer */}
-      {totalRecords > 0 && returnsData.length > 0 && (
-        <div
-          className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 p-3 border-top"
-          style={{
-            position: "sticky",
-            bottom: 0,
-            zIndex: 5,
-            backgroundColor: "#f8f9fa",
-          }}
-        >
-          <div style={{ fontSize: "14px", color: "#6c757d" }}>
-            Showing <strong>{getDisplayedData(returnsData).length}</strong> of{" "}
-            <strong>{totalRecords}</strong> returns
-          </div>
-          {hasMoreData(returnsData) && (
-            <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              Scroll down to load more
-            </div>
-          )}
-        </div>
-      )}
-    </>
+  const handleApproveReturn = useCallback(
+    async (row) => {
+      setReturnsState((prev) => ({ ...prev, busyCaseId: row.return_case_id }));
+      try {
+        await inventoryManagementApi.approveReturnCase(row.return_case_id);
+        toast.success("Return approved");
+        await loadReturns({ page: returnsState.pagination.page });
+      } catch (error) {
+        console.error("Failed to approve return", error);
+        toast.error(error.message || "Failed to approve return");
+      } finally {
+        setReturnsState((prev) => ({ ...prev, busyCaseId: null }));
+      }
+    },
+    [loadReturns, returnsState.pagination.page]
   );
-};
 
-const StockManagementPage = () => {
+  const handleRejectReturn = useCallback(
+    async (row) => {
+      setReturnsState((prev) => ({ ...prev, busyCaseId: row.return_case_id }));
+      try {
+        await inventoryManagementApi.rejectReturnCase(row.return_case_id);
+        toast.success("Return rejected");
+        await loadReturns({ page: returnsState.pagination.page });
+      } catch (error) {
+        console.error("Failed to reject return", error);
+        toast.error(error.message || "Failed to reject return");
+      } finally {
+        setReturnsState((prev) => ({ ...prev, busyCaseId: null }));
+      }
+    },
+    [loadReturns, returnsState.pagination.page]
+  );
+
+  const handleSyncReturnCases = useCallback(async () => {
+    setReturnsState((prev) => ({ ...prev, loading: true }));
+    try {
+      await inventoryManagementApi.syncReturnCases(200);
+      toast.success("Return cases synced from Shopify data");
+      await loadReturns({ page: 1 });
+    } catch (error) {
+      console.error("Failed to sync return cases", error);
+      toast.error(error.message || "Failed to sync return cases");
+    } finally {
+      setReturnsState((prev) => ({ ...prev, loading: false }));
+    }
+  }, [loadReturns]);
+
+  const inventoryTable = useMemo(() => {
+    if (inventoryState.loading) {
+      return (
+        <tr>
+          <td colSpan={7} className="text-center py-5">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    if (!inventoryState.data.length) {
+      return (
+        <tr>
+          <td colSpan={7} className="text-center text-muted py-4">
+            No inventory records found
+          </td>
+        </tr>
+      );
+    }
+
+    return inventoryState.data.map((item) => (
+      <tr key={item.inventory_item_id}>
+        <td>{item.product_name}</td>
+        <td>{item.variant_display_name}</td>
+        <td>{item.sku || "-"}</td>
+        <td className="text-center">{formatNumber(item.available_quantity)}</td>
+        <td className="text-center">{formatNumber(item.committed_quantity)}</td>
+        <td className="text-center">{formatNumber(item.cancelled_quantity)}</td>
+        <td className="text-center">
+          {formatNumber(item.approved_returns_quantity)}
+        </td>
+        <td className="text-end">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => openInventoryDetail(item)}
+          >
+            <Icon icon="mdi:eye" width={16} height={16} />
+          </button>
+        </td>
+      </tr>
+    ));
+  }, [inventoryState, openInventoryDetail]);
+
+  const returnsTable = useMemo(() => {
+    if (returnsState.loading) {
+      return (
+        <tr>
+          <td colSpan={8} className="text-center py-5">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    if (!returnsState.data.length) {
+      return (
+        <tr>
+          <td colSpan={8} className="text-center text-muted py-4">
+            No return cases
+          </td>
+        </tr>
+      );
+    }
+
+    return returnsState.data.map((row) => (
+      <tr key={row.return_case_id}>
+        <td>{row.order_id}</td>
+        <td>{row.sku || row.shopify_variant_id || "-"}</td>
+        <td>{row.variant_display_name || "-"}</td>
+        <td className="text-center">{formatNumber(row.quantity)}</td>
+        <td className="text-center">{row.status}</td>
+        <td className="text-muted small">{row.reason || "-"}</td>
+        <td className="text-muted small">
+          {new Date(row.reported_at).toLocaleString()}
+        </td>
+        <td className="text-end">
+          <ReturnActionButtons
+            row={row}
+            busy={returnsState.busyCaseId === row.return_case_id}
+            onApprove={handleApproveReturn}
+            onReject={handleRejectReturn}
+          />
+        </td>
+      </tr>
+    ));
+  }, [returnsState, handleApproveReturn, handleRejectReturn]);
+
   return (
-    <>
-      <SidebarPermissionGuard requiredSidebar="stockManagement">
-        {/* MasterLayout */}
-        <MasterLayout>
-          {/* Breadcrumb */}
-          <Breadcrumb title="Inventory Management / Stock Management" />
+    <SidebarPermissionGuard requiredSidebar="stockManagement">
+      <MasterLayout>
+        <Breadcrumb title="Stock Management" />
+        <div className="container-fluid py-4">
+          <div className="card">
+            <div className="card-header border-0 pb-0">
+              <div className="d-flex gap-3">
+                {[
+                  { id: "inventory", label: "Inventory" },
+                  { id: "returns", label: "Returns" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`btn btn-link px-0 text-decoration-none fw-semibold ${
+                      activeTab === tab.id ? "text-primary" : "text-muted"
+                    }`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="card-body">
+              {activeTab === "inventory" && (
+                <div>
+                  <div className="row g-3 align-items-end mb-3">
+                    <div className="col-md-4">
+                      <label className="form-label small">Search</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Product, variant or SKU"
+                        value={inventoryState.search}
+                        onChange={(event) =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                            search: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="col-md-3">
+                      <label className="form-label small">Page Size</label>
+                      <select
+                        className="form-select"
+                        value={inventoryState.limit}
+                        onChange={(event) =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                            limit: Number(event.target.value) || 25,
+                          }))
+                        }
+                      >
+                        {[25, 50, 75, 100].map((option) => (
+                          <option key={option} value={option}>
+                            {option} rows
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-2 d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => loadInventory({ page: 1 })}
+                        disabled={inventoryState.loading}
+                      >
+                        <Icon icon="mdi:magnify" width={18} height={18} />
+                        Search
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={() =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                            search: "",
+                          }))
+                        }
+                        disabled={inventoryState.loading}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
 
-          {/* StockManagementLayer */}
-          <StockManagementLayer />
-        </MasterLayout>
-      </SidebarPermissionGuard>
-    </>
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Product</th>
+                          <th>Variant</th>
+                          <th>SKU</th>
+                          <th className="text-center">Available</th>
+                          <th className="text-center">Committed</th>
+                          <th className="text-center">Cancels</th>
+                          <th className="text-center">Approved Returns</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>{inventoryTable}</tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="text-muted small">
+                      Page {inventoryState.pagination.page} of{" "}
+                      {inventoryState.pagination.totalPages}
+                    </div>
+                    <div className="btn-group">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          inventoryState.loading ||
+                          inventoryState.pagination.page <= 1
+                        }
+                        onClick={() =>
+                          loadInventory({
+                            page: inventoryState.pagination.page - 1,
+                          })
+                        }
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          inventoryState.loading ||
+                          inventoryState.pagination.page >=
+                            inventoryState.pagination.totalPages
+                        }
+                        onClick={() =>
+                          loadInventory({
+                            page: inventoryState.pagination.page + 1,
+                          })
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "returns" && (
+                <div>
+                  <div className="row g-3 align-items-end mb-3">
+                    <div className="col-md-3">
+                      <label className="form-label small">Status</label>
+                      <select
+                        className="form-select"
+                        value={returnsState.status}
+                        onChange={(event) =>
+                          loadReturns({ status: event.target.value, page: 1 })
+                        }
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="">All</option>
+                      </select>
+                    </div>
+                    <div className="col-md-3 d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={handleSyncReturnCases}
+                        disabled={returnsState.loading}
+                      >
+                        <Icon icon="mdi:refresh" width={18} height={18} />
+                        Sync
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Order</th>
+                          <th>SKU</th>
+                          <th>Variant</th>
+                          <th className="text-center">Qty</th>
+                          <th className="text-center">Status</th>
+                          <th>Reason</th>
+                          <th>Reported At</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>{returnsTable}</tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="text-muted small">
+                      Page {returnsState.pagination.page} of{" "}
+                      {returnsState.pagination.totalPages}
+                    </div>
+                    <div className="btn-group">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          returnsState.loading ||
+                          returnsState.pagination.page <= 1
+                        }
+                        onClick={() =>
+                          loadReturns({
+                            page: returnsState.pagination.page - 1,
+                          })
+                        }
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          returnsState.loading ||
+                          returnsState.pagination.page >=
+                            returnsState.pagination.totalPages
+                        }
+                        onClick={() =>
+                          loadReturns({
+                            page: returnsState.pagination.page + 1,
+                          })
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <InventoryDetailModal
+          item={inventoryDetail.item}
+          ledger={inventoryDetail.ledger}
+          isOpen={Boolean(inventoryDetail.item)}
+          onClose={closeInventoryDetail}
+          loading={inventoryDetail.loadingLedger}
+        />
+      </MasterLayout>
+    </SidebarPermissionGuard>
   );
 };
 

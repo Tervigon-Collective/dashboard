@@ -123,11 +123,15 @@ class QualityCheckApiService {
   }
 
   // Documents: upload (base64 JSON), list, delete
-  async uploadDocument(requestId, { docType, itemId = null, file }) {
+  async uploadDocument(
+    requestId,
+    { docType, itemId = null, file, invoiceNumber = null }
+  ) {
     const content_base64 = await this.readFileAsBase64(file);
     const body = {
       doc_type: docType,
       item_id: itemId,
+      invoice_number: invoiceNumber,
       file_name: file.name,
       mime_type: file.type,
       content_base64,

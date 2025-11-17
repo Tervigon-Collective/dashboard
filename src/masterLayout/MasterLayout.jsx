@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../helper/ThemeToggleButton";
+import AskSelericLauncher from "@/components/askSeleric/AskSelericLauncher";
 import Link from "next/link";
 import { useUser } from "@/helper/UserContext";
 import { useRole } from "@/hook/useRole";
@@ -307,7 +308,15 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasAnyApplicationPermission =
+                hasSidebarPermission("skuList") ||
+                hasSidebarPermission("productSpendSummary") ||
+                hasSidebarPermission("procurement") ||
+                hasSidebarPermission("entityReport") ||
+                hasSidebarPermission("userManagement");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasAnyApplicationPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">Application</li>
@@ -471,7 +480,11 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasContentGeneratorPermission =
+                hasSidebarPermission("createContent");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasContentGeneratorPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">
@@ -522,7 +535,14 @@ const MasterLayout = ({ children }) => {
               const isAdmin = role === "admin";
               const isManager = role === "manager";
 
-              if (isSuperAdmin || isAdmin || isManager) {
+              // Check if user has permission to at least one item in this group
+              const hasAnyInventoryPermission =
+                hasSidebarPermission("receivingManagement") ||
+                hasSidebarPermission("orderManagement") ||
+                hasSidebarPermission("stockManagement") ||
+                hasSidebarPermission("masters");
+
+              if ((isSuperAdmin || isAdmin || isManager) && hasAnyInventoryPermission) {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">
@@ -582,7 +602,6 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-
                     {hasSidebarPermission("masters") && (
                       <li>
                         <Link
@@ -1570,6 +1589,7 @@ const MasterLayout = ({ children }) => {
               <div className="d-flex flex-wrap align-items-center gap-3">
                 {/* ThemeToggleButton */}
                 <ThemeToggleButton />
+                <AskSelericLauncher />
                 {/* <div className="dropdown">
                   <button
                     className="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"

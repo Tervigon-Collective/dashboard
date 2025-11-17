@@ -26,6 +26,15 @@ const isTodayRange = (start, end) => {
 const sortBreakdown = (arr) =>
   arr.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
+const emptyInventoryEvents = {
+  cancelCount: null,
+  cancelQuantity: null,
+  returnCount: null,
+  returnQuantity: null,
+  totalEvents: null,
+  totalQuantity: null,
+};
+
 const UnitCountOne = ({ dateRange }) => {
   const [adSpend, setAdSpend] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +72,7 @@ const UnitCountOne = ({ dateRange }) => {
     google: null,
     meta: null,
   });
+  const [inventoryEvents, setInventoryEvents] = useState(emptyInventoryEvents);
 
   // Helper to sort breakdowns by value descending
   const sortBreakdown = (arr) =>
@@ -135,6 +145,7 @@ const UnitCountOne = ({ dateRange }) => {
     setGrossRoas({ total: null, google: null, meta: null });
     setNetRoas({ total: null, google: null, meta: null });
     setBeRoas({ total: null, google: null, meta: null });
+    setInventoryEvents(emptyInventoryEvents);
 
     const { startDate, endDate } = effectiveDateRange;
     const isToday = isTodayRange(startDate, endDate);
@@ -152,6 +163,11 @@ const UnitCountOne = ({ dateRange }) => {
         apiClient.get(`/api/net_profit${query}`),
         apiClient.get(`/api/order_count${query}`),
         apiClient.get(`/api/roas${query}`),
+        apiClient.get(
+          `/api/inventory-events/summary?start_date=${
+            startDate.split(" ")[0]
+          }&end_date=${endDate.split(" ")[0]}`
+        ),
       ]).then((results) => {
         // ad_spend
         if (results[0].status === "fulfilled") {
@@ -217,6 +233,23 @@ const UnitCountOne = ({ dateRange }) => {
         } else {
           setError((e) => ({ ...e, roas: "Failed to load data" }));
         }
+        // inventory events (returns / cancels)
+        if (results[6].status === "fulfilled") {
+          const payload = results[6].value.data?.data;
+          setInventoryEvents({
+            cancelCount: payload?.cancel?.count ?? null,
+            cancelQuantity: payload?.cancel?.quantity ?? null,
+            returnCount: payload?.return?.count ?? null,
+            returnQuantity: payload?.return?.quantity ?? null,
+            totalEvents: payload?.total_events ?? null,
+            totalQuantity: payload?.total_quantity ?? null,
+          });
+        } else {
+          setError((e) => ({
+            ...e,
+            inventoryEvents: "Failed to load data",
+          }));
+        }
         // Use correct net profit formula: total net profit = total sales - total cogs - total ad spend
         const totalSales = Number(
           results[2].status === "fulfilled"
@@ -248,6 +281,11 @@ const UnitCountOne = ({ dateRange }) => {
         ),
         apiClient.get(
           `/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
+        ),
+        apiClient.get(
+          `/api/inventory-events/summary?start_date=${
+            startDate.split(" ")[0]
+          }&end_date=${endDate.split(" ")[0]}`
         ),
       ])
         .then((results) => {
@@ -348,6 +386,24 @@ const UnitCountOne = ({ dateRange }) => {
             }
           } else {
             setError((e) => ({ ...e, sales: "Failed to load data" }));
+          }
+
+          // Handle inventory events summary
+          if (results[2].status === "fulfilled") {
+            const payload = results[2].value.data?.data;
+            setInventoryEvents({
+              cancelCount: payload?.cancel?.count ?? null,
+              cancelQuantity: payload?.cancel?.quantity ?? null,
+              returnCount: payload?.return?.count ?? null,
+              returnQuantity: payload?.return?.quantity ?? null,
+              totalEvents: payload?.total_events ?? null,
+              totalQuantity: payload?.total_quantity ?? null,
+            });
+          } else {
+            setError((e) => ({
+              ...e,
+              inventoryEvents: "Failed to load data",
+            }));
           }
 
           setLoading(false);
@@ -785,7 +841,11 @@ const UnitCountOne = ({ dateRange }) => {
                   icon: (
                     <Icon
                       icon="mdi:leaf"
-                      style={{ fontSize: 20, minWidth: 40 }}
+                      style={{
+                        fontSize: 20,
+                        minWidth: 40,
+                        color: "#388e3c",
+                      }}
                     />
                   ),
                   value: organicCogs,
@@ -942,7 +1002,121 @@ const UnitCountOne = ({ dateRange }) => {
         </div>
         {/* card end */}
       </div>
-      {/* Card 6: Gross ROAS (with Google & Meta breakdown) */}
+      {/* Card 6: Returns / Cancels */}
+      <div className="col">
+        <div
+          className="card shadow-none border bg-gradient-start-14 h-100 position-relative"
+          style={{ overflow: "visible" }}
+        >
+          <div className="card-body p-20">
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-medium text-black mb-1">Returns / Cancels</p>
+                <h6
+                  className="mb-0 display-6 fw-bold"
+                  style={{ letterSpacing: "1px" }}
+                >
+                  {getCardContent(
+                    inventoryEvents.totalEvents,
+                    loading,
+                    error.inventoryEvents,
+                    (v) => Number(v).toLocaleString()
+                  )}
+                </h6>
+              </div>
+              <div
+                className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #f37335 0%, #fdc830 100%)",
+                }}
+              >
+                <Icon
+                  icon="mdi:package-variant"
+                  className="text-white text-2xl mb-0"
+                />
+              </div>
+            </div>
+            <div
+              className="my-3"
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, #f37335 0%, #fdc830 100%)",
+                opacity: 0.4,
+              }}
+            ></div>
+            <div
+              className="d-flex flex-column align-items-center mt-2"
+              style={{ gap: 6, marginTop: 8, width: "100%" }}
+            >
+              {[
+                {
+                  label: "Cancelled Orders",
+                  icon: (
+                    <Icon
+                      icon="mdi:cancel"
+                      style={{ fontSize: 20, minWidth: 40, color: "#d32f2f" }}
+                    />
+                  ),
+                  count: inventoryEvents.cancelCount,
+                  quantity: inventoryEvents.cancelQuantity,
+                },
+                {
+                  label: "Returned Orders",
+                  icon: (
+                    <Icon
+                      icon="mdi:backup-restore"
+                      style={{ fontSize: 20, minWidth: 40, color: "#00796b" }}
+                    />
+                  ),
+                  count: inventoryEvents.returnCount,
+                  quantity: inventoryEvents.returnQuantity,
+                },
+              ].map((item) => (
+                <div
+                  className="d-flex align-items-center justify-content-between w-100 flex-wrap"
+                  style={{ gap: 8 }}
+                  key={item.label}
+                >
+                  <div
+                    className="d-flex align-items-center"
+                    style={{ gap: 6, minWidth: 0 }}
+                  >
+                    {item.icon}
+                    <span
+                      className="fw-medium text-black"
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: "#222",
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 16,
+                      color: "#0d47a1",
+                      textAlign: "right",
+                    }}
+                  >
+                    {getCardContent(
+                      item.count,
+                      loading,
+                      error.inventoryEvents,
+                      (v) => Number(v).toLocaleString()
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* card end */}
+      </div>
+      {/* Card 7: Gross ROAS (with Google & Meta breakdown) */}
       <div className="col">
         <div
           className="card shadow-none border bg-gradient-start-11 h-100 position-relative"
@@ -1046,7 +1220,7 @@ const UnitCountOne = ({ dateRange }) => {
         </div>
         {/* card end */}
       </div>
-      {/* Card 7: Net ROAS (with Google & Meta breakdown) */}
+      {/* Card 8: Net ROAS (with Google & Meta breakdown) */}
       <div className="col">
         <div
           className="card shadow-none border bg-gradient-start-12 h-100 position-relative"
@@ -1150,7 +1324,7 @@ const UnitCountOne = ({ dateRange }) => {
         </div>
         {/* card end */}
       </div>
-      {/* Card 8: BE ROAS (with Google & Meta breakdown) */}
+      {/* Card 9: BE ROAS (with Google & Meta breakdown) */}
       <div className="col">
         <div
           className="card shadow-none border bg-gradient-start-13 h-100 position-relative"

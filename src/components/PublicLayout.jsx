@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import ThemeToggleButton from "@/helper/ThemeToggleButton";
+import AskSelericLauncher from "@/components/askSeleric/AskSelericLauncher";
 
 const PublicLayout = ({ children, title }) => {
   return (
@@ -24,6 +25,7 @@ const PublicLayout = ({ children, title }) => {
             {/* Theme Toggle */}
             <div className="d-flex align-items-center gap-3">
               <ThemeToggleButton />
+              <AskSelericLauncher size={36} />
               <Link href="/sign-in" className="btn btn-outline-primary btn-sm">
                 Sign In
               </Link>

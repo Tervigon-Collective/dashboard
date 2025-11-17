@@ -1,435 +1,626 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Modal, Button } from "react-bootstrap";
 import { Icon } from "@iconify/react";
+import { Modal, Button } from "react-bootstrap";
 import { toast } from "react-toastify";
 
-import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import Breadcrumb from "@/components/Breadcrumb";
-import orderManagementApi from "@/services/orderManagementApi";
+import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
+import inventoryManagementApi from "@/services/inventoryManagementApi";
 
 const Html5QrScanner = dynamic(() => import("@/components/Html5QrScanner"), {
   ssr: false,
 });
 
-const initialDispatchState = {
-  isOpen: false,
-  lineItem: null,
-  isDispatching: false,
-  scanError: "",
-};
-
-const parseQrPayload = (value) => {
-  if (!value) {
+const parseQrToken = (rawValue) => {
+  if (!rawValue) {
     throw new Error("QR payload is empty");
   }
 
+  if (rawValue.startsWith("http")) {
+    try {
+      const url = new URL(rawValue);
+      const tokenFromQuery = url.searchParams.get("token");
+      if (tokenFromQuery) {
+        return tokenFromQuery;
+      }
+
+      const segments = url.pathname.split("/").filter(Boolean);
+      return segments[segments.length - 1];
+    } catch (error) {
+      console.warn("Failed to parse QR URL, falling back to raw value", error);
+    }
+  }
+
+  const queryIndex = rawValue.indexOf("token=");
+  if (queryIndex !== -1) {
+    const params = new URLSearchParams(rawValue.slice(queryIndex));
+    const tokenFromQuery = params.get("token");
+    if (tokenFromQuery) {
+      return tokenFromQuery;
+    }
+  }
+
+  const tokens = rawValue.split("/").filter(Boolean);
+  return tokens[tokens.length - 1];
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
   try {
-    let url;
-    if (value.startsWith("http")) {
-      url = new URL(value);
-    } else {
-      url = new URL(value, "https://placeholder.local");
-    }
-
-    const segments = url.pathname.split("/").filter(Boolean);
-    const receivingIndex = segments.findIndex(
-      (segment) => segment === "receiving"
-    );
-
-    if (
-      receivingIndex === -1 ||
-      !segments[receivingIndex + 1] ||
-      segments[receivingIndex + 1] !== "qr"
-    ) {
-      throw new Error("QR code does not match receiving format");
-    }
-
-    const requestId = segments[receivingIndex + 2];
-    const itemId = segments[receivingIndex + 3];
-    const token = segments[receivingIndex + 4];
-
-    if (!requestId || !itemId || !token) {
-      throw new Error("Incomplete QR data");
-    }
-
-    return {
-      requestId: Number(requestId),
-      itemId: Number(itemId),
-      token,
-    };
+    return new Date(value).toLocaleString();
   } catch (error) {
-    throw new Error("Unable to parse QR code: " + error.message);
+    return value;
   }
 };
 
-const OrderManagementPage = () => {
-  const [orders, setOrders] = useState([]);
-  const [orderLines, setOrderLines] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [dispatchState, setDispatchState] = useState(initialDispatchState);
+const DispatchScannerModal = ({
+  isOpen,
+  onClose,
+  lineItem,
+  onScan,
+  scanError,
+  isDispatching,
+}) => {
+  if (!lineItem) return null;
 
-  const loadOrders = useCallback(async () => {
+  return (
+    <Modal show={isOpen} onHide={onClose} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Dispatch: {lineItem.title}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="mb-3">
+          <div className="fw-semibold">Order</div>
+          <div className="text-muted small">
+            {lineItem.order_name || lineItem.order_id}
+          </div>
+        </div>
+        <div className="row g-3 mb-3">
+          <div className="col-6 col-md-3">
+            <span className="text-muted small">Ordered</span>
+            <div className="fw-semibold">{lineItem.quantity}</div>
+          </div>
+          <div className="col-6 col-md-3">
+            <span className="text-muted small">Dispatched</span>
+            <div className="fw-semibold text-success">
+              {lineItem.dispatched_quantity || 0}
+            </div>
+          </div>
+          <div className="col-6 col-md-3">
+            <span className="text-muted small">Remaining</span>
+            <div
+              className={`fw-semibold ${
+                lineItem.remaining_to_dispatch === 0
+                  ? "text-success"
+                  : "text-primary"
+              }`}
+            >
+              {lineItem.remaining_to_dispatch || 0}
+            </div>
+          </div>
+          <div className="col-6 col-md-3">
+            <span className="text-muted small">Available</span>
+            <div className="fw-semibold">
+              {lineItem.available_quantity ?? "-"}
+            </div>
+          </div>
+        </div>
+        <div className="border rounded p-3 bg-light">
+          {lineItem.remaining_to_dispatch === 0 ? (
+            <div className="text-center py-4">
+              <div className="text-success mb-3">
+                <Icon icon="mdi:check-circle" width={64} height={64} />
+              </div>
+              <div className="fw-semibold text-success mb-2">
+                All items dispatched successfully!
+              </div>
+              <div className="small text-muted">
+                You can close the scanner now.
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 small text-muted">
+                Scan the QR code attached to each unit.{" "}
+                <span className="fw-semibold text-primary">
+                  {lineItem.remaining_to_dispatch} item
+                  {lineItem.remaining_to_dispatch !== 1 ? "s" : ""} remaining.
+                </span>
+              </p>
+              {isDispatching && (
+                <div className="alert alert-info mb-2 py-2" role="alert">
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{ width: "1rem", height: "1rem" }}
+                    >
+                      <span className="visually-hidden">Processing...</span>
+                    </div>
+                    <span className="small">Processing scan...</span>
+                  </div>
+                </div>
+              )}
+              <Html5QrScanner
+                className="w-100"
+                onScan={onScan}
+                onError={(message) =>
+                  console.warn("QR scanner warning", message)
+                }
+                qrbox={320}
+              />
+            </>
+          )}
+        </div>
+        {scanError && (
+          <div className="alert alert-danger mt-3" role="alert">
+            {scanError}
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose} disabled={isDispatching}>
+          Close
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+const OrderManagementPage = () => {
+  const [queue, setQueue] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [limit, setLimit] = useState(50);
+  const [scannerState, setScannerState] = useState({
+    isOpen: false,
+    lineItem: null,
+    scanError: "",
+    isDispatching: false,
+  });
+  // Track last scanned token and timestamp to prevent duplicate scans
+  const lastScanRef = useRef({
+    token: null,
+    timestamp: 0,
+    orderLineItemId: null,
+  });
+  // Synchronous flag to prevent concurrent processing
+  const isProcessingRef = useRef(false);
+
+  const loadQueue = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoadingOrders(true);
-      const response = await orderManagementApi.getRecentOrders(20);
-      const data = response?.data || [];
-      setOrders(data);
-      const flattened = data.flatMap((order) =>
-        (order.line_items || []).map((item) => ({
-          ...item,
-          order_id: order.order_id,
-          order_name: order.order_name,
-          order_created_at: order.created_at,
-          order_total_price_amount: order.total_price_amount,
-          order_total_price_currency: order.total_price_currency,
-          order_status: order.display_fulfillment_status,
-        }))
-      );
-      setOrderLines(flattened);
-    } catch (error) {
-      console.error("Failed to load orders:", error);
-      toast.error(error.message || "Failed to load orders");
+      const response = await inventoryManagementApi.listDispatchQueue(limit);
+      setQueue(response?.data || response || []);
+    } catch (err) {
+      console.error("Failed to load dispatch queue", err);
+      setError(err.message || "Failed to load dispatch queue");
+      toast.error(err.message || "Failed to load dispatch queue");
     } finally {
-      setLoadingOrders(false);
+      setLoading(false);
     }
-  }, []);
+  }, [limit]);
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    loadQueue();
+  }, [loadQueue]);
 
   const handleOpenScanner = useCallback((lineItem) => {
-    setDispatchState({
+    // Reset scan tracking when opening scanner for a new line item
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
+    setScannerState({
       isOpen: true,
       lineItem,
-      isDispatching: false,
       scanError: "",
+      isDispatching: false,
     });
   }, []);
 
   const handleCloseScanner = useCallback(() => {
-    setDispatchState(initialDispatchState);
+    // Reset scan tracking when closing scanner
+    lastScanRef.current = { token: null, timestamp: 0, orderLineItemId: null };
+    isProcessingRef.current = false;
+    setScannerState({
+      isOpen: false,
+      lineItem: null,
+      scanError: "",
+      isDispatching: false,
+    });
   }, []);
 
-  const handleDispatch = useCallback(
-    async ({ requestId, itemId, token }) => {
-      if (!dispatchState.lineItem) {
-        toast.error("No line item selected for dispatch");
+  const handleScan = useCallback(
+    async (value) => {
+      // Synchronous check to prevent concurrent processing
+      if (isProcessingRef.current) {
+        console.log("Scan already processing, ignoring duplicate");
         return;
       }
 
+      if (!scannerState.lineItem || scannerState.isDispatching) {
+        return;
+      }
+
+      if (!value) {
+        return;
+      }
+
+      let token;
       try {
-        setDispatchState((prev) => ({
+        token = parseQrToken(value);
+        if (!token) {
+          throw new Error("Unable to extract QR token");
+        }
+      } catch (err) {
+        console.error("Failed to parse QR", err);
+        setScannerState((prev) => ({
+          ...prev,
+          scanError: err.message || "Invalid QR code",
+        }));
+        return;
+      }
+
+      // Prevent duplicate scans: same token + same order line item within 2 seconds
+      const currentOrderLineItemId = `${scannerState.lineItem.order_id}-${scannerState.lineItem.item_id}`;
+      const now = Date.now();
+      const timeSinceLastScan = now - lastScanRef.current.timestamp;
+      const isDuplicate =
+        lastScanRef.current.token === token &&
+        lastScanRef.current.orderLineItemId === currentOrderLineItemId &&
+        timeSinceLastScan < 2000; // 2 second debounce
+
+      if (isDuplicate) {
+        console.log("Duplicate scan ignored", { token, timeSinceLastScan });
+        return;
+      }
+
+      // Set processing flag immediately (synchronous)
+      isProcessingRef.current = true;
+
+      try {
+        setScannerState((prev) => ({
           ...prev,
           isDispatching: true,
           scanError: "",
         }));
 
-        const payload = {
-          shopifyVariantId: dispatchState.lineItem.variant_id,
-          requestId,
-          purchaseRequestItemId: itemId,
-          qrToken: token,
+        // Update last scan reference immediately to prevent duplicates
+        lastScanRef.current = {
+          token,
+          timestamp: now,
+          orderLineItemId: currentOrderLineItemId,
         };
 
-        const response = await orderManagementApi.dispatchOrderItem(
-          dispatchState.lineItem.order_id,
-          dispatchState.lineItem.item_id,
-          payload
+        const response = await inventoryManagementApi.dispatchScan(
+          scannerState.lineItem.order_id,
+          scannerState.lineItem.item_id,
+          {
+            qrToken: token,
+            source: "order_management",
+          }
         );
 
-        if (!response?.success) {
-          throw new Error(response?.message || "Dispatch failed");
-        }
+        // Get remaining quantity from response
+        const remainingAfterScan =
+          response?.data?.remaining_to_dispatch ?? null;
 
-        toast.success("Item dispatched successfully");
-        await loadOrders();
-        handleCloseScanner();
-      } catch (error) {
-        console.error("Dispatch failed:", error);
-        const message = error.message || "Failed to dispatch item";
-        toast.error(message);
-        setDispatchState((prev) => ({
+        // Reload queue to get updated data
+        const queueResponse = await inventoryManagementApi.listDispatchQueue(
+          limit
+        );
+        const updatedQueue = queueResponse?.data || queueResponse || [];
+        setQueue(updatedQueue);
+
+        // Find the updated line item from the fresh queue data
+        const updatedLine = updatedQueue.find(
+          (line) =>
+            line.order_id === scannerState.lineItem.order_id &&
+            line.item_id === scannerState.lineItem.item_id
+        );
+
+        // Get final remaining quantity (from updatedLine or response)
+        const finalRemaining =
+          updatedLine?.remaining_to_dispatch ??
+          remainingAfterScan ??
+          scannerState.lineItem.remaining_to_dispatch;
+
+        const totalQuantity = Number(
+          updatedLine?.quantity || scannerState.lineItem.quantity || 0
+        );
+        const dispatchedCount = Number(updatedLine?.dispatched_quantity || 0);
+
+        // Update scanner state with fresh data
+        setScannerState((prev) => ({
+          ...prev,
+          lineItem: updatedLine || prev.lineItem,
+          isDispatching: false,
+          scanError: "",
+        }));
+
+        // Show appropriate message and handle auto-close
+        if (finalRemaining === 0) {
+          // All items dispatched - show completion message and close scanner
+          toast.success(
+            `All ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } dispatched successfully!`,
+            { autoClose: 3000 }
+          );
+          // Auto-close scanner after a short delay to show the success message
+          setTimeout(() => {
+            handleCloseScanner();
+          }, 500);
+        } else {
+          // More items remaining - show progress message
+          toast.success(
+            `${dispatchedCount} of ${totalQuantity} item${
+              totalQuantity !== 1 ? "s" : ""
+            } scanned. ${finalRemaining} remaining.`,
+            { autoClose: 2000 }
+          );
+        }
+      } catch (err) {
+        console.error("Dispatch failed", err);
+        // Reset last scan on error so user can retry
+        lastScanRef.current = {
+          token: null,
+          timestamp: 0,
+          orderLineItemId: null,
+        };
+        setScannerState((prev) => ({
           ...prev,
           isDispatching: false,
-          scanError: message,
+          scanError: err.message || "Failed to dispatch",
         }));
+        toast.error(err.message || "Failed to dispatch");
+      } finally {
+        // Always reset processing flag to allow next scan
+        isProcessingRef.current = false;
       }
     },
-    [dispatchState.lineItem, loadOrders, handleCloseScanner]
+    [
+      scannerState.lineItem,
+      scannerState.isDispatching,
+      limit,
+      handleCloseScanner,
+    ]
   );
 
-  const handleScanResult = useCallback(
-    (decodedText) => {
-      if (dispatchState.isDispatching) {
-        return;
+  // Group queue items by order_id
+  const groupedOrders = useMemo(() => {
+    const groups = {};
+    queue.forEach((line) => {
+      const orderId = line.order_id;
+      if (!groups[orderId]) {
+        groups[orderId] = {
+          order_id: orderId,
+          order_name: line.order_name,
+          created_at: line.created_at,
+          display_fulfillment_status: line.display_fulfillment_status,
+          lineItems: [],
+          totalItems: 0,
+          totalRemaining: 0,
+        };
       }
+      groups[orderId].lineItems.push(line);
+      groups[orderId].totalItems += Number(line.quantity || 0);
+      groups[orderId].totalRemaining += Number(line.remaining_to_dispatch || 0);
+    });
+    return Object.values(groups);
+  }, [queue]);
 
-      if (!decodedText) {
-        return;
-      }
+  const tableBody = useMemo(() => {
+    if (loading) {
+      return (
+        <tr>
+          <td colSpan={10} className="text-center py-5">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
 
-      try {
-        const parsed = parseQrPayload(decodedText);
-        handleDispatch(parsed);
-      } catch (parseError) {
-        console.error(parseError);
-        setDispatchState((prev) => ({
-          ...prev,
-          scanError: parseError.message,
-        }));
-      }
-    },
-    [dispatchState.isDispatching, handleDispatch]
-  );
+    if (error) {
+      return (
+        <tr>
+          <td colSpan={10} className="text-center text-danger py-4">
+            {error}
+          </td>
+        </tr>
+      );
+    }
 
-  const dispatchModalBody = useMemo(() => {
-    if (!dispatchState.lineItem) return null;
+    if (!queue.length) {
+      return (
+        <tr>
+          <td colSpan={10} className="text-center text-muted py-4">
+            No items awaiting dispatch
+          </td>
+        </tr>
+      );
+    }
 
-    return (
-      <>
-        <div className="mb-3">
-          <h6 className="mb-1">{dispatchState.lineItem.title}</h6>
-          <div className="small text-muted">
-            SKU: {dispatchState.lineItem.sku || "-"}
-          </div>
-          <div className="small text-muted">
-            Remaining to dispatch:{" "}
-            {dispatchState.lineItem.remaining_to_dispatch}
-          </div>
-          <div className="small text-muted">
-            Inventory available: {dispatchState.lineItem.current_quantity ?? 0}
-          </div>
-        </div>
-        <div className="border rounded p-3 bg-light">
-          <p className="mb-2">Scan the QR code attached to the product.</p>
-          <div className="qr-reader-wrapper">
-            <Html5QrScanner
-              className="w-100"
-              onScan={handleScanResult}
-              onError={(errorMessage) =>
-                setDispatchState((prev) => ({
-                  ...prev,
-                  scanError: errorMessage,
-                }))
-              }
-              qrbox={280}
-            />
-          </div>
-        </div>
-        {dispatchState.scanError && (
-          <div className="alert alert-danger mt-3" role="alert">
-            {dispatchState.scanError}
-          </div>
-        )}
-      </>
-    );
-  }, [dispatchState.lineItem, dispatchState.scanError, handleScanResult]);
+    const rows = [];
+    groupedOrders.forEach((orderGroup) => {
+      // Order summary row
+      rows.push(
+        <tr
+          key={`order-${orderGroup.order_id}`}
+          style={{ backgroundColor: "#f8f9fa", fontWeight: "600" }}
+        >
+          <td>
+            <div className="fw-semibold">
+              Order: {orderGroup.order_name || orderGroup.order_id}
+            </div>
+            <div className="small text-muted">
+              {formatDateTime(orderGroup.created_at)}
+            </div>
+          </td>
+          <td className="text-center">
+            <span className="badge bg-light text-secondary border">
+              Status: {orderGroup.display_fulfillment_status || "Unknown"}
+            </span>
+          </td>
+          <td>
+            <div className="fw-semibold">
+              Items: {orderGroup.lineItems.length}
+            </div>
+          </td>
+          <td>-</td>
+          <td className="text-center">{orderGroup.totalItems}</td>
+          <td className="text-center">-</td>
+          <td className="text-center fw-semibold text-primary">
+            Remaining: {orderGroup.totalRemaining}
+          </td>
+          <td className="text-center">-</td>
+          <td className="text-center">-</td>
+          <td className="text-end">-</td>
+        </tr>
+      );
+
+      // Line item rows with tree structure
+      orderGroup.lineItems.forEach((line, index) => {
+        const remaining = Number(line.remaining_to_dispatch || 0);
+        const isDisabled = remaining <= 0;
+        const isLast = index === orderGroup.lineItems.length - 1;
+        const treePrefix = isLast ? "└─" : "├─";
+
+        rows.push(
+          <tr key={`${line.order_id}-${line.item_id}`}>
+            <td>
+              <div className="d-flex align-items-center gap-2 ps-3">
+                <span style={{ color: "#6b7280", fontFamily: "monospace" }}>
+                  {treePrefix}
+                </span>
+                <div>
+                  <div className="fw-semibold" style={{ fontSize: "0.9em" }}>
+                    {line.sku || "-"}
+                  </div>
+                  <div className="small text-muted">Remaining: {remaining}</div>
+                </div>
+              </div>
+            </td>
+            <td className="text-center">-</td>
+            <td>
+              <div className="fw-semibold">{line.title}</div>
+              <div className="small text-muted">
+                {line.product_title || "Unknown product"}
+              </div>
+            </td>
+            <td>{line.sku || "-"}</td>
+            <td className="text-center">{line.quantity}</td>
+            <td className="text-center">{line.dispatched_quantity || 0}</td>
+            <td className="text-center fw-semibold text-primary">
+              {remaining}
+            </td>
+            <td className="text-center">{line.available_quantity ?? "-"}</td>
+            <td className="text-center">{line.committed_quantity ?? "-"}</td>
+            <td className="text-end">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                onClick={() => handleOpenScanner(line)}
+                disabled={isDisabled}
+              >
+                <Icon icon="mdi:barcode-scan" width={18} height={18} />
+                Dispatch
+              </button>
+            </td>
+          </tr>
+        );
+      });
+    });
+
+    return rows;
+  }, [groupedOrders, loading, error, queue.length, handleOpenScanner]);
 
   return (
     <SidebarPermissionGuard requiredSidebar="orderManagement">
       <MasterLayout>
         <Breadcrumb title="Order Management" />
         <div className="container-fluid py-4">
-          <div className="card h-100">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Order Dispatch Queue</h5>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={loadOrders}
-                disabled={loadingOrders}
-              >
-                <Icon icon="mdi:refresh" fontSize={16} />
-              </button>
+          <div className="card">
+            <div className="card-header d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">
+              <div>
+                <h5 className="mb-0">Order Dispatch Queue</h5>
+                <div className="text-muted small">
+                  Process Shopify orders by scanning the QR codes printed during
+                  receiving.
+                </div>
+              </div>
+              <div className="d-flex gap-2">
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={limit}
+                  onChange={(event) =>
+                    setLimit(Number(event.target.value) || 50)
+                  }
+                  disabled={loading}
+                >
+                  {[25, 50, 75, 100].map((option) => (
+                    <option key={option} value={option}>
+                      Show {option}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={loadQueue}
+                  disabled={loading}
+                >
+                  <Icon icon="mdi:refresh" width={18} height={18} />
+                </button>
+              </div>
             </div>
             <div className="card-body p-0">
-              {loadingOrders ? (
-                <div className="d-flex justify-content-center py-5">
-                  <div className="spinner-border" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                </div>
-              ) : orderLines.length === 0 ? (
-                <div className="text-center py-5 text-muted">
-                  No line items requiring dispatch were found.
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table
-                    className="table table-hover mb-0"
-                    style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+              <div className="table-responsive">
+                <table
+                  className="table table-hover mb-0"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  <thead
+                    style={{
+                      backgroundColor: "#f9fafb",
+                      borderBottom: "1px solid #e5e7eb",
+                    }}
                   >
-                    <thead
-                      style={{
-                        backgroundColor: "#f9fafb",
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      <tr>
-                        <th style={{ fontWeight: 600, color: "#374151" }}>
-                          Order
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{ fontWeight: 600, color: "#374151" }}
-                        >
-                          Status
-                        </th>
-                        <th
-                          style={{
-                            minWidth: "220px",
-                            fontWeight: 600,
-                            color: "#374151",
-                          }}
-                        >
-                          Product
-                        </th>
-                        <th style={{ fontWeight: 600, color: "#374151" }}>
-                          SKU
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{ fontWeight: 600, color: "#374151" }}
-                        >
-                          Ordered
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{ fontWeight: 600, color: "#374151" }}
-                        >
-                          Dispatched
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{ fontWeight: 600, color: "#374151" }}
-                        >
-                          Remaining
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{ fontWeight: 600, color: "#374151" }}
-                        >
-                          Available
-                        </th>
-                        <th
-                          className="text-end"
-                          style={{
-                            minWidth: "120px",
-                            fontWeight: 600,
-                            color: "#374151",
-                          }}
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orderLines.map((line) => {
-                        const remaining =
-                          Number(line.remaining_to_dispatch) || 0;
-                        const isDisabled = remaining <= 0;
-                        return (
-                          <tr key={`${line.order_id}-${line.item_id}`}>
-                            <td style={{ padding: "12px" }}>
-                              <div className="fw-semibold">
-                                {line.order_name || line.order_id}
-                              </div>
-                              <div className="small text-muted">
-                                {new Date(
-                                  line.order_created_at
-                                ).toLocaleString()}
-                              </div>
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "12px" }}
-                            >
-                              <span className="badge bg-light text-secondary border">
-                                {line.order_status || "Unknown"}
-                              </span>
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              <div className="fw-semibold">{line.title}</div>
-                              <div className="small text-muted">
-                                {line.product_title || "Unknown Product"}
-                              </div>
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              {line.sku || "-"}
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "12px" }}
-                            >
-                              {line.quantity}
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "12px" }}
-                            >
-                              {line.dispatched_quantity || 0}
-                            </td>
-                            <td
-                              className="text-center fw-semibold"
-                              style={{ padding: "12px", color: "#2563eb" }}
-                            >
-                              {remaining}
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "12px" }}
-                            >
-                              {line.current_quantity ?? 0}
-                            </td>
-                            <td
-                              className="text-end"
-                              style={{ padding: "12px" }}
-                            >
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                                disabled={isDisabled}
-                                onClick={() => handleOpenScanner(line)}
-                              >
-                                <Icon icon="mdi:barcode-scan" fontSize={16} />
-                                Dispatch
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    <tr>
+                      <th>Order</th>
+                      <th className="text-center">Status</th>
+                      <th>Product</th>
+                      <th>SKU</th>
+                      <th className="text-center">Ordered</th>
+                      <th className="text-center">Dispatched</th>
+                      <th className="text-center">Remaining</th>
+                      <th className="text-center">Available</th>
+                      <th className="text-center">Committed</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>{tableBody}</tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
 
-        <Modal
-          show={dispatchState.isOpen}
-          onHide={handleCloseScanner}
-          size="lg"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Scan QR to Dispatch</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>{dispatchModalBody}</Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={handleCloseScanner}
-              disabled={dispatchState.isDispatching}
-            >
-              Close
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <DispatchScannerModal
+          isOpen={scannerState.isOpen}
+          onClose={handleCloseScanner}
+          lineItem={scannerState.lineItem}
+          onScan={handleScan}
+          scanError={scannerState.scanError}
+          isDispatching={scannerState.isDispatching}
+        />
       </MasterLayout>
     </SidebarPermissionGuard>
   );

@@ -5,17 +5,104 @@ import productMasterApi from "../services/productMasterApi";
 import VariantOptionsManager from "./VariantOptionsManager";
 import { generateVariantCombinations } from "../utils/variantCombinationGenerator";
 
+const DEFAULT_VARIANT_TITLE = "Default Title";
+
+const sanitizeVariantType = (variantType) => {
+  if (
+    variantType &&
+    typeof variantType === "object" &&
+    Object.keys(variantType).length > 0
+  ) {
+    return variantType;
+  }
+
+  return { title: DEFAULT_VARIANT_TITLE };
+};
+
+const createDefaultVariant = (overrides = {}) => {
+  const variant_type = sanitizeVariantType(overrides.variant_type);
+  const derivedDisplayName =
+    overrides.displayName ||
+    overrides.variant_display_name ||
+    (Object.values(variant_type).length > 0
+      ? Object.values(variant_type).join(" × ")
+      : DEFAULT_VARIANT_TITLE);
+
+  return {
+    id: overrides.id || `default_variant_${Date.now()}`,
+    variant_id: overrides.variant_id ?? null,
+    variant_type,
+    displayName: derivedDisplayName || DEFAULT_VARIANT_TITLE,
+    sku: typeof overrides.sku === "string" ? overrides.sku : "",
+    groupBy: overrides.groupBy || "Default",
+  };
+};
+
+const cloneVariant = (variant) => {
+  if (!variant) return null;
+  return {
+    ...variant,
+    variant_type: variant.variant_type
+      ? { ...variant.variant_type }
+      : sanitizeVariantType(undefined),
+  };
+};
+
+const cloneVariantOptions = (options) => {
+  if (!Array.isArray(options)) return [];
+  return options.map((option) => ({
+    ...option,
+    values: Array.isArray(option.values) ? [...option.values] : [],
+  }));
+};
+
+const isDefaultVariantRecord = (variant) => {
+  if (!variant) return false;
+
+  const variantType = sanitizeVariantType(variant.variant_type);
+  const keys = Object.keys(variantType);
+
+  if (keys.length === 0) return true;
+
+  if (
+    keys.length === 1 &&
+    keys[0].toLowerCase() === "title" &&
+    String(variantType[keys[0]] || "")
+      .toLowerCase()
+      .includes(DEFAULT_VARIANT_TITLE.toLowerCase())
+  ) {
+    return true;
+  }
+
+  const displayName =
+    variant.variant_display_name || variant.displayName || variant.groupBy || "";
+
+  return (
+    keys.length === 1 &&
+    keys[0].toLowerCase() === "title" &&
+    displayName.toLowerCase().includes("default")
+  );
+};
+
 const ProductMasterLayer = () => {
   const [products, setProducts] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     productName: "",
-    itemDescription: "",
     hsnCode: "",
   });
   // Variant management state
   const [variantOptions, setVariantOptions] = useState([]);
-  const [variants, setVariants] = useState([]);
+  const [variants, setVariants] = useState(() => [
+    createDefaultVariant({ id: "default_variant" }),
+  ]);
+  const [variantMode, setVariantMode] = useState("default");
+
+  const defaultVariantCacheRef = useRef(
+    createDefaultVariant({ id: "default_variant" })
+  );
+  const customVariantCacheRef = useRef([]);
+  const customOptionsCacheRef = useRef([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,9 +127,32 @@ const ProductMasterLayer = () => {
   // Search, filter, and sort states
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [hsnCodeFilter, setHsnCodeFilter] = useState("all"); // all, with, without
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
+
+  const getPrimarySku = useCallback((product) => {
+    if (!product) return "";
+
+    const normalizeSku = (value) =>
+      typeof value === "string" ? value.trim() : "";
+
+    const directSku = normalizeSku(product.sku);
+    if (directSku) return directSku;
+
+    const defaultSku = normalizeSku(product.default_sku);
+    if (defaultSku) return defaultSku;
+
+    if (Array.isArray(product.variants)) {
+      for (const variant of product.variants) {
+        const variantSku = normalizeSku(variant?.sku);
+        if (variantSku) {
+          return variantSku;
+        }
+      }
+    }
+
+    return "";
+  }, []);
 
   // Debounce search term (industry best practice: 500ms delay)
   useEffect(() => {
@@ -52,6 +162,54 @@ const ProductMasterLayer = () => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  const sortProductData = useCallback(
+    (dataArray, field = sortField, direction = sortDirection) => {
+      if (!field || !Array.isArray(dataArray)) {
+        return dataArray || [];
+      }
+
+      const sortedData = [...dataArray].sort((a, b) => {
+        const valueA =
+          field === "sku" ? getPrimarySku(a) : a?.[field];
+        const valueB =
+          field === "sku" ? getPrimarySku(b) : b?.[field];
+
+        if (valueA === valueB) return 0;
+        if (valueA == null) return -1;
+        if (valueB == null) return 1;
+
+        // Handle dates
+        if (/_at$/.test(field)) {
+          const dateA = new Date(valueA).getTime();
+          const dateB = new Date(valueB).getTime();
+          return dateA - dateB;
+        }
+
+        // Handle numbers
+        const numA = Number(valueA);
+        const numB = Number(valueB);
+        const bothNumbers = !Number.isNaN(numA) && !Number.isNaN(numB);
+
+        if (bothNumbers) {
+          return numA - numB;
+        }
+
+        return String(valueA)
+          .toLocaleLowerCase()
+          .localeCompare(String(valueB).toLocaleLowerCase(), undefined, {
+            sensitivity: "base",
+          });
+      });
+
+      if (direction === "desc") {
+        sortedData.reverse();
+      }
+
+      return sortedData;
+    },
+    [sortField, sortDirection, getPrimarySku]
+  );
 
   // Load products from API with server-side search, filters, and pagination
   const loadProducts = async (page = 1, resetPage = false, append = false) => {
@@ -64,7 +222,6 @@ const ProductMasterLayer = () => {
 
       const options = {
         search: debouncedSearchTerm || undefined,
-        hsnCodeFilter: hsnCodeFilter !== "all" ? hsnCodeFilter : undefined,
         sortField: sortField || undefined,
         sortDirection: sortDirection || undefined,
       };
@@ -77,9 +234,12 @@ const ProductMasterLayer = () => {
 
       if (result.success) {
         if (append) {
-          setProducts((prev) => [...prev, ...(result.data || [])]);
+          setProducts((prev) => {
+            const combined = [...prev, ...(result.data || [])];
+            return sortProductData(combined);
+          });
         } else {
-          setProducts(result.data || []);
+          setProducts(sortProductData(result.data || []));
           setDisplayedItemsCount(20); // Reset displayed items
         }
         setCurrentPage(result.pagination?.page || targetPage);
@@ -106,7 +266,6 @@ const ProductMasterLayer = () => {
   const prevPageRef = useRef(1);
   const prevFiltersRef = useRef({
     search: "",
-    filter: "all",
     sort: null,
     sortDir: "asc",
   });
@@ -125,7 +284,6 @@ const ProductMasterLayer = () => {
 
     const currentFilters = {
       search: debouncedSearchTerm,
-      filter: hsnCodeFilter,
       sort: sortField,
       sortDir: sortDirection,
     };
@@ -136,7 +294,6 @@ const ProductMasterLayer = () => {
     // Check if filters changed
     const filtersChanged =
       prevFilters.search !== currentFilters.search ||
-      prevFilters.filter !== currentFilters.filter ||
       prevFilters.sort !== currentFilters.sort ||
       prevFilters.sortDir !== currentFilters.sortDir;
 
@@ -173,7 +330,6 @@ const ProductMasterLayer = () => {
   }, [
     isMounted,
     debouncedSearchTerm,
-    hsnCodeFilter,
     sortField,
     sortDirection,
     currentPage,
@@ -183,7 +339,6 @@ const ProductMasterLayer = () => {
   const handleResetFilters = () => {
     setSearchTerm("");
     setDebouncedSearchTerm("");
-    setHsnCodeFilter("all");
     setSortField(null);
     setSortDirection("asc");
     setCurrentPage(1);
@@ -195,6 +350,10 @@ const ProductMasterLayer = () => {
   const getDisplayedData = (dataArray) => {
     return dataArray.slice(0, displayedItemsCount);
   };
+
+  useEffect(() => {
+    setProducts((prev) => sortProductData(prev));
+  }, [sortProductData]);
 
   // Check if there's more data to load
   const hasMoreData = useCallback(
@@ -235,7 +394,7 @@ const ProductMasterLayer = () => {
   // Reset displayed items when search term or filters change
   useEffect(() => {
     setDisplayedItemsCount(20);
-  }, [debouncedSearchTerm, hsnCodeFilter, sortField, sortDirection]);
+  }, [debouncedSearchTerm, sortField, sortDirection]);
 
   // Scroll detection for infinite scroll (using event listeners in addition to onScroll/onWheel)
   useEffect(() => {
@@ -277,8 +436,129 @@ const ProductMasterLayer = () => {
     } else {
       setSortField(field);
       setSortDirection("asc");
+      setDisplayedItemsCount(20);
+      isInfiniteScrollRef.current = false;
+      if (currentPage !== 1) {
+        prevPageRef.current = currentPage;
+        setCurrentPage(1);
+      }
     }
   };
+
+  const handleSortFieldSelect = (value) => {
+    const newSortField = value || null;
+    setSortField(newSortField);
+    setDisplayedItemsCount(20);
+    isInfiniteScrollRef.current = false;
+    if (currentPage !== 1) {
+      prevPageRef.current = currentPage;
+      setCurrentPage(1);
+    }
+  };
+
+  const handleSortDirectionSelect = (value) => {
+    setSortDirection(value);
+    setDisplayedItemsCount(20);
+    isInfiniteScrollRef.current = false;
+    if (currentPage !== 1) {
+      prevPageRef.current = currentPage;
+      setCurrentPage(1);
+    }
+  };
+
+  const extractBaseSku = useCallback((variant, hasMultipleVariants = false) => {
+    const rawSku = variant?.sku;
+    if (!rawSku || typeof rawSku !== "string") return null;
+
+    const escapeRegExp = (string) =>
+      string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const collectVariantStrings = () => {
+      const collected = [];
+
+      if (variant?.variant_type) {
+        Object.values(variant.variant_type).forEach((value) => {
+          if (typeof value === "string" && value.trim()) {
+            collected.push(value.trim());
+          }
+        });
+      }
+
+      if (typeof variant?.variant_display_name === "string") {
+        variant.variant_display_name
+          .split(/[×x,\/]/i)
+          .flatMap((part) => part.split("-"))
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .forEach((part) => collected.push(part));
+      }
+
+      const derived = [];
+      collected.forEach((value) => {
+        if (!value) return;
+        derived.push(value);
+        const upperValue = value.toUpperCase();
+        if (upperValue !== value) {
+          derived.push(upperValue);
+        }
+
+        const compact = value.replace(/\s+/g, "");
+        if (compact && compact !== value) {
+          derived.push(compact);
+          derived.push(compact.toUpperCase());
+        }
+
+        const firstLetters = value
+          .split(/\s+/)
+          .map((word) => word[0])
+          .join("");
+        if (firstLetters && firstLetters.length > 0) {
+          derived.push(firstLetters);
+          derived.push(firstLetters.toUpperCase());
+        }
+      });
+
+      return Array.from(
+        new Set(
+          derived
+            .map((value) => value.trim())
+            .filter(Boolean)
+        )
+      );
+    };
+
+    let baseSku = rawSku.trim();
+    const candidateValues = collectVariantStrings();
+
+    candidateValues.forEach((value) => {
+      const escapedValue = escapeRegExp(value);
+
+      const patterns = [
+        new RegExp(`\\s*-\\s*${escapedValue}$`, "i"),
+        new RegExp(`-${escapedValue}$`, "i"),
+        new RegExp(`\\s*\\(${escapedValue}\\)$`, "i"),
+      ];
+
+      patterns.forEach((pattern) => {
+        if (pattern.test(baseSku)) {
+          baseSku = baseSku.replace(pattern, "");
+        }
+      });
+    });
+
+    if (
+      hasMultipleVariants &&
+      /-[A-Z]{1,3}$/.test(baseSku) &&
+      !candidateValues.some((value) =>
+        new RegExp(`-${escapeRegExp(value)}$`, "i").test(baseSku)
+      )
+    ) {
+      baseSku = baseSku.replace(/-([A-Z]{1,3})$/, "");
+    }
+
+    baseSku = baseSku.replace(/\s*-\s*$/, "").trim();
+    return baseSku || rawSku.trim();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -311,7 +591,6 @@ const ProductMasterLayer = () => {
           const fieldMap = {
             product_name: "productName",
             hsn_code: "hsnCode",
-            item_description: "itemDescription",
           };
 
           const frontendField = fieldMap[fieldName] || fieldName;
@@ -327,6 +606,11 @@ const ProductMasterLayer = () => {
 
   // Handle variant options change
   const handleVariantOptionsChange = (options) => {
+    if (variantMode !== "custom") {
+      setVariantOptions([]);
+      return;
+    }
+
     setVariantOptions(options);
 
     // In edit mode, don't regenerate existing variants
@@ -386,6 +670,68 @@ const ProductMasterLayer = () => {
     }
   };
 
+  const handleVariantModeChange = (mode) => {
+    if (mode === variantMode) return;
+
+    if (mode === "default") {
+      if (variantMode === "custom") {
+        customVariantCacheRef.current = Array.isArray(variants)
+          ? variants.map((variant) => cloneVariant(variant)).filter(Boolean)
+          : [];
+        customOptionsCacheRef.current = cloneVariantOptions(variantOptions);
+      }
+
+      const cachedDefault = cloneVariant(defaultVariantCacheRef.current);
+      const defaultVariant =
+        cachedDefault ||
+        createDefaultVariant({
+          id: "default_variant",
+        });
+
+      setVariantMode("default");
+      setVariantOptions([]);
+      setVariants([
+        createDefaultVariant({
+          id: defaultVariant.id || "default_variant",
+          variant_id: defaultVariant.variant_id ?? null,
+          variant_type: defaultVariant.variant_type,
+          displayName: defaultVariant.displayName,
+          sku: defaultVariant.sku,
+          groupBy: defaultVariant.groupBy,
+        }),
+      ]);
+    } else {
+      if (variantMode === "default") {
+        const currentDefault = variants?.[0];
+        if (currentDefault) {
+          defaultVariantCacheRef.current = cloneVariant(currentDefault);
+        }
+      }
+
+      setVariantMode("custom");
+      const restoredVariants = customVariantCacheRef.current || [];
+      const restoredOptions = customOptionsCacheRef.current || [];
+
+      setVariantOptions(cloneVariantOptions(restoredOptions));
+      setVariants(
+        restoredVariants.length > 0
+          ? restoredVariants.map((variant) => cloneVariant(variant)).filter(Boolean)
+          : []
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!formErrors.variants) return;
+    if (Array.isArray(variants) && variants.length > 0) {
+      setFormErrors((prev) => {
+        if (!prev.variants) return prev;
+        const { variants: _ignored, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [variants, formErrors.variants]);
+
   // Handle variant change (for SKU input)
   const handleVariantChange = (index, field, value) => {
     const updatedVariants = [...variants];
@@ -396,26 +742,71 @@ const ProductMasterLayer = () => {
     setVariants(updatedVariants);
   };
 
+  useEffect(() => {
+    if (variantMode === "default" && Array.isArray(variants) && variants.length > 0) {
+      defaultVariantCacheRef.current = cloneVariant(variants[0]);
+    }
+  }, [variantMode, variants]);
+
+  useEffect(() => {
+    if (variantMode === "custom") {
+      customVariantCacheRef.current = Array.isArray(variants)
+        ? variants.map((variant) => cloneVariant(variant)).filter(Boolean)
+        : [];
+    }
+  }, [variantMode, variants]);
+
+  useEffect(() => {
+    if (variantMode === "custom") {
+      customOptionsCacheRef.current = cloneVariantOptions(variantOptions);
+    }
+  }, [variantMode, variantOptions]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const apiData = {
-        product_name: formData.productName,
-        item_description: formData.itemDescription || null,
-        hsn_code: formData.hsnCode?.trim() || null,
-      };
-
-      // Include variants data if there are variants
-      if (variants && variants.length > 0) {
-        apiData.variants = variants.map((variant) => ({
-          ...(variant.variant_id && { variant_id: variant.variant_id }), // Include if exists
-          variant_type: variant.variant_type,
-          variant_display_name: variant.displayName,
-          sku: variant.sku,
+      const trimmedName = formData.productName?.trim() || "";
+      if (!trimmedName) {
+        setFormErrors((prev) => ({
+          ...prev,
+          productName: "Product name is required.",
         }));
+        setIsSubmitting(false);
+        return;
       }
+
+      if (!variants || variants.length === 0) {
+        setFormErrors((prev) => ({
+          ...prev,
+          variants: "At least one SKU is required.",
+        }));
+        setIsSubmitting(false);
+        return;
+      }
+
+      const apiData = {
+        product_name: trimmedName,
+        hsn_code: formData.hsnCode?.trim() || null,
+        item_description: null,
+        variants: variants.map((variant, index) => {
+          const variantType = sanitizeVariantType(variant.variant_type);
+          const displayName =
+            variant.displayName ||
+            variant.variant_display_name ||
+            (Object.values(variantType).length > 0
+              ? Object.values(variantType).join(" × ")
+              : `${DEFAULT_VARIANT_TITLE} ${index + 1}`);
+
+          return {
+            ...(variant.variant_id && { variant_id: variant.variant_id }),
+            variant_type: variantType,
+            variant_display_name: displayName,
+            sku: typeof variant.sku === "string" ? variant.sku.trim() : "",
+          };
+        }),
+      };
 
       // Call the backend API using the service
       let result;
@@ -434,7 +825,6 @@ const ProductMasterLayer = () => {
         // Reset form and close modal
         setFormData({
           productName: "",
-          itemDescription: "",
           hsnCode: "",
         });
         setFormErrors({});
@@ -443,7 +833,8 @@ const ProductMasterLayer = () => {
         setIsEditMode(false);
         setEditingProduct(null);
         setVariantOptions([]);
-        setVariants([]);
+        setVariantMode("default");
+        setVariants([createDefaultVariant({ id: "default_variant" })]);
 
         // Reload products list to show updated data with current filters
         await loadProducts(currentPage, false);
@@ -499,13 +890,27 @@ const ProductMasterLayer = () => {
     setIsEditMode(false);
     setEditingProduct(null);
     setVariantOptions([]);
-    setVariants([]);
+    setVariantMode("default");
+    setVariants([createDefaultVariant({ id: "default_variant" })]);
     setFormErrors({});
     setFormData({
       productName: "",
-      itemDescription: "",
       hsnCode: "",
     });
+  };
+
+  const handleAddProductClick = () => {
+    setIsEditMode(false);
+    setEditingProduct(null);
+    setFormErrors({});
+    setFormData({
+      productName: "",
+      hsnCode: "",
+    });
+    setVariantOptions([]);
+    setVariantMode("default");
+    setVariants([createDefaultVariant({ id: "default_variant" })]);
+    setModalOpen(true);
   };
 
   const handleEditProduct = async (product) => {
@@ -513,12 +918,10 @@ const ProductMasterLayer = () => {
     setIsEditMode(true);
     setFormErrors({});
     setFormData({
-      productName: product.product_name,
-      itemDescription: product.item_description || "",
+      productName: product.product_name || "",
       hsnCode: product.hsn_code || "",
     });
 
-    // Load full product data with variants if not already loaded
     let productWithVariants = product;
     if (!product.variants || product.variants.length === 0) {
       try {
@@ -533,69 +936,82 @@ const ProductMasterLayer = () => {
       }
     }
 
-    // Set variants for editing
-    if (
-      productWithVariants.variants &&
-      productWithVariants.variants.length > 0
-    ) {
-      setVariants(
-        productWithVariants.variants.map((variant, index) => {
-          const variantType = variant.variant_type || {};
-          const variantTypeKeys = Object.keys(variantType);
+    const apiVariants = Array.isArray(productWithVariants.variants)
+      ? productWithVariants.variants
+      : [];
+
+    if (apiVariants.length === 0) {
+      setVariantMode("default");
+      setVariantOptions([]);
+      setVariants([
+        createDefaultVariant({
+          id: "default_variant",
+          sku: "",
+        }),
+      ]);
+    } else {
+      const defaultOnly =
+        apiVariants.length === 1 && isDefaultVariantRecord(apiVariants[0]);
+
+      if (defaultOnly) {
+        setVariantMode("default");
+        setVariantOptions([]);
+        setVariants([
+          createDefaultVariant({
+            id: `edit_variant_${apiVariants[0].variant_id || Date.now()}`,
+            variant_id: apiVariants[0].variant_id ?? null,
+            variant_type: apiVariants[0].variant_type,
+            variant_display_name:
+              apiVariants[0].variant_display_name || DEFAULT_VARIANT_TITLE,
+            sku: apiVariants[0].sku || "",
+          }),
+        ]);
+      } else {
+        setVariantMode("custom");
+
+        const mappedVariants = apiVariants.map((variant, index) => {
+          const variantType = sanitizeVariantType(variant.variant_type);
+          const displayName =
+            variant.variant_display_name ||
+            (Object.values(variantType).length > 0
+              ? Object.values(variantType).join(" × ")
+              : `Variant ${index + 1}`);
 
           return {
-            id: `edit_variant_${index}`,
+            id: `edit_variant_${variant.variant_id || index}`,
             variant_id: variant.variant_id,
             variant_type: variantType,
-            displayName:
-              variantTypeKeys.length > 0
-                ? Object.values(variantType).join(" × ")
-                : `Variant ${index + 1}`,
+            displayName,
             sku: variant.sku || "",
           };
-        })
-      );
+        });
 
-      // Extract variant options from existing variants
-      const optionTypes = {};
-      productWithVariants.variants.forEach((variant) => {
-        if (variant.variant_type) {
-          Object.keys(variant.variant_type).forEach((key) => {
-            if (!optionTypes[key]) {
-              optionTypes[key] = new Set();
-            }
-          });
-        }
-      });
+        setVariants(mappedVariants);
 
-      if (Object.keys(optionTypes).length > 0) {
-        const options = Object.keys(optionTypes).map((type) => ({
-          id: `option_${type}`,
-          type: type,
-          label: type.charAt(0).toUpperCase() + type.slice(1),
-          icon: "mdi:tag",
-          values: [],
-        }));
-
-        // Extract values for each option type
-        productWithVariants.variants.forEach((variant) => {
+        const optionTypesMap = {};
+        apiVariants.forEach((variant) => {
           if (variant.variant_type) {
-            Object.keys(variant.variant_type).forEach((type) => {
-              const option = options.find((opt) => opt.type === type);
-              if (option && variant.variant_type[type]) {
-                if (!option.values.includes(variant.variant_type[type])) {
-                  option.values.push(variant.variant_type[type]);
-                }
+            Object.entries(variant.variant_type).forEach(([type, value]) => {
+              if (!optionTypesMap[type]) {
+                optionTypesMap[type] = new Set();
+              }
+              if (value) {
+                optionTypesMap[type].add(value);
               }
             });
           }
         });
 
+        const options = Object.keys(optionTypesMap).map((type) => ({
+          id: `option_${type}`,
+          type,
+          label: type.charAt(0).toUpperCase() + type.slice(1),
+          icon: "mdi:tag",
+          values: Array.from(optionTypesMap[type]),
+        }));
+
         setVariantOptions(options);
       }
-    } else {
-      setVariantOptions([]);
-      setVariants([]);
     }
 
     setModalOpen(true);
@@ -702,21 +1118,42 @@ const ProductMasterLayer = () => {
           />
         </div>
 
-        {/* Filter Dropdown */}
+        {/* Sort Field */}
         <select
           className="form-select form-select-sm"
-          value={hsnCodeFilter}
-          onChange={(e) => setHsnCodeFilter(e.target.value)}
+          value={sortField || ""}
+          onChange={(e) => handleSortFieldSelect(e.target.value)}
           style={{
-            height: "36px",
+            height: "34px",
             width: "auto",
-            minWidth: "150px",
-            fontSize: "0.875rem",
+            minWidth: "160px",
+            fontSize: "0.8125rem",
+            lineHeight: "1.1",
           }}
         >
-          <option value="all">All HSN Codes</option>
-          <option value="with">With HSN Code</option>
-          <option value="without">Without HSN Code</option>
+          <option value="">Sort By</option>
+          <option value="product_name">Product Name</option>
+          <option value="hsn_code">HSN Code</option>
+          <option value="sku">SKU</option>
+          <option value="created_at">Created At</option>
+          <option value="updated_at">Updated At</option>
+        </select>
+
+        {/* Sort Order */}
+        <select
+          className="form-select form-select-sm"
+          value={sortDirection}
+          onChange={(e) => handleSortDirectionSelect(e.target.value)}
+          style={{
+            height: "34px",
+            width: "auto",
+            minWidth: "110px",
+            fontSize: "0.8125rem",
+            lineHeight: "1.1",
+          }}
+        >
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
         </select>
 
         {/* Reset Button */}
@@ -770,10 +1207,7 @@ const ProductMasterLayer = () => {
 
         {/* Add Button */}
         <button
-          onClick={() => {
-            setFormErrors({});
-            setModalOpen(true);
-          }}
+          onClick={handleAddProductClick}
           className="btn btn-primary btn-sm d-inline-flex align-items-center"
           style={{
             gap: "4px",
@@ -856,7 +1290,7 @@ const ProductMasterLayer = () => {
               >
                 <div className="d-flex align-items-center gap-2">
                   Product Name
-                  {sortField === "product_name" && (
+              {sortField === "product_name" && (
                     <Icon
                       icon={
                         sortDirection === "asc"
@@ -889,7 +1323,26 @@ const ProductMasterLayer = () => {
                   )}
                 </div>
               </th>
-              <th scope="col">Item Description</th>
+              <th
+                scope="col"
+                onClick={() => handleSort("sku")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  SKU
+                  {sortField === "sku" && (
+                    <Icon
+                      icon={
+                        sortDirection === "asc"
+                          ? "lucide:chevron-up"
+                          : "lucide:chevron-down"
+                      }
+                      width="14"
+                      height="14"
+                    />
+                  )}
+                </div>
+              </th>
               <th
                 scope="col"
                 className="text-center"
@@ -926,7 +1379,7 @@ const ProductMasterLayer = () => {
                 <td colSpan="5" className="text-center py-4 text-muted">
                   <div className="d-flex flex-column align-items-center">
                     <p className="text-muted mb-0">
-                      {searchTerm || hsnCodeFilter !== "all"
+                      {searchTerm
                         ? "No products match your search criteria."
                         : 'No products found. Click "Add New Product" to get started.'}
                     </p>
@@ -953,10 +1406,45 @@ const ProductMasterLayer = () => {
                     <td>
                       <span
                         className="text-secondary-light text-truncate d-inline-block"
-                        style={{ maxWidth: "200px" }}
-                        title={product.item_description}
+                        style={{ maxWidth: "220px" }}
+                        title={
+                          Array.isArray(product.variants) && product.variants.length
+                            ? Array.from(
+                                new Set(
+                                  product.variants
+                                    .map(
+                                      (variant) =>
+                                        extractBaseSku(
+                                          variant,
+                                          product.variants.length > 1
+                                        ) ?? variant?.sku
+                                    )
+                                    .filter(Boolean)
+                                )
+                              ).join(", ")
+                            : "-"
+                        }
                       >
-                        {product.item_description || "-"}
+                        {Array.isArray(product.variants) && product.variants.length
+                          ? (() => {
+                              const skuList = Array.from(
+                                new Set(
+                                  product.variants
+                                    .map(
+                                      (variant) =>
+                                        extractBaseSku(
+                                          variant,
+                                          product.variants.length > 1
+                                        ) ?? variant?.sku
+                                    )
+                                    .filter(Boolean)
+                                )
+                              );
+                              if (!skuList.length) return "-";
+                              if (skuList.length === 1) return skuList[0];
+                              return `${skuList[0]} (+${skuList.length - 1} more)`;
+                            })()
+                          : "-"}
                       </span>
                     </td>
                     <td className="text-center">
@@ -1114,68 +1602,122 @@ const ProductMasterLayer = () => {
                     </div>
                   </div>
 
+                  {/* Variant Mode & Options */}
                   <div className="mb-3">
-                    <label className="form-label">Item Description</label>
-                    <textarea
-                      className={`form-control ${
-                        formErrors.itemDescription ? "is-invalid" : ""
-                      }`}
-                      name="itemDescription"
-                      rows="3"
-                      value={formData.itemDescription}
-                      onChange={handleInputChange}
-                      placeholder="Enter product description..."
-                    />
-                    {formErrors.itemDescription && (
-                      <div className="invalid-feedback d-block">
-                        {formErrors.itemDescription}
+                    <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2 gap-lg-3 mb-3">
+                      <label className="form-label mb-0">
+                        <strong>Variants</strong> <span className="text-danger">*</span>
+                      </label>
+                      <div className="btn-group btn-group-sm" role="group">
+                        <input
+                          type="radio"
+                          className="btn-check"
+                          name="variantMode"
+                          id="variantModeDefault"
+                          value="default"
+                          checked={variantMode === "default"}
+                          onChange={() => handleVariantModeChange("default")}
+                        />
+                        <label
+                          className={`btn btn-outline-secondary px-3 ${
+                            variantMode === "default" ? "active text-primary border-primary" : ""
+                          }`}
+                          htmlFor="variantModeDefault"
+                        >
+                          Single SKU
+                        </label>
+                        <input
+                          type="radio"
+                          className="btn-check"
+                          name="variantMode"
+                          id="variantModeCustom"
+                          value="custom"
+                          checked={variantMode === "custom"}
+                          onChange={() => handleVariantModeChange("custom")}
+                        />
+                        <label
+                          className={`btn btn-outline-secondary px-3 ${
+                            variantMode === "custom" ? "active text-primary border-primary" : ""
+                          }`}
+                          htmlFor="variantModeCustom"
+                        >
+                          Multiple Variants
+                        </label>
+                      </div>
+                    </div>
+
+                    {variantMode === "custom" ? (
+                      <div className="border rounded px-3 py-3 bg-body-tertiary">
+                        <VariantOptionsManager
+                          key={`custom-variant-options-${variantOptions.length}`}
+                          onOptionsChange={handleVariantOptionsChange}
+                          initialOptions={variantOptions}
+                          hideHeader={true}
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-body-tertiary border rounded px-3 py-2 small text-muted">
+                        Single SKU mode keeps one default option. Switch to
+                        Multiple Variants to configure combinations.
                       </div>
                     )}
                   </div>
 
-                  {/* Variant Options Manager */}
-                  <div className="mb-3">
-                    <label className="form-label">
-                      <strong>Variant Options</strong>
-                    </label>
-                    <VariantOptionsManager
-                      onOptionsChange={handleVariantOptionsChange}
-                      initialOptions={variantOptions}
-                      hideHeader={true}
-                    />
-                  </div>
-
                   {/* Variants SKU Input */}
-                  {variants.length > 0 && (
-                    <div className="mb-3">
-                      <label className="form-label">Variants SKU</label>
-                      <div
-                        className="border rounded p-3"
-                        style={{ backgroundColor: "#f8f9fa" }}
-                      >
-                        {variants.map((variant, index) => (
-                          <div key={variant.id} className="mb-2">
-                            <label className="form-label small">
-                              {variant.displayName}
-                            </label>
-                            <input
-                              type="text"
-                              className="form-control"
-                              value={variant.sku || ""}
-                              onChange={(e) =>
-                                handleVariantChange(
-                                  index,
-                                  "sku",
-                                  e.target.value
-                                )
-                              }
-                              placeholder={`Enter SKU for ${variant.displayName}`}
-                            />
-                          </div>
-                        ))}
-                      </div>
+                  <div className="mb-3">
+                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                      <label className="form-label mb-0">
+                        {variantMode === "default" ? (
+                          <>
+                            SKU <span className="text-danger">*</span>
+                          </>
+                        ) : (
+                          <>
+                            Variants SKU <span className="text-danger">*</span>
+                          </>
+                        )}
+                      </label>
                     </div>
-                  )}
+                    <div
+                      className="border rounded px-3 py-3 bg-body-tertiary"
+                    >
+                      {variants.length === 0 && (
+                        <div className="text-muted small">
+                          {variantMode === "custom"
+                            ? "Add variant options to generate SKUs."
+                            : "Provide a SKU for this product."}
+                        </div>
+                      )}
+                      {variants.map((variant, index) => (
+                        <div
+                          key={variant.id || `variant_${index}`}
+                          className={index === variants.length - 1 ? "" : "mb-3"}
+                        >
+                          <label className="form-label small text-uppercase text-muted mb-1">
+                            {variant.displayName ||
+                              `${DEFAULT_VARIANT_TITLE} ${index + 1}`}
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={variant.sku || ""}
+                            onChange={(e) =>
+                              handleVariantChange(index, "sku", e.target.value)
+                            }
+                            placeholder={`Enter SKU for ${
+                              variant.displayName ||
+                              `${DEFAULT_VARIANT_TITLE} ${index + 1}`
+                            }`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {formErrors.variants && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.variants}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="modal-footer">
                     <button
