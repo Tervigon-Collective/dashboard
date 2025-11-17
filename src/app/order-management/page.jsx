@@ -176,6 +176,7 @@ const OrderManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [limit, setLimit] = useState(50);
+  const [activeTab, setActiveTab] = useState("pending"); // "pending", "in-progress", or "fully-dispatched"
   const [scannerState, setScannerState] = useState({
     isOpen: false,
     lineItem: null,
@@ -405,14 +406,73 @@ const OrderManagementPage = () => {
           lineItems: [],
           totalItems: 0,
           totalRemaining: 0,
+          totalDispatched: 0,
         };
       }
       groups[orderId].lineItems.push(line);
       groups[orderId].totalItems += Number(line.quantity || 0);
       groups[orderId].totalRemaining += Number(line.remaining_to_dispatch || 0);
+      groups[orderId].totalDispatched += Number(line.dispatched_quantity || 0);
     });
     return Object.values(groups);
   }, [queue]);
+
+  // Filter grouped orders based on active tab
+  const filteredGroupedOrders = useMemo(() => {
+    if (activeTab === "pending") {
+      // Show orders where no items have been dispatched yet (all line items have dispatched_quantity = 0)
+      return groupedOrders.filter((orderGroup) => {
+        return orderGroup.lineItems.every(
+          (line) => Number(line.dispatched_quantity || 0) === 0
+        );
+      });
+    } else if (activeTab === "in-progress") {
+      // Show orders that are partially scanned (at least one scan, but not all items dispatched)
+      return groupedOrders.filter((orderGroup) => {
+        const hasScans = orderGroup.lineItems.some(
+          (line) => Number(line.dispatched_quantity || 0) > 0
+        );
+        const hasRemaining = orderGroup.lineItems.some(
+          (line) => Number(line.remaining_to_dispatch || 0) > 0
+        );
+        return hasScans && hasRemaining; // Has scans but still has remaining items
+      });
+    } else {
+      // Show fully dispatched orders (all items have remaining_to_dispatch = 0)
+      return groupedOrders.filter((orderGroup) => {
+        return orderGroup.lineItems.every(
+          (line) => Number(line.remaining_to_dispatch || 0) === 0
+        );
+      });
+    }
+  }, [groupedOrders, activeTab]);
+
+  // Calculate counts for tabs
+  const tabCounts = useMemo(() => {
+    const pending = groupedOrders.filter((orderGroup) => {
+      return orderGroup.lineItems.every(
+        (line) => Number(line.dispatched_quantity || 0) === 0
+      );
+    }).length;
+
+    const inProgress = groupedOrders.filter((orderGroup) => {
+      const hasScans = orderGroup.lineItems.some(
+        (line) => Number(line.dispatched_quantity || 0) > 0
+      );
+      const hasRemaining = orderGroup.lineItems.some(
+        (line) => Number(line.remaining_to_dispatch || 0) > 0
+      );
+      return hasScans && hasRemaining; // Has scans but still has remaining items
+    }).length;
+
+    const fullyDispatched = groupedOrders.filter((orderGroup) => {
+      return orderGroup.lineItems.every(
+        (line) => Number(line.remaining_to_dispatch || 0) === 0
+      );
+    }).length;
+
+    return { pending, inProgress, fullyDispatched };
+  }, [groupedOrders]);
 
   const tableBody = useMemo(() => {
     if (loading) {
@@ -447,8 +507,22 @@ const OrderManagementPage = () => {
       );
     }
 
+    if (filteredGroupedOrders.length === 0) {
+      return (
+        <tr>
+          <td colSpan={10} className="text-center text-muted py-4">
+            {activeTab === "pending"
+              ? "No pending orders to dispatch"
+              : activeTab === "in-progress"
+              ? "No orders in progress"
+              : "No fully dispatched orders"}
+          </td>
+        </tr>
+      );
+    }
+
     const rows = [];
-    groupedOrders.forEach((orderGroup) => {
+    filteredGroupedOrders.forEach((orderGroup) => {
       // Order summary row
       rows.push(
         <tr
@@ -539,7 +613,14 @@ const OrderManagementPage = () => {
     });
 
     return rows;
-  }, [groupedOrders, loading, error, queue.length, handleOpenScanner]);
+  }, [
+    filteredGroupedOrders,
+    loading,
+    error,
+    queue.length,
+    handleOpenScanner,
+    activeTab,
+  ]);
 
   return (
     <SidebarPermissionGuard requiredSidebar="orderManagement">
@@ -580,6 +661,62 @@ const OrderManagementPage = () => {
                   <Icon icon="mdi:refresh" width={18} height={18} />
                 </button>
               </div>
+            </div>
+            {/* Tabs for Pending, In Progress, and Fully Dispatched */}
+            <div className="border-bottom">
+              <ul className="nav nav-tabs card-header-tabs" role="tablist">
+                <li className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link ${
+                      activeTab === "pending" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveTab("pending")}
+                    type="button"
+                    role="tab"
+                  >
+                    Pending Dispatch
+                    {tabCounts.pending > 0 && (
+                      <span className="badge bg-primary ms-2">
+                        {tabCounts.pending}
+                      </span>
+                    )}
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link ${
+                      activeTab === "in-progress" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveTab("in-progress")}
+                    type="button"
+                    role="tab"
+                  >
+                    In Progress
+                    {tabCounts.inProgress > 0 && (
+                      <span className="badge bg-info ms-2">
+                        {tabCounts.inProgress}
+                      </span>
+                    )}
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link ${
+                      activeTab === "fully-dispatched" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveTab("fully-dispatched")}
+                    type="button"
+                    role="tab"
+                  >
+                    Fully Dispatched
+                    {tabCounts.fullyDispatched > 0 && (
+                      <span className="badge bg-success ms-2">
+                        {tabCounts.fullyDispatched}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              </ul>
             </div>
             <div className="card-body p-0">
               <div className="table-responsive">

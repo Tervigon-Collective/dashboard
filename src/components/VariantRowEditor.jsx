@@ -1,7 +1,8 @@
 "use client";
 
 import { Icon } from "@iconify/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { Combobox } from "@headlessui/react";
 
 /**
  * Component to edit a single variant row
@@ -15,7 +16,7 @@ const VariantRowEditor = ({
   mode,
   isLast,
 }) => {
-  const [showVendorDropdown, setShowVendorDropdown] = useState(false);
+  const [vendorQuery, setVendorQuery] = useState("");
 
   const handleFieldChange = (field, value) => {
     const updated = { ...variant, [field]: value };
@@ -30,59 +31,48 @@ const VariantRowEditor = ({
     onChange(updated);
   };
 
-  const handleVendorToggle = (vendorId) => {
-    const vendorPricing = variant.vendor_pricing || [];
-    const existingIndex = vendorPricing.findIndex(
-      (vp) => vp.vendor_id == vendorId
-    );
-
-    let updatedPricing;
-
-    if (existingIndex >= 0) {
-      // Remove vendor
-      updatedPricing = vendorPricing.filter((vp) => vp.vendor_id != vendorId);
-    } else {
-      // Add vendor
-      const vendor = vendors.find((v) => (v.id || v.vendor_id) == vendorId);
-      if (!vendor) return;
-
-      // Check if this should be primary (first vendor added)
-      const isPrimary = vendorPricing.length === 0;
-
-      // If making primary, unmark others
-      if (isPrimary) {
-        updatedPricing = vendorPricing.map((vp) => ({
-          ...vp,
-          is_primary_vendor: false,
-        }));
-      } else {
-        updatedPricing = [...vendorPricing];
-      }
-
-      updatedPricing.push({
-        vendor_id: vendor.id || vendor.vendor_id,
-        vendor_name: vendor.vendor_name,
-        is_primary_vendor: isPrimary,
-      });
+  // Handle single company selection (replace existing, don't add multiple)
+  const handleCompanySelect = (vendorId) => {
+    if (!vendorId) {
+      // Remove company if null
+      onChange({ ...variant, vendor_pricing: [] });
+      setVendorQuery("");
+      return;
     }
 
+    const vendor = vendors.find((v) => v.vendor_id == vendorId);
+    if (!vendor) return;
+
+    // Replace existing vendor with new one (single selection only)
+    const updatedPricing = [
+      {
+        vendor_id: vendor.vendor_id, // vendor_master.vendor_id
+        vendor_name: vendor.vendor_name, // For display
+        is_primary_vendor: true, // Always primary since there's only one
+      },
+    ];
+
     onChange({ ...variant, vendor_pricing: updatedPricing });
+    setVendorQuery(""); // Clear search after selection
   };
 
-  const togglePrimaryVendor = (vendorId) => {
-    const vendorPricing = variant.vendor_pricing || [];
-    const updatedPricing = vendorPricing.map((vp) => ({
-      ...vp,
-      is_primary_vendor: vp.vendor_id == vendorId,
-    }));
-    onChange({ ...variant, vendor_pricing: updatedPricing });
-  };
+  // Get currently selected company (single selection)
+  const selectedCompany = variant.vendor_pricing?.[0] || null;
+  const selectedVendor = selectedCompany
+    ? vendors.find((v) => v.vendor_id === selectedCompany.vendor_id)
+    : null;
 
-  const assignedVendorIds =
-    variant.vendor_pricing?.map((vp) => vp.vendor_id) || [];
-  const availableVendors = vendors.filter(
-    (v) => !assignedVendorIds.includes(v.id || v.vendor_id)
-  );
+  // Filter vendors based on search query (show all vendors for selection)
+  const filteredVendors = useMemo(() => {
+    if (!vendorQuery.trim()) return vendors;
+    const query = vendorQuery.toLowerCase();
+    return vendors.filter(
+      (vendor) =>
+        (vendor.company_name &&
+          vendor.company_name.toLowerCase().includes(query)) ||
+        (vendor.vendor_name && vendor.vendor_name.toLowerCase().includes(query))
+    );
+  }, [vendors, vendorQuery]);
 
   return (
     <div
@@ -111,6 +101,87 @@ const VariantRowEditor = ({
             <Icon icon="lucide:trash-2" width="14" height="14" />
           </button>
         )}
+      </div>
+
+      {/* Row 3: Company/Vendors - Single Selection */}
+      <div className="row">
+        <div className="col-12">
+          <label className="shopify-label">
+            Company Name <span className="text-danger">*</span>
+          </label>
+          {vendors.length > 0 ? (
+            <div className="position-relative">
+              <Combobox
+                value={selectedVendor}
+                onChange={(vendor) => {
+                  handleCompanySelect(vendor ? vendor.vendor_id : null);
+                }}
+              >
+                <div className="position-relative">
+                  <Combobox.Input
+                    className="form-control"
+                    placeholder="Select company..."
+                    displayValue={(vendor) => {
+                      if (vendor) {
+                        return vendor.company_name
+                          ? `${vendor.company_name} (${vendor.vendor_name})`
+                          : vendor.vendor_name;
+                      }
+                      // Show search query if typing, otherwise show selected company
+                      if (vendorQuery) return vendorQuery;
+                      if (selectedVendor) {
+                        return selectedVendor.company_name
+                          ? `${selectedVendor.company_name} (${selectedVendor.vendor_name})`
+                          : selectedVendor.vendor_name;
+                      }
+                      return "";
+                    }}
+                    onChange={(event) => setVendorQuery(event.target.value)}
+                  />
+                  <Combobox.Options
+                    className="list-group position-absolute w-100 shadow-sm mt-1"
+                    style={{
+                      maxHeight: "240px",
+                      overflowY: "auto",
+                      zIndex: 1050,
+                    }}
+                  >
+                    {filteredVendors.length === 0 ? (
+                      <Combobox.Option
+                        value={null}
+                        disabled
+                        className="list-group-item disabled"
+                      >
+                        No companies found
+                      </Combobox.Option>
+                    ) : (
+                      filteredVendors.map((vendor) => (
+                        <Combobox.Option
+                          key={vendor.vendor_id}
+                          value={vendor}
+                          className={({ active }) =>
+                            `list-group-item list-group-item-action ${
+                              active ? "active" : ""
+                            }`
+                          }
+                        >
+                          {vendor.company_name
+                            ? `${vendor.company_name} (${vendor.vendor_name})`
+                            : vendor.vendor_name}
+                        </Combobox.Option>
+                      ))
+                    )}
+                  </Combobox.Options>
+                </div>
+              </Combobox>
+            </div>
+          ) : (
+            <small className="shopify-text-small text-muted">
+              No companies available. Please add companies in the Vendor Master
+              module.
+            </small>
+          )}
+        </div>
       </div>
 
       {/* Row 1: MRP, COGS, Quantity, Margin */}
@@ -200,120 +271,6 @@ const VariantRowEditor = ({
               handleFieldChange("dimension_without_packing", e.target.value)
             }
           />
-        </div>
-      </div>
-
-      {/* Row 3: Vendors */}
-      <div className="row">
-        <div className="col-12">
-          <label className="shopify-label">Assigned Vendors</label>
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            {/* Display assigned vendors */}
-            {variant.vendor_pricing && variant.vendor_pricing.length > 0 ? (
-              variant.vendor_pricing.map((vp, index) => (
-                <span
-                  key={index}
-                  className={`badge ${
-                    vp.is_primary_vendor ? "bg-success" : "bg-secondary"
-                  } d-flex align-items-center`}
-                  style={{
-                    fontSize: "13px",
-                    padding: "6px 10px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => togglePrimaryVendor(vp.vendor_id)}
-                  title={
-                    vp.is_primary_vendor
-                      ? "Primary vendor - click to change"
-                      : "Click to make primary"
-                  }
-                >
-                  {vp.is_primary_vendor && (
-                    <Icon icon="mdi:star" className="me-1" width="14" />
-                  )}
-                  {vp.vendor_name}
-                  <span
-                    className="ms-2"
-                    style={{
-                      fontSize: "16px",
-                      cursor: "pointer",
-                      opacity: 0.8,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleVendorToggle(vp.vendor_id);
-                    }}
-                    aria-label="Remove"
-                  >
-                    ×
-                  </span>
-                </span>
-              ))
-            ) : (
-              <small className="shopify-text-small">No vendors assigned</small>
-            )}
-
-            {/* Add Vendor Button */}
-            {vendors.length > 0 && (
-              <div className="position-relative">
-                <button
-                  type="button"
-                  className="shopify-btn shopify-btn-secondary"
-                  style={{ fontSize: "13px", padding: "6px 12px" }}
-                  onClick={() => setShowVendorDropdown(!showVendorDropdown)}
-                >
-                  <Icon icon="mdi:plus" className="me-1" width="14" />
-                  Assign Vendor
-                </button>
-
-                {/* Vendor Dropdown */}
-                {showVendorDropdown && (
-                  <div
-                    className="position-absolute bg-white border rounded shadow-sm"
-                    style={{
-                      top: "100%",
-                      left: 0,
-                      zIndex: 1000,
-                      minWidth: "200px",
-                      maxHeight: "200px",
-                      overflowY: "auto",
-                      marginTop: "4px",
-                      borderColor: "#c9cccf",
-                    }}
-                  >
-                    {availableVendors.length > 0 ? (
-                      <div className="list-group list-group-flush">
-                        {availableVendors.map((vendor) => (
-                          <button
-                            key={vendor.id || vendor.vendor_id}
-                            type="button"
-                            className="list-group-item list-group-item-action"
-                            style={{ fontSize: "13px" }}
-                            onClick={() => {
-                              handleVendorToggle(vendor.id || vendor.vendor_id);
-                              setShowVendorDropdown(false);
-                            }}
-                          >
-                            {vendor.vendor_name}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-2 shopify-text-small">
-                        All vendors assigned
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {vendors.length === 0 && (
-              <small className="shopify-text-small">
-                Add vendors in the Vendor Master List above
-              </small>
-            )}
-          </div>
         </div>
       </div>
     </div>
