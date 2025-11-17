@@ -74,34 +74,53 @@ const BrandkitManagementModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Manage Brandkits</h5>
-            <button type="button" className="btn-close" onClick={onClose} />
+           <div className="modal-header" style={{ padding: "15px", borderBottom: "1px solid #e9ecef" }}>
+             <h6 className="modal-title" style={{ fontSize: "0.875rem", fontWeight: "600", margin: 0 }}>
+               Manage Brandkits
+             </h6>
+            <button 
+              type="button" 
+              className="btn-close btn-close-sm" 
+              onClick={onClose}
+              style={{ fontSize: "0.75rem" }}
+            />
           </div>
-          <div className="modal-body">
+          <div className="modal-body" style={{ padding: "15px", overflowX: "hidden" }}>
             {brandkits.length === 0 ? (
-              <div className="text-center p-5">
+              <div className="text-center" style={{ padding: "40px 20px" }}>
                 <Icon
                   icon="solar:palette-bold"
-                  width="64"
-                  height="64"
-                  className="text-muted mb-3"
+                  width="48"
+                  height="48"
+                  style={{ color: "#6c757d", marginBottom: "12px", opacity: 0.5 }}
                 />
-                <h5 className="text-muted">No Brandkits Yet</h5>
-                <p className="text-muted">
+                <h5 style={{ fontSize: "0.9375rem", color: "#6c757d", marginBottom: "8px", fontWeight: "500" }}>
+                  No Brandkits Yet
+                </h5>
+                <p style={{ fontSize: "0.8125rem", color: "#6c757d", margin: 0 }}>
                   Create your first brandkit to get started
                 </p>
               </div>
             ) : (
-              <div className="table-responsive">
-                <table className="table table-hover">
+              <div className="table-responsive" style={{ overflowX: "hidden" }}>
+                <table className="table" style={{ marginBottom: 0, fontSize: "0.8125rem" }}>
                   <thead>
-                    <tr>
-                      <th>Brand</th>
-                      <th>Status</th>
-                      <th>Tagline</th>
-                      <th>Last Updated</th>
-                      <th>Actions</th>
+                    <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                      <th style={{ fontSize: "0.8125rem", fontWeight: "600", padding: "10px 12px", borderBottom: "1px solid #e9ecef" }}>
+                        Brand
+                      </th>
+                      <th style={{ fontSize: "0.8125rem", fontWeight: "600", padding: "10px 12px", borderBottom: "1px solid #e9ecef" }}>
+                        Status
+                      </th>
+                      <th style={{ fontSize: "0.8125rem", fontWeight: "600", padding: "10px 12px", borderBottom: "1px solid #e9ecef" }}>
+                        Tagline
+                      </th>
+                      <th style={{ fontSize: "0.8125rem", fontWeight: "600", padding: "10px 12px", borderBottom: "1px solid #e9ecef" }}>
+                        Last Updated
+                      </th>
+                      <th style={{ fontSize: "0.8125rem", fontWeight: "600", padding: "10px 12px", borderBottom: "1px solid #e9ecef" }}>
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -112,60 +131,111 @@ const BrandkitManagementModal = ({
                         isActivating === brandkit.brand_id;
 
                       return (
-                        <tr key={brandkit.brand_id}>
-                          <td>
+                        <tr key={brandkit.brand_id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                          <td style={{ padding: "12px" }}>
                             <div className="d-flex align-items-center gap-2">
                               {isActive && (
                                 <Icon
                                   icon="solar:check-circle-bold"
-                                  width="20"
-                                  height="20"
-                                  className="text-success"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "#28a745", flexShrink: 0 }}
                                 />
                               )}
-                              <div>
-                                <div className="fw-semibold">
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: "0.8125rem", fontWeight: "600", marginBottom: "2px" }}>
                                   {brandkit.brand_name}
                                 </div>
-                                <small className="text-muted">
+                                <div style={{ fontSize: "0.6875rem", color: "#6c757d" }}>
                                   {brandkit.brand_id}
-                                </small>
+                                </div>
                               </div>
                             </div>
                           </td>
-                          <td>
+                          <td style={{ padding: "12px" }}>
                             {isActive ? (
-                              <span className="badge bg-success">Active</span>
+                              <span 
+                                style={{ 
+                                  fontSize: "0.6875rem",
+                                  padding: "3px 8px",
+                                  borderRadius: "12px",
+                                  backgroundColor: "#28a745",
+                                  color: "#fff",
+                                  fontWeight: "500"
+                                }}
+                              >
+                                Active
+                              </span>
                             ) : (
-                              <span className="badge bg-secondary">Inactive</span>
+                              <span 
+                                style={{ 
+                                  fontSize: "0.6875rem",
+                                  padding: "3px 8px",
+                                  borderRadius: "12px",
+                                  backgroundColor: "#6c757d",
+                                  color: "#fff",
+                                  fontWeight: "500"
+                                }}
+                              >
+                                Inactive
+                              </span>
                             )}
                           </td>
-                          <td>
+                          <td style={{ padding: "12px" }}>
                             <div
-                              className="text-truncate"
-                              style={{ maxWidth: "200px" }}
+                              style={{ 
+                                maxWidth: "200px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize: "0.8125rem"
+                              }}
                             >
                               {brandkit.tagline || (
-                                <span className="text-muted">—</span>
+                                <span style={{ color: "#6c757d" }}>—</span>
                               )}
                             </div>
                           </td>
-                          <td>
-                            <small>{formatDate(brandkit.updated_at)}</small>
+                          <td style={{ padding: "12px" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#495057" }}>
+                              {formatDate(brandkit.updated_at)}
+                            </span>
                           </td>
-                          <td>
-                            <div className="d-flex gap-2">
+                          <td style={{ padding: "12px" }}>
+                            <div className="d-flex gap-1" style={{ flexWrap: "wrap" }}>
                               {!isActive && (
                                 <button
-                                  className="btn btn-sm btn-outline-primary"
                                   onClick={() => handleActivate(brandkit.brand_id)}
                                   disabled={isProcessing}
                                   title="Set as active brandkit"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #0d6efd",
+                                    backgroundColor: "#0d6efd",
+                                    color: "#fff",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "0.75rem",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isProcessing) {
+                                      e.currentTarget.style.backgroundColor = "#0b5ed7";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#0d6efd";
+                                  }}
                                 >
                                   {isActivating === brandkit.brand_id ? (
                                     <span
                                       className="spinner-border spinner-border-sm"
                                       role="status"
+                                      style={{ width: "12px", height: "12px" }}
                                     />
                                   ) : (
                                     <Icon
@@ -177,10 +247,33 @@ const BrandkitManagementModal = ({
                                 </button>
                               )}
                               <button
-                                className="btn btn-sm btn-outline-secondary"
                                 onClick={() => onEdit(brandkit)}
                                 disabled={isProcessing}
                                 title="Edit brandkit"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #0d6efd",
+                                  backgroundColor: "transparent",
+                                  color: "#0d6efd",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isProcessing) {
+                                    e.currentTarget.style.backgroundColor = "#0d6efd";
+                                    e.currentTarget.style.color = "#fff";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                  e.currentTarget.style.color = "#0d6efd";
+                                }}
                               >
                                 <Icon
                                   icon="solar:pen-bold"
@@ -189,10 +282,33 @@ const BrandkitManagementModal = ({
                                 />
                               </button>
                               <button
-                                className="btn btn-sm btn-outline-info"
                                 onClick={() => onUploadLogo(brandkit)}
                                 disabled={isProcessing}
                                 title="Upload logo"
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #0d6efd",
+                                  backgroundColor: "transparent",
+                                  color: "#0d6efd",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isProcessing) {
+                                    e.currentTarget.style.backgroundColor = "#0d6efd";
+                                    e.currentTarget.style.color = "#fff";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                  e.currentTarget.style.color = "#0d6efd";
+                                }}
                               >
                                 <Icon
                                   icon="solar:gallery-bold"
@@ -201,11 +317,6 @@ const BrandkitManagementModal = ({
                                 />
                               </button>
                               <button
-                                className={`btn btn-sm ${
-                                  deleteConfirm === brandkit.brand_id
-                                    ? "btn-danger"
-                                    : "btn-outline-danger"
-                                }`}
                                 onClick={() => handleDelete(brandkit.brand_id)}
                                 disabled={isActive || isProcessing}
                                 title={
@@ -215,21 +326,46 @@ const BrandkitManagementModal = ({
                                     ? "Click again to confirm"
                                     : "Delete brandkit"
                                 }
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  padding: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: `1px solid ${deleteConfirm === brandkit.brand_id ? "#dc3545" : isActive ? "#6c757d" : "#dc3545"}`,
+                                  backgroundColor: deleteConfirm === brandkit.brand_id ? "#dc3545" : "transparent",
+                                  color: deleteConfirm === brandkit.brand_id ? "#fff" : isActive ? "#6c757d" : "#dc3545",
+                                  borderRadius: "4px",
+                                  cursor: isActive ? "not-allowed" : "pointer",
+                                  fontSize: "0.75rem",
+                                  opacity: isActive ? 0.5 : 1,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isActive && !isProcessing) {
+                                    e.currentTarget.style.backgroundColor = "#dc3545";
+                                    e.currentTarget.style.color = "#fff";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.backgroundColor = deleteConfirm === brandkit.brand_id ? "#dc3545" : "transparent";
+                                    e.currentTarget.style.color = deleteConfirm === brandkit.brand_id ? "#fff" : "#dc3545";
+                                  }
+                                }}
                               >
                                 {isDeleting === brandkit.brand_id ? (
                                   <span
                                     className="spinner-border spinner-border-sm"
                                     role="status"
+                                    style={{ width: "12px", height: "12px" }}
                                   />
                                 ) : deleteConfirm === brandkit.brand_id ? (
-                                  <>
-                                    <Icon
-                                      icon="solar:danger-bold"
-                                      width="14"
-                                      height="14"
-                                    />{" "}
-                                    Confirm?
-                                  </>
+                                  <Icon
+                                    icon="solar:danger-bold"
+                                    width="14"
+                                    height="14"
+                                  />
                                 ) : (
                                   <Icon
                                     icon="solar:trash-bin-2-bold"
@@ -249,21 +385,36 @@ const BrandkitManagementModal = ({
             )}
 
             {brandkits.length > 0 && (
-              <div className="alert alert-info mt-3">
+              <div 
+                style={{
+                  marginTop: "16px",
+                  padding: "12px 14px",
+                  backgroundColor: "#cfe2ff",
+                  borderRadius: "8px",
+                  border: "1px solid #b6d4fe",
+                }}
+              >
                 <div className="d-flex align-items-start gap-2">
-                  <Icon icon="solar:info-circle-bold" width="20" height="20" />
-                  <div>
-                    <strong>Tips:</strong>
-                    <ul className="mb-0 mt-2">
-                      <li>
+                  <Icon 
+                    icon="solar:info-circle-bold" 
+                    width="16" 
+                    height="16" 
+                    style={{ color: "#084298", flexShrink: 0, marginTop: "2px" }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ fontSize: "0.8125rem", color: "#084298", display: "block", marginBottom: "8px" }}>
+                      Tips:
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "0.75rem", color: "#084298", lineHeight: "1.6" }}>
+                      <li style={{ marginBottom: "4px" }}>
                         Only one brandkit can be active at a time. The active
                         brandkit is used for all content generation.
                       </li>
-                      <li>
+                      <li style={{ marginBottom: "4px" }}>
                         You cannot delete the active brandkit. Switch to another
                         brandkit first.
                       </li>
-                      <li>
+                      <li style={{ marginBottom: 0 }}>
                         Use the logo upload to add brand logos after creating a
                         brandkit.
                       </li>
@@ -273,8 +424,27 @@ const BrandkitManagementModal = ({
               </div>
             )}
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <div className="modal-footer" style={{ padding: "12px 15px", borderTop: "1px solid #e9ecef" }}>
+            <button 
+              type="button" 
+              onClick={onClose}
+              style={{
+                padding: "6px 16px",
+                fontSize: "0.8125rem",
+                backgroundColor: "#6c757d",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#5c636a";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#6c757d";
+              }}
+            >
               Close
             </button>
           </div>

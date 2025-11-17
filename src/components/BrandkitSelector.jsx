@@ -54,20 +54,46 @@ const BrandkitSelector = ({ onCreateNew, onManage }) => {
   };
 
   return (
-    <div className="position-relative" ref={dropdownRef} style={{ minWidth: 0, maxWidth: "250px" }}>
+    <div className="position-relative" ref={dropdownRef} style={{ minWidth: 0, maxWidth: "250px", width: "100%" }}>
       <button
-        className="btn btn-outline-secondary d-flex align-items-center gap-2"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading || isSwitching}
         style={{
-          minWidth: "200px",
+          width: "100%",
           maxWidth: "100%",
+          display: "flex",
+          alignItems: "center",
           justifyContent: "space-between",
+          gap: "8px",
+          padding: "6px 12px",
+          backgroundColor: "#f8f9fa",
+          border: "1px solid #dee2e6",
+          borderRadius: "6px",
+          fontSize: "0.8125rem",
+          color: "#212529",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          boxSizing: "border-box",
+        }}
+        onMouseEnter={(e) => {
+          if (!isLoading && !isSwitching) {
+            e.currentTarget.style.backgroundColor = "#e9ecef";
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "#f8f9fa";
         }}
       >
-        <div className="d-flex align-items-center gap-2">
-          <Icon icon="solar:palette-bold" width="16" height="16" />
-          <span className="text-truncate">
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: 0 }}>
+          <Icon icon="solar:palette-bold" width="14" height="14" style={{ flexShrink: 0 }} />
+          <span 
+            style={{ 
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              fontSize: "0.8125rem"
+            }}
+          >
             {isSwitching
               ? "Switching..."
               : activeBrandkit?.brand_name || "Loading..."}
@@ -77,105 +103,195 @@ const BrandkitSelector = ({ onCreateNew, onManage }) => {
           icon={isOpen ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"}
           width="12"
           height="12"
+          style={{ flexShrink: 0, color: "#6c757d" }}
         />
       </button>
 
       {isOpen && (
         <div
-          className="dropdown-menu show"
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            right: 0,
+            width: "100%",
             zIndex: 1050,
             maxHeight: "400px",
             overflowY: "auto",
             overflowX: "hidden",
-            minWidth: "250px",
-            maxWidth: "100%",
+            minWidth: "200px",
+            backgroundColor: "#fff",
+            border: "1px solid #dee2e6",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            padding: "4px 0",
+            boxSizing: "border-box",
           }}
         >
           {brandkits.length > 0 ? (
             <>
-              <h6 className="dropdown-header">Available Brandkits</h6>
-              {brandkits.map((bk) => (
-                <button
-                  key={bk.brand_id}
-                  className={`dropdown-item ${
-                    bk.brand_id === activeBrandkit?.brand_id ? "active" : ""
-                  }`}
-                  onClick={() => handleSwitch(bk.brand_id)}
-                  disabled={isSwitching}
-                  style={{
-                    whiteSpace: "normal",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div className="d-flex align-items-center justify-content-between" style={{ width: "100%" }}>
-                    <span className="text-truncate" style={{ flex: 1, minWidth: 0 }}>{bk.brand_name}</span>
-                    {bk.brand_id === activeBrandkit?.brand_id && (
+              <div
+                style={{
+                  padding: "8px 12px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#212529",
+                  borderBottom: "1px solid #e9ecef",
+                  marginBottom: "4px",
+                }}
+              >
+                Available Brandkits
+              </div>
+              {brandkits.map((bk) => {
+                const isActive = bk.brand_id === activeBrandkit?.brand_id;
+                return (
+                  <button
+                    key={bk.brand_id}
+                    onClick={() => handleSwitch(bk.brand_id)}
+                    disabled={isSwitching}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "none",
+                      backgroundColor: isActive ? "#0d6efd" : "transparent",
+                      color: isActive ? "#fff" : "#212529",
+                      fontSize: "0.8125rem",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      transition: "background-color 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive && !isSwitching) {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.8125rem",
+                      }}
+                    >
+                      {bk.brand_name}
+                    </span>
+                    {isActive && (
                       <Icon
                         icon="solar:check-circle-bold"
-                        width="16"
-                        height="16"
-                        className="text-success ms-2"
-                        style={{ flexShrink: 0 }}
+                        width="14"
+                        height="14"
+                        style={{ flexShrink: 0, color: "#28a745" }}
                       />
                     )}
-                  </div>
-                  {bk.tagline && (
-                    <small className="text-muted d-block text-truncate" style={{ width: "100%" }}>
-                      {bk.tagline}
-                    </small>
-                  )}
-                </button>
-              ))}
-              <hr className="dropdown-divider" />
+                  </button>
+                );
+              })}
+              <div
+                style={{
+                  height: "1px",
+                  backgroundColor: "#e9ecef",
+                  margin: "4px 0",
+                }}
+              />
             </>
           ) : (
             <>
-              <div className="dropdown-item-text text-muted small">
+              <div
+                style={{
+                  padding: "8px 12px",
+                  fontSize: "0.75rem",
+                  color: "#6c757d",
+                }}
+              >
                 No brandkits available
               </div>
-              <hr className="dropdown-divider" />
+              <div
+                style={{
+                  height: "1px",
+                  backgroundColor: "#e9ecef",
+                  margin: "4px 0",
+                }}
+              />
             </>
           )}
           <button
-            className="dropdown-item"
             onClick={handleCreateNew}
             disabled={isSwitching}
             style={{
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              width: "100%",
+              padding: "8px 12px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "#212529",
+              fontSize: "0.8125rem",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "background-color 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSwitching) {
+                e.currentTarget.style.backgroundColor = "#f8f9fa";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
             }}
           >
             <Icon
               icon="solar:add-circle-bold"
-              width="16"
-              height="16"
-              className="me-2"
+              width="14"
+              height="14"
+              style={{ flexShrink: 0 }}
             />
-            Create New Brandkit
+            <span style={{ fontSize: "0.8125rem" }}>Create New Brandkit</span>
           </button>
           <button
-            className="dropdown-item"
             onClick={handleManage}
             disabled={isSwitching}
             style={{
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              width: "100%",
+              padding: "8px 12px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "#212529",
+              fontSize: "0.8125rem",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "background-color 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSwitching) {
+                e.currentTarget.style.backgroundColor = "#f8f9fa";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
             }}
           >
             <Icon
               icon="solar:settings-bold"
-              width="16"
-              height="16"
-              className="me-2"
+              width="14"
+              height="14"
+              style={{ flexShrink: 0 }}
             />
-            Manage Brandkits
+            <span style={{ fontSize: "0.8125rem" }}>Manage Brandkits</span>
           </button>
         </div>
       )}

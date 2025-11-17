@@ -19,9 +19,9 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     emotional_territory: "",
     target_audience_primary: "",
     target_audience_psychographics: [],
-    color_primary: "#2C5F4F",
+    color_primary: [],
     color_secondary: [],
-    color_accent: "#D4A574",
+    color_accent: [],
     typography_primary: "",
     typography_secondary: "",
     tone_dos: [],
@@ -42,7 +42,9 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     brand_voice_avoid: "",
     key_pillars: "",
     target_audience_psychographics: "",
+    color_primary: "#2C5F4F",
     color_secondary: "#8B9D77",
+    color_accent: "#D4A574",
     tone_dos: "",
     tone_donts: "",
     preferred_terms: "",
@@ -94,9 +96,9 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         target_audience_primary: editBrandkit.target_audience?.primary || 
           (typeof editBrandkit.target_audience === 'string' ? editBrandkit.target_audience : ""),
         target_audience_psychographics: ensureStringArray(editBrandkit.target_audience?.psychographics),
-        color_primary: colorPalette[0] || "#2C5F4F",
-        color_secondary: ensureStringArray(colorPalette.slice(1)),
-        color_accent: colorPalette[colorPalette.length - 1] || "#D4A574",
+        color_primary: ensureStringArray(editBrandkit.color_primary || (colorPalette[0] ? [colorPalette[0]] : [])),
+        color_secondary: ensureStringArray(editBrandkit.color_secondary || colorPalette.slice(1, -1)),
+        color_accent: ensureStringArray(editBrandkit.color_accent || (colorPalette[colorPalette.length - 1] ? [colorPalette[colorPalette.length - 1]] : [])),
         typography_primary: editBrandkit.typography?.primary || "",
         typography_secondary: editBrandkit.typography?.secondary || "",
         tone_dos: ensureStringArray(editBrandkit.style_guide?.dos),
@@ -120,9 +122,9 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         emotional_territory: "",
         target_audience_primary: "",
         target_audience_psychographics: [],
-        color_primary: "#2C5F4F",
+        color_primary: [],
         color_secondary: [],
-        color_accent: "#D4A574",
+        color_accent: [],
         typography_primary: "",
         typography_secondary: "",
         tone_dos: [],
@@ -263,11 +265,15 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
           : [],
         target_audience: formData.target_audience_primary.trim(),
         color_palette: [
-          formData.color_primary,
+          ...(Array.isArray(formData.color_primary)
+            ? formData.color_primary.filter(item => typeof item === 'string' && item.trim())
+            : []),
           ...(Array.isArray(formData.color_secondary)
             ? formData.color_secondary.filter(item => typeof item === 'string' && item.trim())
             : []),
-          formData.color_accent,
+          ...(Array.isArray(formData.color_accent)
+            ? formData.color_accent.filter(item => typeof item === 'string' && item.trim())
+            : []),
         ],
         typography: {
           primary: formData.typography_primary.trim() || "Sans-serif",
@@ -377,26 +383,36 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">
+          <div className="modal-header" style={{ padding: "15px", borderBottom: "1px solid #e9ecef" }}>
+            <h6 className="modal-title" style={{ fontSize: "0.875rem", fontWeight: "600", margin: 0 }}>
               {isEditMode ? "Edit Brandkit" : "Create New Brandkit"}
-            </h5>
+            </h6>
             <button
               type="button"
-              className="btn-close"
+              className="btn-close btn-close-sm"
               onClick={onClose}
               disabled={isSubmitting}
+              style={{ fontSize: "0.75rem" }}
             />
           </div>
-          <div className="modal-body">
+          <div className="modal-body" style={{ padding: "15px", overflowX: "hidden" }}>
+            <style>{`
+              .modal-body input::placeholder,
+              .modal-body textarea::placeholder {
+                font-size: 0.75rem !important;
+                opacity: 0.7;
+              }
+            `}</style>
             <form onSubmit={handleSubmit}>
               {/* Required Section */}
-              <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Basic Information</h6>
+              <div className="mb-3">
+                <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                  Basic Information
+                </div>
 
                 {/* Brand Name */}
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Brand Name <span className="text-danger">*</span>
                   </label>
                   <input
@@ -406,15 +422,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     onChange={(e) => handleBrandNameChange(e.target.value)}
                     placeholder="e.g., Tilting Heads, Glow Naturals"
                     disabled={isSubmitting}
+                    style={{ 
+                      fontSize: "0.8125rem", 
+                      padding: "6px 12px"
+                    }}
                   />
                   {errors.brand_name && (
-                    <div className="invalid-feedback">{errors.brand_name}</div>
+                    <div className="invalid-feedback" style={{ fontSize: "0.6875rem" }}>{errors.brand_name}</div>
                   )}
                 </div>
 
                 {/* Brand ID */}
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Brand ID <span className="text-danger">*</span>
                   </label>
                   <input
@@ -427,19 +447,22 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     placeholder="e.g., tilting_heads, glow_naturals"
                     disabled={isEditMode || isSubmitting}
                     readOnly={isEditMode}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                   {errors.brand_id && (
-                    <div className="invalid-feedback">{errors.brand_id}</div>
+                    <div className="invalid-feedback" style={{ fontSize: "0.6875rem" }}>{errors.brand_id}</div>
                   )}
-                  <small className="text-muted">
+                  <small className="text-muted" style={{ fontSize: "0.6875rem", display: "block", marginTop: "4px" }}>
                     Lowercase letters, numbers, underscores, and hyphens only
                     {isEditMode && " (Cannot be changed)"}
                   </small>
                 </div>
 
                 {/* Tagline */}
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Tagline</label>
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                    Tagline
+                  </label>
                   <input
                     type="text"
                     className="form-control"
@@ -449,16 +472,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     }
                     placeholder="e.g., Where Wild Wisdom Meets Modern Care"
                     disabled={isSubmitting}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                 </div>
               </div>
 
               {/* Brand Voice */}
-              <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Brand Voice</h6>
+              <div className="mb-3">
+                <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                  Brand Voice
+                </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Primary Voice <span className="text-danger">*</span>
                   </label>
                   <input
@@ -475,14 +501,17 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     }
                     placeholder="e.g., Calm, Emotional, Poetic"
                     disabled={isSubmitting}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                   {errors.brand_voice_primary && (
-                    <div className="invalid-feedback">{errors.brand_voice_primary}</div>
+                    <div className="invalid-feedback" style={{ fontSize: "0.6875rem" }}>{errors.brand_voice_primary}</div>
                   )}
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Secondary Voices</label>
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                    Secondary Voices
+                  </label>
                   <div className="input-group">
                     <input
                       type="text"
@@ -505,6 +534,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         }
                       }}
                       disabled={isSubmitting}
+                      style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                     />
                     <button
                       type="button"
@@ -516,18 +546,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         )
                       }
                       disabled={isSubmitting}
+                      style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                     >
-                      <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                      <Icon icon="solar:add-circle-bold" width="14" height="14" />
                     </button>
                   </div>
-                  <div className="d-flex flex-wrap gap-2 mt-2">
+                  <div className="d-flex flex-wrap gap-1 mt-1">
                     {formData.brand_voice_secondary.map((item, index) => (
-                      <span key={index} className="badge bg-secondary d-flex align-items-center gap-1">
+                      <span key={index} className="badge bg-secondary d-flex align-items-center gap-1" style={{ fontSize: "0.6875rem", padding: "2px 6px" }}>
                         {item}
                         <button
                           type="button"
                           className="btn-close btn-close-white"
-                          style={{ fontSize: "10px" }}
+                          style={{ fontSize: "8px", width: "8px", height: "8px" }}
                           onClick={() => removeFromArray("brand_voice_secondary", index)}
                           disabled={isSubmitting}
                         />
@@ -536,8 +567,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Voices to Avoid</label>
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                    Voices to Avoid
+                  </label>
                   <div className="input-group">
                     <input
                       type="text"
@@ -557,6 +590,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         }
                       }}
                       disabled={isSubmitting}
+                      style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                     />
                     <button
                       type="button"
@@ -565,18 +599,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         addToArray("brand_voice_avoid", tempInputs.brand_voice_avoid)
                       }
                       disabled={isSubmitting}
+                      style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                     >
-                      <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                      <Icon icon="solar:add-circle-bold" width="14" height="14" />
                     </button>
                   </div>
-                  <div className="d-flex flex-wrap gap-2 mt-2">
+                  <div className="d-flex flex-wrap gap-1 mt-1">
                     {formData.brand_voice_avoid.map((item, index) => (
-                      <span key={index} className="badge bg-warning d-flex align-items-center gap-1">
+                      <span key={index} className="badge bg-warning d-flex align-items-center gap-1" style={{ fontSize: "0.6875rem", padding: "2px 6px" }}>
                         {item}
                         <button
                           type="button"
                           className="btn-close"
-                          style={{ fontSize: "10px" }}
+                          style={{ fontSize: "8px", width: "8px", height: "8px" }}
                           onClick={() => removeFromArray("brand_voice_avoid", index)}
                           disabled={isSubmitting}
                         />
@@ -587,11 +622,13 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
               </div>
 
               {/* Brand Essence */}
-              <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Brand Essence</h6>
+              <div className="mb-3">
+                <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                  Brand Essence
+                </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Core Message <span className="text-danger">*</span>
                   </label>
                   <textarea
@@ -603,14 +640,15 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     }
                     placeholder="e.g., Return to natural, biologically respectful pet care"
                     disabled={isSubmitting}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                   {errors.core_message && (
-                    <div className="invalid-feedback">{errors.core_message}</div>
+                    <div className="invalid-feedback" style={{ fontSize: "0.6875rem" }}>{errors.core_message}</div>
                   )}
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Key Pillars <span className="text-danger">*</span>
                   </label>
                   <div className="input-group">
@@ -629,27 +667,29 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         }
                       }}
                       disabled={isSubmitting}
+                      style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                     />
                     <button
                       type="button"
                       className="btn btn-outline-secondary"
                       onClick={() => addToArray("key_pillars", tempInputs.key_pillars)}
                       disabled={isSubmitting}
+                      style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                     >
-                      <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                      <Icon icon="solar:add-circle-bold" width="14" height="14" />
                     </button>
                   </div>
                   {errors.key_pillars && (
-                    <div className="text-danger small mt-1">{errors.key_pillars}</div>
+                    <div className="text-danger" style={{ fontSize: "0.6875rem", marginTop: "4px" }}>{errors.key_pillars}</div>
                   )}
-                  <div className="d-flex flex-wrap gap-2 mt-2">
+                  <div className="d-flex flex-wrap gap-1 mt-1">
                     {formData.key_pillars.map((item, index) => (
-                      <span key={index} className="badge bg-primary d-flex align-items-center gap-1">
+                      <span key={index} className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: "0.6875rem", padding: "2px 6px" }}>
                         {item}
                         <button
                           type="button"
                           className="btn-close btn-close-white"
-                          style={{ fontSize: "10px" }}
+                          style={{ fontSize: "8px", width: "8px", height: "8px" }}
                           onClick={() => removeFromArray("key_pillars", index)}
                           disabled={isSubmitting}
                         />
@@ -658,8 +698,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Emotional Territory</label>
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                    Emotional Territory
+                  </label>
                   <input
                     type="text"
                     className="form-control"
@@ -672,16 +714,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     }
                     placeholder="e.g., Calm assurance, biological respect, natural wisdom"
                     disabled={isSubmitting}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                 </div>
               </div>
 
               {/* Target Audience */}
-              <div className="mb-4">
-                <h6 className="fw-semibold mb-3">Target Audience</h6>
+              <div className="mb-3">
+                <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                  Target Audience
+                </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
                     Primary Audience <span className="text-danger">*</span>
                   </label>
                   <input
@@ -698,16 +743,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     }
                     placeholder="e.g., Urban pet parents (25-40)"
                     disabled={isSubmitting}
+                    style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
                   {errors.target_audience_primary && (
-                    <div className="invalid-feedback">
+                    <div className="invalid-feedback" style={{ fontSize: "0.6875rem" }}>
                       {errors.target_audience_primary}
                     </div>
                   )}
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Psychographics</label>
+                <div className="mb-2">
+                  <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                    Psychographics
+                  </label>
                   <div className="input-group">
                     <input
                       type="text"
@@ -730,6 +778,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         }
                       }}
                       disabled={isSubmitting}
+                      style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                     />
                     <button
                       type="button"
@@ -741,18 +790,19 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         )
                       }
                       disabled={isSubmitting}
+                      style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                     >
-                      <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                      <Icon icon="solar:add-circle-bold" width="14" height="14" />
                     </button>
                   </div>
-                  <div className="d-flex flex-wrap gap-2 mt-2">
+                  <div className="d-flex flex-wrap gap-1 mt-1">
                     {formData.target_audience_psychographics.map((item, index) => (
-                      <span key={index} className="badge bg-info d-flex align-items-center gap-1">
+                      <span key={index} className="badge bg-info d-flex align-items-center gap-1" style={{ fontSize: "0.6875rem", padding: "2px 6px" }}>
                         {item}
                         <button
                           type="button"
                           className="btn-close"
-                          style={{ fontSize: "10px" }}
+                          style={{ fontSize: "8px", width: "8px", height: "8px" }}
                           onClick={() =>
                             removeFromArray("target_audience_psychographics", index)
                           }
@@ -765,11 +815,12 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
               </div>
 
               {/* Advanced Settings Accordion */}
-              <div className="mb-4">
+              <div className="mb-3">
                 <button
                   type="button"
                   className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-2"
                   onClick={() => setShowAdvanced(!showAdvanced)}
+                  style={{ fontSize: "0.8125rem", color: "#212529" }}
                 >
                   <Icon
                     icon={
@@ -777,146 +828,1186 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         ? "solar:alt-arrow-down-bold"
                         : "solar:alt-arrow-right-bold"
                     }
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                   />
-                  <h6 className="mb-0">Advanced Settings (Optional)</h6>
+                  <span style={{ fontSize: "0.8125rem", fontWeight: "500" }}>Advanced Settings (Optional)</span>
                 </button>
               </div>
 
               {showAdvanced && (
                 <>
-                  {/* Color Palette */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Color Palette</h6>
+                  {/* Color Palette - Paletton Inspired */}
+                  <div className="mb-3">
+                    <div className="mb-3" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Color Palette
+                    </div>
 
-                    <div className="row">
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">Primary Color</label>
-                        <input
-                          type="color"
-                          className="form-control form-control-color"
-                          value={formData.color_primary}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              color_primary: e.target.value,
-                            }))
-                          }
-                          disabled={isSubmitting}
-                        />
-                        <small className="text-muted">{formData.color_primary}</small>
+                    {/* My Palette Strip - Inspired by Paletton */}
+                    <div
+                      style={{
+                        backgroundColor: "#f8f9fa",
+                        border: "1px solid #e9ecef",
+                        borderRadius: "8px",
+                        padding: "14px",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                          color: "#495057",
+                          marginBottom: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <Icon icon="solar:palette-bold" width="14" height="14" />
+                        My Palette:
                       </div>
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">Accent Color</label>
-                        <input
-                          type="color"
-                          className="form-control form-control-color"
-                          value={formData.color_accent}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              color_accent: e.target.value,
-                            }))
-                          }
-                          disabled={isSubmitting}
-                        />
-                        <small className="text-muted">{formData.color_accent}</small>
+                      <div className="d-flex flex-wrap gap-2 align-items-center">
+                        {/* Primary Colors */}
+                        {formData.color_primary.map((color, index) => (
+                          <div
+                            key={`primary-${index}`}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "52px",
+                                height: "52px",
+                                backgroundColor: color,
+                                border: "3px solid #fff",
+                                borderRadius: "8px",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                                position: "relative",
+                              }}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const input = document.createElement("input");
+                                input.type = "color";
+                                input.value = color;
+                                input.style.position = "fixed";
+                                input.style.left = (rect.left + rect.width / 2) + "px";
+                                input.style.top = (rect.top + rect.height / 2) + "px";
+                                input.style.width = "1px";
+                                input.style.height = "1px";
+                                input.style.opacity = "0";
+                                input.style.pointerEvents = "none";
+                                input.style.zIndex = "10000";
+                                document.body.appendChild(input);
+                                input.onchange = (ev) => {
+                                  const newColors = [...formData.color_primary];
+                                  newColors[index] = ev.target.value;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    color_primary: newColors,
+                                  }));
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                input.onblur = () => {
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                setTimeout(() => {
+                                  input.focus();
+                                  input.click();
+                                }, 10);
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "scale(1.08)";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
+                              }}
+                              title={`Primary ${index + 1} - Click to change`}
+                            />
+                            <span
+                              style={{
+                                fontSize: "0.6875rem",
+                                fontWeight: "600",
+                                color: "#495057",
+                              }}
+                            >
+                              Primary {index + 1}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.625rem",
+                                fontFamily: "monospace",
+                                color: "#6c757d",
+                              }}
+                            >
+                              {color.toUpperCase()}
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Secondary Colors */}
+                        {formData.color_secondary.map((color, index) => (
+                          <div
+                            key={`secondary-${index}`}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "52px",
+                                height: "52px",
+                                backgroundColor: color,
+                                border: "3px solid #fff",
+                                borderRadius: "8px",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const input = document.createElement("input");
+                                input.type = "color";
+                                input.value = color;
+                                input.style.position = "fixed";
+                                input.style.left = (rect.left + rect.width / 2) + "px";
+                                input.style.top = (rect.top + rect.height / 2) + "px";
+                                input.style.width = "1px";
+                                input.style.height = "1px";
+                                input.style.opacity = "0";
+                                input.style.pointerEvents = "none";
+                                input.style.zIndex = "10000";
+                                document.body.appendChild(input);
+                                input.onchange = (ev) => {
+                                  const newColors = [...formData.color_secondary];
+                                  newColors[index] = ev.target.value;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    color_secondary: newColors,
+                                  }));
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                input.onblur = () => {
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                setTimeout(() => {
+                                  input.focus();
+                                  input.click();
+                                }, 10);
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "scale(1.08)";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
+                              }}
+                              title={`Secondary ${index + 1} - Click to change`}
+                            />
+                            <span
+                              style={{
+                                fontSize: "0.6875rem",
+                                fontWeight: "600",
+                                color: "#495057",
+                              }}
+                            >
+                              Secondary {index + 1}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.625rem",
+                                fontFamily: "monospace",
+                                color: "#6c757d",
+                              }}
+                            >
+                              {color.toUpperCase()}
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Accent Colors */}
+                        {formData.color_accent.map((color, index) => (
+                          <div
+                            key={`accent-${index}`}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "52px",
+                                height: "52px",
+                                backgroundColor: color,
+                                border: "3px solid #fff",
+                                borderRadius: "8px",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const input = document.createElement("input");
+                                input.type = "color";
+                                input.value = color;
+                                input.style.position = "fixed";
+                                input.style.left = (rect.left + rect.width / 2) + "px";
+                                input.style.top = (rect.top + rect.height / 2) + "px";
+                                input.style.width = "1px";
+                                input.style.height = "1px";
+                                input.style.opacity = "0";
+                                input.style.pointerEvents = "none";
+                                input.style.zIndex = "10000";
+                                document.body.appendChild(input);
+                                input.onchange = (ev) => {
+                                  const newColors = [...formData.color_accent];
+                                  newColors[index] = ev.target.value;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    color_accent: newColors,
+                                  }));
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                input.onblur = () => {
+                                  if (document.body.contains(input)) {
+                                    document.body.removeChild(input);
+                                  }
+                                };
+                                setTimeout(() => {
+                                  input.focus();
+                                  input.click();
+                                }, 10);
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "scale(1.08)";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
+                              }}
+                              title={`Accent ${index + 1} - Click to change`}
+                            />
+                            <span
+                              style={{
+                                fontSize: "0.6875rem",
+                                fontWeight: "600",
+                                color: "#495057",
+                              }}
+                            >
+                              Accent {index + 1}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.625rem",
+                                fontFamily: "monospace",
+                                color: "#6c757d",
+                              }}
+                            >
+                              {color.toUpperCase()}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Secondary Colors</label>
-                      <div className="d-flex gap-2 align-items-center mb-2">
-                        <div className="d-flex align-items-center gap-2 flex-grow-1">
-                          <input
-                            type="color"
-                            className="form-control form-control-color"
-                            value={tempInputs.color_secondary}
-                            onChange={(e) =>
-                              setTempInputs((prev) => ({
-                                ...prev,
-                                color_secondary: e.target.value,
-                              }))
-                            }
-                            disabled={isSubmitting}
-                            style={{ width: "60px", height: "40px" }}
-                          />
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={tempInputs.color_secondary}
-                            onChange={(e) =>
-                              setTempInputs((prev) => ({
-                                ...prev,
-                                color_secondary: e.target.value,
-                              }))
-                            }
-                            placeholder="e.g., #8B9D77"
-                            disabled={isSubmitting}
-                            style={{ maxWidth: "150px" }}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() =>
-                            addToArray("color_secondary", tempInputs.color_secondary)
-                          }
-                          disabled={isSubmitting}
+                    {/* Color Preview - Modern & Unique Design */}
+                    {(formData.color_primary.length > 0 || formData.color_secondary.length > 0 || formData.color_accent.length > 0) && (
+                      <div
+                        style={{
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #e9ecef",
+                          borderRadius: "12px",
+                          padding: "20px",
+                          marginBottom: "16px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                          background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.8125rem",
+                            fontWeight: "700",
+                            color: "#212529",
+                            marginBottom: "18px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            letterSpacing: "0.5px",
+                          }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" className="me-1" />
-                          Add
-                        </button>
-                      </div>
-                      {formData.color_secondary.length > 0 && (
-                        <div className="border rounded p-2" style={{ backgroundColor: "#f8f9fa" }}>
-                          <small className="text-muted d-block mb-2">
-                            {formData.color_secondary.length} color{formData.color_secondary.length !== 1 ? 's' : ''} added
-                          </small>
-                          <div className="d-flex flex-wrap gap-2">
-                            {formData.color_secondary.map((color, index) => (
-                              <div
-                                key={index}
-                                className="d-flex align-items-center gap-2 bg-white border rounded p-2"
-                                style={{ minWidth: "fit-content" }}
-                              >
+                          <Icon icon="solar:palette-2-bold" width="16" height="16" />
+                          Color Preview
+                        </div>
+                        <div className="row g-3">
+                          {/* Primary Colors Preview */}
+                          {formData.color_primary.slice(0, 2).map((color, idx) => {
+                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
+                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
+                            return (
+                              <div key={`preview-primary-${idx}`} className="col-6">
                                 <div
                                   style={{
-                                    width: "24px",
-                                    height: "24px",
                                     backgroundColor: color,
-                                    border: "2px solid #dee2e6",
-                                    borderRadius: "4px",
+                                    borderRadius: "12px",
+                                    padding: "20px",
+                                    minHeight: "140px",
+                                    border: "2px solid rgba(255,255,255,0.2)",
+                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    transition: "all 0.3s ease",
                                   }}
-                                  title={color}
-                                />
-                                <small className="text-monospace" style={{ fontSize: "11px" }}>{color}</small>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-link text-danger p-0"
-                                  onClick={() => removeFromArray("color_secondary", index)}
-                                  disabled={isSubmitting}
-                                  title="Remove color"
-                                  style={{ lineHeight: 1 }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
                                 >
-                                  <Icon icon="solar:trash-bin-2-bold" width="14" height="14" />
-                                </button>
+                                  {/* Decorative gradient overlay */}
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      right: 0,
+                                      width: "60%",
+                                      height: "100%",
+                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
+                                      borderRadius: "0 12px 12px 0",
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      position: "relative",
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        fontSize: "0.8125rem",
+                                        fontWeight: "700",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
+                                        marginBottom: "16px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "8px",
+                                          height: "8px",
+                                          borderRadius: "50%",
+                                          backgroundColor: isLight ? "#212529" : "#ffffff",
+                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
+                                        }}
+                                      />
+                                      Primary {idx + 1}
+                                    </div>
+                                    {/* Color variations with unique shapes */}
+                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
+                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
+                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
+                                        return (
+                                          <div
+                                            key={i}
+                                            style={{
+                                              flex: 1,
+                                              height: `${32 + i * 8}px`,
+                                              backgroundColor: variantColor,
+                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
+                                              border: "2px solid rgba(255,255,255,0.3)",
+                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
+                                              transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.transform = "scale(1.05)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.transform = "scale(1)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
+                                            }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    {/* Hex code badge */}
+                                    <div
+                                      style={{
+                                        display: "inline-block",
+                                        padding: "4px 10px",
+                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
+                                        borderRadius: "20px",
+                                        fontSize: "0.6875rem",
+                                        fontFamily: "monospace",
+                                        fontWeight: "600",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        backdropFilter: "blur(10px)",
+                                      }}
+                                    >
+                                      {color.toUpperCase()}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            ))}
+                            );
+                          })}
+
+                          {/* Secondary Colors Preview */}
+                          {formData.color_secondary.slice(0, 2).map((color, idx) => {
+                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
+                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
+                            return (
+                              <div key={`preview-secondary-${idx}`} className="col-6">
+                                <div
+                                  style={{
+                                    backgroundColor: color,
+                                    borderRadius: "12px",
+                                    padding: "20px",
+                                    minHeight: "140px",
+                                    border: "2px solid rgba(255,255,255,0.2)",
+                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    transition: "all 0.3s ease",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      right: 0,
+                                      width: "60%",
+                                      height: "100%",
+                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
+                                      borderRadius: "0 12px 12px 0",
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      position: "relative",
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        fontSize: "0.8125rem",
+                                        fontWeight: "700",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
+                                        marginBottom: "16px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "8px",
+                                          height: "8px",
+                                          borderRadius: "50%",
+                                          backgroundColor: isLight ? "#212529" : "#ffffff",
+                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
+                                        }}
+                                      />
+                                      Secondary {idx + 1}
+                                    </div>
+                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
+                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
+                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
+                                        return (
+                                          <div
+                                            key={i}
+                                            style={{
+                                              flex: 1,
+                                              height: `${32 + i * 8}px`,
+                                              backgroundColor: variantColor,
+                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
+                                              border: "2px solid rgba(255,255,255,0.3)",
+                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
+                                              transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.transform = "scale(1.05)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.transform = "scale(1)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
+                                            }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "inline-block",
+                                        padding: "4px 10px",
+                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
+                                        borderRadius: "20px",
+                                        fontSize: "0.6875rem",
+                                        fontFamily: "monospace",
+                                        fontWeight: "600",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        backdropFilter: "blur(10px)",
+                                      }}
+                                    >
+                                      {color.toUpperCase()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Accent Colors Preview */}
+                          {formData.color_accent.slice(0, 2).map((color, idx) => {
+                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
+                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
+                            return (
+                              <div key={`preview-accent-${idx}`} className="col-6">
+                                <div
+                                  style={{
+                                    backgroundColor: color,
+                                    borderRadius: "12px",
+                                    padding: "20px",
+                                    minHeight: "140px",
+                                    border: "2px solid rgba(255,255,255,0.2)",
+                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    transition: "all 0.3s ease",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      right: 0,
+                                      width: "60%",
+                                      height: "100%",
+                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
+                                      borderRadius: "0 12px 12px 0",
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      position: "relative",
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        fontSize: "0.8125rem",
+                                        fontWeight: "700",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
+                                        marginBottom: "16px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "8px",
+                                          height: "8px",
+                                          borderRadius: "50%",
+                                          backgroundColor: isLight ? "#212529" : "#ffffff",
+                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
+                                        }}
+                                      />
+                                      Accent {idx + 1}
+                                    </div>
+                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
+                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
+                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
+                                        return (
+                                          <div
+                                            key={i}
+                                            style={{
+                                              flex: 1,
+                                              height: `${32 + i * 8}px`,
+                                              backgroundColor: variantColor,
+                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
+                                              border: "2px solid rgba(255,255,255,0.3)",
+                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
+                                              transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.transform = "scale(1.05)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.transform = "scale(1)";
+                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
+                                            }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "inline-block",
+                                        padding: "4px 10px",
+                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
+                                        borderRadius: "20px",
+                                        fontSize: "0.6875rem",
+                                        fontFamily: "monospace",
+                                        fontWeight: "600",
+                                        color: isLight ? "#212529" : "#ffffff",
+                                        backdropFilter: "blur(10px)",
+                                      }}
+                                    >
+                                      {color.toUpperCase()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add Colors Section */}
+                    <div className="row g-2">
+                      {/* Add Primary Color */}
+                      <div className="col-md-4">
+                        <div
+                          style={{
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #e9ecef",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <label
+                            className="form-label d-block mb-2"
+                            style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}
+                          >
+                            Add Primary Color
+                          </label>
+                          <div className="d-flex gap-2 align-items-center">
+                            <div
+                              style={{
+                                width: "44px",
+                                height: "44px",
+                                border: "2px solid #e9ecef",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <input
+                                type="color"
+                                value={tempInputs.color_primary}
+                                onChange={(e) =>
+                                  setTempInputs((prev) => ({
+                                    ...prev,
+                                    color_primary: e.target.value,
+                                  }))
+                                }
+                                disabled={isSubmitting}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                }}
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={tempInputs.color_primary}
+                              onChange={(e) =>
+                                setTempInputs((prev) => ({
+                                  ...prev,
+                                  color_primary: e.target.value,
+                                }))
+                              }
+                              placeholder="#2C5F4F"
+                              disabled={isSubmitting}
+                              style={{
+                                flex: 1,
+                                fontSize: "0.8125rem",
+                                padding: "6px 10px",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addToArray("color_primary", tempInputs.color_primary);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addToArray("color_primary", tempInputs.color_primary)}
+                              disabled={isSubmitting}
+                              style={{
+                                padding: "6px 12px",
+                                fontSize: "0.75rem",
+                                fontWeight: "500",
+                                backgroundColor: "#0d6efd",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                            </button>
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Add Secondary Color */}
+                      <div className="col-md-4">
+                        <div
+                          style={{
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #e9ecef",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <label
+                            className="form-label d-block mb-2"
+                            style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}
+                          >
+                            Add Secondary Color
+                          </label>
+                          <div className="d-flex gap-2 align-items-center">
+                            <div
+                              style={{
+                                width: "44px",
+                                height: "44px",
+                                border: "2px solid #e9ecef",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <input
+                                type="color"
+                                value={tempInputs.color_secondary}
+                                onChange={(e) =>
+                                  setTempInputs((prev) => ({
+                                    ...prev,
+                                    color_secondary: e.target.value,
+                                  }))
+                                }
+                                disabled={isSubmitting}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                }}
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={tempInputs.color_secondary}
+                              onChange={(e) =>
+                                setTempInputs((prev) => ({
+                                  ...prev,
+                                  color_secondary: e.target.value,
+                                }))
+                              }
+                              placeholder="#8B9D77"
+                              disabled={isSubmitting}
+                              style={{
+                                flex: 1,
+                                fontSize: "0.8125rem",
+                                padding: "6px 10px",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addToArray("color_secondary", tempInputs.color_secondary);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addToArray("color_secondary", tempInputs.color_secondary)}
+                              disabled={isSubmitting}
+                              style={{
+                                padding: "6px 12px",
+                                fontSize: "0.75rem",
+                                fontWeight: "500",
+                                backgroundColor: "#0d6efd",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add Accent Color */}
+                      <div className="col-md-4">
+                        <div
+                          style={{
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #e9ecef",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <label
+                            className="form-label d-block mb-2"
+                            style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}
+                          >
+                            Add Accent Color
+                          </label>
+                          <div className="d-flex gap-2 align-items-center">
+                            <div
+                              style={{
+                                width: "44px",
+                                height: "44px",
+                                border: "2px solid #e9ecef",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <input
+                                type="color"
+                                value={tempInputs.color_accent}
+                                onChange={(e) =>
+                                  setTempInputs((prev) => ({
+                                    ...prev,
+                                    color_accent: e.target.value,
+                                  }))
+                                }
+                                disabled={isSubmitting}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                }}
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={tempInputs.color_accent}
+                              onChange={(e) =>
+                                setTempInputs((prev) => ({
+                                  ...prev,
+                                  color_accent: e.target.value,
+                                }))
+                              }
+                              placeholder="#D4A574"
+                              disabled={isSubmitting}
+                              style={{
+                                flex: 1,
+                                fontSize: "0.8125rem",
+                                padding: "6px 10px",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addToArray("color_accent", tempInputs.color_accent);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addToArray("color_accent", tempInputs.color_accent)}
+                              disabled={isSubmitting}
+                              style={{
+                                padding: "6px 12px",
+                                fontSize: "0.75rem",
+                                fontWeight: "500",
+                                backgroundColor: "#0d6efd",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Color Lists with Delete Options */}
+                    {(formData.color_primary.length > 0 || formData.color_secondary.length > 0 || formData.color_accent.length > 0) && (
+                      <div
+                        style={{
+                          marginTop: "16px",
+                          backgroundColor: "#f8f9fa",
+                          border: "1px solid #e9ecef",
+                          borderRadius: "8px",
+                          padding: "14px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#495057",
+                            marginBottom: "12px",
+                            paddingBottom: "8px",
+                            borderBottom: "1px solid #dee2e6",
+                          }}
+                        >
+                          Manage Colors
+                        </div>
+                        <div className="d-flex flex-wrap gap-2">
+                          {formData.color_primary.map((color, index) => (
+                            <div
+                              key={`manage-primary-${index}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                backgroundColor: "#ffffff",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                                padding: "8px 10px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "24px",
+                                  height: "24px",
+                                  backgroundColor: color,
+                                  border: "2px solid #e9ecef",
+                                  borderRadius: "4px",
+                                }}
+                              />
+                              <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}>
+                                Primary {index + 1}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.6875rem",
+                                  fontFamily: "monospace",
+                                  color: "#6c757d",
+                                }}
+                              >
+                                {color.toUpperCase()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeFromArray("color_primary", index)}
+                                disabled={isSubmitting}
+                                style={{
+                                  padding: "2px 4px",
+                                  backgroundColor: "transparent",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  color: "#dc3545",
+                                  marginLeft: "4px",
+                                }}
+                                title="Remove"
+                              >
+                                <Icon icon="solar:trash-bin-2-bold" width="12" height="12" />
+                              </button>
+                            </div>
+                          ))}
+                          {formData.color_secondary.map((color, index) => (
+                            <div
+                              key={`manage-secondary-${index}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                backgroundColor: "#ffffff",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                                padding: "8px 10px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "24px",
+                                  height: "24px",
+                                  backgroundColor: color,
+                                  border: "2px solid #e9ecef",
+                                  borderRadius: "4px",
+                                }}
+                              />
+                              <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}>
+                                Secondary {index + 1}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.6875rem",
+                                  fontFamily: "monospace",
+                                  color: "#6c757d",
+                                }}
+                              >
+                                {color.toUpperCase()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeFromArray("color_secondary", index)}
+                                disabled={isSubmitting}
+                                style={{
+                                  padding: "2px 4px",
+                                  backgroundColor: "transparent",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  color: "#dc3545",
+                                  marginLeft: "4px",
+                                }}
+                                title="Remove"
+                              >
+                                <Icon icon="solar:trash-bin-2-bold" width="12" height="12" />
+                              </button>
+                            </div>
+                          ))}
+                          {formData.color_accent.map((color, index) => (
+                            <div
+                              key={`manage-accent-${index}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                backgroundColor: "#ffffff",
+                                border: "1px solid #dee2e6",
+                                borderRadius: "6px",
+                                padding: "8px 10px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "24px",
+                                  height: "24px",
+                                  backgroundColor: color,
+                                  border: "2px solid #e9ecef",
+                                  borderRadius: "4px",
+                                }}
+                              />
+                              <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "#495057" }}>
+                                Accent {index + 1}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.6875rem",
+                                  fontFamily: "monospace",
+                                  color: "#6c757d",
+                                }}
+                              >
+                                {color.toUpperCase()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeFromArray("color_accent", index)}
+                                disabled={isSubmitting}
+                                style={{
+                                  padding: "2px 4px",
+                                  backgroundColor: "transparent",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  color: "#dc3545",
+                                  marginLeft: "4px",
+                                }}
+                                title="Remove"
+                              >
+                                <Icon icon="solar:trash-bin-2-bold" width="12" height="12" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Typography */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Typography</h6>
+                  <div className="mb-3">
+                    <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Typography
+                    </div>
 
                     <div className="row">
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">Primary Font</label>
+                      <div className="col-md-6 mb-2">
+                        <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                          Primary Font
+                        </label>
                         <input
                           type="text"
                           className="form-control"
@@ -929,10 +2020,13 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           }
                           placeholder="e.g., Crimson Pro"
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                       </div>
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">Secondary Font</label>
+                      <div className="col-md-6 mb-2">
+                        <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                          Secondary Font
+                        </label>
                         <input
                           type="text"
                           className="form-control"
@@ -945,17 +2039,22 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           }
                           placeholder="e.g., Inter"
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Tone Guide */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Tone Guide</h6>
+                  <div className="mb-3">
+                    <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Tone Guide
+                    </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Dos</label>
+                    <div className="mb-2">
+                      <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                        Dos
+                      </label>
                       <div className="input-group">
                         <input
                           type="text"
@@ -972,27 +2071,30 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                           }}
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                         <button
                           type="button"
                           className="btn btn-outline-secondary"
                           onClick={() => addToArray("tone_dos", tempInputs.tone_dos)}
                           disabled={isSubmitting}
+                          style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                          <Icon icon="solar:add-circle-bold" width="14" height="14" />
                         </button>
                       </div>
-                      <div className="d-flex flex-wrap gap-2 mt-2">
+                      <div className="d-flex flex-wrap gap-1 mt-1">
                         {formData.tone_dos.map((item, index) => (
                           <span
                             key={index}
                             className="badge bg-success d-flex align-items-center gap-1"
+                            style={{ fontSize: "0.6875rem", padding: "2px 6px" }}
                           >
                             {item}
                             <button
                               type="button"
                               className="btn-close btn-close-white"
-                              style={{ fontSize: "10px" }}
+                              style={{ fontSize: "8px", width: "8px", height: "8px" }}
                               onClick={() => removeFromArray("tone_dos", index)}
                               disabled={isSubmitting}
                             />
@@ -1001,8 +2103,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Don'ts</label>
+                    <div className="mb-2">
+                      <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                        Don'ts
+                      </label>
                       <div className="input-group">
                         <input
                           type="text"
@@ -1022,27 +2126,30 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                           }}
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                         <button
                           type="button"
                           className="btn btn-outline-secondary"
                           onClick={() => addToArray("tone_donts", tempInputs.tone_donts)}
                           disabled={isSubmitting}
+                          style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                          <Icon icon="solar:add-circle-bold" width="14" height="14" />
                         </button>
                       </div>
-                      <div className="d-flex flex-wrap gap-2 mt-2">
+                      <div className="d-flex flex-wrap gap-1 mt-1">
                         {formData.tone_donts.map((item, index) => (
                           <span
                             key={index}
                             className="badge bg-danger d-flex align-items-center gap-1"
+                            style={{ fontSize: "0.6875rem", padding: "2px 6px" }}
                           >
                             {item}
                             <button
                               type="button"
                               className="btn-close btn-close-white"
-                              style={{ fontSize: "10px" }}
+                              style={{ fontSize: "8px", width: "8px", height: "8px" }}
                               onClick={() => removeFromArray("tone_donts", index)}
                               disabled={isSubmitting}
                             />
@@ -1053,11 +2160,15 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
 
                   {/* Brand Vocabulary */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Brand Vocabulary</h6>
+                  <div className="mb-3">
+                    <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Brand Vocabulary
+                    </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Preferred Terms</label>
+                    <div className="mb-2">
+                      <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                        Preferred Terms
+                      </label>
                       <div className="input-group">
                         <input
                           type="text"
@@ -1077,6 +2188,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                           }}
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                         <button
                           type="button"
@@ -1085,21 +2197,23 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             addToArray("preferred_terms", tempInputs.preferred_terms)
                           }
                           disabled={isSubmitting}
+                          style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                          <Icon icon="solar:add-circle-bold" width="14" height="14" />
                         </button>
                       </div>
-                      <div className="d-flex flex-wrap gap-2 mt-2">
+                      <div className="d-flex flex-wrap gap-1 mt-1">
                         {formData.preferred_terms.map((item, index) => (
                           <span
                             key={index}
                             className="badge bg-success d-flex align-items-center gap-1"
+                            style={{ fontSize: "0.6875rem", padding: "2px 6px" }}
                           >
                             {item}
                             <button
                               type="button"
                               className="btn-close btn-close-white"
-                              style={{ fontSize: "10px" }}
+                              style={{ fontSize: "8px", width: "8px", height: "8px" }}
                               onClick={() => removeFromArray("preferred_terms", index)}
                               disabled={isSubmitting}
                             />
@@ -1108,8 +2222,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Terms to Avoid</label>
+                    <div className="mb-2">
+                      <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: "500", marginBottom: "4px" }}>
+                        Terms to Avoid
+                      </label>
                       <div className="input-group">
                         <input
                           type="text"
@@ -1129,27 +2245,30 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                           }}
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                         <button
                           type="button"
                           className="btn btn-outline-secondary"
                           onClick={() => addToArray("avoid_terms", tempInputs.avoid_terms)}
                           disabled={isSubmitting}
+                          style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                          <Icon icon="solar:add-circle-bold" width="14" height="14" />
                         </button>
                       </div>
-                      <div className="d-flex flex-wrap gap-2 mt-2">
+                      <div className="d-flex flex-wrap gap-1 mt-1">
                         {formData.avoid_terms.map((item, index) => (
                           <span
                             key={index}
                             className="badge bg-danger d-flex align-items-center gap-1"
+                            style={{ fontSize: "0.6875rem", padding: "2px 6px" }}
                           >
                             {item}
                             <button
                               type="button"
                               className="btn-close btn-close-white"
-                              style={{ fontSize: "10px" }}
+                              style={{ fontSize: "8px", width: "8px", height: "8px" }}
                               onClick={() => removeFromArray("avoid_terms", index)}
                               disabled={isSubmitting}
                             />
@@ -1160,10 +2279,12 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
 
                   {/* Core Products */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Core Products</h6>
+                  <div className="mb-3">
+                    <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Core Products
+                    </div>
 
-                    <div className="mb-3">
+                    <div className="mb-2">
                       <div className="input-group">
                         <input
                           type="text"
@@ -1183,6 +2304,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                           }}
                           disabled={isSubmitting}
+                          style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
                         <button
                           type="button"
@@ -1191,21 +2313,23 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             addToArray("core_products", tempInputs.core_products)
                           }
                           disabled={isSubmitting}
+                          style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                         >
-                          <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                          <Icon icon="solar:add-circle-bold" width="14" height="14" />
                         </button>
                       </div>
-                      <div className="d-flex flex-wrap gap-2 mt-2">
+                      <div className="d-flex flex-wrap gap-1 mt-1">
                         {formData.core_products.map((item, index) => (
                           <span
                             key={index}
                             className="badge bg-primary d-flex align-items-center gap-1"
+                            style={{ fontSize: "0.6875rem", padding: "2px 6px" }}
                           >
                             {item}
                             <button
                               type="button"
                               className="btn-close btn-close-white"
-                              style={{ fontSize: "10px" }}
+                              style={{ fontSize: "8px", width: "8px", height: "8px" }}
                               onClick={() => removeFromArray("core_products", index)}
                               disabled={isSubmitting}
                             />
@@ -1216,10 +2340,12 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
 
                   {/* Competitors */}
-                  <div className="mb-4">
-                    <h6 className="fw-semibold mb-3">Competitors</h6>
+                  <div className="mb-3">
+                    <div className="mb-2" style={{ fontSize: "0.875rem", fontWeight: "600", color: "#212529" }}>
+                      Competitors
+                    </div>
 
-                    <div className="mb-3">
+                    <div className="mb-2">
                       <div className="row">
                         <div className="col-md-5 mb-2">
                           <input
@@ -1234,6 +2360,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                             placeholder="Competitor name"
                             disabled={isSubmitting}
+                            style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                           />
                         </div>
                         <div className="col-md-5 mb-2">
@@ -1249,6 +2376,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             }
                             placeholder="Positioning"
                             disabled={isSubmitting}
+                            style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                           />
                         </div>
                         <div className="col-md-2 mb-2">
@@ -1257,22 +2385,24 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                             className="btn btn-outline-secondary w-100"
                             onClick={addCompetitor}
                             disabled={isSubmitting}
+                            style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                           >
-                            <Icon icon="solar:add-circle-bold" width="16" height="16" />
+                            <Icon icon="solar:add-circle-bold" width="14" height="14" />
                           </button>
                         </div>
                       </div>
                       {formData.competitors.length > 0 && (
-                        <div className="border rounded p-2 mt-2">
+                        <div className="border rounded p-2 mt-2" style={{ backgroundColor: "#f8f9fa" }}>
                           {formData.competitors.map((comp, index) => (
                             <div
                               key={index}
                               className="d-flex justify-content-between align-items-center mb-1"
+                              style={{ padding: "6px 0" }}
                             >
                               <div>
-                                <strong>{comp.name}</strong>
+                                <strong style={{ fontSize: "0.8125rem" }}>{comp.name}</strong>
                                 {comp.positioning && (
-                                  <span className="text-muted small d-block">
+                                  <span className="text-muted d-block" style={{ fontSize: "0.6875rem" }}>
                                     {comp.positioning}
                                   </span>
                                 )}
@@ -1282,8 +2412,9 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                                 className="btn btn-sm btn-outline-danger"
                                 onClick={() => removeCompetitor(index)}
                                 disabled={isSubmitting}
+                                style={{ padding: "4px 8px", fontSize: "0.75rem" }}
                               >
-                                <Icon icon="solar:trash-bin-2-bold" width="14" height="14" />
+                                <Icon icon="solar:trash-bin-2-bold" width="12" height="12" />
                               </button>
                             </div>
                           ))}
@@ -1295,26 +2426,63 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
               )}
             </form>
           </div>
-          <div className="modal-footer">
+          <div className="modal-footer" style={{ padding: "12px 15px", borderTop: "1px solid #e9ecef" }}>
             <button
               type="button"
-              className="btn btn-secondary"
               onClick={onClose}
               disabled={isSubmitting}
+              style={{
+                padding: "6px 16px",
+                fontSize: "0.8125rem",
+                backgroundColor: "#6c757d",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontWeight: "500",
+                marginRight: "8px",
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = "#5c636a";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#6c757d";
+              }}
             >
               Cancel
             </button>
             <button
               type="button"
-              className="btn btn-primary"
               onClick={handleSubmit}
               disabled={isSubmitting}
+              style={{
+                padding: "6px 16px",
+                fontSize: "0.8125rem",
+                backgroundColor: "#0d6efd",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: isSubmitting ? "not-allowed" : "pointer",
+                fontWeight: "500",
+                opacity: isSubmitting ? 0.6 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = "#0b5ed7";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#0d6efd";
+              }}
             >
               {isSubmitting ? (
                 <>
                   <span
                     className="spinner-border spinner-border-sm me-2"
                     role="status"
+                    style={{ width: "12px", height: "12px" }}
                   />
                   {isEditMode ? "Updating..." : "Creating..."}
                 </>
