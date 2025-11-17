@@ -230,19 +230,22 @@ const ProcurementTableDataLayer = () => {
   };
 
   // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length;
-  }, [displayedItemsCount]);
+  const hasMoreData = useCallback(
+    (dataArray) => {
+      return displayedItemsCount < dataArray.length;
+    },
+    [displayedItemsCount]
+  );
 
   // Load more data callback
   const loadMoreData = useCallback(async () => {
     if (isLoadingMore || isLoading) return;
-    
+
     setIsLoadingMore(true);
     // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    setDisplayedItemsCount((prev) => prev + itemsPerPage);
     setIsLoadingMore(false);
   }, [isLoadingMore, isLoading, itemsPerPage]);
 
@@ -258,24 +261,24 @@ const ProcurementTableDataLayer = () => {
       const clientHeight = container.clientHeight;
       const isAtTop = scrollTop <= 1;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
+
       if (e.deltaY > 0 && isAtBottom) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       } else if (e.deltaY < 0 && isAtTop) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       }
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
+    container.addEventListener("wheel", handleWheel, { passive: true });
+
     return () => {
-      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -645,7 +648,6 @@ const ProcurementTableDataLayer = () => {
     </tr>
   );
 
-
   // Show authentication error if present
   if (authError) {
     return (
@@ -1008,7 +1010,9 @@ const ProcurementTableDataLayer = () => {
                           {Array.from({ length: 5 }).map((_, rowIndex) => (
                             <tr key={`skeleton-more-${rowIndex}`}>
                               {Array.from({ length: 9 }).map((_, colIndex) => (
-                                <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                <td
+                                  key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                >
                                   <div
                                     className="skeleton"
                                     style={{
@@ -1045,7 +1049,8 @@ const ProcurementTableDataLayer = () => {
                 }}
               >
                 <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                  Showing <strong>{getDisplayedData(filteredData).length}</strong> of{" "}
+                  Showing{" "}
+                  <strong>{getDisplayedData(filteredData).length}</strong> of{" "}
                   <strong>{filteredData.length}</strong> entries
                 </div>
                 {hasMoreData(filteredData) && (
@@ -1433,67 +1438,8 @@ const ProcurementTableDataLayer = () => {
                         </div>
                       </div>
 
-                      {/* Vendors Table */}
-                      {selectedProduct.vendors &&
-                        selectedProduct.vendors.length > 0 && (
-                          <div className="mb-3">
-                            <h6 className="text-muted mb-3">Vendors</h6>
-                            <div className="table-responsive">
-                              <table className="table table-sm table-bordered">
-                                <thead className="table-light">
-                                  <tr>
-                                    <th className="small">Vendor Name</th>
-                                    <th className="small">Common Name</th>
-                                    <th className="small">Manufactured By</th>
-                                    <th className="small d-none d-md-table-cell">
-                                      Mfg Date
-                                    </th>
-                                    <th className="small d-none d-lg-table-cell">
-                                      Imported By
-                                    </th>
-                                    <th className="small text-center">
-                                      Status
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {selectedProduct.vendors.map(
-                                    (vendor, index) => (
-                                      <tr key={index}>
-                                        <td className="small fw-medium">
-                                          {vendor.vendor_name || "N/A"}
-                                        </td>
-                                        <td className="small">
-                                          {vendor.common_name || "N/A"}
-                                        </td>
-                                        <td className="small">
-                                          {vendor.manufactured_by || "N/A"}
-                                        </td>
-                                        <td className="small d-none d-md-table-cell">
-                                          {vendor.manufacturing_date || "N/A"}
-                                        </td>
-                                        <td className="small d-none d-lg-table-cell">
-                                          {vendor.imported_by || "N/A"}
-                                        </td>
-                                        <td className="small text-center">
-                                          <span
-                                            className={`badge ${
-                                              vendor.vendor_status === "active"
-                                                ? "bg-success"
-                                                : "bg-secondary"
-                                            }`}
-                                          >
-                                            {vendor.vendor_status || "N/A"}
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    )
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
+                      {/* Vendors are now displayed per-variant in the variants table below */}
+                      {/* Removed separate vendors section - vendors are assigned to variants, not products */}
 
                       {/* Variants Table */}
                       {selectedProduct.variants &&
@@ -1514,7 +1460,7 @@ const ProcurementTableDataLayer = () => {
                                     <th className="small text-end">COGS</th>
                                     <th className="small text-end">Margin</th>
                                     <th className="small text-center">Qty</th>
-                                    <th className="small">Vendor</th>
+                                    <th className="small">Company Name</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1559,12 +1505,35 @@ const ProcurementTableDataLayer = () => {
                                         <td className="small">
                                           {variant.vendor_pricing &&
                                           variant.vendor_pricing.length > 0
-                                            ? variant.vendor_pricing
-                                                .map(
-                                                  (vp) =>
-                                                    vp.vendor_name || "N/A"
-                                                )
-                                                .join(", ")
+                                            ? variant.vendor_pricing.map(
+                                                (vp, vpIndex) => {
+                                                  // Show company_name as primary, fallback to vendor_name
+                                                  const displayName =
+                                                    vp.company_name
+                                                      ? vp.company_name
+                                                      : vp.vendor_name || "N/A";
+
+                                                  return (
+                                                    <span key={vpIndex}>
+                                                      {vp.is_primary_vendor && (
+                                                        <span
+                                                          className="badge bg-primary me-1"
+                                                          style={{
+                                                            fontSize: "9px",
+                                                          }}
+                                                        >
+                                                          Primary
+                                                        </span>
+                                                      )}
+                                                      {displayName}
+                                                      {vpIndex <
+                                                        variant.vendor_pricing
+                                                          .length -
+                                                          1 && ", "}
+                                                    </span>
+                                                  );
+                                                }
+                                              )
                                             : "Not Assigned"}
                                         </td>
                                       </tr>
