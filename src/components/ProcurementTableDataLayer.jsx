@@ -1498,9 +1498,7 @@ const ProcurementTableDataLayer = () => {
                                           )}
                                         </td>
                                         <td className="small text-center">
-                                          <span className="badge bg-primary rounded-pill">
-                                            {variant.quantity}
-                                          </span>
+                                          {variant.quantity}
                                         </td>
                                         <td className="small">
                                           {variant.vendor_pricing &&
@@ -1515,16 +1513,6 @@ const ProcurementTableDataLayer = () => {
 
                                                   return (
                                                     <span key={vpIndex}>
-                                                      {vp.is_primary_vendor && (
-                                                        <span
-                                                          className="badge bg-primary me-1"
-                                                          style={{
-                                                            fontSize: "9px",
-                                                          }}
-                                                        >
-                                                          Primary
-                                                        </span>
-                                                      )}
                                                       {displayName}
                                                       {vpIndex <
                                                         variant.vendor_pricing
