@@ -495,7 +495,10 @@ export default function CreateContentPage() {
       // Check if download_url is available from API
       if (item.download_url) {
         // Use the download_url from API (e.g., /api/content/download/run_id/artifact_id)
-        downloadUrl = `${config.pythonApi.baseURL}${item.download_url}`;
+        // Check if it's already a full URL or just a path
+        downloadUrl = item.download_url.startsWith('http') 
+          ? item.download_url 
+          : `${config.pythonApi.baseURL}${item.download_url}`;
       } 
       // If not, try to construct from run_id and artifact_id
       else if (item.run_id && item.artifact_id) {
