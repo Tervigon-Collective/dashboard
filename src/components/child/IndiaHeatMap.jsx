@@ -9,41 +9,41 @@ const IndiaHeatMap = ({ salesData = [] }) => {
 
   // Map province names to state codes (ISO 3166-2:IN)
   const provinceToStateCode = {
-    "Haryana": "IN-HR",
-    "Delhi": "IN-DL",
+    Haryana: "IN-HR",
+    Delhi: "IN-DL",
     "Uttar Pradesh": "IN-UP",
     "Tamil Nadu": "IN-TN",
-    "Maharashtra": "IN-MH",
-    "Karnataka": "IN-KA",
+    Maharashtra: "IN-MH",
+    Karnataka: "IN-KA",
     "West Bengal": "IN-WB",
-    "Punjab": "IN-PB",
+    Punjab: "IN-PB",
     "Himachal Pradesh": "IN-HP",
-    "Rajasthan": "IN-RJ",
-    "Meghalaya": "IN-ML",
+    Rajasthan: "IN-RJ",
+    Meghalaya: "IN-ML",
     "Andhra Pradesh": "IN-AP",
-    "Assam": "IN-AS",
-    "Bihar": "IN-BR",
-    "Chhattisgarh": "IN-CT",
-    "Goa": "IN-GA",
-    "Gujarat": "IN-GJ",
-    "Jharkhand": "IN-JH",
+    Assam: "IN-AS",
+    Bihar: "IN-BR",
+    Chhattisgarh: "IN-CT",
+    Goa: "IN-GA",
+    Gujarat: "IN-GJ",
+    Jharkhand: "IN-JH",
     "Jammu and Kashmir": "IN-JK",
-    "Kerala": "IN-KL",
+    Kerala: "IN-KL",
     "Madhya Pradesh": "IN-MP",
-    "Manipur": "IN-MN",
-    "Mizoram": "IN-MZ",
-    "Nagaland": "IN-NL",
-    "Odisha": "IN-OR",
-    "Sikkim": "IN-SK",
-    "Telangana": "IN-TG",
-    "Tripura": "IN-TR",
-    "Uttarakhand": "IN-UT",
+    Manipur: "IN-MN",
+    Mizoram: "IN-MZ",
+    Nagaland: "IN-NL",
+    Odisha: "IN-OR",
+    Sikkim: "IN-SK",
+    Telangana: "IN-TG",
+    Tripura: "IN-TR",
+    Uttarakhand: "IN-UT",
     "Arunachal Pradesh": "IN-AR",
     "Andaman and Nicobar Islands": "IN-AN",
-    "Chandigarh": "IN-CH",
+    Chandigarh: "IN-CH",
     "Dadra and Nagar Haveli and Daman and Diu": "IN-DD",
-    "Lakshadweep": "IN-LD",
-    "Puducherry": "IN-PY",
+    Lakshadweep: "IN-LD",
+    Puducherry: "IN-PY",
   };
 
   // Create a map of state codes to sales data
@@ -103,38 +103,40 @@ const IndiaHeatMap = ({ salesData = [] }) => {
         Math.floor(normalized * (colors.length - 1)),
         colors.length - 1
       );
-      
+
       // Interpolate between colors for smoother gradient
       const nextIndex = Math.min(colorIndex + 1, colors.length - 1);
-      const fraction = (normalized * (colors.length - 1)) - colorIndex;
-      
+      const fraction = normalized * (colors.length - 1) - colorIndex;
+
       if (fraction === 0 || colorIndex === nextIndex) {
         return colors[colorIndex];
       }
-      
+
       // Simple interpolation between two colors
       const color1 = colors[colorIndex];
       const color2 = colors[nextIndex];
-      
+
       // Convert hex to RGB
       const hexToRgb = (hex) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16)
-        } : null;
+        return result
+          ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+            }
+          : null;
       };
-      
+
       const rgb1 = hexToRgb(color1);
       const rgb2 = hexToRgb(color2);
-      
+
       if (!rgb1 || !rgb2) return colors[colorIndex];
-      
+
       const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * fraction);
       const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * fraction);
       const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * fraction);
-      
+
       return `rgb(${r}, ${g}, ${b})`;
     };
   }, [minSales, maxSales]);
@@ -145,33 +147,33 @@ const IndiaHeatMap = ({ salesData = [] }) => {
   useEffect(() => {
     const eventHandlers = [];
     let isMounted = true;
-    
+
     const loadSVG = async () => {
       try {
         // Use cached SVG if available
         let svgText = svgCache.current;
-        
+
         if (!svgText) {
           const response = await fetch("/assets/svg/india.svg");
           svgText = await response.text();
           svgCache.current = svgText; // Cache it
         }
-        
+
         if (!isMounted || !svgRef.current) return;
-        
+
         // Only update innerHTML if it's empty or data changed
         if (!svgRef.current.innerHTML || svgRef.current.innerHTML !== svgText) {
           svgRef.current.innerHTML = svgText;
         }
-        
+
         // Get all path elements (states)
         const paths = svgRef.current.querySelectorAll("path[id^='IN-']");
-        
+
         paths.forEach((path) => {
           const stateId = path.getAttribute("id");
           const sales = stateSalesMap[stateId] || 0;
           const provinceName = path.getAttribute("title") || stateId;
-          
+
           // Set initial color with smooth transitions
           const fillColor = getColorForSales(sales);
           path.setAttribute("fill", fillColor);
@@ -181,64 +183,64 @@ const IndiaHeatMap = ({ salesData = [] }) => {
           path.style.transition = "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)";
           path.style.filter = "none";
 
-            // Mouse enter event
-            const handleMouseEnter = (e) => {
-              // Enhanced hover effect with scale
-              path.setAttribute("fill", "#FBBF24"); // Highlight color on hover
-              path.setAttribute("stroke", "#F59E0B");
-              path.setAttribute("stroke-width", "2.5");
-              path.style.filter = "brightness(1.1) drop-shadow(0 2px 4px rgba(251, 191, 36, 0.3))";
-              
-              setHoveredState(stateId);
-              
-              // Show tooltip with formatted text
-              const formattedSales = sales > 0 
-                ? `₹${sales.toLocaleString('en-IN')}` 
-                : "No data";
-              
-              setTooltip({
-                show: true,
-                x: e.clientX,
-                y: e.clientY,
-                text: `${provinceName}: ${formattedSales}`,
-              });
-            };
+          // Mouse enter event
+          const handleMouseEnter = (e) => {
+            // Enhanced hover effect with scale
+            path.setAttribute("fill", "#FBBF24"); // Highlight color on hover
+            path.setAttribute("stroke", "#F59E0B");
+            path.setAttribute("stroke-width", "2.5");
+            path.style.filter =
+              "brightness(1.1) drop-shadow(0 2px 4px rgba(251, 191, 36, 0.3))";
 
-            // Mouse leave event
-            const handleMouseLeave = () => {
-              // Reset to original state
-              path.setAttribute("fill", getColorForSales(sales));
-              path.setAttribute("stroke", "#ffffff");
-              path.setAttribute("stroke-width", "0.5");
-              path.style.filter = "none";
-              
-              setHoveredState(null);
-              setTooltip({ show: false, x: 0, y: 0, text: "" });
-            };
+            setHoveredState(stateId);
 
-            // Mouse move event for tooltip positioning
-            const handleMouseMove = (e) => {
-              setTooltip((prev) => ({
-                ...prev,
-                x: e.clientX,
-                y: e.clientY,
-              }));
-            };
+            // Show tooltip with formatted text
+            const formattedSales =
+              sales > 0 ? `₹${sales.toLocaleString("en-IN")}` : "No data";
 
-            path.addEventListener("mouseenter", handleMouseEnter);
-            path.addEventListener("mouseleave", handleMouseLeave);
-            path.addEventListener("mousemove", handleMouseMove);
-
-            // Store handlers for cleanup
-            eventHandlers.push({
-              element: path,
-              handlers: {
-                mouseenter: handleMouseEnter,
-                mouseleave: handleMouseLeave,
-                mousemove: handleMouseMove,
-              },
+            setTooltip({
+              show: true,
+              x: e.clientX,
+              y: e.clientY,
+              text: `${provinceName}: ${formattedSales}`,
             });
+          };
+
+          // Mouse leave event
+          const handleMouseLeave = () => {
+            // Reset to original state
+            path.setAttribute("fill", getColorForSales(sales));
+            path.setAttribute("stroke", "#ffffff");
+            path.setAttribute("stroke-width", "0.5");
+            path.style.filter = "none";
+
+            setHoveredState(null);
+            setTooltip({ show: false, x: 0, y: 0, text: "" });
+          };
+
+          // Mouse move event for tooltip positioning
+          const handleMouseMove = (e) => {
+            setTooltip((prev) => ({
+              ...prev,
+              x: e.clientX,
+              y: e.clientY,
+            }));
+          };
+
+          path.addEventListener("mouseenter", handleMouseEnter);
+          path.addEventListener("mouseleave", handleMouseLeave);
+          path.addEventListener("mousemove", handleMouseMove);
+
+          // Store handlers for cleanup
+          eventHandlers.push({
+            element: path,
+            handlers: {
+              mouseenter: handleMouseEnter,
+              mouseleave: handleMouseLeave,
+              mousemove: handleMouseMove,
+            },
           });
+        });
       } catch (error) {
         console.error("Error loading SVG:", error);
       }
@@ -260,7 +262,10 @@ const IndiaHeatMap = ({ salesData = [] }) => {
   }, [salesData, stateSalesMap, getColorForSales]);
 
   return (
-    <div className="position-relative" style={{ width: "100%", height: "100%", minHeight: "400px" }}>
+    <div
+      className="position-relative"
+      style={{ width: "100%", height: "100%", minHeight: "400px" }}
+    >
       <div
         ref={svgRef}
         className="india-map-container"
@@ -283,19 +288,25 @@ const IndiaHeatMap = ({ salesData = [] }) => {
           }
           @media (max-width: 768px) {
             .india-map-container svg {
-              transform: scale(0.9);
+              transform: scale(0.75);
               transform-origin: center;
             }
           }
           @media (max-width: 576px) {
             .india-map-container svg {
-              transform: scale(0.85);
+              transform: scale(0.7);
+              transform-origin: center;
+            }
+          }
+          @media (max-width: 400px) {
+            .india-map-container svg {
+              transform: scale(0.65);
               transform-origin: center;
             }
           }
         `}</style>
       </div>
-      
+
       {/* Enhanced Tooltip - Minimal */}
       {tooltip.show && (
         <div
@@ -362,32 +373,61 @@ const IndiaHeatMap = ({ salesData = [] }) => {
         <div className="d-flex flex-column align-items-center gap-2">
           {/* High - Top */}
           <div className="d-flex flex-column align-items-center gap-1">
-            <div className="fw-semibold" style={{ fontSize: "clamp(9px, 1vw, 10px)", color: "#111827", lineHeight: "1.2" }}>
+            <div
+              className="fw-semibold"
+              style={{
+                fontSize: "clamp(9px, 1vw, 10px)",
+                color: "#111827",
+                lineHeight: "1.2",
+              }}
+            >
               High
             </div>
-            <div style={{ color: "#6B7280", fontSize: "clamp(8px, 0.9vw, 9px)", lineHeight: "1.2", fontWeight: "500" }}>
+            <div
+              style={{
+                color: "#6B7280",
+                fontSize: "clamp(8px, 0.9vw, 9px)",
+                lineHeight: "1.2",
+                fontWeight: "500",
+              }}
+            >
               ₹{maxSales.toLocaleString()}
             </div>
           </div>
-          
+
           {/* Vertical Color gradient bar */}
-          <div 
+          <div
             style={{
               width: "10px",
               height: "clamp(100px, 15vh, 140px)",
-              background: "linear-gradient(to bottom, #4536b6, #4759d6, #486cea, #487fff, #458eff, #519fff, #6bb1ff, #95c7ff, #bfdcff, #e4f1ff)",
+              background:
+                "linear-gradient(to bottom, #4536b6, #4759d6, #486cea, #487fff, #458eff, #519fff, #6bb1ff, #95c7ff, #bfdcff, #e4f1ff)",
               borderRadius: "5px",
               flexShrink: 0,
               border: "1px solid #E5E7EB",
             }}
           />
-          
+
           {/* Low - Bottom */}
           <div className="d-flex flex-column align-items-center gap-1">
-            <div className="fw-semibold" style={{ fontSize: "clamp(9px, 1vw, 10px)", color: "#111827", lineHeight: "1.2" }}>
+            <div
+              className="fw-semibold"
+              style={{
+                fontSize: "clamp(9px, 1vw, 10px)",
+                color: "#111827",
+                lineHeight: "1.2",
+              }}
+            >
               Low
             </div>
-            <div style={{ color: "#6B7280", fontSize: "clamp(8px, 0.9vw, 9px)", lineHeight: "1.2", fontWeight: "500" }}>
+            <div
+              style={{
+                color: "#6B7280",
+                fontSize: "clamp(8px, 0.9vw, 9px)",
+                lineHeight: "1.2",
+                fontWeight: "500",
+              }}
+            >
               ₹{minSales.toLocaleString()}
             </div>
           </div>

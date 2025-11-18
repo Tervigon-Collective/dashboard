@@ -46,7 +46,7 @@ const LatestRegisteredOne = () => {
   }, [numOrders]);
 
   return (
-    <div className="col-xxl-9 col-xl-12">
+    <div className="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
       <div className="card h-100">
         <div className="card-body p-24">
           <div className="d-flex flex-wrap align-items-center gap-1 justify-content-between mb-16">
