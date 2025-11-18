@@ -611,13 +611,6 @@ export default function CreateContentPage() {
       return;
     }
 
-    if (editPrompt.length > 500) {
-      setEditErrors((prev) => ({ 
-        ...prev, 
-        [imageId]: "Please keep changes under 500 characters" 
-      }));
-      return;
-    }
 
     setIsSendingEdit(true);
     setEditErrors((prev) => ({ ...prev, [imageId]: null }));
@@ -1814,22 +1807,23 @@ export default function CreateContentPage() {
                                       </div>
                                     </div>
                                     <div className="card-body">
-                                      <div className="d-flex align-items-center justify-content-between mb-2">
-                                        <h6 className="card-title small mb-0">
+                                      <div className="d-flex align-items-center justify-content-between mb-3">
+                                        <h6 className="card-title fw-bold mb-0">
                                           {item.title}
                                         </h6>
-                                        <div className="d-flex gap-1">
+                                        <div className="d-flex gap-2">
                                           {/* Edit button - only for images */}
                                           {item.content_type === "image" && (item.image_url || item.local_url) && (
                                             <button
-                                              className="btn btn-sm btn-outline-info"
+                                              className="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
                                               onClick={() => handleEditClick(item.id)}
                                               title="Edit this image"
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:pen-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
                                               />
                                             </button>
                                           )}
@@ -1837,7 +1831,7 @@ export default function CreateContentPage() {
                                           {(item.content_type === "image" && (item.image_url || item.local_url)) ||
                                            (item.content_type === "video" && item.video_url) ? (
                                             <button
-                                              className="btn btn-sm btn-outline-secondary"
+                                              className="btn btn-sm btn-light border d-flex align-items-center justify-content-center"
                                               onClick={() => {
                                                 if (item.content_type === "video") {
                                                   downloadVideo(
@@ -1852,21 +1846,23 @@ export default function CreateContentPage() {
                                                 }
                                               }}
                                               title={`Download this ${item.content_type === "video" ? "video" : "image"}`}
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:download-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
+                                                className="text-dark"
                                               />
                                             </button>
                                           ) : null}
                                         </div>
                                       </div>
-                                      <div className="d-flex align-items-center gap-2 small text-muted">
+                                      <div className="d-flex align-items-center gap-2 small text-muted mt-2">
                                         <Icon
                                           icon="solar:calendar-bold"
-                                          width="12"
-                                          height="12"
+                                          width="14"
+                                          height="14"
                                         />
                                         {new Date(
                                           item.timestamp
@@ -1881,17 +1877,17 @@ export default function CreateContentPage() {
                                     
                                     {/* Edit Input Section */}
                                     {editingImageId === item.id && (
-                                      <div className="card-footer bg-light border-top">
-                                        <div className="mb-2">
-                                          <label className="form-label small fw-semibold">
+                                      <div className="card-footer bg-light border-top p-3">
+                                        <div className="mb-3">
+                                          <label className="form-label small fw-semibold mb-2 d-block">
                                             Describe the changes you want:
                                           </label>
                                           <textarea
-                                            className={`form-control form-control-sm ${
+                                            className={`form-control ${
                                               editErrors[item.id] ? "is-invalid" : ""
                                             }`}
-                                            rows="3"
-                                            placeholder="e.g., Make it brighter with more vibrant colors..."
+                                            rows="4"
+                                            placeholder="Make it brighter with more vibrant colors..."
                                             value={editPrompts[item.id] || ""}
                                             onChange={(e) =>
                                               handleEditPromptChange(
@@ -1900,17 +1896,15 @@ export default function CreateContentPage() {
                                               )
                                             }
                                             disabled={isSendingEdit}
+                                            style={{ resize: "vertical", minHeight: "100px" }}
                                           />
                                           {editErrors[item.id] && (
-                                            <div className="invalid-feedback d-block small">
+                                            <div className="invalid-feedback d-block small mt-1">
                                               {editErrors[item.id]}
                                             </div>
                                           )}
                                         </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                          <small className="text-muted">
-                                            {(editPrompts[item.id]?.length || 0)} / 500 characters
-                                          </small>
+                                        <div className="d-flex align-items-center justify-content-end mt-3">
                                           <div className="d-flex gap-2">
                                             <button
                                               className="btn btn-sm btn-secondary"
@@ -1920,7 +1914,7 @@ export default function CreateContentPage() {
                                               Cancel
                                             </button>
                                             <button
-                                              className="btn btn-sm btn-primary"
+                                              className="btn btn-sm btn-primary d-flex align-items-center gap-1"
                                               onClick={() =>
                                                 handleSendEdit(
                                                   item.id,
@@ -1930,8 +1924,7 @@ export default function CreateContentPage() {
                                               }
                                               disabled={
                                                 isSendingEdit ||
-                                                !editPrompts[item.id]?.trim() ||
-                                                (editPrompts[item.id]?.length || 0) > 500
+                                                !editPrompts[item.id]?.trim()
                                               }
                                             >
                                               {isSendingEdit ? (

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import * as brandkitApi from "@/services/contentGenerationApi";
+import ICPConfiguration from "./ICPConfiguration/ICPConfiguration";
 
 const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) => {
   const isEditMode = !!editBrandkit;
@@ -30,6 +31,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     avoid_terms: [],
     core_products: [],
     competitors: [],
+    icp: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -107,6 +109,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         avoid_terms: ensureStringArray(editBrandkit.keywords?.words_to_avoid || editBrandkit.brand_vocabulary?.words_to_avoid),
         core_products: ensureStringArray(editBrandkit.keywords?.product_categories || editBrandkit.brand_vocabulary?.product_categories),
         competitors: ensureCompetitorArray(editBrandkit.competitors),
+        icp: editBrandkit.icp || null,
       });
     } else if (!isEditMode) {
       // Reset form for CREATE mode
@@ -133,6 +136,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         avoid_terms: [],
         core_products: [],
         competitors: [],
+        icp: null,
       });
     }
   }, [isEditMode, editBrandkit]);
@@ -200,6 +204,14 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     }));
   };
 
+  // Handle ICP change
+  const handleICPChange = (icp) => {
+    setFormData((prev) => ({
+      ...prev,
+      icp: icp,
+    }));
+  };
+
   // Validate form
   const validate = () => {
     const newErrors = {};
@@ -224,6 +236,30 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     }
     if (!formData.target_audience_primary.trim()) {
       newErrors.target_audience_primary = "Primary target audience is required";
+    }
+
+    // Validate ICP if enabled and type is specific
+    if (formData.icp?.enabled && formData.icp?.type === "specific") {
+      const persona = formData.icp.persona;
+      if (!persona) {
+        newErrors.icp = "Persona details are required for specific ICP type";
+      } else {
+        if (!persona.name?.trim()) {
+          newErrors.icp_persona_name = "Persona name is required";
+        }
+        if (!persona.title?.trim()) {
+          newErrors.icp_persona_title = "Persona title is required";
+        }
+        if (!persona.age_range?.trim()) {
+          newErrors.icp_persona_age_range = "Age range is required";
+        }
+        if (!persona.gender?.trim()) {
+          newErrors.icp_persona_gender = "Gender is required";
+        }
+        if (!persona.location?.trim()) {
+          newErrors.icp_persona_location = "Location is required";
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -313,6 +349,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         competitors: Array.isArray(formData.competitors)
           ? formData.competitors.filter(comp => comp && typeof comp === 'object' && comp.name)
           : [],
+        icp: formData.icp || undefined,
       };
 
       // Log payload for debugging
@@ -420,7 +457,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     className={`form-control ${errors.brand_name ? "is-invalid" : ""}`}
                     value={formData.brand_name}
                     onChange={(e) => handleBrandNameChange(e.target.value)}
-                    placeholder="e.g., Tilting Heads, Glow Naturals"
+                    placeholder="Tilting Heads, Glow Naturals"
                     disabled={isSubmitting}
                     style={{ 
                       fontSize: "0.8125rem", 
@@ -444,7 +481,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, brand_id: e.target.value }))
                     }
-                    placeholder="e.g., tilting_heads, glow_naturals"
+                    placeholder="tilting_heads, glow_naturals"
                     disabled={isEditMode || isSubmitting}
                     readOnly={isEditMode}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
@@ -470,7 +507,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, tagline: e.target.value }))
                     }
-                    placeholder="e.g., Where Wild Wisdom Meets Modern Care"
+                    placeholder="Where Wild Wisdom Meets Modern Care"
                     disabled={isSubmitting}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
@@ -499,7 +536,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         brand_voice_primary: e.target.value,
                       }))
                     }
-                    placeholder="e.g., Calm, Emotional, Poetic"
+                    placeholder="Calm, Emotional, Poetic"
                     disabled={isSubmitting}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
@@ -523,7 +560,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           brand_voice_secondary: e.target.value,
                         }))
                       }
-                      placeholder="e.g., Assertive"
+                      placeholder="Assertive"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -582,7 +619,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           brand_voice_avoid: e.target.value,
                         }))
                       }
-                      placeholder="e.g., Aggressive"
+                      placeholder="Aggressive"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -638,7 +675,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, core_message: e.target.value }))
                     }
-                    placeholder="e.g., Return to natural, biologically respectful pet care"
+                    placeholder="Return to natural, biologically respectful pet care"
                     disabled={isSubmitting}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
@@ -659,7 +696,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                       onChange={(e) =>
                         setTempInputs((prev) => ({ ...prev, key_pillars: e.target.value }))
                       }
-                      placeholder="e.g., Speed, Relief, Safety"
+                      placeholder="Speed, Relief, Safety"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -712,7 +749,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         emotional_territory: e.target.value,
                       }))
                     }
-                    placeholder="e.g., Calm assurance, biological respect, natural wisdom"
+                    placeholder="Calm assurance, biological respect, natural wisdom"
                     disabled={isSubmitting}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
@@ -741,7 +778,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                         target_audience_primary: e.target.value,
                       }))
                     }
-                    placeholder="e.g., Urban pet parents (25-40)"
+                    placeholder="Urban pet parents (25-40)"
                     disabled={isSubmitting}
                     style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                   />
@@ -767,7 +804,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           target_audience_psychographics: e.target.value,
                         }))
                       }
-                      placeholder="e.g., Research-heavy, Health-conscious"
+                      placeholder="Research-heavy, Health-conscious"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -813,6 +850,21 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                   </div>
                 </div>
               </div>
+
+              {/* ICP Configuration */}
+              <div className="mb-3">
+                <ICPConfiguration
+                  icp={formData.icp}
+                  onChange={handleICPChange}
+                  disabled={isSubmitting}
+                  errors={errors}
+                />
+              </div>
+              {errors.icp && (
+                <div className="text-danger mb-2" style={{ fontSize: "0.75rem" }}>
+                  {errors.icp}
+                </div>
+              )}
 
               {/* Advanced Settings Accordion */}
               <div className="mb-3">
@@ -1135,386 +1187,6 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                       </div>
                     </div>
 
-                    {/* Color Preview - Modern & Unique Design */}
-                    {(formData.color_primary.length > 0 || formData.color_secondary.length > 0 || formData.color_accent.length > 0) && (
-                      <div
-                        style={{
-                          backgroundColor: "#ffffff",
-                          border: "1px solid #e9ecef",
-                          borderRadius: "12px",
-                          padding: "20px",
-                          marginBottom: "16px",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                          background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "0.8125rem",
-                            fontWeight: "700",
-                            color: "#212529",
-                            marginBottom: "18px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          <Icon icon="solar:palette-2-bold" width="16" height="16" />
-                          Color Preview
-                        </div>
-                        <div className="row g-3">
-                          {/* Primary Colors Preview */}
-                          {formData.color_primary.slice(0, 2).map((color, idx) => {
-                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
-                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
-                            return (
-                              <div key={`preview-primary-${idx}`} className="col-6">
-                                <div
-                                  style={{
-                                    backgroundColor: color,
-                                    borderRadius: "12px",
-                                    padding: "20px",
-                                    minHeight: "140px",
-                                    border: "2px solid rgba(255,255,255,0.2)",
-                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
-                                    position: "relative",
-                                    overflow: "hidden",
-                                    transition: "all 0.3s ease",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                >
-                                  {/* Decorative gradient overlay */}
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: 0,
-                                      right: 0,
-                                      width: "60%",
-                                      height: "100%",
-                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
-                                      borderRadius: "0 12px 12px 0",
-                                    }}
-                                  />
-                                  <div
-                                    style={{
-                                      position: "relative",
-                                      zIndex: 1,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        fontSize: "0.8125rem",
-                                        fontWeight: "700",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
-                                        marginBottom: "16px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: "8px",
-                                          height: "8px",
-                                          borderRadius: "50%",
-                                          backgroundColor: isLight ? "#212529" : "#ffffff",
-                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
-                                        }}
-                                      />
-                                      Primary {idx + 1}
-                                    </div>
-                                    {/* Color variations with unique shapes */}
-                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
-                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
-                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
-                                        return (
-                                          <div
-                                            key={i}
-                                            style={{
-                                              flex: 1,
-                                              height: `${32 + i * 8}px`,
-                                              backgroundColor: variantColor,
-                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
-                                              border: "2px solid rgba(255,255,255,0.3)",
-                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
-                                              transition: "all 0.2s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.transform = "scale(1.05)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.transform = "scale(1)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
-                                            }}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                    {/* Hex code badge */}
-                                    <div
-                                      style={{
-                                        display: "inline-block",
-                                        padding: "4px 10px",
-                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
-                                        borderRadius: "20px",
-                                        fontSize: "0.6875rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: "600",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        backdropFilter: "blur(10px)",
-                                      }}
-                                    >
-                                      {color.toUpperCase()}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {/* Secondary Colors Preview */}
-                          {formData.color_secondary.slice(0, 2).map((color, idx) => {
-                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
-                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
-                            return (
-                              <div key={`preview-secondary-${idx}`} className="col-6">
-                                <div
-                                  style={{
-                                    backgroundColor: color,
-                                    borderRadius: "12px",
-                                    padding: "20px",
-                                    minHeight: "140px",
-                                    border: "2px solid rgba(255,255,255,0.2)",
-                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
-                                    position: "relative",
-                                    overflow: "hidden",
-                                    transition: "all 0.3s ease",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: 0,
-                                      right: 0,
-                                      width: "60%",
-                                      height: "100%",
-                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
-                                      borderRadius: "0 12px 12px 0",
-                                    }}
-                                  />
-                                  <div
-                                    style={{
-                                      position: "relative",
-                                      zIndex: 1,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        fontSize: "0.8125rem",
-                                        fontWeight: "700",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
-                                        marginBottom: "16px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: "8px",
-                                          height: "8px",
-                                          borderRadius: "50%",
-                                          backgroundColor: isLight ? "#212529" : "#ffffff",
-                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
-                                        }}
-                                      />
-                                      Secondary {idx + 1}
-                                    </div>
-                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
-                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
-                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
-                                        return (
-                                          <div
-                                            key={i}
-                                            style={{
-                                              flex: 1,
-                                              height: `${32 + i * 8}px`,
-                                              backgroundColor: variantColor,
-                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
-                                              border: "2px solid rgba(255,255,255,0.3)",
-                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
-                                              transition: "all 0.2s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.transform = "scale(1.05)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.transform = "scale(1)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
-                                            }}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                    <div
-                                      style={{
-                                        display: "inline-block",
-                                        padding: "4px 10px",
-                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
-                                        borderRadius: "20px",
-                                        fontSize: "0.6875rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: "600",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        backdropFilter: "blur(10px)",
-                                      }}
-                                    >
-                                      {color.toUpperCase()}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {/* Accent Colors Preview */}
-                          {formData.color_accent.slice(0, 2).map((color, idx) => {
-                            const rgb = color.match(/\w\w/g)?.map((x) => parseInt(x, 16)) || [0, 0, 0];
-                            const isLight = (rgb[0] + rgb[1] + rgb[2]) / 3 > 128;
-                            return (
-                              <div key={`preview-accent-${idx}`} className="col-6">
-                                <div
-                                  style={{
-                                    backgroundColor: color,
-                                    borderRadius: "12px",
-                                    padding: "20px",
-                                    minHeight: "140px",
-                                    border: "2px solid rgba(255,255,255,0.2)",
-                                    boxShadow: `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`,
-                                    position: "relative",
-                                    overflow: "hidden",
-                                    transition: "all 0.3s ease",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)`;
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: 0,
-                                      right: 0,
-                                      width: "60%",
-                                      height: "100%",
-                                      background: `linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%)`,
-                                      borderRadius: "0 12px 12px 0",
-                                    }}
-                                  />
-                                  <div
-                                    style={{
-                                      position: "relative",
-                                      zIndex: 1,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        fontSize: "0.8125rem",
-                                        fontWeight: "700",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        textShadow: isLight ? "none" : "0 2px 4px rgba(0,0,0,0.3)",
-                                        marginBottom: "16px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: "8px",
-                                          height: "8px",
-                                          borderRadius: "50%",
-                                          backgroundColor: isLight ? "#212529" : "#ffffff",
-                                          boxShadow: `0 0 8px ${isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)"}`,
-                                        }}
-                                      />
-                                      Accent {idx + 1}
-                                    </div>
-                                    <div className="d-flex gap-2 align-items-end" style={{ marginBottom: "12px" }}>
-                                      {[1, 0.75, 0.5, 0.25].map((opacity, i) => {
-                                        const variantColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`;
-                                        return (
-                                          <div
-                                            key={i}
-                                            style={{
-                                              flex: 1,
-                                              height: `${32 + i * 8}px`,
-                                              backgroundColor: variantColor,
-                                              borderRadius: i % 2 === 0 ? "8px 8px 4px 4px" : "4px 4px 8px 8px",
-                                              border: "2px solid rgba(255,255,255,0.3)",
-                                              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
-                                              transition: "all 0.2s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.transform = "scale(1.05)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.2)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.transform = "scale(1)";
-                                              e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.1)";
-                                            }}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                    <div
-                                      style={{
-                                        display: "inline-block",
-                                        padding: "4px 10px",
-                                        backgroundColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.2)",
-                                        borderRadius: "20px",
-                                        fontSize: "0.6875rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: "600",
-                                        color: isLight ? "#212529" : "#ffffff",
-                                        backdropFilter: "blur(10px)",
-                                      }}
-                                    >
-                                      {color.toUpperCase()}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Add Colors Section */}
                     <div className="row g-2">
                       {/* Add Primary Color */}
@@ -1595,20 +1267,35 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               onClick={() => addToArray("color_primary", tempInputs.color_primary)}
                               disabled={isSubmitting}
                               style={{
-                                padding: "6px 12px",
+                                width: "44px",
+                                height: "44px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                                 fontSize: "0.75rem",
                                 fontWeight: "500",
                                 backgroundColor: "#0d6efd",
                                 color: "#fff",
                                 border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
+                                borderRadius: "8px",
+                                cursor: isSubmitting ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                                flexShrink: 0,
+                                opacity: isSubmitting ? 0.6 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSubmitting) {
+                                  e.currentTarget.style.backgroundColor = "#0b5ed7";
+                                  e.currentTarget.style.transform = "scale(1.05)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#0d6efd";
+                                e.currentTarget.style.transform = "scale(1)";
                               }}
                             >
-                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                              <Icon icon="solar:add-circle-bold" width="18" height="18" />
                             </button>
                           </div>
                         </div>
@@ -1692,20 +1379,35 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               onClick={() => addToArray("color_secondary", tempInputs.color_secondary)}
                               disabled={isSubmitting}
                               style={{
-                                padding: "6px 12px",
+                                width: "44px",
+                                height: "44px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                                 fontSize: "0.75rem",
                                 fontWeight: "500",
                                 backgroundColor: "#0d6efd",
                                 color: "#fff",
                                 border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
+                                borderRadius: "8px",
+                                cursor: isSubmitting ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                                flexShrink: 0,
+                                opacity: isSubmitting ? 0.6 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSubmitting) {
+                                  e.currentTarget.style.backgroundColor = "#0b5ed7";
+                                  e.currentTarget.style.transform = "scale(1.05)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#0d6efd";
+                                e.currentTarget.style.transform = "scale(1)";
                               }}
                             >
-                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                              <Icon icon="solar:add-circle-bold" width="18" height="18" />
                             </button>
                           </div>
                         </div>
@@ -1789,20 +1491,35 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               onClick={() => addToArray("color_accent", tempInputs.color_accent)}
                               disabled={isSubmitting}
                               style={{
-                                padding: "6px 12px",
+                                width: "44px",
+                                height: "44px",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                                 fontSize: "0.75rem",
                                 fontWeight: "500",
                                 backgroundColor: "#0d6efd",
                                 color: "#fff",
                                 border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
+                                borderRadius: "8px",
+                                cursor: isSubmitting ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                                flexShrink: 0,
+                                opacity: isSubmitting ? 0.6 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSubmitting) {
+                                  e.currentTarget.style.backgroundColor = "#0b5ed7";
+                                  e.currentTarget.style.transform = "scale(1.05)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#0d6efd";
+                                e.currentTarget.style.transform = "scale(1)";
                               }}
                             >
-                              <Icon icon="solar:add-circle-bold" width="14" height="14" />
+                              <Icon icon="solar:add-circle-bold" width="18" height="18" />
                             </button>
                           </div>
                         </div>
@@ -2018,7 +1735,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               typography_primary: e.target.value,
                             }))
                           }
-                          placeholder="e.g., Crimson Pro"
+                          placeholder="Crimson Pro"
                           disabled={isSubmitting}
                           style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
@@ -2037,7 +1754,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               typography_secondary: e.target.value,
                             }))
                           }
-                          placeholder="e.g., Inter"
+                          placeholder="Inter"
                           disabled={isSubmitting}
                           style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
                         />
@@ -2063,7 +1780,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                           onChange={(e) =>
                             setTempInputs((prev) => ({ ...prev, tone_dos: e.target.value }))
                           }
-                          placeholder="e.g., Speak to the biology"
+                          placeholder="Speak to the biology"
                           onKeyPress={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -2118,7 +1835,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               tone_donts: e.target.value,
                             }))
                           }
-                          placeholder="e.g., Medical jargon"
+                          placeholder="Medical jargon"
                           onKeyPress={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -2180,7 +1897,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               preferred_terms: e.target.value,
                             }))
                           }
-                          placeholder="e.g., microbiome-safe"
+                          placeholder="microbiome-safe"
                           onKeyPress={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -2237,7 +1954,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               avoid_terms: e.target.value,
                             }))
                           }
-                          placeholder="e.g., cure, treat, medicine"
+                          placeholder="cure, treat, medicine"
                           onKeyPress={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -2296,7 +2013,7 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                               core_products: e.target.value,
                             }))
                           }
-                          placeholder="e.g., Skin Microbiome Shampoo"
+                          placeholder="Skin Microbiome Shampoo"
                           onKeyPress={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
