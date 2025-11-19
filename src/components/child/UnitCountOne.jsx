@@ -73,6 +73,7 @@ const UnitCountOne = ({ dateRange }) => {
     meta: null,
   });
   const [inventoryEvents, setInventoryEvents] = useState(emptyInventoryEvents);
+  const [paymentMethodCounts, setPaymentMethodCounts] = useState({});
 
   // Helper to sort breakdowns by value descending
   const sortBreakdown = (arr) =>
@@ -146,6 +147,7 @@ const UnitCountOne = ({ dateRange }) => {
     setNetRoas({ total: null, google: null, meta: null });
     setBeRoas({ total: null, google: null, meta: null });
     setInventoryEvents(emptyInventoryEvents);
+    setPaymentMethodCounts({});
 
     const { startDate, endDate } = effectiveDateRange;
     const isToday = isTodayRange(startDate, endDate);
@@ -168,6 +170,7 @@ const UnitCountOne = ({ dateRange }) => {
             startDate.split(" ")[0]
           }&end_date=${endDate.split(" ")[0]}`
         ),
+        apiClient.get(`/api/payment_method_count${query}`),
       ]).then((results) => {
         // ad_spend
         if (results[0].status === "fulfilled") {
@@ -250,6 +253,19 @@ const UnitCountOne = ({ dateRange }) => {
             inventoryEvents: "Failed to load data",
           }));
         }
+        // payment_method_count
+        if (results[7].status === "fulfilled") {
+          // Backend returns data directly, not wrapped in data property
+          setPaymentMethodCounts(
+            results[7].value.data || results[7].value || {}
+          );
+        } else {
+          setError((e) => ({
+            ...e,
+            paymentMethodCount: "Failed to load data",
+          }));
+        }
+
         // Use correct net profit formula: total net profit = total sales - total cogs - total ad spend
         const totalSales = Number(
           results[2].status === "fulfilled"
@@ -287,6 +303,11 @@ const UnitCountOne = ({ dateRange }) => {
             startDate.split(" ")[0]
           }&end_date=${endDate.split(" ")[0]}`
         ),
+        apiClient.get(
+          `/api/payment_method_count?startDate=${
+            startDate.split(" ")[0]
+          }&endDate=${endDate.split(" ")[0]}`
+        ),
       ])
         .then((results) => {
           // Handle ad spend data
@@ -313,6 +334,7 @@ const UnitCountOne = ({ dateRange }) => {
             setTotalCogs(salesData.unit_cost ?? null);
             setGoogleCogs(salesData.unit_cost_google ?? null);
             setMetaCogs(salesData.unit_cost_meta ?? null);
+            setOrganicCogs(salesData.unit_cost_organic ?? null);
 
             // Set order counts
             setTotalQuantity(salesData.order_count ?? null);
@@ -321,7 +343,10 @@ const UnitCountOne = ({ dateRange }) => {
             setOrganicQuantity(salesData.organic_order_count ?? null);
 
             // Calculate net profits using totals from ad spend
-            const adSpendTotals = results[0].value.data.totals;
+            const adSpendTotals =
+              results[0].status === "fulfilled"
+                ? results[0].value.data.totals
+                : { facebookSpend: 0, googleSpend: 0 };
             const totalAdSpend =
               adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
             const totalNetProfit =
@@ -340,6 +365,11 @@ const UnitCountOne = ({ dateRange }) => {
             setTotalNetProfit(totalNetProfit);
             setGoogleNetProfit(googleNetProfit);
             setMetaNetProfit(metaNetProfit);
+            // Organic net profit = organic sales - organic COGS (no ad spend)
+            const organicNetProfit =
+              (salesData.organic_sales ?? 0) -
+              (salesData.unit_cost_organic ?? 0);
+            setOrganicNetProfit(organicNetProfit);
 
             // Calculate ROAS using totals
             if (totalAdSpend > 0) {
@@ -403,6 +433,18 @@ const UnitCountOne = ({ dateRange }) => {
             setError((e) => ({
               ...e,
               inventoryEvents: "Failed to load data",
+            }));
+          }
+
+          // Handle payment method count
+          if (results[3].status === "fulfilled") {
+            setPaymentMethodCounts(
+              results[3].value.data || results[3].value || {}
+            );
+          } else {
+            setError((e) => ({
+              ...e,
+              paymentMethodCount: "Failed to load data",
             }));
           }
 
@@ -1423,6 +1465,104 @@ const UnitCountOne = ({ dateRange }) => {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+        {/* card end */}
+      </div>
+      {/* Card 10: Payment Method Count */}
+      <div className="col">
+        <div
+          className="card shadow-none border bg-gradient-start-15 h-100 position-relative"
+          style={{ overflow: "visible" }}
+        >
+          <div className="card-body p-20">
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-medium text-black mb-1">Payment Methods</p>
+                <h6
+                  className="mb-0 display-6 fw-bold"
+                  style={{ letterSpacing: "1px" }}
+                >
+                  {getCardContent(
+                    Object.keys(paymentMethodCounts).length > 0
+                      ? Object.values(paymentMethodCounts).reduce(
+                          (a, b) => a + b,
+                          0
+                        )
+                      : null,
+                    loading,
+                    error.paymentMethodCount
+                  )}
+                </h6>
+              </div>
+              <div
+                className="w-50-px h-50-px rounded-circle d-flex justify-content-center align-items-center shadow-lg"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                }}
+              >
+                <Icon
+                  icon="mdi:credit-card-multiple"
+                  className="text-white text-2xl mb-0"
+                />
+              </div>
+            </div>
+            <div
+              className="my-3"
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+                opacity: 0.4,
+              }}
+            ></div>
+            <div
+              className="d-flex flex-column align-items-center mt-2"
+              style={{ gap: 8, marginTop: 8 }}
+            >
+              {loading ? (
+                <span className="text-muted">Loading...</span>
+              ) : error.paymentMethodCount ? (
+                <span className="text-danger small">Failed to load</span>
+              ) : Object.keys(paymentMethodCounts).length === 0 ? (
+                <span className="text-muted">—</span>
+              ) : (
+                sortBreakdown(
+                  Object.entries(paymentMethodCounts).map(
+                    ([method, count]) => ({
+                      label: method,
+                      value: count,
+                    })
+                  )
+                ).map((item) => (
+                  <div
+                    className="d-flex align-items-center justify-content-between w-100"
+                    style={{ gap: 8 }}
+                    key={item.label}
+                  >
+                    <span
+                      className="fw-medium text-black"
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: "#222",
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 15,
+                        color: "#1976d2",
+                      }}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

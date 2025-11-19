@@ -371,9 +371,9 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ### 13. **User Management** (`userManagement`)
 
-**Route:** `/user-management`, `/create-user`, `/assign-role`, `/user-role-info`
+**Route:** `/user-management`, `/create-user`
 
-**Component:** `UserRoleManager.jsx`, `CreateUserLayer.jsx`
+**Component:** `UserManagement.jsx`, `CreateUserLayer.jsx`
 
 **CRUD Operations:**
 
@@ -390,28 +390,34 @@ This document provides a comprehensive analysis of all sidebar items in the dash
   - Send email verification
   - Assign initial roles
   - Set sidebar permissions
+  - Set user status (active/inactive)
 
 - **READ:**
 
   - View all users (`/user-management`)
-  - Filter by role
-  - Search users
-  - View user details
-  - View role information (`/user-role-info`)
+  - Filter by role (All, No Access, User, Manager, Admin, Super Admin)
+  - Search users by email, name, or phone
+  - Sort by name, email, role, or date added
+  - View user details with avatar/initials
+  - Infinite scroll pagination
+  - View user status badges
 
 - **UPDATE:**
 
-  - Edit user roles (`/assign-role`)
-  - Update sidebar permissions (granular control)
+  - Edit user roles (integrated permissions panel in `/user-management`)
+  - Update sidebar permissions with granular CRUD control per sidebar item
+  - Set permission levels (none, read, read+create, read+update, full CRUD)
   - Modify user status
+  - Real-time permission preview
 
 - **DELETE:**
-  - Delete user accounts
-  - Confirmation modal before deletion
+  - Delete user accounts with confirmation dialog
+  - Prevents self-deletion
+  - Removes user from both backend and Firebase
 
 **Access Level:** Admin, Super Admin
 
-**Note:** This is a **FULL CRUD** sidebar with complete user management capabilities
+**Note:** This is a **FULL CRUD** sidebar with complete user management capabilities. Role assignment and permission management are integrated directly into the main user management page via a side panel, rather than separate routes.
 
 ---
 

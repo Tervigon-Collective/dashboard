@@ -6,7 +6,7 @@ import Link from "next/link";
 import { toast } from "react-toastify";
 import { Icon } from "@iconify/react";
 import procurementApi from "@/services/procurementApi";
-import VendorMasterList from "./VendorMasterList";
+import vendorMasterApi from "@/services/vendorMasterApi";
 import VariantOptionsManager from "./VariantOptionsManager";
 import VariantGroupDisplay from "./VariantGroupDisplay";
 import {
@@ -33,7 +33,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   // NEW: Generated variants from combinations
   const [variants, setVariants] = useState([]);
 
-  const [vendors, setVendors] = useState([]);
+  // Vendors from vendor_master (read-only)
+  const [availableVendors, setAvailableVendors] = useState([]);
 
   const [productImages, setProductImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -41,12 +42,30 @@ const ProductForm = ({ mode = "add", productId = null }) => {
   const [imageModalIsOpen, setImageModalIsOpen] = useState(false);
   const [variantsToDelete, setVariantsToDelete] = useState([]); // Track variant IDs to delete
 
+  // Load vendors from vendor_master on component mount
+  useEffect(() => {
+    loadVendorsFromMaster();
+  }, []);
+
   // Load product data for editing
   useEffect(() => {
     if (mode === "edit" && productId) {
       loadProductForEdit();
     }
   }, [mode, productId]);
+
+  // Load vendors from vendor_master API
+  const loadVendorsFromMaster = async () => {
+    try {
+      const response = await vendorMasterApi.getAllVendors(1, 100);
+      if (response.success) {
+        setAvailableVendors(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading vendors from vendor_master:", error);
+      toast.error("Failed to load vendors");
+    }
+  };
 
   const loadProductForEdit = async () => {
     try {
@@ -110,21 +129,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           setExistingImages(product.images);
         }
 
-        // Set vendors data for editing
-        if (product.vendors && product.vendors.length > 0) {
-          setVendors(
-            product.vendors.map((vendor, index) => ({
-              id: index + 1,
-              vendor_id: vendor.vendor_id, // Store the actual vendor_id from database
-              vendor_name: vendor.vendor_name || "",
-              common_name: vendor.common_name || "",
-              manufactured_by: vendor.manufactured_by || "",
-              manufacturing_date: vendor.manufacturing_date || "",
-              vendor_status: vendor.vendor_status || "",
-              imported_by: vendor.imported_by || "",
-            }))
-          );
-        }
+        // Vendors are now loaded via variant.vendor_pricing (from vendor_master)
+        // No need to load vendors separately - they come with variants
       }
     } catch (error) {
       console.error("Error loading product:", error);
@@ -143,54 +149,27 @@ const ProductForm = ({ mode = "add", productId = null }) => {
     }));
   };
 
-  // Vendor Management (for VendorMasterList)
-  const handleAddVendor = (newVendor) => {
-    setVendors((prev) => [...prev, newVendor]);
-    toast.success("Vendor added successfully");
-  };
+  // Vendors are now managed in Vendor Master module (read-only here)
+  // No vendor management functions needed - vendors come from vendor_master API
 
-  const handleUpdateVendor = (vendorId, updatedData) => {
-    setVendors((prev) =>
-      prev.map((vendor) =>
-        vendor.id === vendorId ? { ...vendor, ...updatedData } : vendor
-      )
-    );
-    toast.success("Vendor updated successfully");
-  };
-
-  const handleRemoveVendor = (vendorId) => {
-    // Check if vendor is used in any variant
-    const isUsed = variants.some((variant) =>
-      variant.vendor_pricing?.some((vp) => vp.vendor_id == vendorId)
-    );
-
-    if (isUsed) {
-      toast.error(
-        "This vendor is assigned to one or more variants. Please remove the assignments first."
-      );
-      return;
-    }
-
-    setVendors((prev) => prev.filter((vendor) => vendor.id !== vendorId));
-    toast.success("Vendor removed successfully");
-  };
-
-  // Calculate product_price_category based on variant MRP averages
+  // Calculate product_price_category based on variant Margin averages (MRP - COGS)
   const calculateProductPriceCategory = (variants) => {
     if (!variants || variants.length === 0) return "C"; // Default to C if no variants
 
-    // Calculate average MRP
-    const totalMRP = variants.reduce((sum, variant) => {
+    // Calculate average Margin (MRP - COGS)
+    const totalMargin = variants.reduce((sum, variant) => {
       const mrp = parseFloat(variant.mrp) || 0;
-      return sum + mrp;
+      const cogs = parseFloat(variant.cogs) || 0;
+      const margin = mrp - cogs;
+      return sum + margin;
     }, 0);
 
-    const averageMRP = totalMRP / variants.length;
+    const averageMargin = totalMargin / variants.length;
 
-    // Determine category based on average MRP
-    if (averageMRP >= 1000) {
+    // Determine category based on average Margin
+    if (averageMargin >= 1000) {
       return "A";
-    } else if (averageMRP >= 700) {
+    } else if (averageMargin >= 700) {
       return "B";
     } else {
       return "C";
@@ -523,23 +502,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
       // Calculate product_price_category based on variant MRP averages
       const productPriceCategory = calculateProductPriceCategory(variants);
 
-      // Prepare vendors data - only include vendors with at least vendor_name
-      const vendorsData = vendors
-        .filter((vendor) => vendor.vendor_name && vendor.vendor_name.trim())
-        .map((vendor) => {
-          const vendorObj = {};
-          if (vendor.vendor_id) vendorObj.vendor_id = vendor.vendor_id; // Include vendor_id for updates
-          if (vendor.vendor_name) vendorObj.vendor_name = vendor.vendor_name;
-          if (vendor.common_name) vendorObj.common_name = vendor.common_name;
-          if (vendor.manufactured_by)
-            vendorObj.manufactured_by = vendor.manufactured_by;
-          if (vendor.manufacturing_date)
-            vendorObj.manufacturing_date = vendor.manufacturing_date;
-          if (vendor.vendor_status)
-            vendorObj.vendor_status = vendor.vendor_status;
-          if (vendor.imported_by) vendorObj.imported_by = vendor.imported_by;
-          return vendorObj;
-        });
+      // Vendors are now assigned via variant.vendor_pricing with vendor_master.vendor_id
+      // No need to prepare vendors data separately
 
       // Prepare data for API
       const productData = {
@@ -549,8 +513,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           status: mode === "add" ? "pending" : newProduct.status, // Auto-set to "pending" for new products
           product_price_category: productPriceCategory, // Auto-calculated
         },
-        variants: variantsData,
-        vendors: vendorsData,
+        variants: variantsData, // vendor_pricing included in variants
         imageRequests: imageRequests,
       };
 
@@ -563,8 +526,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
             status: newProduct.status,
             product_price_category: productPriceCategory, // Auto-calculated
           },
-          variants: variantsData,
-          vendors: vendorsData,
+          variants: variantsData, // vendor_pricing included in variants
           variantsToDelete: variantsToDelete, // NEW: Include variant IDs to delete
         };
 
@@ -714,13 +676,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
             </div>
           </div>
 
-          {/* Vendors Information - NEW: VendorMasterList */}
-          <VendorMasterList
-            vendors={vendors}
-            onAddVendor={handleAddVendor}
-            onUpdateVendor={handleUpdateVendor}
-            onRemoveVendor={handleRemoveVendor}
-          />
+          {/* Vendors are now loaded from vendor_master and assigned to variants */}
+          {/* No separate vendor management section needed - vendors come from Vendor Master module */}
 
           {/* Variant Options Manager - NEW: Auto-generate variants */}
           <VariantOptionsManager
@@ -732,7 +689,7 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           {variants.length > 0 && (
             <VariantGroupDisplay
               groupedVariants={groupVariants(variants)}
-              vendors={vendors}
+              vendors={availableVendors}
               onVariantChange={handleVariantChange}
               onVariantsChange={handleVariantsChange}
               onVariantDelete={handleDeleteVariant}
@@ -744,9 +701,6 @@ const ProductForm = ({ mode = "add", productId = null }) => {
           <div className="shopify-card">
             <div className="shopify-card-header">
               <h5 className="shopify-heading-3">Product Images</h5>
-              <p className="shopify-text-muted mb-0">
-                Upload product images to showcase your product
-              </p>
             </div>
             <div className="shopify-card-body">
               <div

@@ -126,10 +126,6 @@ const VariantOptionsManager = ({
             <Icon icon="mdi:sitemap" className="me-2" width="20" />
             Variant Options
           </h5>
-          <p className="text-muted mb-0">
-            Select variant types and add values. All combinations will be
-            generated automatically.
-          </p>
         </div>
       )}
 

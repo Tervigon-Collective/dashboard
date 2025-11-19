@@ -1,4 +1,5 @@
 import GeneratedContent from "./child/GeneratedContent";
+import IndiaSalesHeatMap from "./child/IndiaSalesHeatMap";
 import LatestRegisteredOne from "./child/LatestRegisteredOne";
 import SalesStatisticOne from "./child/SalesStatisticOne";
 import SourceVisitors from "./child/SourceVisitors";
@@ -13,7 +14,7 @@ const DashBoardLayerOne = () => {
       {/* UnitCountOne */}
       <UnitCountOne />
 
-      <section className='row gy-4 mt-1'>
+      <section className="row gy-4 mt-1">
         {/* SalesStatisticOne */}
         <SalesStatisticOne />
 
@@ -21,7 +22,7 @@ const DashBoardLayerOne = () => {
         <TotalSubscriberOne />
 
         {/* UsersOverviewOne */}
-        <UsersOverviewOne />
+        {/* <UsersOverviewOne /> */}
 
         {/* LatestRegisteredOne */}
         <LatestRegisteredOne />
@@ -32,13 +33,13 @@ const DashBoardLayerOne = () => {
         {/* GeneratedContent */}
         <GeneratedContent />
 
+        <SourceVisitors />
 
-        <SourceVisitors/>
+        {/* IndiaSalesHeatMap */}
+        <IndiaSalesHeatMap />
 
         {/* TopCountries */}
         {/* <TopCountries /> */}
-
-
       </section>
     </>
   );

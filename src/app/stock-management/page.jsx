@@ -112,11 +112,15 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
 
 const ReturnActionButtons = ({ row, onApprove, onReject, busy }) => {
   if (row.status !== "pending") {
-    return <span className="badge bg-light text-secondary">{row.status}</span>;
+    return (
+      <div className="d-flex justify-content-end">
+        <span className="badge bg-light text-secondary">{row.status}</span>
+      </div>
+    );
   }
 
   return (
-    <div className="d-flex gap-2">
+    <div className="d-flex gap-2 justify-content-end">
       <button
         type="button"
         className="btn btn-sm btn-success"
