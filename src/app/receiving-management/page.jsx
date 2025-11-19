@@ -3924,6 +3924,18 @@ const PurchaseRequestModal = ({
       tabIndex="-1"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
     >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            /* Hide number input spinners for Chrome, Safari, Edge */
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+          `,
+        }}
+      />
       <div
         className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
         style={{ maxWidth: "min(800px, 95vw)", margin: "1rem auto" }}
@@ -4384,6 +4396,10 @@ const PurchaseRequestModal = ({
                                               parseInt(e.target.value) || ""
                                             )
                                           }
+                                          onWheel={(e) => e.target.blur()}
+                                          style={{
+                                            MozAppearance: "textfield",
+                                          }}
                                           required
                                         />
                                       </div>
@@ -4405,6 +4421,10 @@ const PurchaseRequestModal = ({
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
+                                          onWheel={(e) => e.target.blur()}
+                                          style={{
+                                            MozAppearance: "textfield",
+                                          }}
                                         />
                                       </div>
                                       {/* Taxable Amt */}
@@ -4445,6 +4465,10 @@ const PurchaseRequestModal = ({
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
+                                          onWheel={(e) => e.target.blur()}
+                                          style={{
+                                            MozAppearance: "textfield",
+                                          }}
                                         />
                                       </div>
                                       {/* SGST % */}
@@ -4467,6 +4491,10 @@ const PurchaseRequestModal = ({
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
+                                          onWheel={(e) => e.target.blur()}
+                                          style={{
+                                            MozAppearance: "textfield",
+                                          }}
                                         />
                                       </div>
                                       {/* CGST % */}
@@ -4489,6 +4517,10 @@ const PurchaseRequestModal = ({
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
+                                          onWheel={(e) => e.target.blur()}
+                                          style={{
+                                            MozAppearance: "textfield",
+                                          }}
                                         />
                                       </div>
                                       {/* GST Amt */}

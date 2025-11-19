@@ -60,9 +60,9 @@ const TopPerformerOne = () => {
   }, [period]);
 
   return (
-    <div className="col-xxl-3 col-xl-12">
+    <div className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-sm-12">
       <div className="card h-100">
-        <div className="card-body">
+        <div className="card-body" style={{ overflow: "hidden" }}>
           <div className="d-flex align-items-center flex-wrap gap-2 justify-content-between">
             <h6 className="mb-2 fw-bold text-lg mb-0">Top Performing SKU</h6>
             <div>
@@ -90,8 +90,12 @@ const TopPerformerOne = () => {
                 <div
                   className="d-flex align-items-center justify-content-between gap-3 mb-24"
                   key={item.sku}
+                  style={{ minWidth: 0 }}
                 >
-                  <div className="d-flex align-items-center">
+                  <div
+                    className="d-flex align-items-center"
+                    style={{ minWidth: 0, flex: 1 }}
+                  >
                     <div
                       className="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden bg-primary-100 d-flex align-items-center justify-content-center"
                       style={{
@@ -102,11 +106,27 @@ const TopPerformerOne = () => {
                     >
                       {idx + 1}
                     </div>
-                    <div className="flex-grow-1">
-                      <h6 className="text-md mb-0 fw-medium">{item.sku}</h6>
+                    <div
+                      className="flex-grow-1"
+                      style={{ minWidth: 0, overflow: "hidden" }}
+                    >
+                      <h6
+                        className="text-md mb-0 fw-medium"
+                        style={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={item.sku}
+                      >
+                        {item.sku}
+                      </h6>
                     </div>
                   </div>
-                  <span className="text-primary-light text-md fw-medium">
+                  <span
+                    className="text-primary-light text-md fw-medium flex-shrink-0"
+                    style={{ whiteSpace: "nowrap" }}
+                  >
                     ₹{Number(item.total_sales).toLocaleString()}
                   </span>
                 </div>

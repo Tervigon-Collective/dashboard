@@ -99,7 +99,7 @@ const SourceVisitors = () => {
   const sortedBars = [...barData].sort((a, b) => b.value - a.value).reverse();
 
   return (
-    <div className="col-xxl-5">
+    <div className="col-xxl-5 col-xl-12 col-lg-12 col-md-12 col-sm-12">
       <div className="card h-100">
         <div className="card-header border-bottom-0 pb-0 d-flex align-items-center flex-wrap gap-2 justify-content-between">
           <h6 className="mb-2 fw-bold text-lg mb-0">Channel Conversion</h6>
@@ -115,8 +115,11 @@ const SourceVisitors = () => {
             ))}
           </select>
         </div>
-        <div className="card-body">
-          <div className="position-relative h-100 min-h-320-px">
+        <div className="card-body" style={{ overflow: "hidden" }}>
+          <div
+            className="position-relative h-100 min-h-320-px"
+            style={{ overflow: "hidden" }}
+          >
             <div className="md-position-absolute start-0 top-0 mt-20">
               <h6 className="mb-1">
                 {loading ? "Loading..." : error ? "--" : total.toLocaleString()}
@@ -125,27 +128,58 @@ const SourceVisitors = () => {
                 Total Platform Conversion
               </span>
             </div>
-            <div className="row g-3 h-100">
+            <div
+              className="row g-3 h-100"
+              style={{ margin: 0, overflow: "hidden" }}
+            >
               {sortedBars.map((bar, idx) => (
                 <div
                   key={bar.key}
                   className="col-12 col-md-3 d-flex flex-column justify-content-end"
+                  style={{
+                    overflow: "hidden",
+                    paddingLeft: "0.5rem",
+                    paddingRight: "0.5rem",
+                  }}
                 >
                   <div
-                    className={`d-flex flex-column align-items-center p-24 pt-16 rounded-top-4 ${bar.bg}`}
+                    className={`d-flex flex-column align-items-center justify-content-between rounded-top-4 ${bar.bg}`}
                     style={{
                       minHeight: `${
-                        data && maxValue ? (bar.value / maxValue) * 100 : 50
+                        data && maxValue
+                          ? Math.min((bar.value / maxValue) * 100, 100)
+                          : 50
                       }%`,
+                      maxHeight: "100%",
+                      width: "100%",
+                      padding: "16px 24px 16px 24px",
+                      boxSizing: "border-box",
                     }}
                   >
-                    <span
-                      className={`w-40-px h-40-px d-flex flex-shrink-0 justify-content-center align-items-center ${bar.circle} rounded-circle mb-12`}
+                    <div
+                      className="d-flex flex-column align-items-center"
+                      style={{
+                        flex: 1,
+                        justifyContent: "flex-start",
+                        paddingTop: "8px",
+                      }}
                     >
-                      <img src={bar.icon} alt={bar.label} />
-                    </span>
-                    <span className="text-secondary-light">{bar.label}</span>
-                    <h6 className="mb-0">
+                      <span
+                        className={`w-40-px h-40-px d-flex flex-shrink-0 justify-content-center align-items-center ${bar.circle} rounded-circle mb-12`}
+                      >
+                        <img src={bar.icon} alt={bar.label} />
+                      </span>
+                      <span
+                        className="text-secondary-light"
+                        style={{ fontSize: "12px" }}
+                      >
+                        {bar.label}
+                      </span>
+                    </div>
+                    <h6
+                      className="mb-0"
+                      style={{ marginTop: "auto", paddingTop: "8px" }}
+                    >
                       {loading ? "--" : error ? "--" : bar.value ?? "--"}
                     </h6>
                   </div>

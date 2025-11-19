@@ -9,6 +9,26 @@ const LatestRegisteredOne = () => {
   const [error, setError] = useState(null);
   const [numOrders, setNumOrders] = useState(5);
 
+  // Helper function to format payment method for display
+  const formatPaymentMethod = (paymentMethod) => {
+    if (!paymentMethod) return "—";
+
+    // Convert to lowercase for case-insensitive matching
+    const lowerMethod = paymentMethod.toLowerCase();
+
+    // Check if it contains COD-related keywords and show just "COD"
+    if (
+      lowerMethod.includes("cash on delivery") ||
+      lowerMethod.includes("cod") ||
+      lowerMethod === "cash on delivery (cod)"
+    ) {
+      return "COD";
+    }
+
+    // Keep "manual" and everything else as is
+    return paymentMethod;
+  };
+
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
@@ -26,39 +46,41 @@ const LatestRegisteredOne = () => {
   }, [numOrders]);
 
   return (
-    <div className='col-xxl-9 col-xl-12'>
-      <div className='card h-100'>
-        <div className='card-body p-24'>
-          <div className='d-flex flex-wrap align-items-center gap-1 justify-content-between mb-16'>
+    <div className="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
+      <div className="card h-100">
+        <div className="card-body p-24">
+          <div className="d-flex flex-wrap align-items-center gap-1 justify-content-between mb-16">
             <ul
-              className='nav border-gradient-tab nav-pills mb-0'
-              id='pills-tab'
-              role='tablist'
+              className="nav border-gradient-tab nav-pills mb-0"
+              id="pills-tab"
+              role="tablist"
             >
-              <li className='nav-item' role='presentation'>
+              <li className="nav-item" role="presentation">
                 <button
-                  className='nav-link d-flex align-items-center active'
-                  id='pills-to-do-list-tab'
-                  data-bs-toggle='pill'
-                  data-bs-target='#pills-to-do-list'
-                  type='button'
-                  role='tab'
-                  aria-controls='pills-to-do-list'
-                  aria-selected='true'
+                  className="nav-link d-flex align-items-center active"
+                  id="pills-to-do-list-tab"
+                  data-bs-toggle="pill"
+                  data-bs-target="#pills-to-do-list"
+                  type="button"
+                  role="tab"
+                  aria-controls="pills-to-do-list"
+                  aria-selected="true"
                 >
                   Latest Orders
-                  <span className='text-sm fw-semibold py-6 px-12 bg-neutral-500 rounded-pill text-white line-height-1 ms-12 notification-alert'>
+                  <span className="text-sm fw-semibold py-6 px-12 bg-neutral-500 rounded-pill text-white line-height-1 ms-12 notification-alert">
                     {orders.length}
                   </span>
                 </button>
               </li>
             </ul>
             <div>
-              <label htmlFor="numOrders" className="me-2 fw-medium">Show latest:</label>
+              <label htmlFor="numOrders" className="me-2 fw-medium">
+                Show latest:
+              </label>
               <select
                 id="numOrders"
                 value={numOrders}
-                onChange={e => setNumOrders(Number(e.target.value))}
+                onChange={(e) => setNumOrders(Number(e.target.value))}
                 className="form-select d-inline-block w-auto"
                 style={{ minWidth: 80 }}
               >
@@ -69,69 +91,100 @@ const LatestRegisteredOne = () => {
               </select>
             </div>
           </div>
-          <div className='tab-content' id='pills-tabContent'>
+          <div className="tab-content" id="pills-tabContent">
             <div
-              className='tab-pane fade show active'
-              id='pills-to-do-list'
-              role='tabpanel'
-              aria-labelledby='pills-to-do-list-tab'
+              className="tab-pane fade show active"
+              id="pills-to-do-list"
+              role="tabpanel"
+              aria-labelledby="pills-to-do-list-tab"
               tabIndex={0}
             >
-              <div className='table-responsive scroll-sm'>
-                <table className='table bordered-table sm-table mb-0'>
+              <div className="table-responsive scroll-sm">
+                <table className="table bordered-table sm-table mb-0">
                   <thead>
                     <tr>
-                      <th scope='col'>Order Id </th>
-                      <th scope='col'>Ordered On</th>
-                      <th scope='col'>Product</th>
-                      <th scope='col' className='text-center'>
+                      <th scope="col">Order Id </th>
+                      <th scope="col">Ordered On</th>
+                      <th scope="col">Product</th>
+                      <th scope="col" className="text-center">
                         Total Amount
+                      </th>
+                      <th scope="col" className="text-center">
+                        Payment Method
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="4" className="text-center">Loading...</td>
+                        <td colSpan="5" className="text-center">
+                          Loading...
+                        </td>
                       </tr>
                     ) : error ? (
                       <tr>
-                        <td colSpan="4" className="text-center text-danger">{error}</td>
+                        <td colSpan="5" className="text-center text-danger">
+                          {error}
+                        </td>
                       </tr>
                     ) : orders.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="text-center">No orders found.</td>
+                        <td colSpan="5" className="text-center">
+                          No orders found.
+                        </td>
                       </tr>
                     ) : (
                       orders.map((order) => {
                         // Calculate total quantity of products purchased
-                        const totalQty = order.lineItems?.edges?.reduce((sum, edge) => sum + (edge.node.quantity || 0), 0) || 0;
+                        const totalQty =
+                          order.lineItems?.edges?.reduce(
+                            (sum, edge) => sum + (edge.node.quantity || 0),
+                            0
+                          ) || 0;
                         return (
                           <tr key={order.id}>
                             <td>
-                              <div className='d-flex align-items-center'>
+                              <div className="d-flex align-items-center">
                                 {/* No user image in API, use a placeholder */}
                                 <img
-                                  src='assets/images/make/dashborad-05.jpg'
-                                  alt='User'
-                                  className='w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden'
+                                  src="assets/images/make/dashborad-05.jpg"
+                                  alt="User"
+                                  className="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
                                 />
-                                <div className='flex-grow-1'>
-                                  <h6 className='text-md mb-0 fw-medium'>{order.name}</h6>
-                                  <span className='text-sm text-secondary-light fw-medium'>
-                                    {order.shippingAddress?.city}, {order.shippingAddress?.province}
+                                <div className="flex-grow-1">
+                                  <h6 className="text-md mb-0 fw-medium">
+                                    {order.name}
+                                  </h6>
+                                  <span className="text-sm text-secondary-light fw-medium">
+                                    {order.shippingAddress?.city},{" "}
+                                    {order.shippingAddress?.province}
                                   </span>
                                 </div>
                               </div>
                             </td>
-                            <td>{order.createdAtIST || new Date(order.createdAt).toLocaleString()}</td>
                             <td>
-                              {order.lineItems?.edges && order.lineItems.edges.length > 0 ? (
-                                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                              {order.createdAtIST ||
+                                new Date(order.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              {order.lineItems?.edges &&
+                              order.lineItems.edges.length > 0 ? (
+                                <ul
+                                  style={{
+                                    margin: 0,
+                                    padding: 0,
+                                    listStyle: "none",
+                                  }}
+                                >
                                   {order.lineItems.edges.map((edge, idx) => (
                                     <li key={edge.node.id || idx}>
-                                      <span className="fw-semibold">SKU:</span> {edge.node.variant?.sku || '-'}
-                                      {', '}<span className="fw-semibold">Qty:</span> {edge.node.quantity}
+                                      <span className="fw-semibold">SKU:</span>{" "}
+                                      {edge.node.variant?.sku || "-"}
+                                      {", "}
+                                      <span className="fw-semibold">
+                                        Qty:
+                                      </span>{" "}
+                                      {edge.node.quantity}
                                     </li>
                                   ))}
                                 </ul>
@@ -139,11 +192,26 @@ const LatestRegisteredOne = () => {
                                 "-"
                               )}
                             </td>
-                            <td className='text-center'>
-                              <span className='bg-success-focus text-success-main px-24 py-4 rounded-pill fw-medium text-sm'>
+                            <td className="text-center">
+                              <span className="bg-success-focus text-success-main px-24 py-4 rounded-pill fw-medium text-sm">
                                 {order.totalPriceSet?.shopMoney?.amount
                                   ? `${order.totalPriceSet.shopMoney.amount} ${order.totalPriceSet.shopMoney.currencyCode}`
-                                  : '-'}
+                                  : "-"}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              <span
+                                className="px-16 py-4 rounded-pill fw-medium text-sm"
+                                style={{
+                                  backgroundColor: order.paymentMethod
+                                    ? "#e3f2fd"
+                                    : "#f5f5f5",
+                                  color: order.paymentMethod
+                                    ? "#1976d2"
+                                    : "#757575",
+                                }}
+                              >
+                                {formatPaymentMethod(order.paymentMethod)}
                               </span>
                             </td>
                           </tr>
@@ -162,4 +230,3 @@ const LatestRegisteredOne = () => {
 };
 
 export default LatestRegisteredOne;
-
