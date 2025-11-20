@@ -9,6 +9,13 @@ import "rsuite/dist/rsuite.min.css";
 const API_BASE =
   "https://skuspendsales-aghtewckaqbdfqep.centralindia-01.azurewebsites.net/api/product_spend";
 
+// Channel endpoints mapping
+const CHANNEL_ENDPOINTS = {
+  all: "",
+  meta: "/meta",
+  google: "/google",
+};
+
 function formatLocalISO(date) {
   if (!date) {
     return null;
@@ -36,7 +43,8 @@ const downloadProductSpendExcel = async (
   products,
   summaryData,
   startDate,
-  endDate
+  endDate,
+  channelName = "ALL"
 ) => {
   if (!products || products.length === 0) {
     alert("No data available to download");
@@ -128,7 +136,7 @@ const downloadProductSpendExcel = async (
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `Product_Spend_Summary_${startDate}_to_${endDate}.xlsx`;
+  link.download = `Product_Spend_Summary_${channelName}_${startDate}_to_${endDate}.xlsx`;
   link.click();
   window.URL.revokeObjectURL(url);
 };
@@ -144,6 +152,7 @@ const ProductSpendSummaryLayer = () => {
   const [error, setError] = useState("");
   const [searchSku, setSearchSku] = useState("");
   const [isMobile, setIsMobile] = useState(getIsMobile());
+  const [activeChannel, setActiveChannel] = useState("all"); // 'all', 'meta', 'google'
   
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
@@ -157,7 +166,7 @@ const ProductSpendSummaryLayer = () => {
   const tableContainerRef = useRef(null);
   const itemsPerPage = 20;
 
-  const fetchSummary = async (range) => {
+  const fetchSummary = useCallback(async (range, channel) => {
     setLoading(true);
     setError("");
     setProducts([]);
@@ -165,7 +174,8 @@ const ProductSpendSummaryLayer = () => {
     const start_datetime = formatLocalISO(range[0]);
     const end_datetime = formatLocalISO(range[1]);
     try {
-      const url = `${API_BASE}?start_datetime=${encodeURIComponent(
+      const channelEndpoint = CHANNEL_ENDPOINTS[channel] || "";
+      const url = `${API_BASE}${channelEndpoint}?start_datetime=${encodeURIComponent(
         start_datetime
       )}&end_datetime=${encodeURIComponent(end_datetime)}`;
       const res = await fetch(url);
@@ -180,14 +190,14 @@ const ProductSpendSummaryLayer = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (dateRange && dateRange[0] && dateRange[1]) {
-      fetchSummary(dateRange);
+      fetchSummary(dateRange, activeChannel);
       setDisplayedItemsCount(20); // Reset displayed items on date change
     }
-  }, [dateRange]);
+  }, [dateRange, activeChannel, fetchSummary]);
 
   useEffect(() => {
     setDisplayedItemsCount(20); // Reset displayed items on search change
@@ -329,12 +339,14 @@ const ProductSpendSummaryLayer = () => {
 
     const startDate = formatLocalISO(dateRange[0]).split(" ")[0]; // Get just the date part
     const endDate = formatLocalISO(dateRange[1]).split(" ")[0];
+    const channelName = activeChannel === "all" ? "ALL" : activeChannel.toUpperCase();
 
     await downloadProductSpendExcel(
       sortedProducts,
       summaryData,
       startDate,
-      endDate
+      endDate,
+      channelName
     );
   };
 
@@ -344,113 +356,455 @@ const ProductSpendSummaryLayer = () => {
         className="card basic-data-table border-0 rounded-4"
         style={{ overflow: "visible" }}
       >
-        <div className="card-header d-flex align-items-center justify-content-between">
-          <h5 className="card-title mb-0">Product Spend Dashboard</h5>
-        </div>
-        <hr className="my-0" />
+        <div className="card-body p-24">
+          {/* Header with Date Picker and Download Button */}
+          <div className="d-flex justify-content-between align-items-center mb-20">
+            <div className="d-flex align-items-center">
+              <h6 className="mb-0 me-2" style={{ fontSize: "x-large", fontWeight: "600", color: "#111827" }}>
+                Product Spend Dashboard
+              </h6>
+              <Icon
+                icon="solar:info-circle-bold"
+                style={{ fontSize: "14px", color: "#9CA3AF" }}
+              />
+            </div>
+            <div className="d-flex align-items-center" style={{ gap: 12 }}>
+              <DateRangePicker
+                value={dateRange}
+                onChange={setDateRange}
+                format="yyyy-MM-dd HH:mm"
+                showMeridian={false}
+                ranges={[]}
+                defaultCalendarValue={getDefaultDateRange()}
+                disabledDate={(date) => {
+                  const now = new Date();
+                  now.setMinutes(0, 0, 0);
+                  const d = new Date(date);
+                  d.setMinutes(0, 0, 0);
+                  return d > now;
+                }}
+                placeholder="Select date and hour range"
+                style={{
+                  borderRadius: 8,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  width: 300,
+                }}
+                appearance="subtle"
+                cleanable
+                menuStyle={{
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                  borderRadius: 8,
+                  padding: 8,
+                  zIndex: 2000,
+                }}
+                placement="bottomEnd"
+                oneTap={false}
+              />
+              <button
+                className="btn btn-success btn-icon"
+                onClick={handleDownload}
+                disabled={
+                  loading || !sortedProducts || sortedProducts.length === 0
+                }
+                title="Download Excel Report"
+                style={{
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 8,
+                }}
+              >
+                <Icon
+                  icon="vscode-icons:file-type-excel"
+                  width="24"
+                  height="24"
+                />
+              </button>
+            </div>
+          </div>
 
-        {/* Summary Cards */}
-        {summaryData && (
-          <div className="card-body pb-2 pt-3 px-3">
-            <div className="row mb-3">
-              <div className="col-md-3 col-sm-6 mb-2">
+          {/* Channel Tabs */}
+          <div
+            className="mb-4 border-bottom pb-0"
+            style={{ overflowX: "auto", overflowY: "hidden" }}
+          >
+            <div
+              className="d-flex gap-2 gap-md-4"
+              style={{ minWidth: "max-content", flexWrap: "nowrap" }}
+            >
+              <div
+                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
+                  activeChannel === "all" ? "text-primary" : "text-muted"
+                }`}
+                onClick={() => {
+                  setActiveChannel("all");
+                  setDisplayedItemsCount(20);
+                }}
+                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                <Icon
+                  icon="mdi:view-dashboard-outline"
+                  className="icon"
+                  style={{ flexShrink: 0 }}
+                />
+                <span
+                  className="fw-medium"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  ALL
+                </span>
+                {activeChannel === "all" && (
+                  <div
+                    className="position-absolute bottom-0 start-0 end-0"
+                    style={{
+                      height: "2px",
+                      backgroundColor: "#0d6efd",
+                    }}
+                  />
+                )}
+              </div>
+              <div
+                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
+                  activeChannel === "meta" ? "text-primary" : "text-muted"
+                }`}
+                onClick={() => {
+                  setActiveChannel("meta");
+                  setDisplayedItemsCount(20);
+                }}
+                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                <Icon
+                  icon="mdi:facebook"
+                  className="icon"
+                  style={{ flexShrink: 0 }}
+                />
+                <span
+                  className="fw-medium"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  Meta
+                </span>
+                {activeChannel === "meta" && (
+                  <div
+                    className="position-absolute bottom-0 start-0 end-0"
+                    style={{
+                      height: "2px",
+                      backgroundColor: "#0d6efd",
+                    }}
+                  />
+                )}
+              </div>
+              <div
+                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
+                  activeChannel === "google" ? "text-primary" : "text-muted"
+                }`}
+                onClick={() => {
+                  setActiveChannel("google");
+                  setDisplayedItemsCount(20);
+                }}
+                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                <Icon
+                  icon="mdi:google"
+                  className="icon"
+                  style={{ flexShrink: 0 }}
+                />
+                <span
+                  className="fw-medium"
+                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+                >
+                  Google
+                </span>
+                {activeChannel === "google" && (
+                  <div
+                    className="position-absolute bottom-0 start-0 end-0"
+                    style={{
+                      height: "2px",
+                      backgroundColor: "#0d6efd",
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          {summaryData && (
+            <div className="row mb-20" style={{ gap: "16px", marginTop: "20px" }}>
+              <div className="col-md-2 col-6">
                 <div
-                  className="p-3 rounded"
+                  className="card"
                   style={{
-                    backgroundColor: "#f0f9ff",
-                    border: "1px solid #bae6fd",
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
                   }}
                 >
-                  <div className="text-muted" style={{ fontSize: 13 }}>
-                    Total Products
-                  </div>
-                  <div
-                    className="fw-bold"
-                    style={{ fontSize: 20, color: "#0369a1" }}
-                  >
-                    {summaryData.total_products}
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL PRODUCTS
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        {summaryData.total_products}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#3B82F6",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
-              <div className="col-md-3 col-sm-6 mb-2">
+              <div className="col-md-2 col-6">
                 <div
-                  className="p-3 rounded"
+                  className="card"
                   style={{
-                    backgroundColor: "#fef3c7",
-                    border: "1px solid #fde68a",
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
                   }}
                 >
-                  <div className="text-muted" style={{ fontSize: 13 }}>
-                    Total Ad Spend
-                  </div>
-                  <div
-                    className="fw-bold"
-                    style={{ fontSize: 20, color: "#d97706" }}
-                  >
-                    ₹
-                    {Number(summaryData.total_ad_spend).toLocaleString(
-                      undefined,
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL AD SPEND
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        ₹{Number(summaryData.total_ad_spend).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#F59E0B",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
-              <div className="col-md-3 col-sm-6 mb-2">
+              <div className="col-md-2 col-6">
                 <div
-                  className="p-3 rounded"
+                  className="card"
                   style={{
-                    backgroundColor: "#dcfce7",
-                    border: "1px solid #bbf7d0",
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
                   }}
                 >
-                  <div className="text-muted" style={{ fontSize: 13 }}>
-                    Total Revenue
-                  </div>
-                  <div
-                    className="fw-bold"
-                    style={{ fontSize: 20, color: "#16a34a" }}
-                  >
-                    ₹
-                    {Number(summaryData.total_revenue).toLocaleString(
-                      undefined,
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL REVENUE
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        ₹{Number(summaryData.total_revenue).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#10B981",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
-              <div className="col-md-3 col-sm-6 mb-2">
+              <div className="col-md-2 col-6">
                 <div
-                  className="p-3 rounded"
+                  className="card"
                   style={{
-                    backgroundColor: "#fce7f3",
-                    border: "1px solid #fbcfe8",
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
                   }}
                 >
-                  <div className="text-muted" style={{ fontSize: 13 }}>
-                    Total Quantity Sold
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL QUANTITY
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        {summaryData.total_quantity}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#8B5CF6",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
                   </div>
-                  <div
-                    className="fw-bold"
-                    style={{ fontSize: 20, color: "#be185d" }}
-                  >
-                    {summaryData.total_quantity}
+                </div>
+              </div>
+              <div className="col-md-2 col-6">
+                <div
+                  className="card"
+                  style={{
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL COGS
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        ₹{Number(summaryData.total_cogs || 0).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#06B6D4",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="card-body pb-2 pt-3 px-3">
+          {/* Search and Filters */}
           <div
             className="d-flex flex-column flex-xl-row align-items-start align-items-xl-center justify-content-between mb-3"
-            style={{ gap: 24 }}
+            style={{ gap: 24, marginTop: "20px" }}
           >
             <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center" style={{ gap: 12 }}>
               <label className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2">Search by SKU</label>
@@ -485,73 +839,6 @@ const ProductSpendSummaryLayer = () => {
                 )}
               </div>
             </div>
-            <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center" style={{ gap: 12 }}>
-              <label
-                htmlFor="date-range-picker"
-                className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2"
-              >
-                Select Date & Hour Range:
-              </label>
-              <div className="d-flex align-items-center" style={{ gap: 12 }}>
-                <DateRangePicker
-                  id="date-range-picker"
-                  value={dateRange}
-                  onChange={setDateRange}
-                  format="yyyy-MM-dd HH:mm"
-                  showMeridian={false}
-                  ranges={[]}
-                  defaultCalendarValue={getDefaultDateRange()}
-                  disabledDate={(date) => {
-                    const now = new Date();
-                    now.setMinutes(0, 0, 0);
-                    const d = new Date(date);
-                    d.setMinutes(0, 0, 0);
-                    return d > now;
-                  }}
-                  placeholder="Select date and hour range"
-                  style={{
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                    fontSize: 16,
-                    width: "100%",
-                    maxWidth: 320,
-                  }}
-                  appearance="subtle"
-                  cleanable
-                  menuStyle={{
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-                    borderRadius: 8,
-                    padding: 8,
-                    zIndex: 2000,
-                  }}
-                  placement="bottomEnd"
-                  oneTap={false}
-                />
-                <button
-                  className="btn btn-success btn-icon"
-                  onClick={handleDownload}
-                  disabled={
-                    loading || !sortedProducts || sortedProducts.length === 0
-                  }
-                  title="Download Excel Report"
-                  style={{
-                    width: 40,
-                    height: 40,
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 8,
-                  }}
-                >
-                  <Icon
-                    icon="vscode-icons:file-type-excel"
-                    width="24"
-                    height="24"
-                  />
-                </button>
-              </div>
-            </div>
           </div>
           <div
             ref={tableContainerRef}
@@ -562,6 +849,7 @@ const ProductSpendSummaryLayer = () => {
               overflowX: "auto",
               scrollBehavior: "smooth",
               overscrollBehavior: "auto",
+              position: "relative",
             }}
             onScroll={(e) => {
               const target = e.currentTarget;
@@ -599,19 +887,28 @@ const ProductSpendSummaryLayer = () => {
               }
             }}
           >
-            <div className="table-responsive">
-              <table className="table table-striped table-bordered align-middle">
+            <div className="table-responsive" style={{ position: "relative" }}>
+              <table className="table table-striped table-bordered align-middle" style={{ marginBottom: 0 }}>
                 <thead
                   className="table-light"
                   style={{
                     position: "sticky",
                     top: 0,
-                    zIndex: 10,
+                    zIndex: 1000,
+                    backgroundColor: "#f8f9fa",
                   }}
                 >
-                  <tr>
+                  <tr style={{ backgroundColor: "#f8f9fa" }}>
                     <th
-                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 120, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("sku")}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -630,7 +927,15 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ minWidth: 220, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 220, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("product_title")}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -649,7 +954,15 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 120, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("spend")}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -668,7 +981,15 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 120, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("revenue")}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -687,7 +1008,15 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ minWidth: 100, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 100, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("quantity")}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -706,7 +1035,15 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ minWidth: 120, cursor: "pointer", userSelect: "none" }}
+                      style={{ 
+                        minWidth: 120, 
+                        cursor: "pointer", 
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
                       onClick={() => handleSort("cogs")}
                     >
                       <div className="d-flex align-items-center gap-2">
