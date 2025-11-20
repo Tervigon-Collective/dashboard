@@ -19,6 +19,33 @@ const Html5QrScanner = dynamic(() => import("@/components/Html5QrScanner"), {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Extract numeric ID from Shopify GID format
+ * Handles both GID format (gid://shopify/Order/123) and plain numeric IDs
+ * @param {string} gidOrId - GID string or numeric ID
+ * @returns {string} - Numeric ID as string
+ */
+const extractNumericId = (gidOrId) => {
+  if (!gidOrId) return gidOrId;
+
+  const str = String(gidOrId);
+
+  // If it's already a numeric string, return as-is
+  if (/^\d+$/.test(str)) {
+    return str;
+  }
+
+  // If it's a GID format, extract the numeric part
+  // Format: gid://shopify/Order/123456 or gid://shopify/LineItem/123456
+  const gidMatch = str.match(/gid:\/\/shopify\/(?:Order|LineItem)\/(\d+)/i);
+  if (gidMatch && gidMatch[1]) {
+    return gidMatch[1];
+  }
+
+  // If no match, return original (might be a different format)
+  return str;
+};
+
 const parseQrToken = (rawValue) => {
   if (!rawValue) {
     throw new Error("QR payload is empty");
@@ -476,9 +503,13 @@ const OrderManagementPage = () => {
           orderLineItemId: currentOrderLineItemId,
         };
 
+        // Extract numeric IDs from GID format if needed
+        const orderId = extractNumericId(scannerState.lineItem.order_id);
+        const orderLineItemId = extractNumericId(scannerState.lineItem.item_id);
+
         const response = await inventoryManagementApi.dispatchScan(
-          scannerState.lineItem.order_id,
-          scannerState.lineItem.item_id,
+          orderId,
+          orderLineItemId,
           {
             qrToken: token,
             source: "order_management",
