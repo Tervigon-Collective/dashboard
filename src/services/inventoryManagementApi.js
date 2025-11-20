@@ -243,8 +243,41 @@ class InventoryManagementApiService {
       }
 
       if (!response.ok) {
-        const text = await response.text();
-        const error = new Error(text || `HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type");
+        let errorMessage = `HTTP ${response.status}`;
+
+        // Try to parse JSON error response
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (parseError) {
+            // If JSON parsing fails, use default message
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } else {
+          try {
+            const text = await response.text();
+            errorMessage = text || errorMessage;
+          } catch (textError) {
+            // If text parsing fails, use default message
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        }
+
+        // For 400 errors (validation errors), return a result object instead of throwing
+        // This prevents browser console error logging for expected user input validation errors
+        if (response.status === 400) {
+          const validationError = new Error(errorMessage);
+          validationError.status = 400;
+          validationError.isValidationError = true;
+          // Return a rejected promise, but mark it so it can be handled gracefully
+          // The caller's catch block will still catch it, but browser won't log it as an unhandled error
+          return Promise.reject(validationError);
+        }
+
+        // For other errors, throw normally
+        const error = new Error(errorMessage);
         error.status = response.status;
         throw error;
       }

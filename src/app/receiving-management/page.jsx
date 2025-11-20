@@ -369,7 +369,7 @@ const ReceivingManagementLayer = () => {
                           padding: "12px",
                         }}
                       >
-                        Sr No
+                        PR No
                       </th>
                       <th
                         style={{
@@ -487,7 +487,13 @@ const ReceivingManagementLayer = () => {
                       <>
                         {displayedData.map((request, index) => (
                           <tr key={request.request_id}>
-                            <td className="small">{index + 1}</td>
+                            <td className="small">
+                              {request.pr_number ||
+                                `PR-${String(request.request_id).padStart(
+                                  3,
+                                  "0"
+                                )}`}
+                            </td>
                             <td className="small">
                               {request.company_name ||
                                 request.vendor_name ||
@@ -3417,7 +3423,7 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    Sr No
+                    PR No
                   </th>
                   <th
                     style={{
@@ -3467,16 +3473,6 @@ const PurchaseRequestTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    HSN Code
-                  </th>
-                  <th
-                    style={{
-                      fontWeight: "600",
-                      color: "#374151",
-                      padding: "clamp(8px, 2vw, 12px)",
-                      fontSize: "clamp(11px, 2.5vw, 14px)",
-                    }}
-                  >
                     Action
                   </th>
                 </tr>
@@ -3486,7 +3482,7 @@ const PurchaseRequestTab = ({
                   <>
                     {Array.from({ length: 5 }).map((_, rowIndex) => (
                       <tr key={`skeleton-${rowIndex}`}>
-                        {Array.from({ length: 7 }).map((_, colIndex) => (
+                        {Array.from({ length: 6 }).map((_, colIndex) => (
                           <td key={`skeleton-${rowIndex}-${colIndex}`}>
                             <div
                               className="skeleton"
@@ -3505,7 +3501,7 @@ const PurchaseRequestTab = ({
                   </>
                 ) : displayedData.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4">
+                    <td colSpan="6" className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <Icon
                           icon="lucide:file-text"
@@ -3557,7 +3553,11 @@ const PurchaseRequestTab = ({
                               fontSize: "clamp(11px, 2.5vw, 14px)",
                             }}
                           >
-                            {index + 1}
+                            {request.pr_number ||
+                              `PR-${String(request.request_id).padStart(
+                                3,
+                                "0"
+                              )}`}
                           </td>
                           <td
                             style={{
@@ -3603,15 +3603,6 @@ const PurchaseRequestTab = ({
                           >
                             {productNames}
                           </td>
-                          <td
-                            style={{
-                              padding: "clamp(8px, 2vw, 12px)",
-                              color: "#374151",
-                              fontSize: "clamp(11px, 2.5vw, 14px)",
-                            }}
-                          >
-                            {hsnCodes}
-                          </td>
                           <td style={{ padding: "12px" }}>
                             <div className="d-flex flex-wrap gap-1 gap-sm-2">
                               <button
@@ -3648,16 +3639,53 @@ const PurchaseRequestTab = ({
                                   justifyContent: "center",
                                   border: "1px solid #e5e7eb",
                                   borderRadius: "6px",
-                                  backgroundColor: "white",
+                                  backgroundColor:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? "white"
+                                      : "#f3f4f6",
+                                  cursor:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? "pointer"
+                                      : "not-allowed",
+                                  opacity:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? 1
+                                      : 0.5,
                                 }}
-                                title="Edit"
-                                onClick={() => handleEditRequest(request)}
+                                title={
+                                  request.status === "Pending" ||
+                                  request.status?.toLowerCase() === "pending"
+                                    ? "Edit"
+                                    : "Cannot edit after status change"
+                                }
+                                onClick={() => {
+                                  if (
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                  ) {
+                                    handleEditRequest(request);
+                                  }
+                                }}
+                                disabled={
+                                  request.status !== "Pending" &&
+                                  request.status?.toLowerCase() !== "pending"
+                                }
                               >
                                 <Icon
                                   icon="lucide:edit"
                                   width="16"
                                   height="16"
-                                  style={{ color: "#3b82f6" }}
+                                  style={{
+                                    color:
+                                      request.status === "Pending" ||
+                                      request.status?.toLowerCase() ===
+                                        "pending"
+                                        ? "#3b82f6"
+                                        : "#9ca3af",
+                                  }}
                                 />
                               </button>
                               <button
@@ -3671,16 +3699,53 @@ const PurchaseRequestTab = ({
                                   justifyContent: "center",
                                   border: "1px solid #e5e7eb",
                                   borderRadius: "6px",
-                                  backgroundColor: "white",
+                                  backgroundColor:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? "white"
+                                      : "#f3f4f6",
+                                  cursor:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? "pointer"
+                                      : "not-allowed",
+                                  opacity:
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                      ? 1
+                                      : 0.5,
                                 }}
-                                title="Delete"
-                                onClick={() => handleDeleteRequest(request)}
+                                title={
+                                  request.status === "Pending" ||
+                                  request.status?.toLowerCase() === "pending"
+                                    ? "Delete"
+                                    : "Cannot delete after status change"
+                                }
+                                onClick={() => {
+                                  if (
+                                    request.status === "Pending" ||
+                                    request.status?.toLowerCase() === "pending"
+                                  ) {
+                                    handleDeleteRequest(request);
+                                  }
+                                }}
+                                disabled={
+                                  request.status !== "Pending" &&
+                                  request.status?.toLowerCase() !== "pending"
+                                }
                               >
                                 <Icon
                                   icon="lucide:trash-2"
                                   width="16"
                                   height="16"
-                                  style={{ color: "#ef4444" }}
+                                  style={{
+                                    color:
+                                      request.status === "Pending" ||
+                                      request.status?.toLowerCase() ===
+                                        "pending"
+                                        ? "#ef4444"
+                                        : "#9ca3af",
+                                  }}
                                 />
                               </button>
                               {/* Only show Settings icon if status is "Pending" */}
@@ -3720,7 +3785,7 @@ const PurchaseRequestTab = ({
                       <>
                         {Array.from({ length: 5 }).map((_, rowIndex) => (
                           <tr key={`skeleton-more-${rowIndex}`}>
-                            {Array.from({ length: 7 }).map((_, colIndex) => (
+                            {Array.from({ length: 6 }).map((_, colIndex) => (
                               <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
                                 <div
                                   className="skeleton"
@@ -4853,7 +4918,7 @@ const ToBeDeliveredTab = ({
                       fontSize: "clamp(11px, 2.5vw, 14px)",
                     }}
                   >
-                    Sr No
+                    PR No
                   </th>
                   <th
                     style={{
@@ -4953,7 +5018,8 @@ const ToBeDeliveredTab = ({
                           fontSize: "clamp(11px, 2.5vw, 14px)",
                         }}
                       >
-                        {index + 1}
+                        {request.pr_number ||
+                          `PR-${String(request.request_id).padStart(3, "0")}`}
                       </td>
                       <td
                         style={{
@@ -5398,7 +5464,7 @@ const QualityCheckTab = ({
                         padding: "12px",
                       }}
                     >
-                      Sr No
+                      PR No
                     </th>
                     <th
                       style={{
@@ -5506,7 +5572,11 @@ const QualityCheckTab = ({
                         return (
                           <tr key={request.request_id}>
                             <td style={{ padding: "12px", color: "#374151" }}>
-                              {index + 1}
+                              {request.pr_number ||
+                                `PR-${String(request.request_id).padStart(
+                                  3,
+                                  "0"
+                                )}`}
                             </td>
                             <td style={{ padding: "12px", color: "#374151" }}>
                               {request.company_name ||

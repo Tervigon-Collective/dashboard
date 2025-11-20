@@ -121,6 +121,26 @@ const UnitCountOne = ({ dateRange }) => {
     };
   }, [dateRange?.startDate, dateRange?.endDate]);
 
+  // Combine "manual" payment method with "Razorpay" for display
+  const combinedPaymentMethodCounts = useMemo(() => {
+    if (!paymentMethodCounts || Object.keys(paymentMethodCounts).length === 0) {
+      return {};
+    }
+
+    const combined = { ...paymentMethodCounts };
+    const manualCount = combined["manual"] || 0;
+    const razorpayCount = combined["Razorpay"] || 0;
+
+    // Combine manual into Razorpay
+    if (manualCount > 0 || razorpayCount > 0) {
+      combined["Razorpay"] = razorpayCount + manualCount;
+      // Remove manual from the object
+      delete combined["manual"];
+    }
+
+    return combined;
+  }, [paymentMethodCounts]);
+
   useEffect(() => {
     setLoading(true);
     setError({});
@@ -1485,8 +1505,8 @@ const UnitCountOne = ({ dateRange }) => {
                   style={{ letterSpacing: "1px" }}
                 >
                   {getCardContent(
-                    Object.keys(paymentMethodCounts).length > 0
-                      ? Object.values(paymentMethodCounts).reduce(
+                    Object.keys(combinedPaymentMethodCounts).length > 0
+                      ? Object.values(combinedPaymentMethodCounts).reduce(
                           (a, b) => a + b,
                           0
                         )
@@ -1525,11 +1545,11 @@ const UnitCountOne = ({ dateRange }) => {
                 <span className="text-muted">Loading...</span>
               ) : error.paymentMethodCount ? (
                 <span className="text-danger small">Failed to load</span>
-              ) : Object.keys(paymentMethodCounts).length === 0 ? (
+              ) : Object.keys(combinedPaymentMethodCounts).length === 0 ? (
                 <span className="text-muted">—</span>
               ) : (
                 sortBreakdown(
-                  Object.entries(paymentMethodCounts).map(
+                  Object.entries(combinedPaymentMethodCounts).map(
                     ([method, count]) => ({
                       label: method,
                       value: count,
