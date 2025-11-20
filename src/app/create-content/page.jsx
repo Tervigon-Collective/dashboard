@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
 import ReviewPromptsModal from "@/components/ReviewPromptsModal";
@@ -637,9 +636,6 @@ export default function CreateContentPage() {
 
   return (
     <SidebarPermissionGuard requiredSidebar="createContent">
-      {/* Breadcrumb */}
-      <Breadcrumb title="Create Content" />
-
       <div className="container-fluid">
         {/* Tabs */}
         <div className="mb-3">

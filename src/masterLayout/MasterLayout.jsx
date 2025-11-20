@@ -1579,10 +1579,6 @@ const MasterLayout = ({ children }) => {
                 >
                   <Icon icon="heroicons:bars-3-solid" className="icon" />
                 </button>
-                <form className="navbar-search">
-                  <input type="text" name="search" placeholder="Search" />
-                  <Icon icon="ion:search-outline" className="icon" />
-                </form>
               </div>
             </div>
             <div className="col-auto">

@@ -1,4 +1,3 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import ProductSpendSummaryLayer from "@/components/ProductSpendSummaryLayer";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
@@ -14,7 +13,6 @@ const Page = () => {
     <>
       <SidebarPermissionGuard requiredSidebar="productSpendSummary">
         <MasterLayout>
-          <Breadcrumb title="Components / Product Spend Summary" />
           <ProductSpendSummaryLayer />
         </MasterLayout>
       </SidebarPermissionGuard>

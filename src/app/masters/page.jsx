@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import VendorMasterLayer from "../../components/VendorMasterLayer";
@@ -99,9 +98,6 @@ const MastersPage = () => {
       <SidebarPermissionGuard requiredSidebar="masters">
         {/* MasterLayout */}
         <MasterLayout>
-          {/* Breadcrumb */}
-          <Breadcrumb title="Components / Manage Masters" />
-
           {/* MastersLayer */}
           <MastersLayer />
         </MasterLayout>

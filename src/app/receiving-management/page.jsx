@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import Breadcrumb from "../../components/Breadcrumb";
 import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import purchaseRequestApi from "../../services/purchaseRequestApi";
@@ -4662,9 +4661,6 @@ const ReceivingManagementPage = () => {
       <SidebarPermissionGuard requiredSidebar="receivingManagement">
         {/* MasterLayout */}
         <MasterLayout>
-          {/* Breadcrumb */}
-          <Breadcrumb title="Components / Receiving Management" />
-
           {/* ReceivingManagementLayer */}
           <ReceivingManagementLayer />
         </MasterLayout>

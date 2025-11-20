@@ -1,4 +1,3 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import ProcurementTableDataLayer from "@/components/ProcurementTableDataLayer";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 
@@ -11,9 +10,6 @@ export const metadata = {
 const Page = () => {
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
-      {/* Breadcrumb */}
-      <Breadcrumb title="Components / Procurement" />
-
       {/* ProcurementTableDataLayer */}
       <ProcurementTableDataLayer />
     </SidebarPermissionGuard>

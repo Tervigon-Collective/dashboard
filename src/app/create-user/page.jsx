@@ -1,5 +1,4 @@
 "use client";
-import Breadcrumb from "@/components/Breadcrumb";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import CreateUserLayer from "@/components/CreateUserLayer";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
@@ -10,8 +9,6 @@ const CreateUserPage = () => {
     <>
       <SidebarPermissionGuard requiredSidebar="userManagement">
         <MasterLayout>
-          <Breadcrumb title="Create New User" />
-
           <div className="row">
             <div className="col-12">
               <CreateUserLayer />

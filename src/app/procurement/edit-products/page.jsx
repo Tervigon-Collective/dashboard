@@ -1,5 +1,4 @@
 'use client';
-import Breadcrumb from "@/components/Breadcrumb";
 import ProductForm from "@/components/ProductForm";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import Link from "next/link";
@@ -14,7 +13,6 @@ function EditProductContent() {
   if (!id) {
     return (
       <SidebarPermissionGuard requiredSidebar="procurement">
-        <Breadcrumb title="Procurement / Edit Product" />
         <div className="alert alert-warning p-2 d-flex align-items-center justify-content-between" role="alert">
           <div className="d-flex align-items-center">
             <i className="icon-alert-triangle me-2"></i>
@@ -33,9 +31,8 @@ function EditProductContent() {
 
   return (
     <SidebarPermissionGuard requiredSidebar="procurement">
-      {/* Header with Breadcrumb and Back Button in one line */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Breadcrumb title="Procurement / Edit Product" />
+      {/* Header with Back Button */}
+      <div className="d-flex justify-content-end align-items-center mb-3">
         <Link href="/procurement" className="btn btn-outline-secondary btn-sm">
           <i className="icon-arrow-left me-2"></i>
           Back to Procurement

@@ -1906,7 +1906,7 @@ const EntityReportLayer = () => {
               startDate: getCurrentDate(),
               endDate: getCurrentDate(),
             },
-        activeTab: savedTab || "google",
+        activeTab: savedTab || "meta",
       };
     }
     return {
@@ -1915,7 +1915,7 @@ const EntityReportLayer = () => {
         startDate: getCurrentDate(),
         endDate: getCurrentDate(),
       },
-      activeTab: "google",
+      activeTab: "meta",
     };
   };
 
@@ -6647,6 +6647,41 @@ const EntityReportLayer = () => {
             >
               <li className="nav-item" role="presentation">
                 <button
+                  className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
+                  onClick={() => handleTabChange("meta")}
+                  style={{
+                    backgroundColor:
+                      activeTab === "meta" ? "#f8fafc" : "transparent",
+                    border: "none",
+                    borderBottom:
+                      activeTab === "meta"
+                        ? "2px solid #6b7280"
+                        : "2px solid transparent",
+                    color: activeTab === "meta" ? "#374151" : "#6b7280",
+                    fontWeight: activeTab === "meta" ? "500" : "400",
+                    borderRadius: "0",
+                    padding: "12px 16px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "meta") {
+                      e.target.style.backgroundColor = "#f9fafb";
+                      e.target.style.color = "#4b5563";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "meta") {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#6b7280";
+                    }
+                  }}
+                >
+                  <Icon icon="logos:meta-icon" className="me-2" />
+                  Meta Ads
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
                   className={`nav-link ${
                     activeTab === "google" ? "active" : ""
                   }`}
@@ -6680,41 +6715,6 @@ const EntityReportLayer = () => {
                 >
                   <Icon icon="logos:google-icon" className="me-2" />
                   Google Ads
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "meta" ? "active" : ""}`}
-                  onClick={() => handleTabChange("meta")}
-                  style={{
-                    backgroundColor:
-                      activeTab === "meta" ? "#f8fafc" : "transparent",
-                    border: "none",
-                    borderBottom:
-                      activeTab === "meta"
-                        ? "2px solid #6b7280"
-                        : "2px solid transparent",
-                    color: activeTab === "meta" ? "#374151" : "#6b7280",
-                    fontWeight: activeTab === "meta" ? "500" : "400",
-                    borderRadius: "0",
-                    padding: "12px 16px",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== "meta") {
-                      e.target.style.backgroundColor = "#f9fafb";
-                      e.target.style.color = "#4b5563";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== "meta") {
-                      e.target.style.backgroundColor = "transparent";
-                      e.target.style.color = "#6b7280";
-                    }
-                  }}
-                >
-                  <Icon icon="logos:meta-icon" className="me-2" />
-                  Meta Ads
                 </button>
               </li>
               <li className="nav-item" role="presentation">
@@ -6808,9 +6808,9 @@ const EntityReportLayer = () => {
             renderSummaryCards()}
 
           {/* Search and Filter Controls */}
-          {((data[activeTab] && data[activeTab].length > 0) ||
-            (activeTab === "meta" && data.metaHierarchy)) && (
-            <div className="row mb-3">
+          <div className="row mb-3">
+            {((data[activeTab] && data[activeTab].length > 0) ||
+              (activeTab === "meta" && data.metaHierarchy)) && (
               <div className="col-md-6">
                 <div className="input-group">
                   <span className="input-group-text">
@@ -6825,7 +6825,31 @@ const EntityReportLayer = () => {
                   />
                 </div>
               </div>
-              <div className="col-md-6 text-end">
+            )}
+            <div className={`${((data[activeTab] && data[activeTab].length > 0) || (activeTab === "meta" && data.metaHierarchy)) ? "col-md-6" : "col-md-12"} text-end d-flex align-items-center justify-content-end gap-2`}>
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => fetchData(activeTab)}
+                disabled={loading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                }}
+                title="Refresh data"
+              >
+                <Icon 
+                  icon="solar:refresh-bold" 
+                  style={{
+                    fontSize: "16px",
+                    animation: loading ? "spin 1s linear infinite" : "none",
+                  }}
+                />
+                Refresh
+              </button>
+              {((data[activeTab] && data[activeTab].length > 0) ||
+                (activeTab === "meta" && data.metaHierarchy)) && (
                 <small className="text-muted">
                   {
                     getFilteredAndSortedData(
@@ -6838,9 +6862,9 @@ const EntityReportLayer = () => {
                   }{" "}
                   results
                 </small>
-              </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Data Tables */}
           <div className="tab-content">
