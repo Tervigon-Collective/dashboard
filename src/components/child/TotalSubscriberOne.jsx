@@ -13,15 +13,24 @@ const TotalSubscriberOne = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalNetProfit, setTotalNetProfit] = useState(0);
+  const [period, setPeriod] = useState("week"); // 'week' or 'month'
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
 
-    // Calculate date range for last 7 days
+    // Calculate date range based on period
     const endDate = new Date();
     endDate.setDate(endDate.getDate() - 1); // Yesterday to avoid future date issues
     const startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - 6); // 6 days before yesterday (total 7 days)
+
+    if (period === "week") {
+      // Last 7 days (yesterday + 6 days before)
+      startDate.setDate(endDate.getDate() - 6);
+    } else if (period === "month") {
+      // Last 30 days (API limit is 30 days)
+      startDate.setDate(endDate.getDate() - 29);
+    }
 
     // Format dates as YYYY-MM-DD
     const formatDate = (date) => {
@@ -54,15 +63,22 @@ const TotalSubscriberOne = () => {
         setError("Failed to load data");
         setLoading(false);
       });
-  }, []);
+  }, [period]);
 
   // Prepare chart data
   const chartLabels = data.map((d) => {
     const date = new Date(d.date);
-    // Remove any trailing .0 from day string
-    return date
-      .toLocaleDateString("en-US", { weekday: "short" })
-      .replace(/\.0$/, "");
+    if (period === "month") {
+      // For monthly view, show date as MM-DD
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${mm}-${dd}`;
+    } else {
+      // For weekly view, show weekday abbreviation
+      return date
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .replace(/\.0$/, "");
+    }
   });
   const chartSeries = [
     {
@@ -104,12 +120,13 @@ const TotalSubscriberOne = () => {
       categories: chartLabels,
       labels: {
         style: { fontWeight: 600, fontSize: "12px" },
-        rotate: -30,
+        rotate: period === "month" ? -45 : -30,
         minHeight: 20,
         maxHeight: 40,
         trim: true,
         hideOverlappingLabels: true,
       },
+      tickAmount: period === "month" ? 10 : undefined,
     },
     yaxis: {
       labels: {
@@ -127,12 +144,23 @@ const TotalSubscriberOne = () => {
   };
 
   return (
-    <div className="col-xxl-3 col-xl-6">
+    <div className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-sm-12">
       <div className="card h-100 radius-8 border">
         <div className="card-body p-24">
-          <h6 className="mb-12 fw-semibold text-lg mb-16">
-            Net Profit (Last 7 Days)
-          </h6>
+          <div className="d-flex flex-wrap align-items-center justify-content-between mb-16">
+            <h6 className="mb-0 fw-semibold text-lg">
+              Net Profit{" "}
+              {period === "week" ? "(Last 7 Days)" : "(Last 30 Days)"}
+            </h6>
+            <select
+              className="form-select bg-base form-select-sm w-auto"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+            </select>
+          </div>
           <div className="d-flex align-items-center gap-2 mb-20">
             {loading ? (
               <h6 className="fw-semibold mb-0">Loading...</h6>

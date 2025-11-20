@@ -18,7 +18,7 @@ const IndiaSalesHeatMap = () => {
   const getDateRange = React.useCallback((selectedPeriod) => {
     const now = new Date();
     let startDate, endDate;
-    
+
     if (selectedPeriod === "today") {
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -47,51 +47,57 @@ const IndiaSalesHeatMap = () => {
       startDate = `${yyyy}-01-01`;
       endDate = `${yyyy}-12-31`;
     }
-    
+
     return { startDate, endDate };
   }, []);
 
-  const fetchSalesData = React.useCallback((selectedPeriod) => {
-    const { startDate, endDate } = getDateRange(selectedPeriod);
-    const cacheKey = `${selectedPeriod}-${startDate}-${endDate}`;
-    
-    // Check cache first
-    const cached = dataCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      setSalesData(cached.data);
-      setTotalSales(cached.total);
-      setLoading(false);
-      return;
-    }
+  const fetchSalesData = React.useCallback(
+    (selectedPeriod) => {
+      const { startDate, endDate } = getDateRange(selectedPeriod);
+      const cacheKey = `${selectedPeriod}-${startDate}-${endDate}`;
 
-    setLoading(true);
-    setError(null);
+      // Check cache first
+      const cached = dataCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setSalesData(cached.data);
+        setTotalSales(cached.total);
+        setLoading(false);
+        return;
+      }
 
-    apiClient
-      .get(
-        `/api/order_sales_by_province?start_date=${startDate}&end_date=${endDate}`
-      )
-      .then((res) => {
-        const rows = Array.isArray(res.data) ? res.data : [];
-        const total = rows.reduce((sum, item) => sum + (item.total_sales || 0), 0);
-        
-        // Cache the result
-        dataCache.set(cacheKey, {
-          data: rows,
-          total,
-          timestamp: Date.now(),
+      setLoading(true);
+      setError(null);
+
+      apiClient
+        .get(
+          `/api/order_sales_by_province?start_date=${startDate}&end_date=${endDate}`
+        )
+        .then((res) => {
+          const rows = Array.isArray(res.data) ? res.data : [];
+          const total = rows.reduce(
+            (sum, item) => sum + (item.total_sales || 0),
+            0
+          );
+
+          // Cache the result
+          dataCache.set(cacheKey, {
+            data: rows,
+            total,
+            timestamp: Date.now(),
+          });
+
+          setSalesData(rows);
+          setTotalSales(total);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Error fetching sales data:", err);
+          setError("Failed to load sales data");
+          setLoading(false);
         });
-        
-        setSalesData(rows);
-        setTotalSales(total);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching sales data:", err);
-        setError("Failed to load sales data");
-        setLoading(false);
-      });
-  }, [getDateRange]);
+    },
+    [getDateRange]
+  );
 
   React.useEffect(() => {
     if (period) {
@@ -107,11 +113,11 @@ const IndiaSalesHeatMap = () => {
   ];
 
   return (
-    <div className="col-xxl-8 col-lg-12">
+    <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12">
       <div className="card radius-8 border-0 h-100 shadow-sm">
-        <div className="card-body p-0">
+        <div className="card-body p-0" style={{ overflow: "hidden" }}>
           {/* Header Section - Compact */}
-          <div 
+          <div
             className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between"
             style={{
               padding: "16px 16px 12px",
@@ -119,7 +125,7 @@ const IndiaSalesHeatMap = () => {
             }}
           >
             <div className="mb-2 mb-sm-0">
-              <h6 
+              <h6
                 className="mb-0 fw-semibold"
                 style={{
                   fontSize: "clamp(14px, 2vw, 16px)",
@@ -131,7 +137,7 @@ const IndiaSalesHeatMap = () => {
                 Sales by Region
               </h6>
               {!loading && !error && (
-                <p 
+                <p
                   className="mb-0 mt-1"
                   style={{
                     fontSize: "clamp(11px, 1.8vw, 13px)",
@@ -140,12 +146,15 @@ const IndiaSalesHeatMap = () => {
                     lineHeight: "1.4",
                   }}
                 >
-                  Total Sales: <span style={{ color: "#487fff", fontWeight: "600" }}>₹{totalSales.toLocaleString()}</span>
+                  Total Sales:{" "}
+                  <span style={{ color: "#487fff", fontWeight: "600" }}>
+                    ₹{totalSales.toLocaleString()}
+                  </span>
                 </p>
               )}
             </div>
             {/* Period Selection - Minimal Professional */}
-            <div 
+            <div
               className="d-flex align-items-center"
               style={{
                 gap: "0",
@@ -168,7 +177,8 @@ const IndiaSalesHeatMap = () => {
                       lineHeight: "1.5",
                       fontFamily: "inherit",
                       borderRadius: "4px",
-                      background: period === p.value ? "#F3F4F6" : "transparent",
+                      background:
+                        period === p.value ? "#F3F4F6" : "transparent",
                     }}
                     onMouseEnter={(e) => {
                       if (period !== p.value) {
@@ -202,27 +212,33 @@ const IndiaSalesHeatMap = () => {
               ))}
             </div>
           </div>
-          
+
           {/* Map Container - Responsive */}
-          <div 
-            style={{ 
-              padding: "12px 16px 16px",
+          <div
+            style={{
+              padding:
+                typeof window !== "undefined" && window.innerWidth < 576
+                  ? "4px 2px 4px 2px"
+                  : typeof window !== "undefined" && window.innerWidth < 768
+                  ? "6px 4px 6px 4px"
+                  : "12px 16px 16px",
               minHeight: "400px",
               position: "relative",
+              overflow: "hidden",
             }}
             className="w-100"
           >
             {loading ? (
-              <div 
-                className="d-flex justify-content-center align-items-center" 
-                style={{ 
+              <div
+                className="d-flex justify-content-center align-items-center"
+                style={{
                   minHeight: "400px",
                   width: "100%",
                 }}
               >
                 <div className="text-center">
-                  <div 
-                    className="spinner-border text-primary" 
+                  <div
+                    className="spinner-border text-primary"
                     role="status"
                     style={{
                       width: "2rem",
@@ -232,7 +248,7 @@ const IndiaSalesHeatMap = () => {
                   >
                     <span className="visually-hidden">Loading...</span>
                   </div>
-                  <p 
+                  <p
                     className="mt-3 mb-0"
                     style={{
                       fontSize: "13px",
@@ -244,15 +260,15 @@ const IndiaSalesHeatMap = () => {
                 </div>
               </div>
             ) : error ? (
-              <div 
-                className="d-flex justify-content-center align-items-center" 
-                style={{ 
+              <div
+                className="d-flex justify-content-center align-items-center"
+                style={{
                   minHeight: "400px",
                   width: "100%",
                 }}
               >
                 <div className="text-center">
-                  <p 
+                  <p
                     className="mb-3"
                     style={{
                       fontSize: "14px",
@@ -287,14 +303,14 @@ const IndiaSalesHeatMap = () => {
                 </div>
               </div>
             ) : salesData.length === 0 ? (
-              <div 
-                className="d-flex justify-content-center align-items-center" 
-                style={{ 
+              <div
+                className="d-flex justify-content-center align-items-center"
+                style={{
                   minHeight: "400px",
                   width: "100%",
                 }}
               >
-                <p 
+                <p
                   className="mb-0"
                   style={{
                     fontSize: "13px",
@@ -315,4 +331,3 @@ const IndiaSalesHeatMap = () => {
 };
 
 export default IndiaSalesHeatMap;
-
