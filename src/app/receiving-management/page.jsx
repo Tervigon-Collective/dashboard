@@ -221,7 +221,8 @@ const ReceivingManagementLayer = () => {
   const [purchaseRequestLoadingMore, setPurchaseRequestLoadingMore] =
     useState(false);
   const purchaseRequestContainerRef = useRef(null);
-  const purchaseRequestItemsPerPage = 20;
+  const ITEMS_PER_LOAD = 50; // Items to load per scroll
+  const INITIAL_ITEMS_TO_SHOW = 50; // Initial items to display
 
   const [formData, setFormData] = useState({
     selectedVendor: null,
@@ -616,7 +617,6 @@ const ReceivingManagementLayer = () => {
   const [toBeDeliveredLoadingMore, setToBeDeliveredLoadingMore] =
     useState(false);
   const toBeDeliveredContainerRef = useRef(null);
-  const toBeDeliveredItemsPerPage = 20;
 
   // Quality Check tab state
   const [qualityCheckRequests, setQualityCheckRequests] = useState([]);
@@ -631,7 +631,6 @@ const ReceivingManagementLayer = () => {
   );
   const [qualityCheckLoadingMore, setQualityCheckLoadingMore] = useState(false);
   const qualityCheckContainerRef = useRef(null);
-  const qualityCheckItemsPerPage = 20;
 
   // Receipt Details tab state
   const [receiptRequests, setReceiptRequests] = useState([]);
@@ -644,7 +643,6 @@ const ReceivingManagementLayer = () => {
   const [receiptDisplayedItems, setReceiptDisplayedItems] = useState([]);
   const [receiptLoadingMore, setReceiptLoadingMore] = useState(false);
   const receiptContainerRef = useRef(null);
-  const receiptItemsPerPage = 20;
 
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
@@ -666,16 +664,16 @@ const ReceivingManagementLayer = () => {
   const loadPurchaseRequests = async (page = 1, append = false) => {
     try {
       setIsLoading(true);
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
+      // Use large limit to fetch all data at once for infinite scrolling
+      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
         if (append) {
           setRequests((prev) => [...prev, ...result.data]);
         } else {
           setRequests(result.data);
-          setPurchaseRequestDisplayedItems(
-            result.data.slice(0, purchaseRequestItemsPerPage)
-          );
+          // Show initial batch, infinite scroll will handle progressive loading
+          setPurchaseRequestDisplayedItems(result.data.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
@@ -692,7 +690,8 @@ const ReceivingManagementLayer = () => {
   const loadToBeDeliveredRequests = async (page = 1, append = false) => {
     try {
       setToBeDeliveredLoading(true);
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
+      // Use large limit to fetch all data at once for infinite scrolling
+      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
         // Filter only requests with status "to_be_delivered"
@@ -703,9 +702,8 @@ const ReceivingManagementLayer = () => {
           setToBeDeliveredRequests((prev) => [...prev, ...filteredRequests]);
         } else {
           setToBeDeliveredRequests(filteredRequests);
-          setToBeDeliveredDisplayedItems(
-            filteredRequests.slice(0, toBeDeliveredItemsPerPage)
-          );
+          // Show initial batch, infinite scroll will handle progressive loading
+          setToBeDeliveredDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setToBeDeliveredCurrentPage(result.pagination.page);
         setToBeDeliveredTotalPages(result.pagination.totalPages);
@@ -722,7 +720,8 @@ const ReceivingManagementLayer = () => {
   const loadQualityCheckRequests = async (page = 1, append = false) => {
     try {
       setQualityCheckLoading(true);
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
+      // Use large limit to fetch all data at once for infinite scrolling
+      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
         // Filter only requests with status "arrived"
@@ -733,9 +732,8 @@ const ReceivingManagementLayer = () => {
           setQualityCheckRequests((prev) => [...prev, ...filteredRequests]);
         } else {
           setQualityCheckRequests(filteredRequests);
-          setQualityCheckDisplayedItems(
-            filteredRequests.slice(0, qualityCheckItemsPerPage)
-          );
+          // Show initial batch, infinite scroll will handle progressive loading
+          setQualityCheckDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setQualityCheckCurrentPage(result.pagination.page);
         setQualityCheckTotalPages(result.pagination.totalPages);
@@ -752,7 +750,8 @@ const ReceivingManagementLayer = () => {
   const loadReceiptDetailsRequests = async (page = 1, append = false) => {
     try {
       setReceiptLoading(true);
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 20);
+      // Use large limit to fetch all data at once for infinite scrolling
+      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
         // Filter only requests with status "fulfilled"
@@ -838,7 +837,8 @@ const ReceivingManagementLayer = () => {
           setReceiptRequests((prev) => [...prev, ...enriched]);
         } else {
           setReceiptRequests(enriched);
-          setReceiptDisplayedItems(enriched.slice(0, receiptItemsPerPage));
+          // Show initial batch, infinite scroll will handle progressive loading
+          setReceiptDisplayedItems(enriched.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setReceiptCurrentPage(result.pagination.page);
         setReceiptTotalPages(result.pagination.totalPages);
@@ -906,19 +906,17 @@ const ReceivingManagementLayer = () => {
   // Reset displayed items when search term or active tab changes
   useEffect(() => {
     if (activeTab === "purchase-request") {
-      setPurchaseRequestDisplayedItems(
-        requests.slice(0, purchaseRequestItemsPerPage)
-      );
+      // Show initial batch, infinite scroll will handle progressive loading
+      setPurchaseRequestDisplayedItems(requests.slice(0, INITIAL_ITEMS_TO_SHOW));
     } else if (activeTab === "to-be-delivered") {
-      setToBeDeliveredDisplayedItems(
-        toBeDeliveredRequests.slice(0, toBeDeliveredItemsPerPage)
-      );
+      // Show initial batch, infinite scroll will handle progressive loading
+      setToBeDeliveredDisplayedItems(toBeDeliveredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
     } else if (activeTab === "quality-check") {
-      setQualityCheckDisplayedItems(
-        qualityCheckRequests.slice(0, qualityCheckItemsPerPage)
-      );
+      // Show initial batch, infinite scroll will handle progressive loading
+      setQualityCheckDisplayedItems(qualityCheckRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
     } else if (activeTab === "receipt-details") {
-      setReceiptDisplayedItems(receiptRequests.slice(0, receiptItemsPerPage));
+      // Show initial batch, infinite scroll will handle progressive loading
+      setReceiptDisplayedItems(receiptRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
     }
   }, [
     searchTerm,
@@ -947,9 +945,10 @@ const ReceivingManagementLayer = () => {
     setPurchaseRequestLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Load more items progressively
     const nextItems = requests.slice(
       purchaseRequestDisplayedItems.length,
-      purchaseRequestDisplayedItems.length + purchaseRequestItemsPerPage
+      purchaseRequestDisplayedItems.length + ITEMS_PER_LOAD
     );
     setPurchaseRequestDisplayedItems((prev) => [...prev, ...nextItems]);
     setPurchaseRequestLoadingMore(false);
@@ -958,7 +957,6 @@ const ReceivingManagementLayer = () => {
     isLoading,
     requests,
     purchaseRequestDisplayedItems.length,
-    purchaseRequestItemsPerPage,
   ]);
 
   // Infinite scroll helper functions for To Be Delivered tab
@@ -976,9 +974,10 @@ const ReceivingManagementLayer = () => {
     setToBeDeliveredLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Load more items progressively
     const nextItems = toBeDeliveredRequests.slice(
       toBeDeliveredDisplayedItems.length,
-      toBeDeliveredDisplayedItems.length + toBeDeliveredItemsPerPage
+      toBeDeliveredDisplayedItems.length + ITEMS_PER_LOAD
     );
     setToBeDeliveredDisplayedItems((prev) => [...prev, ...nextItems]);
     setToBeDeliveredLoadingMore(false);
@@ -987,7 +986,6 @@ const ReceivingManagementLayer = () => {
     toBeDeliveredLoading,
     toBeDeliveredRequests,
     toBeDeliveredDisplayedItems.length,
-    toBeDeliveredItemsPerPage,
   ]);
 
   // Infinite scroll helper functions for Quality Check tab
@@ -1005,9 +1003,10 @@ const ReceivingManagementLayer = () => {
     setQualityCheckLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Load more items progressively
     const nextItems = qualityCheckRequests.slice(
       qualityCheckDisplayedItems.length,
-      qualityCheckDisplayedItems.length + qualityCheckItemsPerPage
+      qualityCheckDisplayedItems.length + ITEMS_PER_LOAD
     );
     setQualityCheckDisplayedItems((prev) => [...prev, ...nextItems]);
     setQualityCheckLoadingMore(false);
@@ -1016,7 +1015,6 @@ const ReceivingManagementLayer = () => {
     qualityCheckLoading,
     qualityCheckRequests,
     qualityCheckDisplayedItems.length,
-    qualityCheckItemsPerPage,
   ]);
 
   // Infinite scroll helper functions for Receipt Details tab
@@ -1034,9 +1032,10 @@ const ReceivingManagementLayer = () => {
     setReceiptLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Load more items progressively
     const nextItems = receiptRequests.slice(
       receiptDisplayedItems.length,
-      receiptDisplayedItems.length + receiptItemsPerPage
+      receiptDisplayedItems.length + ITEMS_PER_LOAD
     );
     setReceiptDisplayedItems((prev) => [...prev, ...nextItems]);
     setReceiptLoadingMore(false);
@@ -1045,7 +1044,6 @@ const ReceivingManagementLayer = () => {
     receiptLoading,
     receiptRequests,
     receiptDisplayedItems.length,
-    receiptItemsPerPage,
   ]);
 
   // Handle vendor selection
