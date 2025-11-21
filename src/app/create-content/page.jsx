@@ -6,8 +6,13 @@ import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
 import ReviewPromptsModal from "@/components/ReviewPromptsModal";
+import BrandkitSelector from "@/components/BrandkitSelector";
+import BrandkitFormModal from "@/components/BrandkitFormModal";
+import BrandkitManagementModal from "@/components/BrandkitManagementModal";
+import BrandkitLogoUpload from "@/components/BrandkitLogoUpload";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
+import { useBrandkit } from "@/contexts/BrandkitContext";
 import {
   getGeneratedContent,
   getGenerationJobs,
@@ -16,6 +21,7 @@ import {
   getGenerationStatus,
   editImage,
   getGenerationResults,
+  getBrandkit,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -45,6 +51,16 @@ export default function CreateContentPage() {
     cta: "",
     variantGoal: 1,
   });
+
+  // Brandkit modal states
+  const [showBrandkitFormModal, setShowBrandkitFormModal] = useState(false);
+  const [showBrandkitManagementModal, setShowBrandkitManagementModal] = useState(false);
+  const [showLogoUploadModal, setShowLogoUploadModal] = useState(false);
+  const [editingBrandkit, setEditingBrandkit] = useState(null);
+  const [uploadingLogoBrandkit, setUploadingLogoBrandkit] = useState(null);
+
+  // Get brandkit context
+  const { activeBrandkit, refresh: refreshBrandkit } = useBrandkit();
 
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
@@ -479,7 +495,10 @@ export default function CreateContentPage() {
       // Check if download_url is available from API
       if (item.download_url) {
         // Use the download_url from API (e.g., /api/content/download/run_id/artifact_id)
-        downloadUrl = `${config.pythonApi.baseURL}${item.download_url}`;
+        // Check if it's already a full URL or just a path
+        downloadUrl = item.download_url.startsWith('http') 
+          ? item.download_url 
+          : `${config.pythonApi.baseURL}${item.download_url}`;
       } 
       // If not, try to construct from run_id and artifact_id
       else if (item.run_id && item.artifact_id) {
@@ -592,13 +611,6 @@ export default function CreateContentPage() {
       return;
     }
 
-    if (editPrompt.length > 500) {
-      setEditErrors((prev) => ({ 
-        ...prev, 
-        [imageId]: "Please keep changes under 500 characters" 
-      }));
-      return;
-    }
 
     setIsSendingEdit(true);
     setEditErrors((prev) => ({ ...prev, [imageId]: null }));
@@ -635,12 +647,82 @@ export default function CreateContentPage() {
     }
   };
 
+  // Brandkit modal handlers
+  const handleCreateNewBrandkit = () => {
+    setEditingBrandkit(null);
+    setShowBrandkitFormModal(true);
+  };
+
+  const handleManageBrandkits = () => {
+    setShowBrandkitManagementModal(true);
+  };
+
+  const handleEditBrandkit = async (brandkitSummary) => {
+    try {
+      // Show management modal is closing but don't close it yet to prevent flash
+      // Fetch full brandkit data before editing
+      const fullBrandkit = await getBrandkit(brandkitSummary.brand_id);
+      setEditingBrandkit(fullBrandkit);
+      setShowBrandkitManagementModal(false);
+      setShowBrandkitFormModal(true);
+    } catch (error) {
+      console.error("Error loading brandkit for edit:", error);
+      alert("Failed to load brandkit details: " + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleUploadLogo = (brandkit) => {
+    setUploadingLogoBrandkit(brandkit);
+    setShowLogoUploadModal(true);
+    setShowBrandkitManagementModal(false);
+  };
+
+  const handleBrandkitFormSuccess = async () => {
+    await refreshBrandkit();
+    setShowBrandkitFormModal(false);
+    setEditingBrandkit(null);
+  };
+
+  const handleLogoUploadSuccess = async () => {
+    await refreshBrandkit();
+    setShowLogoUploadModal(false);
+    setUploadingLogoBrandkit(null);
+  };
+
   return (
     <SidebarPermissionGuard requiredSidebar="createContent">
       {/* Breadcrumb */}
-      <Breadcrumb title="Create Content" />
+      <Breadcrumb
+        title="Create Content"
+        rootLabel="Content Craft"
+        rootIcon="solar:magic-stick-3-bold"
+        rootBreadcrumbLabel="Dashboard"
+      />
 
-      <div className="container-fluid">
+      <div className="container-fluid" style={{ padding: "15px", overflowX: "hidden" }}>
+        {/* Brandkit Selector Section */}
+        <div className="d-flex justify-content-between align-items-center mb-3" style={{ flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+            {activeBrandkit && (
+              <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
+                <span className="badge bg-light text-dark border">
+                  <Icon icon="solar:palette-bold" width="14" height="14" className="me-1" />
+                  Active: {activeBrandkit.brand_name}
+                </span>
+                {activeBrandkit.tagline && (
+                  <small className="text-muted">"{activeBrandkit.tagline}"</small>
+                )}
+              </div>
+            )}
+          </div>
+          <div style={{ minWidth: 0, flex: "0 0 auto", maxWidth: "250px", width: "100%" }}>
+            <BrandkitSelector
+              onCreateNew={handleCreateNewBrandkit}
+              onManage={handleManageBrandkits}
+            />
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="mb-3">
           <ul
@@ -1725,22 +1807,23 @@ export default function CreateContentPage() {
                                       </div>
                                     </div>
                                     <div className="card-body">
-                                      <div className="d-flex align-items-center justify-content-between mb-2">
-                                        <h6 className="card-title small mb-0">
+                                      <div className="d-flex align-items-center justify-content-between mb-3">
+                                        <h6 className="card-title fw-bold mb-0">
                                           {item.title}
                                         </h6>
-                                        <div className="d-flex gap-1">
+                                        <div className="d-flex gap-2">
                                           {/* Edit button - only for images */}
                                           {item.content_type === "image" && (item.image_url || item.local_url) && (
                                             <button
-                                              className="btn btn-sm btn-outline-info"
+                                              className="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
                                               onClick={() => handleEditClick(item.id)}
                                               title="Edit this image"
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:pen-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
                                               />
                                             </button>
                                           )}
@@ -1748,7 +1831,7 @@ export default function CreateContentPage() {
                                           {(item.content_type === "image" && (item.image_url || item.local_url)) ||
                                            (item.content_type === "video" && item.video_url) ? (
                                             <button
-                                              className="btn btn-sm btn-outline-secondary"
+                                              className="btn btn-sm btn-light border d-flex align-items-center justify-content-center"
                                               onClick={() => {
                                                 if (item.content_type === "video") {
                                                   downloadVideo(
@@ -1763,21 +1846,23 @@ export default function CreateContentPage() {
                                                 }
                                               }}
                                               title={`Download this ${item.content_type === "video" ? "video" : "image"}`}
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:download-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
+                                                className="text-dark"
                                               />
                                             </button>
                                           ) : null}
                                         </div>
                                       </div>
-                                      <div className="d-flex align-items-center gap-2 small text-muted">
+                                      <div className="d-flex align-items-center gap-2 small text-muted mt-2">
                                         <Icon
                                           icon="solar:calendar-bold"
-                                          width="12"
-                                          height="12"
+                                          width="14"
+                                          height="14"
                                         />
                                         {new Date(
                                           item.timestamp
@@ -1792,17 +1877,17 @@ export default function CreateContentPage() {
                                     
                                     {/* Edit Input Section */}
                                     {editingImageId === item.id && (
-                                      <div className="card-footer bg-light border-top">
-                                        <div className="mb-2">
-                                          <label className="form-label small fw-semibold">
+                                      <div className="card-footer bg-light border-top p-3">
+                                        <div className="mb-3">
+                                          <label className="form-label small fw-semibold mb-2 d-block">
                                             Describe the changes you want:
                                           </label>
                                           <textarea
-                                            className={`form-control form-control-sm ${
+                                            className={`form-control ${
                                               editErrors[item.id] ? "is-invalid" : ""
                                             }`}
-                                            rows="3"
-                                            placeholder="e.g., Make it brighter with more vibrant colors..."
+                                            rows="4"
+                                            placeholder="Make it brighter with more vibrant colors..."
                                             value={editPrompts[item.id] || ""}
                                             onChange={(e) =>
                                               handleEditPromptChange(
@@ -1811,17 +1896,15 @@ export default function CreateContentPage() {
                                               )
                                             }
                                             disabled={isSendingEdit}
+                                            style={{ resize: "vertical", minHeight: "100px" }}
                                           />
                                           {editErrors[item.id] && (
-                                            <div className="invalid-feedback d-block small">
+                                            <div className="invalid-feedback d-block small mt-1">
                                               {editErrors[item.id]}
                                             </div>
                                           )}
                                         </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                          <small className="text-muted">
-                                            {(editPrompts[item.id]?.length || 0)} / 500 characters
-                                          </small>
+                                        <div className="d-flex align-items-center justify-content-end mt-3">
                                           <div className="d-flex gap-2">
                                             <button
                                               className="btn btn-sm btn-secondary"
@@ -1831,7 +1914,7 @@ export default function CreateContentPage() {
                                               Cancel
                                             </button>
                                             <button
-                                              className="btn btn-sm btn-primary"
+                                              className="btn btn-sm btn-primary d-flex align-items-center gap-1"
                                               onClick={() =>
                                                 handleSendEdit(
                                                   item.id,
@@ -1841,8 +1924,7 @@ export default function CreateContentPage() {
                                               }
                                               disabled={
                                                 isSendingEdit ||
-                                                !editPrompts[item.id]?.trim() ||
-                                                (editPrompts[item.id]?.length || 0) > 500
+                                                !editPrompts[item.id]?.trim()
                                               }
                                             >
                                               {isSendingEdit ? (
@@ -1937,6 +2019,36 @@ export default function CreateContentPage() {
           }}
         />
       )}
+
+      {/* Brandkit Form Modal */}
+      <BrandkitFormModal
+        isOpen={showBrandkitFormModal}
+        onClose={() => {
+          setShowBrandkitFormModal(false);
+          setEditingBrandkit(null);
+        }}
+        onSuccess={handleBrandkitFormSuccess}
+        editBrandkit={editingBrandkit}
+      />
+
+      {/* Brandkit Management Modal */}
+      <BrandkitManagementModal
+        isOpen={showBrandkitManagementModal}
+        onClose={() => setShowBrandkitManagementModal(false)}
+        onEdit={handleEditBrandkit}
+        onUploadLogo={handleUploadLogo}
+      />
+
+      {/* Logo Upload Modal */}
+      <BrandkitLogoUpload
+        isOpen={showLogoUploadModal}
+        onClose={() => {
+          setShowLogoUploadModal(false);
+          setUploadingLogoBrandkit(null);
+        }}
+        brandkit={uploadingLogoBrandkit}
+        onSuccess={handleLogoUploadSuccess}
+      />
     </SidebarPermissionGuard>
   );
 }
