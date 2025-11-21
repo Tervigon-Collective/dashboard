@@ -43,6 +43,7 @@ const UserManagement = () => {
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const tableContainerRef = useRef(null);
+  const permissionsPanelRef = useRef(null);
   const itemsPerPage = 20;
 
   const validRoles = getValidRoles();
@@ -388,6 +389,49 @@ const UserManagement = () => {
     setShowPermissionsPanel(true);
   };
 
+  // Auto-scroll to permissions panel when it opens
+  useEffect(() => {
+    if (showPermissionsPanel && permissionsPanelRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const panelElement = permissionsPanelRef.current;
+        if (!panelElement) return;
+
+        // For mobile/tablet (full-screen overlay)
+        if (window.innerWidth < 992) {
+          // Scroll to top of the panel with offset
+          const panelTop = panelElement.getBoundingClientRect().top;
+          const scrollOffset = window.pageYOffset || document.documentElement.scrollTop;
+          const targetPosition = Math.max(0, panelTop + scrollOffset - 20); // 20px offset from top
+          
+          window.scrollTo({
+            top: targetPosition,
+            behavior: "smooth",
+          });
+        } else {
+          // For desktop (side panel), scroll into view smoothly
+          panelElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+            inline: "nearest",
+          });
+          
+          // Also ensure the panel header is visible
+          const panelHeader = panelElement.querySelector('.card-header');
+          if (panelHeader) {
+            const headerTop = panelHeader.getBoundingClientRect().top;
+            if (headerTop < 0) {
+              window.scrollBy({
+                top: headerTop - 20,
+                behavior: "smooth",
+              });
+            }
+          }
+        }
+      }, 150);
+    }
+  }, [showPermissionsPanel, selectedUser]);
+
   const getStatusBadge = (userData) => {
     // Determine status based on user data
     if (userData.disabled) return { text: "Inactive", color: "bg-secondary" };
@@ -508,148 +552,241 @@ const UserManagement = () => {
   }
 
   return (
-    <div className="container-fluid p-4">
-      {/* Header Section */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-              <h4 className="h5 mb-0 fw-semibold" style={{ color: "#374151" }}>
-                User Groups
-              </h4>
-            </div>
-            <div className="d-flex align-items-center gap-3">
-              <div className="position-relative" style={{ width: "280px" }}>
-                <Icon
-                  icon="mdi:magnify"
-                  className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                  style={{ zIndex: 10, fontSize: "1rem" }}
-                />
-                <input
-                  type="text"
-                  className="form-control ps-5"
-                  placeholder="Search by email, phone, name"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    fontSize: "0.9rem",
-                    padding: "10px 16px 10px 40px",
-                    height: "40px",
-                    border: "1px solid #d1d5db",
-                  }}
-                />
-              </div>
-              <div className="dropdown">
-                <button
-                  className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  style={{
-                    fontSize: "0.9rem",
-                    padding: "10px 16px",
-                    height: "40px",
-                    border: "1px solid #d1d5db",
-                  }}
-                >
-                  <Icon icon="mdi:sort" style={{ fontSize: "1rem" }} />
-                  Sort
-                </button>
-                <ul className="dropdown-menu border-0 shadow-sm">
-                  <li>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => setSortBy("name")}
-                    >
-                      <Icon icon="mdi:account" className="me-2" />
-                      Name
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => setSortBy("email")}
-                    >
-                      <Icon icon="mdi:email" className="me-2" />
-                      Email
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => setSortBy("role")}
-                    >
-                      <Icon icon="mdi:shield-account" className="me-2" />
-                      Role
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => setSortBy("date")}
-                    >
-                      <Icon icon="mdi:calendar" className="me-2" />
-                      Date added
-                    </button>
-                  </li>
-                </ul>
-              </div>
-              <button
-                className="btn btn-primary d-flex align-items-center gap-2"
-                onClick={() => {
-                  // Navigate to create user page or open modal
-                  window.location.href = "/create-user";
-                }}
-                style={{
-                  fontSize: "0.9rem",
-                  padding: "10px 16px",
-                  height: "40px",
-                }}
-              >
-                <Icon icon="mdi:plus" style={{ fontSize: "1rem" }} />
-                Add User
-              </button>
-            </div>
+    <>
+      <style>{`
+        .table-scroll-container {
+          -webkit-overflow-scrolling: touch;
+        }
+        .table-scroll-container::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+        .table-scroll-container::-webkit-scrollbar-track {
+          background: #F3F4F6;
+          border-radius: 6px;
+        }
+        .table-scroll-container::-webkit-scrollbar-thumb {
+          background: #D1D5DB;
+          border-radius: 6px;
+          border: 2px solid #F3F4F6;
+        }
+        .table-scroll-container::-webkit-scrollbar-thumb:hover {
+          background: #9CA3AF;
+        }
+        .table-scroll-container table {
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+        .table-scroll-container table thead th,
+        .table-scroll-container table tbody td {
+          padding: 12px !important;
+          box-sizing: border-box;
+        }
+        .table-scroll-container table tbody tr {
+          border-bottom: 1px solid #F3F4F6;
+        }
+        .table-scroll-container table tbody tr:last-child {
+          border-bottom: none;
+        }
+        .nav-tabs.flex-nowrap.overflow-auto::-webkit-scrollbar {
+          display: none;
+        }
+        .nav-tabs.flex-nowrap.overflow-auto {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        @media (max-width: 992px) {
+          .table-scroll-container {
+            max-height: calc(100vh - 350px) !important;
+            min-height: 400px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .table-scroll-container {
+            max-height: calc(100vh - 320px) !important;
+            min-height: 350px !important;
+          }
+          .table-scroll-container table {
+            min-width: 700px !important;
+          }
+          .user-permissions-panel {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            z-index: 1050 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            padding: 1rem !important;
+            overflow-y: auto !important;
+          }
+          .user-permissions-panel .card {
+            max-height: 90vh !important;
+            margin: 0 !important;
+            min-height: auto !important;
+          }
+          .user-permissions-panel .card-body {
+            max-height: calc(90vh - 120px) !important;
+          }
+        }
+        @media (max-width: 576px) {
+          .table-scroll-container {
+            max-height: calc(100vh - 280px) !important;
+            min-height: 300px !important;
+          }
+          .table-scroll-container table {
+            min-width: 600px !important;
+            font-size: 0.85rem !important;
+          }
+          .table-scroll-container th,
+          .table-scroll-container td {
+            padding: 10px 12px !important;
+          }
+          .container-fluid {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
+          }
+        }
+      `}</style>
+      <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
+        {/* Message Display */}
+        {message.text && (
+          <div
+            className={`alert alert-${
+              message.type === "success" ? "success" : "danger"
+            } d-flex align-items-center mb-3 border-0 shadow-sm`}
+            style={{ fontSize: "0.9rem" }}
+          >
+            <Icon
+              icon={
+                message.type === "success"
+                  ? "mdi:check-circle"
+                  : "mdi:alert-circle"
+              }
+              className="me-2"
+              style={{ fontSize: "1.25rem" }}
+            />
+            <span>{message.text}</span>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Message Display */}
-      {message.text && (
-        <div
-          className={`alert alert-${
-            message.type === "success" ? "success" : "danger"
-          } d-flex align-items-center mb-4 mx-auto border-0 shadow-sm`}
-          style={{ maxWidth: "800px" }}
-        >
-          <Icon
-            icon={
-              message.type === "success"
-                ? "mdi:check-circle"
-                : "mdi:alert-circle"
-            }
-            className="me-2"
-            style={{ fontSize: "1.25rem" }}
-          />
-          <span style={{ fontSize: "0.9rem" }}>{message.text}</span>
-        </div>
-      )}
+        <div className="row g-2 g-md-3">
+          {/* Left Panel - User Groups List */}
+          <div
+            className={`${
+              showPermissionsPanel ? "col-lg-7 col-xl-8" : "col-12"
+            } col-12`}
+          >
+            <div className="card basic-data-table border-0 shadow-sm">
+              <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 p-3 p-md-4">
+                <h5 className="card-title mb-0" style={{ fontSize: "clamp(1rem, 2.5vw, 1.25rem)" }}>User Groups</h5>
+                {hasOperation("userManagement", "create") && (
+                  <button
+                    className="btn btn-primary d-inline-flex align-items-center"
+                    onClick={() => {
+                      window.location.href = "/create-user";
+                    }}
+                    style={{ 
+                      gap: "6px", 
+                      padding: "8px 12px",
+                      fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    <Icon icon="lucide:plus" width="18" height="18" />
+                    <span className="d-none d-sm-inline">Add New User</span>
+                    <span className="d-sm-none">Add</span>
+                  </button>
+                )}
+              </div>
 
-      <div className="row justify-content-center">
-        {/* Left Panel - User Groups List */}
-        <div
-          className={`${
-            showPermissionsPanel ? "col-lg-7" : "col-lg-10"
-          } col-12`}
-        >
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-4">
-              {/* User Group Filters */}
-              <div className="mb-4">
-                <ul
-                  className="nav nav-tabs"
-                  role="tablist"
-                  style={{ borderBottom: "1px solid #e5e7eb" }}
-                >
+              <div className="card-body d-flex flex-column" style={{ padding: "0.75rem 1rem" }}>
+                {/* Search and Filter Controls */}
+                <div className="row g-2 g-md-3 mb-2 mb-md-3">
+                  <div className="col-12 col-md-6 col-lg-4">
+                    <div className="input-group">
+                      <span className="input-group-text bg-white">
+                        <Icon icon="lucide:search" width="16" height="16" />
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Search by email, phone, name"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-12 col-sm-6 col-md-3 col-lg-2">
+                    <div className="dropdown w-100">
+                      <button
+                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex align-items-center justify-content-between"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        style={{ fontSize: "0.9rem" }}
+                      >
+                        <span>Sort</span>
+                      </button>
+                      <ul className="dropdown-menu border-0 shadow-sm">
+                        <li>
+                          <button
+                            className="dropdown-item d-flex align-items-center"
+                            onClick={() => setSortBy("name")}
+                            style={{ gap: "8px" }}
+                          >
+                            <Icon icon="mdi:account" width="16" height="16" />
+                            <span>Name</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item d-flex align-items-center"
+                            onClick={() => setSortBy("email")}
+                            style={{ gap: "8px" }}
+                          >
+                            <Icon icon="mdi:email" width="16" height="16" />
+                            <span>Email</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item d-flex align-items-center"
+                            onClick={() => setSortBy("role")}
+                            style={{ gap: "8px" }}
+                          >
+                            <Icon icon="mdi:shield-account" width="16" height="16" />
+                            <span>Role</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item d-flex align-items-center"
+                            onClick={() => setSortBy("date")}
+                            style={{ gap: "8px" }}
+                          >
+                            <Icon icon="mdi:calendar" width="16" height="16" />
+                            <span>Date added</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* User Group Filters */}
+                <div className="mb-2 mb-md-3">
+                  <ul
+                    className="nav nav-tabs flex-nowrap overflow-auto"
+                    role="tablist"
+                    style={{ 
+                      borderBottom: "1px solid #e5e7eb",
+                      WebkitOverflowScrolling: "touch",
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none"
+                    }}
+                  >
                   <li className="nav-item" role="presentation">
                     <button
                       className={`nav-link ${
@@ -667,7 +804,9 @@ const UserManagement = () => {
                         color: selectedRole === "all" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "all" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -683,8 +822,18 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:account-group" className="me-2" />
-                      All users
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:account-group" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>All users</span>
+                      </div>
                     </button>
                   </li>
                   {/* No Access */}
@@ -705,7 +854,9 @@ const UserManagement = () => {
                         color: selectedRole === "none" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "none" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -721,8 +872,18 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:account-off" className="me-2" />
-                      No Access
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:account-off" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>No Access</span>
+                      </div>
                     </button>
                   </li>
 
@@ -744,7 +905,9 @@ const UserManagement = () => {
                         color: selectedRole === "user" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "user" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -760,8 +923,18 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:account" className="me-2" />
-                      User
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:account" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>User</span>
+                      </div>
                     </button>
                   </li>
 
@@ -786,7 +959,9 @@ const UserManagement = () => {
                           selectedRole === "manager" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "manager" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -802,8 +977,18 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:account-tie" className="me-2" />
-                      Manager
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:account-tie" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>Manager</span>
+                      </div>
                     </button>
                   </li>
 
@@ -825,7 +1010,9 @@ const UserManagement = () => {
                         color: selectedRole === "admin" ? "#374151" : "#6b7280",
                         fontWeight: selectedRole === "admin" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -841,8 +1028,18 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:shield-account" className="me-2" />
-                      Admin
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:shield-account" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>Admin</span>
+                      </div>
                     </button>
                   </li>
 
@@ -870,7 +1067,9 @@ const UserManagement = () => {
                         fontWeight:
                           selectedRole === "super_admin" ? "500" : "400",
                         borderRadius: "0",
-                        padding: "12px 16px",
+                        padding: "10px 12px",
+                        whiteSpace: "nowrap",
+                        fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -886,126 +1085,136 @@ const UserManagement = () => {
                         }
                       }}
                     >
-                      <Icon icon="mdi:shield-crown" className="me-2" />
-                      Super Admin
+                      <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+                        <Icon 
+                          icon="mdi:shield-crown" 
+                          style={{ 
+                            fontSize: "1.125rem",
+                            lineHeight: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }} 
+                        />
+                        <span>Super Admin</span>
+                      </div>
                     </button>
                   </li>
                 </ul>
               </div>
 
-              {/* Users Table */}
-              <div
-                ref={tableContainerRef}
-                className="table-scroll-container"
-                style={{
-                  maxHeight: "600px",
-                  overflowY: "auto",
-                  overflowX: "auto",
-                  scrollBehavior: "smooth",
-                  overscrollBehavior: "auto",
-                }}
-                onScroll={(e) => {
-                  const target = e.currentTarget;
-                  const scrollTop = target.scrollTop;
-                  const scrollHeight = target.scrollHeight;
-                  const clientHeight = target.clientHeight;
+                {/* Table */}
+                <div
+                  ref={tableContainerRef}
+                  className="table-scroll-container"
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "auto",
+                    scrollBehavior: "smooth",
+                    overscrollBehavior: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                  onScroll={(e) => {
+                    const target = e.currentTarget;
+                    const scrollTop = target.scrollTop;
+                    const scrollHeight = target.scrollHeight;
+                    const clientHeight = target.clientHeight;
 
-                  if (
-                    scrollTop + clientHeight >= scrollHeight - 10 &&
-                    hasMoreData(sortedUsers) &&
-                    !isLoadingMore &&
-                    !loading
-                  ) {
-                    loadMoreData();
-                  }
-                }}
-                onWheel={(e) => {
-                  const target = e.currentTarget;
-                  const scrollTop = target.scrollTop;
-                  const scrollHeight = target.scrollHeight;
-                  const clientHeight = target.clientHeight;
-                  const isAtTop = scrollTop <= 1;
-                  const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                    if (
+                      scrollTop + clientHeight >= scrollHeight - 10 &&
+                      hasMoreData(sortedUsers) &&
+                      !isLoadingMore &&
+                      !loading
+                    ) {
+                      loadMoreData();
+                    }
+                  }}
+                  onWheel={(e) => {
+                    const target = e.currentTarget;
+                    const scrollTop = target.scrollTop;
+                    const scrollHeight = target.scrollHeight;
+                    const clientHeight = target.clientHeight;
+                    const isAtTop = scrollTop <= 1;
+                    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
 
-                  if (e.deltaY > 0 && isAtBottom) {
-                    window.scrollBy({
-                      top: e.deltaY,
-                      behavior: "auto",
-                    });
-                  } else if (e.deltaY < 0 && isAtTop) {
-                    window.scrollBy({
-                      top: e.deltaY,
-                      behavior: "auto",
-                    });
-                  }
-                }}
-              >
-                <div className="table-responsive">
-                  <table
-                    className="table table-hover align-middle mb-0"
-                    style={{ fontSize: "0.9rem" }}
-                  >
-                    <thead
-                      style={{
-                        backgroundColor: "#f9fafb",
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 10,
-                      }}
+                    if (e.deltaY > 0 && isAtBottom) {
+                      window.scrollBy({
+                        top: e.deltaY,
+                        behavior: "auto",
+                      });
+                    } else if (e.deltaY < 0 && isAtTop) {
+                      window.scrollBy({
+                        top: e.deltaY,
+                        behavior: "auto",
+                      });
+                    }
+                  }}
+                >
+                  <div className="table-responsive" style={{ flex: 1, minHeight: 0 }}>
+                    <table
+                      className="table table-hover align-middle mb-0"
+                      style={{ fontSize: "14px" }}
                     >
-                      <tr>
-                        <th
-                          className="border-0 fw-semibold text-muted py-4 px-3"
-                          style={{
-                            fontSize: "0.8rem",
-                            letterSpacing: "0.5px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Name
-                        </th>
-                        <th
-                          className="border-0 fw-semibold text-muted py-4 px-3"
-                          style={{
-                            fontSize: "0.8rem",
-                            letterSpacing: "0.5px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Status
-                        </th>
-                        <th
-                          className="border-0 fw-semibold text-muted py-4 px-3"
-                          style={{
-                            fontSize: "0.8rem",
-                            letterSpacing: "0.5px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Role
-                        </th>
-                        <th
-                          className="border-0 fw-semibold text-muted py-4 px-3"
-                          style={{
-                            fontSize: "0.8rem",
-                            letterSpacing: "0.5px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Date Added
-                        </th>
-                        <th
-                          className="border-0 fw-semibold text-muted py-4 px-3 text-center"
-                          style={{
-                            fontSize: "0.8rem",
-                            letterSpacing: "0.5px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
+                      <thead
+                        style={{
+                          backgroundColor: "#f9fafb",
+                          borderBottom: "2px solid #e5e7eb",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                        }}
+                      >
+                        <tr>
+                          <th
+                            style={{
+                              fontWeight: "600",
+                              color: "#374151",
+                              padding: "12px",
+                            }}
+                          >
+                            Name
+                          </th>
+                          <th
+                            style={{
+                              fontWeight: "600",
+                              color: "#374151",
+                              padding: "12px",
+                            }}
+                          >
+                            Status
+                          </th>
+                          <th
+                            style={{
+                              fontWeight: "600",
+                              color: "#374151",
+                              padding: "12px",
+                            }}
+                          >
+                            Role
+                          </th>
+                          <th
+                            style={{
+                              fontWeight: "600",
+                              color: "#374151",
+                              padding: "12px",
+                            }}
+                          >
+                            Date Added
+                          </th>
+                          <th
+                            style={{
+                              fontWeight: "600",
+                              color: "#374151",
+                              padding: "12px",
+                              textAlign: "center",
+                            }}
+                          >
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
                     <tbody>
                       {loading ? (
                         <>
@@ -1045,15 +1254,24 @@ const UserManagement = () => {
                         return (
                           <tr
                             key={userData.uid}
-                            style={{ borderBottom: "1px solid #f0f0f0" }}
+                            style={{ 
+                              borderBottom: "1px solid #F3F4F6",
+                              transition: "background-color 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#F9FAFB";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                            }}
                           >
-                            <td className="py-4 px-3">
+                            <td style={{ padding: "12px", verticalAlign: "middle" }}>
                               <div className="d-flex align-items-center gap-3">
                                 {userData.photoURL ? (
                                   <img
                                     src={userData.photoURL}
                                     alt=""
-                                    className="rounded-circle"
+                                    className="rounded-circle flex-shrink-0"
                                     style={{
                                       width: "40px",
                                       height: "40px",
@@ -1062,7 +1280,7 @@ const UserManagement = () => {
                                   />
                                 ) : (
                                   <div
-                                    className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold"
+                                    className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold flex-shrink-0"
                                     style={{
                                       width: "40px",
                                       height: "40px",
@@ -1075,49 +1293,42 @@ const UserManagement = () => {
                                     )}
                                   </div>
                                 )}
-                                <div>
+                                <div style={{ minWidth: 0, flex: 1 }}>
                                   <div
                                     className="fw-medium mb-1"
                                     style={{
                                       color: "#1f2937",
-                                      fontSize: "0.9rem",
+                                      fontSize: "14px",
                                     }}
                                   >
                                     {userData.displayName || userData.email}
                                   </div>
-                                  <small
-                                    className="text-muted"
-                                    style={{ fontSize: "0.8rem" }}
-                                  >
+                                  <small className="text-muted" style={{ fontSize: "12px" }}>
                                     {userData.email}
                                   </small>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-3">
+                            <td style={{ padding: "12px", verticalAlign: "middle" }}>
                               <span
                                 className={`badge ${status.color} rounded-pill`}
                                 style={{
                                   padding: "6px 12px",
                                   fontSize: "0.75rem",
                                   fontWeight: "500",
+                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 {status.text}
                               </span>
                             </td>
-                            <td className="py-4 px-3">
-                              <span
-                                style={{ color: "#6b7280", fontSize: "0.9rem" }}
-                              >
+                            <td style={{ padding: "12px", verticalAlign: "middle" }}>
+                              <span style={{ fontSize: "14px", color: "#374151" }}>
                                 {getRoleDisplayName(userData.role || "user")}
                               </span>
                             </td>
-                            <td className="py-4 px-3">
-                              <span
-                                className="text-muted"
-                                style={{ fontSize: "0.85rem" }}
-                              >
+                            <td style={{ padding: "12px", verticalAlign: "middle" }}>
+                              <span style={{ fontSize: "14px", color: "#6b7280" }}>
                                 {userData.updatedAt
                                   ? new Date(
                                       userData.updatedAt.toDate()
@@ -1129,7 +1340,7 @@ const UserManagement = () => {
                                   : "N/A"}
                               </span>
                             </td>
-                            <td className="py-4 px-3">
+                            <td style={{ padding: "12px", verticalAlign: "middle", textAlign: "center" }}>
                               <div className="d-flex justify-content-center">
                                 <div className="dropdown">
                                   <button
@@ -1225,25 +1436,25 @@ const UserManagement = () => {
                           )}
                         </>
                       )}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Infinite Scroll Footer */}
+                {/* Infinite Scroll Footer - Sticky at bottom */}
                 {sortedUsers.length > 0 && (
                   <div
                     className="d-flex justify-content-between align-items-center px-3 py-2"
                     style={{
                       backgroundColor: "#f8f9fa",
-                      borderRadius: "0 0 8px 8px",
-                      marginTop: "0",
-                      position: "sticky",
-                      bottom: 0,
-                      zIndex: 5,
+                      borderTop: "1px solid #e5e7eb",
+                      flexShrink: 0,
+                      marginTop: "auto",
                     }}
                   >
                     <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                      Showing <strong>{getDisplayedData(sortedUsers).length}</strong> of{" "}
+                      Showing{" "}
+                      <strong>{getDisplayedData(sortedUsers).length}</strong> of{" "}
                       <strong>{sortedUsers.length}</strong> users
                     </div>
                     {hasMoreData(sortedUsers) && (
@@ -1256,41 +1467,51 @@ const UserManagement = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Panel - User Permissions */}
-        {showPermissionsPanel && selectedUser && (
-          <div className="col-lg-5">
-            <div
-              className="card border-0 shadow-sm"
-              style={{ height: "fit-content", minHeight: "600px" }}
-            >
-              <div className="card-header bg-white border-bottom p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5
-                    className="mb-0 mx-auto fw-semibold"
-                    style={{ color: "#1f2937", fontSize: "1.1rem" }}
-                  >
-                    User Permissions
-                  </h5>
-                  <button
-                    className="btn btn-link text-muted p-0"
-                    onClick={() => {
-                      setShowPermissionsPanel(false);
-                      setSelectedUser(null);
-                      setNewRole("");
-                      setSidebarPermissions({});
-                    }}
-                    style={{ fontSize: "1.25rem" }}
-                  >
-                    <Icon icon="mdi:close" />
-                  </button>
-                </div>
-              </div>
-              <div
-                className="card-body p-4"
-                style={{ maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}
+            {/* Right Panel - User Permissions */}
+            {showPermissionsPanel && selectedUser && (
+              <div 
+                ref={permissionsPanelRef}
+                className={`col-lg-5 col-xl-4 ${showPermissionsPanel ? "user-permissions-panel" : ""}`}
+                style={{ scrollMarginTop: "20px" }}
               >
+                <div
+                  className="card border-0 shadow-sm"
+                  style={{ 
+                    height: "fit-content", 
+                    minHeight: "600px"
+                  }}
+                >
+                  <div className="card-header bg-white border-bottom p-3 p-md-4">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h5
+                        className="mb-0 fw-semibold"
+                        style={{ color: "#1f2937", fontSize: "clamp(0.95rem, 2vw, 1.1rem)" }}
+                      >
+                        User Permissions
+                      </h5>
+                      <button
+                        className="btn btn-link text-muted p-0"
+                        onClick={() => {
+                          setShowPermissionsPanel(false);
+                          setSelectedUser(null);
+                          setNewRole("");
+                          setSidebarPermissions({});
+                        }}
+                        style={{ fontSize: "1.25rem", minWidth: "32px", minHeight: "32px" }}
+                        aria-label="Close"
+                      >
+                        <Icon icon="mdi:close" />
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    className="card-body p-3 p-md-4"
+                    style={{ 
+                      maxHeight: "calc(100vh - 200px)", 
+                      overflowY: "auto" 
+                    }}
+                  >
                 {/* Selected User Details */}
                 <div
                   className="d-flex align-items-center gap-3 p-4 mb-4 rounded-3"
@@ -1783,11 +2004,12 @@ const UserManagement = () => {
                   </button>
                 </div>
               </div>
-            </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+    </>
   );
 };
 

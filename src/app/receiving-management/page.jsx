@@ -604,6 +604,7 @@ const ReceivingManagementLayer = () => {
   const [requestToInspect, setRequestToInspect] = useState(null);
   const [inspectionData, setInspectionData] = useState([]);
   const [isSavingInspection, setIsSavingInspection] = useState(false);
+  const [isEditingInspection, setIsEditingInspection] = useState(false);
   const [qualityCheckerName, setQualityCheckerName] = useState("");
   const [inspectionDate, setInspectionDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -673,16 +674,23 @@ const ReceivingManagementLayer = () => {
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
+        // Filter only requests with status "Pending" or "pending"
+        const filteredRequests = result.data.filter(
+          (request) =>
+            request.status === "Pending" ||
+            request.status?.toLowerCase() === "pending"
+        );
+        
         if (append) {
-          setRequests((prev) => [...prev, ...result.data]);
+          setRequests((prev) => [...prev, ...filteredRequests]);
         } else {
-          setRequests(result.data);
+          setRequests(filteredRequests);
           // Show initial batch, infinite scroll will handle progressive loading
-          setPurchaseRequestDisplayedItems(result.data.slice(0, INITIAL_ITEMS_TO_SHOW));
+          setPurchaseRequestDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
-        setTotalRecords(result.pagination.total);
+        setTotalRecords(filteredRequests.length);
       }
     } catch (error) {
       console.error("Error loading purchase requests:", error);
@@ -1400,6 +1408,7 @@ const ReceivingManagementLayer = () => {
   const [grnInfo, setGrnInfo] = useState(null);
   const [isDownloadingGrn, setIsDownloadingGrn] = useState(false);
   const [qrPreviewData, setQrPreviewData] = useState(null);
+  const [qrPreviewSku, setQrPreviewSku] = useState(null);
   const [qrGenerationStatus, setQrGenerationStatus] = useState({});
 
   useEffect(() => {
@@ -1606,33 +1615,203 @@ const ReceivingManagementLayer = () => {
     router,
   ]);
 
+
+  // Helper function to add SKU text to QR code image
+  const addSkuToQrImage = async (imageBlob, sku) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(imageBlob);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        const qrWidth = img.width;
+        const qrHeight = img.height;
+        const padding = 20;
+        const textHeight = sku ? 40 : 0;
+        const canvasWidth = qrWidth + (padding * 2);
+        const canvasHeight = qrHeight + (padding * 2) + textHeight;
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Fill white background
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        // Draw QR code image
+        ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+        
+        // Add SKU text at the bottom if provided
+        if (sku) {
+          ctx.fillStyle = "#000000";
+          ctx.font = "bold 16px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          
+          const textY = qrHeight + padding + (textHeight / 2);
+          ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to create blob from canvas"));
+          }
+        }, "image/png");
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Failed to load image"));
+      };
+      
+      img.src = url;
+    });
+  };
+
   const handleGenerateQrCodes = async (request) => {
     if (!request) return;
     const requestId = request.request_id;
 
-    if (
-      !window.confirm(
-        "Are you sure you want to generate QR codes for this request?"
-      )
-    ) {
-      return;
+    // Check if QR codes already exist
+    const hasQrCodes = request.items?.some(
+      (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+    ) || false;
+
+    if (!hasQrCodes) {
+      // Only show confirmation for generating new QR codes
+      if (
+        !window.confirm(
+          "Are you sure you want to generate QR codes for this request?"
+        )
+      ) {
+        return;
+      }
     }
 
     setQrGenerationStatus((prev) => ({ ...prev, [requestId]: true }));
 
     try {
-      await purchaseRequestApi.generateQrCodes(requestId);
+      // Only generate if QR codes don't exist
+      if (!hasQrCodes) {
+        await purchaseRequestApi.generateQrCodes(requestId);
+      }
 
       try {
+        // Reload the request to get updated QR codes with file names (or use existing if already generated)
+        let updatedRequestResult;
+        if (!hasQrCodes) {
+          updatedRequestResult = await purchaseRequestApi.getPurchaseRequestById(
+            requestId,
+            true
+          );
+        } else {
+          // Use existing request data if QR codes already exist
+          updatedRequestResult = { success: true, data: request };
+        }
+        
+        let itemsWithSku = [];
+        const vendorId = updatedRequestResult.data?.vendor_id || request.vendor_id || '';
+        const requestData = updatedRequestResult.data || request;
+        if (requestData?.items) {
+          itemsWithSku = requestData.items.map(item => ({
+            qrFileName: item.qr_code?.file_name,
+            sku: item.sku,
+            itemId: item.item_id,
+          }));
+        }
+
+        // Download the ZIP
         const zipBlob = await purchaseRequestApi.downloadQrCodesZip(requestId);
-        const url = URL.createObjectURL(zipBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `QR-${requestId}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        
+        // Process ZIP to add SKU to each QR code
+        try {
+          // Dynamic import of JSZip
+          const JSZip = (await import('jszip')).default;
+          const zip = await JSZip.loadAsync(zipBlob);
+          const newZip = new JSZip();
+          
+          // Collect all files first
+          const fileEntries = [];
+          zip.forEach((relativePath, file) => {
+            if (!file.dir) {
+              fileEntries.push({ relativePath, file });
+            }
+          });
+          
+          // Process each file in parallel
+          const filePromises = fileEntries.map(async ({ relativePath, file }) => {
+            if (relativePath.endsWith('.png')) {
+              // Find matching SKU for this file
+              const item = itemsWithSku.find(
+                item => item.qrFileName === relativePath || 
+                relativePath.includes(item.qrFileName?.replace('.png', '') || '') ||
+                item.qrFileName?.includes(relativePath.replace('.png', '')) ||
+                relativePath.includes(String(item.itemId))
+              );
+              const sku = item?.sku || null;
+              
+              // Get the image blob
+              const imageBlob = await file.async('blob');
+              
+              // Add SKU to the image
+              const modifiedBlob = await addSkuToQrImage(imageBlob, sku);
+              
+              // Create new filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
+              let newFileName = relativePath;
+              if (sku && vendorId) {
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
+              } else if (sku) {
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedSku}.png`;
+              } else if (vendorId) {
+                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedVendorId}.png`;
+              }
+              
+              // Add to new ZIP with new filename
+              newZip.file(newFileName, modifiedBlob);
+            } else {
+              // Keep non-image files as-is
+              const content = await file.async('blob');
+              newZip.file(relativePath, content);
+            }
+          });
+          
+          // Wait for all files to be processed
+          await Promise.all(filePromises);
+          
+          // Generate the new ZIP
+          const modifiedZipBlob = await newZip.generateAsync({ type: 'blob' });
+          
+          // Download the modified ZIP
+          const url = URL.createObjectURL(modifiedZipBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `QR-${requestId}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } catch (zipError) {
+          console.error("Error processing ZIP with SKU:", zipError);
+          // Fallback: download original ZIP if processing fails
+          const url = URL.createObjectURL(zipBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `QR-${requestId}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       } catch (downloadError) {
         console.error("Error downloading QR codes:", downloadError);
         alert(
@@ -1647,7 +1826,7 @@ const ReceivingManagementLayer = () => {
         await handleViewRequest(request, "quality-check");
       }
 
-      alert("QR codes generated successfully.");
+      alert(hasQrCodes ? "QR codes downloaded successfully." : "QR codes generated successfully.");
     } catch (error) {
       console.error("Error generating QR codes:", error);
       alert(error.message || "Failed to generate QR codes. Please try again.");
@@ -1656,16 +1835,110 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  const handleDownloadQrImage = (qrCode) => {
+  const handleDownloadQrImage = async (qrCode, sku = null) => {
     if (!qrCode?.image_base64) {
       return;
     }
-    const link = document.createElement("a");
-    link.href = qrCode.image_base64;
-    link.download = qrCode.file_name || "qr-code.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    try {
+      // Create an image element to load the QR code
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = qrCode.image_base64;
+      });
+
+      // Create a canvas
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Set canvas dimensions: QR code width + padding + text area
+      const qrWidth = img.width;
+      const qrHeight = img.height;
+      const padding = 20;
+      const textHeight = sku ? 40 : 0; // Space for SKU text
+      const canvasWidth = qrWidth + (padding * 2);
+      const canvasHeight = qrHeight + (padding * 2) + textHeight;
+      
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      
+      // Fill white background
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Draw QR code image
+      ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+      
+      // Add SKU text at the bottom if provided
+      if (sku) {
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Draw SKU text
+        const textY = qrHeight + padding + (textHeight / 2);
+        ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
+      }
+      
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.error("Failed to create blob from canvas");
+          // Fallback to original download
+          const link = document.createElement("a");
+          link.href = qrCode.image_base64;
+          link.download = qrCode.file_name || "qr-code.png";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          return;
+        }
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        
+        // Create filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
+        let fileName = "qr-code.png";
+        if (sku) {
+          const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+          // Try to get vendor_id from selectedRequest or item
+          const vendorId = selectedRequest?.vendor_id || '';
+          if (vendorId) {
+            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            fileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
+          } else {
+            fileName = `QR-${sanitizedSku}.png`;
+          }
+        } else {
+          const vendorId = selectedRequest?.vendor_id || '';
+          if (vendorId) {
+            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            fileName = `QR-${sanitizedVendorId}.png`;
+          }
+        }
+        
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    } catch (error) {
+      console.error("Error processing QR code with SKU:", error);
+      // Fallback to original download method
+      const link = document.createElement("a");
+      link.href = qrCode.image_base64;
+      link.download = qrCode.file_name || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Handle settings icon click (open status confirmation modal)
@@ -1787,7 +2060,8 @@ const ReceivingManagementLayer = () => {
       );
 
       if (result.success && result.data.length > 0) {
-        // Pre-populate with existing data
+        // Pre-populate with existing data - editing mode
+        setIsEditingInspection(true);
         const inspectionItems = request.items.map((item) => {
           const existingCheck = result.data.find(
             (qc) => qc.item_id === item.item_id
@@ -1814,7 +2088,8 @@ const ReceivingManagementLayer = () => {
             new Date().toISOString().split("T")[0]
         );
       } else {
-        // Initialize with empty data
+        // Initialize with empty data - new inspection
+        setIsEditingInspection(false);
         const inspectionItems = request.items.map((item) => ({
           item_id: item.item_id,
           invoice_quantity: item.quantity || 0,
@@ -1833,7 +2108,8 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error loading quality checks:", error);
-      // Initialize with empty data
+      // Initialize with empty data - new inspection
+      setIsEditingInspection(false);
       const inspectionItems = request.items.map((item) => ({
         item_id: item.item_id,
         invoice_quantity: item.quantity || 0,
@@ -2348,6 +2624,23 @@ const ReceivingManagementLayer = () => {
                               if (!selectedRequest) return;
                               setIsDownloadingGrn(true);
                               try {
+                                // Fetch the latest GRN info to ensure we have the correct grn_number
+                                let currentGrnInfo = grnInfo;
+                                if (!currentGrnInfo || !currentGrnInfo.grn_number) {
+                                  const exists = await qualityCheckApi.checkGrnExists(
+                                    selectedRequest.request_id
+                                  );
+                                  if (exists) {
+                                    const info = await qualityCheckApi.getGrnInfo(
+                                      selectedRequest.request_id
+                                    );
+                                    if (info.success && info.data) {
+                                      currentGrnInfo = info.data;
+                                      setGrnInfo(currentGrnInfo);
+                                    }
+                                  }
+                                }
+                                
                                 const blob =
                                   await qualityCheckApi.downloadGrnPdf(
                                     selectedRequest.request_id
@@ -2356,8 +2649,8 @@ const ReceivingManagementLayer = () => {
                                 const a = document.createElement("a");
                                 a.href = url;
                                 a.download =
-                                  grnInfo.file_name ||
-                                  `${grnInfo.grn_number}.pdf`;
+                                  currentGrnInfo?.file_name ||
+                                  (currentGrnInfo?.grn_number ? `${currentGrnInfo.grn_number}.pdf` : `GRN-${selectedRequest.request_id}.pdf`);
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -2569,9 +2862,10 @@ const ReceivingManagementLayer = () => {
                                         <button
                                           type="button"
                                           className="btn btn-sm btn-outline-primary"
-                                          onClick={() =>
-                                            setQrPreviewData(item.qr_code)
-                                          }
+                                          onClick={() => {
+                                            setQrPreviewData(item.qr_code);
+                                            setQrPreviewSku(item.sku);
+                                          }}
                                         >
                                           View
                                         </button>
@@ -2579,7 +2873,7 @@ const ReceivingManagementLayer = () => {
                                           type="button"
                                           className="btn btn-sm btn-outline-secondary"
                                           onClick={() =>
-                                            handleDownloadQrImage(item.qr_code)
+                                            handleDownloadQrImage(item.qr_code, item.sku)
                                           }
                                         >
                                           Download
@@ -2659,9 +2953,7 @@ const ReceivingManagementLayer = () => {
                                         {item.variant_display_name || "-"}
                                       </td>
                                       <td className="small text-center">
-                                        <span className="badge bg-info">
-                                          {qc.invoice_quantity || 0}
-                                        </span>
+                                        {qc.invoice_quantity || 0}
                                       </td>
                                       <td className="small text-center">
                                         {qc.actual_quantity || 0}
@@ -2789,16 +3081,33 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn-close"
-                    onClick={() => setQrPreviewData(null)}
+                    onClick={() => {
+                      setQrPreviewData(null);
+                      setQrPreviewSku(null);
+                    }}
                   ></button>
                 </div>
-                <div className="modal-body d-flex justify-content-center">
+                <div className="modal-body d-flex flex-column align-items-center">
                   {qrPreviewData.image_base64 ? (
-                    <img
-                      src={qrPreviewData.image_base64}
-                      alt="QR Code"
-                      style={{ maxWidth: "100%", height: "auto" }}
-                    />
+                    <>
+                      <img
+                        src={qrPreviewData.image_base64}
+                        alt="QR Code"
+                        style={{ maxWidth: "100%", height: "auto" }}
+                      />
+                      {qrPreviewSku && (
+                        <div
+                          className="mt-3 text-center"
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "600",
+                            color: "#1f2937",
+                          }}
+                        >
+                          SKU: {qrPreviewSku}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-muted">No preview available.</div>
                   )}
@@ -2807,7 +3116,7 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    onClick={() => handleDownloadQrImage(qrPreviewData)}
+                    onClick={() => handleDownloadQrImage(qrPreviewData, qrPreviewSku)}
                     disabled={!qrPreviewData.image_base64}
                   >
                     Download
@@ -3066,6 +3375,11 @@ const ReceivingManagementLayer = () => {
                             }
                             placeholder="Enter checker name"
                             required
+                            disabled={isEditingInspection}
+                            style={{
+                              backgroundColor: isEditingInspection ? "#f3f4f6" : "white",
+                              cursor: isEditingInspection ? "not-allowed" : "text",
+                            }}
                           />
                         </div>
                         <div>
@@ -3126,9 +3440,7 @@ const ReceivingManagementLayer = () => {
                                   {requestItem?.sku || "-"}
                                 </td>
                                 <td className="small text-center">
-                                  <span className="badge bg-info">
-                                    {item.invoice_quantity || 0}
-                                  </span>
+                                  {item.invoice_quantity || 0}
                                 </td>
                                 <td className="small">
                                   <input
@@ -5284,9 +5596,25 @@ const QualityCheckTab = ({
     setDownloadingGrn((prev) => ({ ...prev, [requestId]: true }));
 
     try {
+      // Fetch the latest GRN info to ensure we have the correct grn_number
+      let grnInfo = grnInfoCache[requestId];
+      if (!grnInfo || !grnInfo.grn_number) {
+        const exists = await qualityCheckApi.checkGrnExists(requestId);
+        if (exists) {
+          const info = await qualityCheckApi.getGrnInfo(requestId);
+          if (info.success && info.data) {
+            grnInfo = info.data;
+            // Update cache
+            setGrnInfoCache((prev) => ({
+              ...prev,
+              [requestId]: info.data,
+            }));
+          }
+        }
+      }
+      
       const blob = await qualityCheckApi.downloadGrnPdf(requestId);
-      const grnInfo = grnInfoCache[requestId];
-      const fileName = grnInfo?.file_name || `GRN-${requestId}.pdf`;
+      const fileName = grnInfo?.file_name || (grnInfo?.grn_number ? `${grnInfo.grn_number}.pdf` : `GRN-${requestId}.pdf`);
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -5555,12 +5883,19 @@ const QualityCheckTab = ({
                           hasQualityCheckCompletedSync(request);
                         const grnInfo = grnInfoCache[request.request_id];
                         const hasGrn = !!grnInfo;
+                        // Check if QR codes are already generated
+                        const hasQrCodes = request.items?.some(
+                          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+                        ) || false;
+                        // QR button is only disabled if conditions aren't met (not if QR codes already exist)
                         const qrDisabled =
                           isGeneratingQr || !qcCompleted || !hasGrn;
                         const qrTitle = !qcCompleted
                           ? "Complete quality inspection to enable QR codes"
                           : !hasGrn
-                          ? "Generate GRN before creating QR codes"
+                          ? "First generate GRN, then generate QR codes"
+                          : hasQrCodes
+                          ? "Download QR codes"
                           : "Generate QR codes";
 
                         return (
@@ -5646,38 +5981,53 @@ const QualityCheckTab = ({
                                     style={{ color: "#16a34a" }}
                                   />
                                 </button>
-                                <button
-                                  className="btn btn-sm"
-                                  style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    padding: 0,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "6px",
-                                    backgroundColor: "white",
-                                  }}
+                                <div
                                   title={qrTitle}
-                                  onClick={() => handleGenerateQrCodes(request)}
-                                  disabled={qrDisabled}
+                                  style={{
+                                    display: "inline-block",
+                                    position: "relative",
+                                  }}
                                 >
-                                  {isGeneratingQr ? (
-                                    <span
-                                      className="spinner-border spinner-border-sm"
-                                      role="status"
-                                      aria-hidden="true"
-                                    />
-                                  ) : (
-                                    <Icon
-                                      icon="mdi:qrcode"
-                                      width="16"
-                                      height="16"
-                                      style={{ color: "#111827" }}
-                                    />
-                                  )}
-                                </button>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      padding: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "6px",
+                                      backgroundColor: qrDisabled ? "#f3f4f6" : "white",
+                                      opacity: qrDisabled ? 0.6 : 1,
+                                      cursor: qrDisabled ? "not-allowed" : "pointer",
+                                    }}
+                                    onClick={() => {
+                                      if (!qrDisabled) {
+                                        handleGenerateQrCodes(request);
+                                      }
+                                    }}
+                                    disabled={qrDisabled}
+                                  >
+                                    {isGeneratingQr ? (
+                                      <span
+                                        className="spinner-border spinner-border-sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <Icon
+                                        icon="mdi:qrcode"
+                                        width="16"
+                                        height="16"
+                                        style={{ 
+                                          color: qrDisabled ? "#9ca3af" : "#111827" 
+                                        }}
+                                      />
+                                    )}
+                                  </button>
+                                </div>
                                 <button
                                   className="btn btn-sm"
                                   style={{
