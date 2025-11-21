@@ -7,7 +7,6 @@ import { Modal, Button } from "react-bootstrap";
 import { toast } from "react-toastify";
 
 import MasterLayout from "@/masterLayout/MasterLayout";
-import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import inventoryManagementApi from "@/services/inventoryManagementApi";
 
@@ -861,7 +860,6 @@ const OrderManagementPage = () => {
   return (
     <SidebarPermissionGuard requiredSidebar="orderManagement">
       <MasterLayout>
-        <Breadcrumb title="Order Management" />
         <div className="container-fluid py-4">
           <div className="card">
             <div className="card-header d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">

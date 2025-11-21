@@ -1,4 +1,3 @@
-import Breadcrumb from "@/components/Breadcrumb";
 import SkuTableDataLayer from "@/components/SkuTableDataLayer";
 import MasterLayout from "@/masterLayout/MasterLayout";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
@@ -15,9 +14,6 @@ const Page = () => {
       <SidebarPermissionGuard requiredSidebar="skuList">
         {/* MasterLayout */}
         <MasterLayout>
-          {/* Breadcrumb */}
-          <Breadcrumb title="Components / Sku" />
-
           {/* StarRatingLayer */}
           <SkuTableDataLayer />
         </MasterLayout>

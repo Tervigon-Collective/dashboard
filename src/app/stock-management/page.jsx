@@ -6,7 +6,6 @@ import { Modal, Button } from "react-bootstrap";
 import { toast } from "react-toastify";
 
 import MasterLayout from "@/masterLayout/MasterLayout";
-import Breadcrumb from "@/components/Breadcrumb";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import inventoryManagementApi from "@/services/inventoryManagementApi";
 
@@ -421,7 +420,6 @@ const StockManagementPage = () => {
   return (
     <SidebarPermissionGuard requiredSidebar="stockManagement">
       <MasterLayout>
-        <Breadcrumb title="Stock Management" />
         <div className="container-fluid py-4">
           <div className="card">
             <div className="card-header border-0 pb-0">
