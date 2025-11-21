@@ -700,29 +700,6 @@ export default function CreateContentPage() {
       />
 
       <div className="container-fluid" style={{ padding: "15px", overflowX: "hidden" }}>
-        {/* Brandkit Selector Section */}
-        <div className="d-flex justify-content-between align-items-center mb-3" style={{ flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-            {activeBrandkit && (
-              <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
-                <span className="badge bg-light text-dark border">
-                  <Icon icon="solar:palette-bold" width="14" height="14" className="me-1" />
-                  Active: {activeBrandkit.brand_name}
-                </span>
-                {activeBrandkit.tagline && (
-                  <small className="text-muted">"{activeBrandkit.tagline}"</small>
-                )}
-              </div>
-            )}
-          </div>
-          <div style={{ minWidth: 0, flex: "0 0 auto", maxWidth: "250px", width: "100%" }}>
-            <BrandkitSelector
-              onCreateNew={handleCreateNewBrandkit}
-              onManage={handleManageBrandkits}
-            />
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="mb-3">
           <ul
@@ -857,6 +834,29 @@ export default function CreateContentPage() {
                   </p>
                 </div>
                 <div className="card-body p-24">
+                  {/* Brandkit Selector Section */}
+                  <div className="d-flex justify-content-between align-items-center mb-4" style={{ flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                      {activeBrandkit && (
+                        <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
+                          <span className="badge bg-light text-dark border">
+                            <Icon icon="solar:palette-bold" width="14" height="14" className="me-1" />
+                            Active: {activeBrandkit.brand_name}
+                          </span>
+                          {activeBrandkit.tagline && (
+                            <small className="text-muted">"{activeBrandkit.tagline}"</small>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: "0 0 auto", maxWidth: "250px", width: "100%" }}>
+                      <BrandkitSelector
+                        onCreateNew={handleCreateNewBrandkit}
+                        onManage={handleManageBrandkits}
+                      />
+                    </div>
+                  </div>
+
                   {/* Image Upload */}
                   <div className="mb-4">
                     <label className="form-label fw-semibold mb-2 d-block">
