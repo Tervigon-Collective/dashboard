@@ -598,6 +598,17 @@ const ReceivingManagementLayer = () => {
   const [requestToUpdate, setRequestToUpdate] = useState(null);
   const [statusUpdateTarget, setStatusUpdateTarget] =
     useState("to_be_delivered");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Reset loading state when modal opens or request changes
+  useEffect(() => {
+    if (statusConfirmModal) {
+      setIsUpdatingStatus(false);
+    } else {
+      // Also reset when modal closes to ensure clean state
+      setIsUpdatingStatus(false);
+    }
+  }, [statusConfirmModal, requestToUpdate]);
 
   // Quality Check Inspection Modal state
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
@@ -605,6 +616,7 @@ const ReceivingManagementLayer = () => {
   const [inspectionData, setInspectionData] = useState([]);
   const [isSavingInspection, setIsSavingInspection] = useState(false);
   const [isEditingInspection, setIsEditingInspection] = useState(false);
+  const [isLoadingInspection, setIsLoadingInspection] = useState(false);
   const [qualityCheckerName, setQualityCheckerName] = useState("");
   const [inspectionDate, setInspectionDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -650,6 +662,12 @@ const ReceivingManagementLayer = () => {
   const [receiptLoadingMore, setReceiptLoadingMore] = useState(false);
   const receiptContainerRef = useRef(null);
 
+  // Track if data has been loaded for each tab (to prevent unnecessary refetching)
+  const [purchaseRequestsLoaded, setPurchaseRequestsLoaded] = useState(false);
+  const [toBeDeliveredLoaded, setToBeDeliveredLoaded] = useState(false);
+  const [qualityCheckLoaded, setQualityCheckLoaded] = useState(false);
+  const [receiptDetailsLoaded, setReceiptDetailsLoaded] = useState(false);
+
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
     companyName: "",
@@ -667,7 +685,12 @@ const ReceivingManagementLayer = () => {
   });
 
   // Load purchase requests
-  const loadPurchaseRequests = async (page = 1, append = false) => {
+  const loadPurchaseRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (purchaseRequestsLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -691,16 +714,27 @@ const ReceivingManagementLayer = () => {
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
         setTotalRecords(filteredRequests.length);
+        setPurchaseRequestsLoaded(true);
       }
     } catch (error) {
       console.error("Error loading purchase requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   // Load to-be-delivered requests
-  const loadToBeDeliveredRequests = async (page = 1, append = false) => {
+  const loadToBeDeliveredRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (toBeDeliveredLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setToBeDeliveredLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -721,16 +755,27 @@ const ReceivingManagementLayer = () => {
         setToBeDeliveredCurrentPage(result.pagination.page);
         setToBeDeliveredTotalPages(result.pagination.totalPages);
         setToBeDeliveredTotalRecords(filteredRequests.length);
+        setToBeDeliveredLoaded(true);
       }
     } catch (error) {
       console.error("Error loading to-be-delivered requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setToBeDeliveredLoading(false);
     }
   };
 
   // Load quality check (arrived) requests
-  const loadQualityCheckRequests = async (page = 1, append = false) => {
+  const loadQualityCheckRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (qualityCheckLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setQualityCheckLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -751,16 +796,27 @@ const ReceivingManagementLayer = () => {
         setQualityCheckCurrentPage(result.pagination.page);
         setQualityCheckTotalPages(result.pagination.totalPages);
         setQualityCheckTotalRecords(filteredRequests.length);
+        setQualityCheckLoaded(true);
       }
     } catch (error) {
       console.error("Error loading quality check requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setQualityCheckLoading(false);
     }
   };
 
   // Load receipt details (fulfilled) requests with QC aggregation
-  const loadReceiptDetailsRequests = async (page = 1, append = false) => {
+  const loadReceiptDetailsRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (receiptDetailsLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setReceiptLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -856,9 +912,15 @@ const ReceivingManagementLayer = () => {
         setReceiptCurrentPage(result.pagination.page);
         setReceiptTotalPages(result.pagination.totalPages);
         setReceiptTotalRecords(enriched.length);
+        setReceiptDetailsLoaded(true);
       }
     } catch (error) {
       console.error("Error loading receipt details:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setReceiptLoading(false);
     }
@@ -873,6 +935,12 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error loading vendors:", error);
+      // Handle rate limiting errors
+      if (error.status === 429 || (error.message && error.message.includes("429"))) {
+        const retryAfter = error.result?.retryAfter || 60;
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+        // Don't show alert for vendor loading as it's not critical
+      }
       // Set empty array to prevent errors
       setVendors([]);
     }
@@ -903,18 +971,18 @@ const ReceivingManagementLayer = () => {
     });
   }, []);
 
-  // Load to-be-delivered requests when switching to that tab
+  // Load to-be-delivered requests when switching to that tab (only if not already loaded)
   useEffect(() => {
-    if (activeTab === "to-be-delivered") {
+    if (activeTab === "to-be-delivered" && !toBeDeliveredLoaded) {
       loadToBeDeliveredRequests();
     }
-    if (activeTab === "quality-check") {
+    if (activeTab === "quality-check" && !qualityCheckLoaded) {
       loadQualityCheckRequests();
     }
-    if (activeTab === "receipt-details") {
+    if (activeTab === "receipt-details" && !receiptDetailsLoaded) {
       loadReceiptDetailsRequests();
     }
-  }, [activeTab]);
+  }, [activeTab, toBeDeliveredLoaded, qualityCheckLoaded, receiptDetailsLoaded]);
 
   // Reset displayed items when search term or active tab changes
   useEffect(() => {
@@ -1276,7 +1344,7 @@ const ReceivingManagementLayer = () => {
         setModalOpen(false);
         setIsEditMode(false);
         setEditingRequest(null);
-        await loadPurchaseRequests(currentPage);
+        await loadPurchaseRequests(currentPage, false, true); // force = true after create/update
 
         console.log(
           `Purchase request ${
@@ -1386,7 +1454,7 @@ const ReceivingManagementLayer = () => {
         );
 
         if (result.success) {
-          await loadPurchaseRequests(currentPage);
+          await loadPurchaseRequests(currentPage, false, true); // force = true after delete
           console.log("Purchase request deleted successfully");
         } else {
           alert(`Error: ${result.message}`);
@@ -1744,8 +1812,11 @@ const ReceivingManagementLayer = () => {
             }
           });
           
-          // Process each file in parallel
-          const filePromises = fileEntries.map(async ({ relativePath, file }) => {
+          // Track used filenames to prevent collisions
+          const usedFilenames = new Map();
+          
+          // Process each file sequentially to avoid race conditions with filename generation
+          for (const { relativePath, file } of fileEntries) {
             if (relativePath.endsWith('.png')) {
               // Find matching SKU for this file
               const item = itemsWithSku.find(
@@ -1754,7 +1825,8 @@ const ReceivingManagementLayer = () => {
                 item.qrFileName?.includes(relativePath.replace('.png', '')) ||
                 relativePath.includes(String(item.itemId))
               );
-              const sku = item?.sku || null;
+              const sku = item?.sku ?? null;
+              const itemId = item?.itemId ?? null;
               
               // Get the image blob
               const imageBlob = await file.async('blob');
@@ -1763,6 +1835,7 @@ const ReceivingManagementLayer = () => {
               const modifiedBlob = await addSkuToQrImage(imageBlob, sku);
               
               // Create new filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
+              // Use itemId as fallback to ensure uniqueness when SKU is missing
               let newFileName = relativePath;
               if (sku && vendorId) {
                 const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1773,20 +1846,37 @@ const ReceivingManagementLayer = () => {
                 newFileName = `QR-${sanitizedSku}.png`;
               } else if (vendorId) {
                 const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
-                newFileName = `QR-${sanitizedVendorId}.png`;
+                // Use itemId to ensure uniqueness when SKU is missing
+                if (itemId !== null) {
+                  const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                  newFileName = `QR-${sanitizedVendorId}-${sanitizedItemId}.png`;
+                } else {
+                  newFileName = `QR-${sanitizedVendorId}.png`;
+                }
+              } else if (itemId !== null) {
+                // Fallback: use itemId if neither SKU nor vendorId exists
+                const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedItemId}.png`;
               }
               
-              // Add to new ZIP with new filename
-              newZip.file(newFileName, modifiedBlob);
+              // Ensure filename is unique (handle collisions by appending counter)
+              let finalFileName = newFileName;
+              let counter = 1;
+              while (usedFilenames.has(finalFileName)) {
+                const baseWithoutExt = newFileName.replace(/\.png$/, '');
+                finalFileName = `${baseWithoutExt}-${counter}.png`;
+                counter++;
+              }
+              usedFilenames.set(finalFileName, true);
+              
+              // Add to new ZIP with final unique filename
+              newZip.file(finalFileName, modifiedBlob);
             } else {
               // Keep non-image files as-is
               const content = await file.async('blob');
               newZip.file(relativePath, content);
             }
-          });
-          
-          // Wait for all files to be processed
-          await Promise.all(filePromises);
+          }
           
           // Generate the new ZIP
           const modifiedZipBlob = await newZip.generateAsync({ type: 'blob' });
@@ -1820,7 +1910,7 @@ const ReceivingManagementLayer = () => {
         );
       }
 
-      await loadQualityCheckRequests();
+      await loadQualityCheckRequests(1, false, true); // force = true after QR generation
 
       if (selectedRequest && selectedRequest.request_id === requestId) {
         await handleViewRequest(request, "quality-check");
@@ -1988,6 +2078,7 @@ const ReceivingManagementLayer = () => {
 
     setRequestToUpdate(request);
     setStatusUpdateTarget(targetStatus);
+    setIsUpdatingStatus(false); // Reset loading state when opening modal
     setStatusConfirmModal(true);
   };
 
@@ -2003,8 +2094,11 @@ const ReceivingManagementLayer = () => {
 
   // Handle status update confirmation
   const handleStatusUpdateConfirm = async () => {
-    if (!requestToUpdate) return;
+    if (!requestToUpdate || isUpdatingStatus) return;
 
+    // Set loading state immediately - React will handle the re-render automatically
+    setIsUpdatingStatus(true);
+    
     try {
       const result = await purchaseRequestApi.updateStatus(
         requestToUpdate.request_id,
@@ -2015,6 +2109,7 @@ const ReceivingManagementLayer = () => {
         // Close modal
         setStatusConfirmModal(false);
         setRequestToUpdate(null);
+        setIsUpdatingStatus(false); // Reset loading state on success
 
         // Switch tab based on target
         let targetTab = "to-be-delivered"; // default
@@ -2025,17 +2120,36 @@ const ReceivingManagementLayer = () => {
         }
         setActiveTab(targetTab);
 
-        // Reload lists
-        await loadPurchaseRequests(currentPage);
-        await loadToBeDeliveredRequests();
-        await loadQualityCheckRequests();
-        await loadReceiptDetailsRequests();
+        // Reload lists with delays to prevent rate limiting
+        // Force reload after status update to get fresh data
+        // Add small delays between API calls to avoid hitting rate limits
+        try {
+          await loadPurchaseRequests(currentPage, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadToBeDeliveredRequests(1, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadQualityCheckRequests(1, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadReceiptDetailsRequests(1, false, true); // force = true
 
-        // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
-        if (statusUpdateTarget === "to_be_delivered") {
-          setTimeout(async () => {
-            await loadToBeDeliveredRequests();
-          }, 2000); // Wait 2 seconds for PDF generation to complete
+          // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
+          if (statusUpdateTarget === "to_be_delivered") {
+            setTimeout(async () => {
+              try {
+                await loadToBeDeliveredRequests(1, false, true); // force = true
+              } catch (refreshError) {
+                console.error("Error refreshing to-be-delivered requests:", refreshError);
+                // Don't show alert for background refresh errors
+              }
+            }, 2000); // Wait 2 seconds for PDF generation to complete
+          }
+        } catch (reloadError) {
+          console.error("Error reloading lists after status update:", reloadError);
+          // Don't show alert here as the status update was successful
+          // The lists will refresh when user switches tabs
         }
 
         console.log("Purchase request status updated successfully");
@@ -2044,12 +2158,28 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error updating purchase request status:", error);
-      alert("Failed to update purchase request status. Please try again.");
+      // Handle rate limiting errors specifically
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+      } else {
+        alert("Failed to update purchase request status. Please try again.");
+      }
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
   // Handle inspect button click - open inspection modal
   const handleInspectClick = async (request) => {
+    // Reset all inspection state first to prevent showing stale data
+    setInspectionData([]);
+    setQualityCheckerName("");
+    setInspectionDate(new Date().toISOString().split("T")[0]);
+    setIsEditingInspection(false);
+    setIsLoadingInspection(true);
+    
+    // Set request and open modal
     setRequestToInspect(request);
     setInspectionModalOpen(true);
 
@@ -2124,6 +2254,9 @@ const ReceivingManagementLayer = () => {
         user?.email?.split("@")[0] ||
         "Quality Checker";
       setQualityCheckerName(defaultCheckerName);
+      setInspectionDate(new Date().toISOString().split("T")[0]);
+    } finally {
+      setIsLoadingInspection(false);
     }
   };
 
@@ -2178,7 +2311,7 @@ const ReceivingManagementLayer = () => {
       if (result.success) {
         setInspectionModalOpen(false);
         setRequestToInspect(null);
-        await loadQualityCheckRequests();
+        await loadQualityCheckRequests(1, false, true); // force = true after saving inspection
         alert("Quality check inspection saved successfully!");
       } else {
         alert(`Error: ${result.message}`);
@@ -3129,17 +3262,24 @@ const ReceivingManagementLayer = () => {
 
         {/* Status Update Confirmation Modal (Procurement-style UI) */}
         {statusConfirmModal && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1050,
-            }}
-          >
+          <>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1050,
+              }}
+            >
             <div
               style={{
                 width: "100%",
@@ -3154,9 +3294,13 @@ const ReceivingManagementLayer = () => {
               {/* Close button */}
               <button
                 onClick={() => {
-                  setStatusConfirmModal(false);
-                  setRequestToUpdate(null);
+                  if (!isUpdatingStatus) {
+                    setStatusConfirmModal(false);
+                    setRequestToUpdate(null);
+                    setIsUpdatingStatus(false); // Reset loading state when closing
+                  }
                 }}
+                disabled={isUpdatingStatus}
                 style={{
                   position: "absolute",
                   top: "16px",
@@ -3166,8 +3310,9 @@ const ReceivingManagementLayer = () => {
                   border: "none",
                   borderRadius: "8px",
                   background: "transparent",
-                  color: "#6b7280",
-                  cursor: "pointer",
+                  color: isUpdatingStatus ? "#9ca3af" : "#6b7280",
+                  cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                  opacity: isUpdatingStatus ? 0.5 : 1,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3175,12 +3320,16 @@ const ReceivingManagementLayer = () => {
                   fontSize: "20px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                  e.currentTarget.style.color = "#374151";
+                  if (!isUpdatingStatus) {
+                    e.currentTarget.style.background = "#f3f4f6";
+                    e.currentTarget.style.color = "#374151";
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#6b7280";
+                  if (!isUpdatingStatus) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#6b7280";
+                  }
                 }}
                 aria-label="Close"
               >
@@ -3238,10 +3387,14 @@ const ReceivingManagementLayer = () => {
                 <div className="d-flex flex-column flex-sm-row gap-2">
                   <button
                     onClick={() => {
-                      setStatusConfirmModal(false);
-                      setRequestToUpdate(null);
+                      if (!isUpdatingStatus) {
+                        setStatusConfirmModal(false);
+                        setRequestToUpdate(null);
+                        setIsUpdatingStatus(false); // Reset loading state when canceling
+                      }
                     }}
                     className="w-100 w-sm-auto"
+                    disabled={isUpdatingStatus}
                     style={{
                       padding: "12px 18px",
                       fontSize: "15px",
@@ -3250,16 +3403,21 @@ const ReceivingManagementLayer = () => {
                       borderRadius: "10px",
                       background: "white",
                       color: "#374151",
-                      cursor: "pointer",
+                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                      opacity: isUpdatingStatus ? 0.6 : 1,
                       transition: "all 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#f9fafb";
-                      e.currentTarget.style.borderColor = "#d1d5db";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#f9fafb";
+                        e.currentTarget.style.borderColor = "#d1d5db";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.borderColor = "#e5e7eb";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "white";
+                        e.currentTarget.style.borderColor = "#e5e7eb";
+                      }
                     }}
                   >
                     Cancel
@@ -3267,30 +3425,58 @@ const ReceivingManagementLayer = () => {
                   <button
                     onClick={handleStatusUpdateConfirm}
                     className="w-100 w-sm-auto"
+                    disabled={isUpdatingStatus}
                     style={{
                       padding: "12px 18px",
                       fontSize: "15px",
                       fontWeight: 600,
                       border: "none",
                       borderRadius: "10px",
-                      background: "#4f46e5",
+                      background: isUpdatingStatus ? "#9ca3af" : "#4f46e5",
                       color: "white",
-                      cursor: "pointer",
+                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                      opacity: isUpdatingStatus ? 0.7 : 1,
                       transition: "background 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#4338ca";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#4338ca";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#4f46e5";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#4f46e5";
+                      }
                     }}
                   >
-                    Yes, Change Status
+                    {isUpdatingStatus ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"
+                          style={{ 
+                            width: "14px", 
+                            height: "14px",
+                            borderWidth: "2px",
+                            flexShrink: 0
+                          }}
+                        />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      "Yes, Change Status"
+                    )}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+          </>
         )}
 
         {/* Quality Check Inspection Modal */}
@@ -3316,6 +3502,12 @@ const ReceivingManagementLayer = () => {
                     onClick={() => {
                       setInspectionModalOpen(false);
                       setRequestToInspect(null);
+                      setIsLoadingInspection(false);
+                      // Reset inspection state when closing
+                      setInspectionData([]);
+                      setQualityCheckerName("");
+                      setInspectionDate(new Date().toISOString().split("T")[0]);
+                      setIsEditingInspection(false);
                     }}
                   ></button>
                 </div>
@@ -3323,6 +3515,21 @@ const ReceivingManagementLayer = () => {
                   className="modal-body"
                   style={{ maxHeight: "70vh", overflowY: "auto" }}
                 >
+                  {isLoadingInspection ? (
+                    <div className="d-flex justify-content-center align-items-center py-5">
+                      <div className="text-center">
+                        <div
+                          className="spinner-border text-primary mb-3"
+                          role="status"
+                          style={{ width: "3rem", height: "3rem" }}
+                        >
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="text-muted">Loading inspection details...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   {/* Request Info */}
                   <div className="row mb-4">
                     <div className="col-md-6">
@@ -3375,11 +3582,7 @@ const ReceivingManagementLayer = () => {
                             }
                             placeholder="Enter checker name"
                             required
-                            disabled={isEditingInspection}
-                            style={{
-                              backgroundColor: isEditingInspection ? "#f3f4f6" : "white",
-                              cursor: isEditingInspection ? "not-allowed" : "text",
-                            }}
+                            disabled
                           />
                         </div>
                         <div>
@@ -3523,13 +3726,15 @@ const ReceivingManagementLayer = () => {
                       includes all damaged items found.
                     </div>
                   </div>
+                    </>
+                  )}
                 </div>
                 <div className="modal-footer d-flex flex-column flex-sm-row gap-2 justify-content-end">
                   <button
                     type="button"
                     className="btn btn-primary w-100 w-sm-auto"
                     onClick={handleSaveInspection}
-                    disabled={isSavingInspection}
+                    disabled={isSavingInspection || isLoadingInspection}
                   >
                     {isSavingInspection ? (
                       <>
