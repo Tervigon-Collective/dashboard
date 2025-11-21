@@ -113,7 +113,7 @@ const ProcurementTableDataLayer = () => {
 
       if (product.variants && product.variants.length > 0) {
         totalQuantity = product.variants.reduce(
-          (sum, variant) => sum + (variant.quantity || 0),
+          (sum, variant) => sum + (variant.moq || 0),
           0
         );
 
@@ -1459,7 +1459,10 @@ const ProcurementTableDataLayer = () => {
                                     <th className="small text-end">MRP</th>
                                     <th className="small text-end">COGS</th>
                                     <th className="small text-end">Margin</th>
-                                    <th className="small text-center">Qty</th>
+                                    <th className="small text-center">MOQ</th>
+                                    <th className="small text-center d-none d-lg-table-cell">
+                                      Sample Qty
+                                    </th>
                                     <th className="small">Company Name</th>
                                   </tr>
                                 </thead>
@@ -1498,7 +1501,10 @@ const ProcurementTableDataLayer = () => {
                                           )}
                                         </td>
                                         <td className="small text-center">
-                                          {variant.quantity}
+                                          {variant.moq || 0}
+                                        </td>
+                                        <td className="small text-center d-none d-lg-table-cell">
+                                          {variant.sample_quantity || 0}
                                         </td>
                                         <td className="small">
                                           {variant.vendor_pricing &&
