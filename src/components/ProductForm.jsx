@@ -107,7 +107,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
                     ? (variant.mrp - variant.cogs).toFixed(2)
                     : "",
                 variant_type: variantType,
-                quantity: variant.quantity || "",
+                moq: variant.moq || "",
+                sample_quantity: variant.sample_quantity || "",
                 dimension_with_packing: variant.dimension_with_packing || "",
                 dimension_without_packing:
                   variant.dimension_without_packing || "",
@@ -474,7 +475,8 @@ const ProductForm = ({ mode = "add", productId = null }) => {
         mrp: Number(variant.mrp),
         cogs: Number(variant.cogs),
         variant_type: variant.variant_type,
-        quantity: Number(variant.quantity) || 0,
+        moq: Number(variant.moq) || 0,
+        sample_quantity: Number(variant.sample_quantity) || 0,
         dimension_with_packing: variant.dimension_with_packing,
         dimension_without_packing: variant.dimension_without_packing,
         sku: variant.sku,
