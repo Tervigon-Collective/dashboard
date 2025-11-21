@@ -15235,6 +15235,8 @@ td.fc-header-center {
   top: 0;
   padding: 1rem 1.5rem;
   z-index: 2;
+  border-bottom: 1px solid var(--neutral-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-toggle,

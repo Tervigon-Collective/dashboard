@@ -310,7 +310,6 @@ const MasterLayout = ({ children }) => {
 
               // Check if user has permission to at least one item in this group
               const hasAnyApplicationPermission =
-                hasSidebarPermission("skuList") ||
                 hasSidebarPermission("productSpendSummary") ||
                 hasSidebarPermission("procurement") ||
                 hasSidebarPermission("entityReport") ||
@@ -320,19 +319,6 @@ const MasterLayout = ({ children }) => {
                 return (
                   <>
                     <li className="sidebar-menu-group-title">Application</li>
-                    {hasSidebarPermission("skuList") && (
-                      <li>
-                        <Link
-                          href="/Sku-List"
-                          className={
-                            pathname === "/Sku-List" ? "active-page" : ""
-                          }
-                        >
-                          <Icon icon="mage:box" className="menu-icon" />
-                          <span>Sku List</span>
-                        </Link>
-                      </li>
-                    )}
                     {hasSidebarPermission("productSpendSummary") && (
                       <li>
                         <Link
