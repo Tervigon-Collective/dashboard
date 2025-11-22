@@ -365,19 +365,23 @@ const StockManagementPage = () => {
           };
 
         if (append) {
-          // When appending, combine data first, then sort the entire dataset
-          // to maintain correct sort order across pages
+          // When appending during infinite scroll:
+          // - If client-side sorting is active, don't append (sorting breaks pagination order)
+          // - If no sorting, append and maintain API pagination order
           setInventoryState((prev) => {
+            if (prev.sortField) {
+              // Client-side sorting is active - don't append to preserve pagination order
+              // User should remove sort or load all data first
+              return {
+                ...prev,
+                loading: false,
+              };
+            }
+            // No sorting active - safe to append and maintain API pagination order
             const combinedData = [...prev.data, ...data];
-            // Use sort field and direction from prev state to ensure correct sorting
-            const processedData = sortInventoryData(
-              combinedData,
-              prev.sortField,
-              prev.sortDirection
-            );
             return {
               ...prev,
-              data: processedData,
+              data: combinedData,
               pagination,
               loading: false,
             };
@@ -442,19 +446,23 @@ const StockManagementPage = () => {
           };
 
         if (append) {
-          // When appending, combine data first, then sort the entire dataset
-          // to maintain correct sort order across pages
+          // When appending during infinite scroll:
+          // - If client-side sorting is active, don't append (sorting breaks pagination order)
+          // - If no sorting, append and maintain API pagination order
           setReturnsState((prev) => {
+            if (prev.sortField) {
+              // Client-side sorting is active - don't append to preserve pagination order
+              // User should remove sort or load all data first
+              return {
+                ...prev,
+                loading: false,
+              };
+            }
+            // No sorting active - safe to append and maintain API pagination order
             const combinedData = [...prev.data, ...data];
-            // Use sort field and direction from prev state to ensure correct sorting
-            const processedData = sortReturnsData(
-              combinedData,
-              prev.sortField,
-              prev.sortDirection
-            );
             return {
               ...prev,
-              data: processedData,
+              data: combinedData,
               pagination,
               loading: false,
             };
@@ -694,21 +702,31 @@ const StockManagementPage = () => {
 
   // Check if there's more inventory data
   const hasMoreInventoryData = useCallback(() => {
+    // If client-side sorting is active, disable infinite scroll to preserve pagination order
+    if (inventoryState.sortField) {
+      return false;
+    }
+    
     const filteredData = getFilteredInventoryData();
     
     return (
       inventoryDisplayedCount < filteredData.length ||
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     );
-  }, [inventoryDisplayedCount, getFilteredInventoryData, inventoryState.pagination]);
+  }, [inventoryDisplayedCount, getFilteredInventoryData, inventoryState.pagination, inventoryState.sortField]);
 
   // Check if there's more returns data
   const hasMoreReturnsData = useCallback(() => {
+    // If client-side sorting is active, disable infinite scroll to preserve pagination order
+    if (returnsState.sortField) {
+      return false;
+    }
+    
     return (
       returnsDisplayedCount < returnsState.data.length ||
       returnsState.pagination.page < returnsState.pagination.totalPages
     );
-  }, [returnsDisplayedCount, returnsState.data.length, returnsState.pagination]);
+  }, [returnsDisplayedCount, returnsState.data.length, returnsState.pagination, returnsState.sortField]);
 
   // Load more inventory data
   const loadMoreInventoryData = useCallback(async () => {
