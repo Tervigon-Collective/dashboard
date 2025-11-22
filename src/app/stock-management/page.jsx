@@ -35,10 +35,11 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
             <div className="small text-muted">SKU: {item.sku || "-"}</div>
           </div>
         </div>
-        <div className="row g-3">
+        <div className="row g-3 mb-3">
           {[
             { label: "Available", value: item.available_quantity },
             { label: "Committed", value: item.committed_quantity },
+            { label: "Net Available", value: item.net_available || (item.available_quantity - item.committed_quantity) },
             { label: "Cancelled", value: item.cancelled_quantity },
             {
               label: "Approved Returns",
@@ -53,6 +54,50 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
             </div>
           ))}
         </div>
+
+        {/* Thresholds Section (Read-Only) */}
+        {(item.reorder_point !== null || item.minimum_stock_level !== null || item.safety_stock !== null) && (
+          <div className="mt-4 pt-3 border-top">
+            <h6 className="mb-3">
+              Inventory Thresholds
+              <span className="badge bg-info ms-2" style={{ fontSize: "0.7rem" }}>
+                Auto-calculated
+              </span>
+            </h6>
+            <div className="row g-3">
+              {[
+                { label: "Reorder Point", value: item.reorder_point, tooltip: "When to reorder" },
+                { label: "Minimum Stock Level", value: item.minimum_stock_level, tooltip: "Critical threshold" },
+                { label: "Safety Stock", value: item.safety_stock, tooltip: "Buffer stock" },
+                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v ? v.toFixed(2) : "-" },
+                { label: "Lead Time (Days)", value: item.lead_time_days, tooltip: "Expected delivery time" },
+              ].map((metric) => (
+                <div className="col-6 col-md-4" key={metric.label}>
+                  <div className="text-muted small">
+                    {metric.label}
+                    {metric.tooltip && (
+                      <span
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        data-bs-title={metric.tooltip}
+                        style={{ cursor: "help", marginLeft: "4px" }}
+                      >
+                        <Icon
+                          icon="lucide:info"
+                          width="12"
+                          height="12"
+                        />
+                      </span>
+                    )}
+                  </div>
+                  <div className="fw-semibold">
+                    {metric.format ? metric.format(metric.value) : formatNumber(metric.value)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <h6 className="mb-3">Recent Ledger Entries</h6>
@@ -201,8 +246,14 @@ const StockManagementPage = () => {
       }
 
       const sortedData = [...dataArray].sort((a, b) => {
-        const valueA = a?.[field];
-        const valueB = b?.[field];
+        let valueA = a?.[field];
+        let valueB = b?.[field];
+
+        // Handle net_available - calculate if not present
+        if (field === "net_available") {
+          valueA = a?.net_available ?? (a?.available_quantity - a?.committed_quantity);
+          valueB = b?.net_available ?? (b?.available_quantity - b?.committed_quantity);
+        }
 
         if (valueA === valueB) return 0;
         if (valueA == null) return -1;
@@ -311,25 +362,35 @@ const StockManagementPage = () => {
             total: data.length,
           };
 
-        // Apply sorting first
-        let processedData = sortInventoryData(data);
-
         if (append) {
-        setInventoryState((prev) => ({
-          ...prev,
-            data: [...prev.data, ...processedData],
-            pagination,
-            loading: false,
-          }));
+          // When appending, combine data first, then sort the entire dataset
+          // to maintain correct sort order across pages
+          setInventoryState((prev) => {
+            const combinedData = [...prev.data, ...data];
+            // Use sort field and direction from prev state to ensure correct sorting
+            const processedData = sortInventoryData(
+              combinedData,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              loading: false,
+            };
+          });
         } else {
+          // When not appending, sort the new data normally
+          const processedData = sortInventoryData(data);
           setInventoryState((prev) => ({
             ...prev,
             data: processedData,
-          pagination,
-          loading: false,
-          limit: limit ?? prev.limit,
+            pagination,
+            loading: false,
+            limit: limit ?? prev.limit,
             search: search !== undefined ? search : prev.search,
-        }));
+          }));
           setInventoryDisplayedCount(20);
         }
       } catch (error) {
@@ -371,24 +432,34 @@ const StockManagementPage = () => {
             total: data.length,
           };
 
-        // Apply sorting
-        const processedData = sortReturnsData(data);
-
         if (append) {
-        setReturnsState((prev) => ({
-          ...prev,
-            data: [...prev.data, ...processedData],
-            pagination,
-            loading: false,
-          }));
+          // When appending, combine data first, then sort the entire dataset
+          // to maintain correct sort order across pages
+          setReturnsState((prev) => {
+            const combinedData = [...prev.data, ...data];
+            // Use sort field and direction from prev state to ensure correct sorting
+            const processedData = sortReturnsData(
+              combinedData,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              loading: false,
+            };
+          });
         } else {
+          // When not appending, sort the new data normally
+          const processedData = sortReturnsData(data);
           setReturnsState((prev) => ({
             ...prev,
             data: processedData,
-          pagination,
-          status: status ?? prev.status,
-          loading: false,
-        }));
+            pagination,
+            status: status ?? prev.status,
+            loading: false,
+          }));
           setReturnsDisplayedCount(20);
         }
       } catch (error) {
@@ -525,54 +596,69 @@ const StockManagementPage = () => {
   }, []);
 
   // Initialize Bootstrap tooltips
+  const initializeTooltips = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    import("bootstrap/dist/js/bootstrap.bundle.min.js").then(
+      (bootstrapModule) => {
+        // Wait for DOM to update
+        setTimeout(() => {
+          const Tooltip = bootstrapModule.Tooltip || (window.bootstrap && window.bootstrap.Tooltip);
+          if (!Tooltip) return;
+
+          const tooltipTriggerList = document.querySelectorAll(
+            '[data-bs-toggle="tooltip"]'
+          );
+          
+          // Dispose existing tooltips first
+          tooltipTriggerList.forEach((el) => {
+            const existingTooltip = Tooltip.getInstance(el);
+            if (existingTooltip) {
+              existingTooltip.dispose();
+            }
+          });
+
+          // Initialize new tooltips
+          [...tooltipTriggerList].forEach(
+            (tooltipTriggerEl) => new Tooltip(tooltipTriggerEl)
+          );
+        }, 100);
+      }
+    );
+  }, []);
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("bootstrap/dist/js/bootstrap.bundle.min.js").then(
-        (bootstrapModule) => {
-          // Wait for DOM to update
-          setTimeout(() => {
-            const Tooltip = bootstrapModule.Tooltip || (window.bootstrap && window.bootstrap.Tooltip);
-            if (!Tooltip) return;
+    initializeTooltips();
+  }, [inventoryState.data, returnsState.data, initializeTooltips]);
 
-            const tooltipTriggerList = document.querySelectorAll(
-              '[data-bs-toggle="tooltip"]'
-            );
-            
-            // Dispose existing tooltips first
-            tooltipTriggerList.forEach((el) => {
-              const existingTooltip = Tooltip.getInstance(el);
-              if (existingTooltip) {
-                existingTooltip.dispose();
-              }
-            });
-
-            // Initialize new tooltips
-            const tooltipList = [...tooltipTriggerList].map(
-              (tooltipTriggerEl) => new Tooltip(tooltipTriggerEl)
-            );
-
-            return () => {
-              tooltipList.forEach((tooltip) => {
-                if (tooltip && typeof tooltip.dispose === "function") {
-                  tooltip.dispose();
-                }
-              });
-            };
-          }, 100);
-        }
-      );
+  // Initialize tooltips when modal opens
+  useEffect(() => {
+    if (inventoryDetail.item) {
+      // Wait for modal to be fully rendered
+      setTimeout(() => {
+        initializeTooltips();
+      }, 200);
     }
-  }, [inventoryState.data, returnsState.data]);
+  }, [inventoryDetail.item, initializeTooltips]);
 
   // Get filtered inventory data (helper function)
   const getFilteredInventoryData = useCallback(() => {
     let filteredData = inventoryState.data;
     
-    // Apply low stock filter
+    // Apply low stock filter based on thresholds
     if (inventoryState.lowStockFilter === "low") {
-      filteredData = filteredData.filter((item) => (item.available_quantity || 0) < 5);
+      filteredData = filteredData.filter((item) => {
+        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        return netAvailable <= 0 || 
+               (item.minimum_stock_level && netAvailable <= item.minimum_stock_level) ||
+               (item.reorder_point && netAvailable <= item.reorder_point);
+      });
     } else if (inventoryState.lowStockFilter === "normal") {
-      filteredData = filteredData.filter((item) => (item.available_quantity || 0) >= 5);
+      filteredData = filteredData.filter((item) => {
+        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        return netAvailable > 0 && 
+               (!item.reorder_point || netAvailable > item.reorder_point);
+      });
     }
     
     return filteredData;
@@ -908,8 +994,8 @@ const StockManagementPage = () => {
                       }}
                     >
                       <option value="all">All Stock</option>
-                      <option value="low">Low Stock (&lt;5)</option>
-                      <option value="normal">Normal Stock (≥5)</option>
+                      <option value="low">Low/Critical Stock</option>
+                      <option value="normal">Normal Stock</option>
                       </select>
 
                     {/* Sort Field */}
@@ -935,6 +1021,8 @@ const StockManagementPage = () => {
                       <option value="sku">SKU</option>
                       <option value="available_quantity">Available Qty</option>
                       <option value="committed_quantity">Committed Qty</option>
+                      <option value="net_available">Net Available</option>
+                      <option value="reorder_point">Reorder Point</option>
                     </select>
 
                     {/* Sort Order */}
@@ -1129,11 +1217,69 @@ const StockManagementPage = () => {
                               )}
                             </div>
                           </th>
-                          <th scope="col" className="text-center">
-                            Cancels
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("net_available")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Net Available
+                              {inventoryState.sortField === "net_available" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
                           </th>
-                          <th scope="col" className="text-center">
-                            Approved Returns
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("net_available")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                            title="Sort by stock status (based on net available)"
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Status
+                              {inventoryState.sortField === "net_available" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("reorder_point")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Reorder Point
+                              {inventoryState.sortField === "reorder_point" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
                           </th>
                           <th
                             scope="col"
@@ -1181,7 +1327,24 @@ const StockManagementPage = () => {
                         ) : (
                           <>
                             {getDisplayedInventoryData().map((item, index) => {
-                              const isLowStock = (item.available_quantity || 0) < 5;
+                              const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+                              
+                              // Determine stock status based on thresholds
+                              const getStockStatus = () => {
+                                if (netAvailable <= 0) {
+                                  return { status: 'out_of_stock', label: 'OUT OF STOCK', color: '#dc3545', bgColor: '#f8d7da' };
+                                }
+                                if (item.minimum_stock_level && netAvailable <= item.minimum_stock_level) {
+                                  return { status: 'critical', label: 'CRITICAL', color: '#fd7e14', bgColor: '#fff3cd' };
+                                }
+                                if (item.reorder_point && netAvailable <= item.reorder_point) {
+                                  return { status: 'low_stock', label: 'LOW STOCK', color: '#ffc107', bgColor: '#fff3cd' };
+                                }
+                                return { status: 'in_stock', label: 'IN STOCK', color: '#198754', bgColor: '#d1e7dd' };
+                              };
+                              
+                              const stockStatus = getStockStatus();
+                              
                               return (
                                 <tr key={item.inventory_item_id}>
                                   <td>
@@ -1205,39 +1368,9 @@ const StockManagementPage = () => {
                                     </span>
                                   </td>
                                   <td className="text-center">
-                                    <div className="d-flex align-items-center justify-content-center gap-1 position-relative">
-                                      <span
-                                        className={`fw-semibold ${
-                                          isLowStock ? "text-danger" : ""
-                                        }`}
-                                      >
-                                        {formatNumber(item.available_quantity)}
-                                      </span>
-                                      {isLowStock && (
-                                        <span
-                                          className="position-relative"
-                                          data-bs-toggle="tooltip"
-                                          data-bs-placement="top"
-                                          data-bs-title={`Low Stock Warning: Only ${formatNumber(item.available_quantity)} units available. Please restock soon.`}
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            cursor: "help",
-                                          }}
-                                        >
-                                          <span
-                                            style={{
-                                              width: "6px",
-                                              height: "6px",
-                                              borderRadius: "50%",
-                                              backgroundColor: "#dc3545",
-                                              display: "inline-block",
-                                              marginLeft: "4px",
-                                            }}
-                                          />
-                                        </span>
-                                      )}
-                                    </div>
+                                    <span className="fw-semibold">
+                                      {formatNumber(item.available_quantity)}
+                                    </span>
                                   </td>
                                   <td className="text-center">
                                     <span className="text-secondary-light">
@@ -1245,13 +1378,33 @@ const StockManagementPage = () => {
                                     </span>
                                   </td>
                                   <td className="text-center">
-                                    <span className="text-secondary-light">
-                                      {formatNumber(item.cancelled_quantity)}
+                                    <span className={`fw-semibold ${
+                                      stockStatus.status === 'out_of_stock' ? 'text-danger' :
+                                      stockStatus.status === 'critical' ? 'text-warning' :
+                                      stockStatus.status === 'low_stock' ? 'text-warning' : ''
+                                    }`}>
+                                      {formatNumber(netAvailable)}
                                     </span>
                                   </td>
                                   <td className="text-center">
-                                    <span className="text-secondary-light">
-                                      {formatNumber(item.approved_returns_quantity)}
+                                    <span
+                                      className="badge"
+                                      style={{
+                                        backgroundColor: stockStatus.bgColor,
+                                        color: stockStatus.color,
+                                        fontSize: "0.75rem",
+                                        padding: "4px 8px",
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      {stockStatus.label}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="text-secondary-light small">
+                                      {item.reorder_point !== null && item.reorder_point !== undefined
+                                        ? formatNumber(item.reorder_point)
+                                        : "-"}
                                     </span>
                                   </td>
                                   <td className="text-end">
