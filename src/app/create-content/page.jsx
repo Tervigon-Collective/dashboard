@@ -537,17 +537,21 @@ export default function CreateContentPage() {
   // Helper function to check if send should be enabled
   const canSendEdit = (imageId) => {
     const hasPrompt = editPrompts[imageId]?.trim();
-    const aspectRatio = editAspectRatios[imageId] || "square_1_1";
-    const hasAspectRatioChange = aspectRatio !== "square_1_1";
+    // Check if user explicitly selected an aspect ratio (even if it's 1:1)
+    const hasExplicitAspectRatio = explicitlySelectedAspectRatios.has(imageId);
     
-    return hasPrompt || hasAspectRatioChange;
+    // Allow sending if there's a prompt OR if aspect ratio was explicitly selected
+    return hasPrompt || hasExplicitAspectRatio;
   };
+
+  // Track which aspect ratios were explicitly selected by the user
+  const [explicitlySelectedAspectRatios, setExplicitlySelectedAspectRatios] = useState(new Set());
 
   // Edit image handlers
   const handleEditClick = (imageId) => {
     setEditingImageId(imageId);
     setEditErrors((prev) => ({ ...prev, [imageId]: null }));
-    // Initialize default aspect ratio if not set
+    // Initialize default aspect ratio if not set (but don't mark it as explicitly selected)
     setEditAspectRatios((prev) => {
       if (!prev[imageId]) {
         return { ...prev, [imageId]: "square_1_1" };
@@ -591,18 +595,24 @@ export default function CreateContentPage() {
       delete newSeeds[imageId];
       return newSeeds;
     });
+    // Clear the explicit selection tracking when canceling
+    setExplicitlySelectedAspectRatios((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(imageId);
+      return newSet;
+    });
   };
 
   const handleSendEdit = async (imageId, runId, artifactId) => {
     const editPrompt = editPrompts[imageId]?.trim();
     const aspectRatio = editAspectRatios[imageId] || "square_1_1";
-    const hasAspectRatioChange = aspectRatio !== "square_1_1";
+    const hasExplicitAspectRatio = explicitlySelectedAspectRatios.has(imageId);
     
-    // Validate: need either prompt or aspect ratio change
-    if (!editPrompt && !hasAspectRatioChange) {
+    // Validate: need either prompt or explicitly selected aspect ratio
+    if (!editPrompt && !hasExplicitAspectRatio) {
       setEditErrors((prev) => ({ 
         ...prev, 
-        [imageId]: "Please enter a description of changes or select a different aspect ratio" 
+        [imageId]: "Please enter a description of changes or select an aspect ratio" 
       }));
       return;
     }
@@ -644,7 +654,13 @@ export default function CreateContentPage() {
       const response = await editImage(runId, artifactId, editPrompt || "", options);
       
       if (response.success) {
-        // Success! Close edit mode and refresh content
+        // Success! Clear explicit selection tracking before closing edit mode
+        setExplicitlySelectedAspectRatios((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(imageId);
+          return newSet;
+        });
+        // Close edit mode and refresh content
         handleCancelEdit(imageId);
         
         // Wait a bit then refresh to show the new image
@@ -1823,7 +1839,7 @@ export default function CreateContentPage() {
                             </span>
                           </div>
 
-                          <div className="row g-3">
+                          <div className="generated-content-gallery">
                             {generatedContent
                               .filter((item) => {
                                 if (item.product !== product) return false;
@@ -1831,7 +1847,7 @@ export default function CreateContentPage() {
                                 return item.content_type === contentTypeFilter;
                               })
                               .map((item) => (
-                                <div key={item.id} className="col-md-4">
+                                <div key={item.id} style={{ width: "100%" }}>
                                   <div className="card">
                                     <div
                                       className="position-relative"
@@ -2199,6 +2215,12 @@ export default function CreateContentPage() {
                                                       [item.id]: ratio.value,
                                                     };
                                                     setEditAspectRatios(newRatios);
+                                                    // Mark this aspect ratio as explicitly selected by the user
+                                                    setExplicitlySelectedAspectRatios((prev) => {
+                                                      const newSet = new Set(prev);
+                                                      newSet.add(item.id);
+                                                      return newSet;
+                                                    });
                                                     console.log("Aspect ratio selected:", ratio.value, "for image:", item.id, "State:", newRatios);
                                                   }}
                                                   disabled={isSendingEdit}
