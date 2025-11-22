@@ -204,6 +204,7 @@ const StockManagementPage = () => {
   // Infinite scroll state for inventory
   const [inventoryDisplayedCount, setInventoryDisplayedCount] = useState(20);
   const [inventoryLoadingMore, setInventoryLoadingMore] = useState(false);
+  const inventoryLoadingMoreRef = useRef(false); // Ref for immediate synchronous access
   const inventoryTableRef = useRef(null);
   const inventoryItemsPerPage = 20;
 
@@ -221,6 +222,7 @@ const StockManagementPage = () => {
   // Infinite scroll state for returns
   const [returnsDisplayedCount, setReturnsDisplayedCount] = useState(20);
   const [returnsLoadingMore, setReturnsLoadingMore] = useState(false);
+  const returnsLoadingMoreRef = useRef(false); // Ref for immediate synchronous access
   const returnsTableRef = useRef(null);
   const returnsItemsPerPage = 20;
 
@@ -656,7 +658,9 @@ const StockManagementPage = () => {
     } else if (inventoryState.lowStockFilter === "normal") {
       filteredData = filteredData.filter((item) => {
         const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        // Normal stock: must be above minimum_stock_level (if exists) AND above reorder_point (if exists)
         return netAvailable > 0 && 
+               (!item.minimum_stock_level || netAvailable > item.minimum_stock_level) &&
                (!item.reorder_point || netAvailable > item.reorder_point);
       });
     }
@@ -694,8 +698,11 @@ const StockManagementPage = () => {
 
   // Load more inventory data
   const loadMoreInventoryData = useCallback(async () => {
-    if (inventoryLoadingMore || inventoryState.loading) return;
+    // Use ref for immediate synchronous check to prevent race conditions
+    if (inventoryLoadingMoreRef.current || inventoryState.loading) return;
 
+    // Set both ref and state - ref for immediate access, state for UI updates
+    inventoryLoadingMoreRef.current = true;
     setInventoryLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -711,9 +718,9 @@ const StockManagementPage = () => {
     }
 
     setInventoryDisplayedCount((prev) => prev + inventoryItemsPerPage);
+    inventoryLoadingMoreRef.current = false;
     setInventoryLoadingMore(false);
   }, [
-    inventoryLoadingMore,
     inventoryState.loading,
     inventoryState.data.length,
     inventoryState.pagination,
@@ -724,8 +731,11 @@ const StockManagementPage = () => {
 
   // Load more returns data
   const loadMoreReturnsData = useCallback(async () => {
-    if (returnsLoadingMore || returnsState.loading) return;
+    // Use ref for immediate synchronous check to prevent race conditions
+    if (returnsLoadingMoreRef.current || returnsState.loading) return;
 
+    // Set both ref and state - ref for immediate access, state for UI updates
+    returnsLoadingMoreRef.current = true;
     setReturnsLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -741,9 +751,9 @@ const StockManagementPage = () => {
     }
 
     setReturnsDisplayedCount((prev) => prev + returnsItemsPerPage);
+    returnsLoadingMoreRef.current = false;
     setReturnsLoadingMore(false);
   }, [
-    returnsLoadingMore,
     returnsState.loading,
     returnsState.data.length,
     returnsState.pagination,
@@ -1096,7 +1106,7 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (hasMoreInventoryData() && !inventoryLoadingMore && !inventoryState.loading) {
+                        if (hasMoreInventoryData() && !inventoryLoadingMoreRef.current && !inventoryState.loading) {
                           loadMoreInventoryData();
                         }
                       }
@@ -1622,7 +1632,7 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (hasMoreReturnsData() && !returnsLoadingMore && !returnsState.loading) {
+                        if (hasMoreReturnsData() && !returnsLoadingMoreRef.current && !returnsState.loading) {
                           loadMoreReturnsData();
                         }
                       }
