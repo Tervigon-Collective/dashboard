@@ -380,7 +380,7 @@ const InventoryAlertsPage = () => {
                                 {entry.source_reference || "-"}
                               </td>
                               <td className="small text-muted">
-                                {new Date(entry.created_at).toLocaleString()}
+                                {entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}
                               </td>
                             </tr>
                           ))}

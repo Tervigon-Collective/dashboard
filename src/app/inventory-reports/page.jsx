@@ -125,7 +125,7 @@ const InventoryReportsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeReport, dateRange, includeZeroStock, daysThreshold]);
+  }, [activeReport, dateRange.startDate, dateRange.endDate, includeZeroStock, daysThreshold]);
 
   useEffect(() => {
     loadReport();

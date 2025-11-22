@@ -135,7 +135,7 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         {entry.source_reference || "-"}
                       </td>
                       <td className="small text-muted">
-                        {new Date(entry.created_at).toLocaleString()}
+                        {entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}
                       </td>
                     </tr>
                   ))}
@@ -384,15 +384,22 @@ const StockManagementPage = () => {
           });
         } else {
           // When not appending, sort the new data normally
-          const processedData = sortInventoryData(data);
-          setInventoryState((prev) => ({
-            ...prev,
-            data: processedData,
-            pagination,
-            loading: false,
-            limit: limit ?? prev.limit,
-            search: search !== undefined ? search : prev.search,
-          }));
+          // Use state from setState callback to avoid stale closure issues
+          setInventoryState((prev) => {
+            const processedData = sortInventoryData(
+              data,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              loading: false,
+              limit: limit ?? prev.limit,
+              search: search !== undefined ? search : prev.search,
+            };
+          });
           setInventoryDisplayedCount(20);
         }
       } catch (error) {
@@ -454,14 +461,21 @@ const StockManagementPage = () => {
           });
         } else {
           // When not appending, sort the new data normally
-          const processedData = sortReturnsData(data);
-          setReturnsState((prev) => ({
-            ...prev,
-            data: processedData,
-            pagination,
-            status: status ?? prev.status,
-            loading: false,
-          }));
+          // Use state from setState callback to avoid stale closure issues
+          setReturnsState((prev) => {
+            const processedData = sortReturnsData(
+              data,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              status: status ?? prev.status,
+              loading: false,
+            };
+          });
           setReturnsDisplayedCount(20);
         }
       } catch (error) {
@@ -707,8 +721,10 @@ const StockManagementPage = () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Check if we need to fetch more from API
+    // Compare against filtered data length, not total unfiltered data
+    const filteredData = getFilteredInventoryData();
     if (
-      inventoryDisplayedCount >= inventoryState.data.length &&
+      inventoryDisplayedCount >= filteredData.length &&
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     ) {
       await loadInventory({
@@ -722,11 +738,11 @@ const StockManagementPage = () => {
     setInventoryLoadingMore(false);
   }, [
     inventoryState.loading,
-    inventoryState.data.length,
     inventoryState.pagination,
     inventoryDisplayedCount,
     inventoryItemsPerPage,
     loadInventory,
+    getFilteredInventoryData,
   ]);
 
   // Load more returns data
@@ -1306,7 +1322,7 @@ const StockManagementPage = () => {
                               </tr>
                             ))}
                           </>
-                        ) : inventoryState.data.length === 0 ? (
+                        ) : (inventoryState.data.length === 0 || getFilteredInventoryData().length === 0) ? (
                           <tr>
                             <td colSpan="9" className="text-center py-4 text-muted">
                               <div className="d-flex flex-column align-items-center">
@@ -1857,7 +1873,7 @@ const StockManagementPage = () => {
                                 </td>
                                 <td>
                                   <span className="text-secondary-light small">
-                                    {new Date(row.reported_at).toLocaleString()}
+                                    {row.reported_at ? new Date(row.reported_at).toLocaleString() : "-"}
                                   </span>
                                 </td>
                                 <td className="text-end">
