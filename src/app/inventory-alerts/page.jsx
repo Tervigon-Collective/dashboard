@@ -83,7 +83,10 @@ const InventoryAlertsPage = () => {
       ]);
       
       const resolvedItem = itemDetail?.data || itemDetail;
-      const resolvedLedger = ledger?.data ? ledger : { data: ledger };
+      // Normalize ledger structure: ensure it always has { data: [...] } format
+      const resolvedLedger = ledger?.data 
+        ? { data: Array.isArray(ledger.data) ? ledger.data : [ledger.data] }
+        : { data: Array.isArray(ledger) ? ledger : (ledger ? [ledger] : []) };
       
       setSelectedItem({
         item: resolvedItem,
@@ -336,7 +339,7 @@ const InventoryAlertsPage = () => {
                         { label: "Reorder Point", value: selectedItem.item.reorder_point },
                         { label: "Minimum Stock Level", value: selectedItem.item.minimum_stock_level },
                         { label: "Safety Stock", value: selectedItem.item.safety_stock },
-                        { label: "Average Daily Sales", value: selectedItem.item.average_daily_sales, format: (v) => v ? v.toFixed(2) : "-" },
+                        { label: "Average Daily Sales", value: selectedItem.item.average_daily_sales, format: (v) => v !== null && v !== undefined ? v.toFixed(2) : "-" },
                         { label: "Lead Time (Days)", value: selectedItem.item.lead_time_days },
                       ].map((metric) => (
                         <div className="col-6 col-md-4" key={metric.label}>

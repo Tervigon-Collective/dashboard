@@ -69,7 +69,7 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                 { label: "Reorder Point", value: item.reorder_point, tooltip: "When to reorder" },
                 { label: "Minimum Stock Level", value: item.minimum_stock_level, tooltip: "Critical threshold" },
                 { label: "Safety Stock", value: item.safety_stock, tooltip: "Buffer stock" },
-                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v ? v.toFixed(2) : "-" },
+                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v !== null && v !== undefined ? v.toFixed(2) : "-" },
                 { label: "Lead Time (Days)", value: item.lead_time_days, tooltip: "Expected delivery time" },
               ].map((metric) => (
                 <div className="col-6 col-md-4" key={metric.label}>
@@ -828,7 +828,10 @@ const StockManagementPage = () => {
         }),
       ]);
       const resolvedItem = freshItem?.data || freshItem;
-      const resolvedLedger = ledger?.data ? ledger : { data: ledger };
+      // Normalize ledger structure: ensure it always has { data: [...] } format
+      const resolvedLedger = ledger?.data 
+        ? { data: Array.isArray(ledger.data) ? ledger.data : [ledger.data] }
+        : { data: Array.isArray(ledger) ? ledger : (ledger ? [ledger] : []) };
       setInventoryDetail({
         item: resolvedItem,
         ledger: resolvedLedger,
@@ -1248,27 +1251,8 @@ const StockManagementPage = () => {
                               )}
                             </div>
                           </th>
-                          <th
-                            scope="col"
-                            className="text-center"
-                            onClick={() => handleInventorySort("net_available")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                            title="Sort by stock status (based on net available)"
-                          >
-                            <div className="d-flex align-items-center gap-2 justify-content-center">
-                              Status
-                              {inventoryState.sortField === "net_available" && (
-                                <Icon
-                                  icon={
-                                    inventoryState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
+                          <th scope="col" className="text-center">
+                            Status
                           </th>
                           <th
                             scope="col"
