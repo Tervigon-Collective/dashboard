@@ -405,6 +405,85 @@ class InventoryManagementApiService {
       body: JSON.stringify({ notes: notes || null }),
     });
   }
+
+  // ============================================================================
+  // Sample Inventory API Methods
+  // ============================================================================
+
+  getSampleProducts({ page, limit, search } = {}) {
+    const params = new URLSearchParams();
+    if (page) params.append("page", String(page));
+    if (limit) params.append("limit", String(limit));
+    if (search) params.append("search", search);
+
+    const query = params.toString();
+    return this.makeRequest(`/sample-products${query ? `?${query}` : ""}`);
+  }
+
+  validateSkuForSampleMove(sku) {
+    return this.makeRequest(`/sample-products/validate-sku`, {
+      method: "POST",
+      body: JSON.stringify({ sku }),
+    });
+  }
+
+  moveSampleToInventory(procurementVariantId, { sku, quantity }) {
+    return this.makeRequest(
+      `/sample-products/${encodeURIComponent(procurementVariantId)}/move`,
+      {
+        method: "POST",
+        body: JSON.stringify({ sku, quantity }),
+      }
+    );
+  }
+
+  async getSampleQrCode({ procurementVariantId, masterVariantId, token }) {
+    const params = new URLSearchParams();
+    if (token) {
+      params.append("token", token);
+    } else if (procurementVariantId && masterVariantId) {
+      params.append("procurementVariantId", String(procurementVariantId));
+      params.append("masterVariantId", String(masterVariantId));
+    }
+    const query = params.toString();
+    
+    // For blob/image responses, we need to handle differently
+    const authToken = await this.getAuthToken();
+    if (!authToken) {
+      throw new Error("No authentication token available");
+    }
+    
+    const response = await fetch(
+      `${this.baseURL}/sample-products/qr-code${query ? `?${query}` : ""}`,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to fetch QR code" }));
+      throw new Error(error.message || "Failed to fetch QR code");
+    }
+    
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  }
+
+  getSampleQrCodeInfo({ procurementVariantId, masterVariantId, token }) {
+    const params = new URLSearchParams();
+    if (token) {
+      params.append("token", token);
+    } else if (procurementVariantId && masterVariantId) {
+      params.append("procurementVariantId", String(procurementVariantId));
+      params.append("masterVariantId", String(masterVariantId));
+    }
+    const query = params.toString();
+    return this.makeRequest(
+      `/sample-products/qr-code/info${query ? `?${query}` : ""}`
+    );
+  }
 }
 
 export default new InventoryManagementApiService();
