@@ -39,7 +39,7 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
           {[
             { label: "Available", value: item.available_quantity },
             { label: "Committed", value: item.committed_quantity },
-            { label: "Net Available", value: item.net_available || (item.available_quantity - item.committed_quantity) },
+            { label: "Net Available", value: item.net_available ?? (item.available_quantity - item.committed_quantity) },
             { label: "Cancelled", value: item.cancelled_quantity },
             {
               label: "Approved Returns",
@@ -652,16 +652,16 @@ const StockManagementPage = () => {
       filteredData = filteredData.filter((item) => {
         const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
         return netAvailable <= 0 || 
-               (item.minimum_stock_level && netAvailable <= item.minimum_stock_level) ||
-               (item.reorder_point && netAvailable <= item.reorder_point);
+               (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) ||
+               (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point);
       });
     } else if (inventoryState.lowStockFilter === "normal") {
       filteredData = filteredData.filter((item) => {
         const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
         // Normal stock: must be above minimum_stock_level (if exists) AND above reorder_point (if exists)
         return netAvailable > 0 && 
-               (!item.minimum_stock_level || netAvailable > item.minimum_stock_level) &&
-               (!item.reorder_point || netAvailable > item.reorder_point);
+               (item.minimum_stock_level === null || item.minimum_stock_level === undefined || netAvailable > item.minimum_stock_level) &&
+               (item.reorder_point === null || item.reorder_point === undefined || netAvailable > item.reorder_point);
       });
     }
     
@@ -1328,10 +1328,10 @@ const StockManagementPage = () => {
                                 if (netAvailable <= 0) {
                                   return { status: 'out_of_stock', label: 'OUT OF STOCK', color: '#dc3545', bgColor: '#f8d7da' };
                                 }
-                                if (item.minimum_stock_level && netAvailable <= item.minimum_stock_level) {
+                                if (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) {
                                   return { status: 'critical', label: 'CRITICAL', color: '#fd7e14', bgColor: '#fff3cd' };
                                 }
-                                if (item.reorder_point && netAvailable <= item.reorder_point) {
+                                if (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point) {
                                   return { status: 'low_stock', label: 'LOW STOCK', color: '#ffc107', bgColor: '#fff3cd' };
                                 }
                                 return { status: 'in_stock', label: 'IN STOCK', color: '#198754', bgColor: '#d1e7dd' };

@@ -24,14 +24,14 @@ const StockStatusBadge = ({ item }) => {
       </span>
     );
   }
-  if (item.minimum_stock_level && netAvailable <= item.minimum_stock_level) {
+  if (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) {
     return (
       <span className="badge bg-warning text-dark" style={{ fontSize: "0.75rem", padding: "4px 8px" }}>
         CRITICAL
       </span>
     );
   }
-  if (item.reorder_point && netAvailable <= item.reorder_point) {
+  if (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point) {
     return (
       <span className="badge bg-warning text-dark" style={{ fontSize: "0.75rem", padding: "4px 8px" }}>
         LOW STOCK
@@ -316,7 +316,7 @@ const InventoryAlertsPage = () => {
                   {[
                     { label: "Available", value: selectedItem.item.available_quantity },
                     { label: "Committed", value: selectedItem.item.committed_quantity },
-                    { label: "Net Available", value: selectedItem.item.net_available || (selectedItem.item.available_quantity - selectedItem.item.committed_quantity) },
+                    { label: "Net Available", value: selectedItem.item.net_available ?? (selectedItem.item.available_quantity - selectedItem.item.committed_quantity) },
                   ].map((metric) => (
                     <div className="col-6 col-md-4" key={metric.label}>
                       <div className="text-muted small">{metric.label}</div>
