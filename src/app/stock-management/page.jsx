@@ -36,10 +36,11 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
             <div className="small text-muted">SKU: {item.sku || "-"}</div>
           </div>
         </div>
-        <div className="row g-3">
+        <div className="row g-3 mb-3">
           {[
             { label: "Available", value: item.available_quantity },
             { label: "Committed", value: item.committed_quantity },
+            { label: "Net Available", value: item.net_available ?? (item.available_quantity - item.committed_quantity) },
             { label: "Cancelled", value: item.cancelled_quantity },
             {
               label: "Approved Returns",
@@ -54,6 +55,50 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
             </div>
           ))}
         </div>
+
+        {/* Thresholds Section (Read-Only) */}
+        {(item.reorder_point !== null || item.minimum_stock_level !== null || item.safety_stock !== null) && (
+          <div className="mt-4 pt-3 border-top">
+            <h6 className="mb-3">
+              Inventory Thresholds
+              <span className="badge bg-info ms-2" style={{ fontSize: "0.7rem" }}>
+                Auto-calculated
+              </span>
+            </h6>
+            <div className="row g-3">
+              {[
+                { label: "Reorder Point", value: item.reorder_point, tooltip: "When to reorder" },
+                { label: "Minimum Stock Level", value: item.minimum_stock_level, tooltip: "Critical threshold" },
+                { label: "Safety Stock", value: item.safety_stock, tooltip: "Buffer stock" },
+                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v !== null && v !== undefined ? v.toFixed(2) : "-" },
+                { label: "Lead Time (Days)", value: item.lead_time_days, tooltip: "Expected delivery time" },
+              ].map((metric) => (
+                <div className="col-6 col-md-4" key={metric.label}>
+                  <div className="text-muted small">
+                    {metric.label}
+                    {metric.tooltip && (
+                      <span
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        data-bs-title={metric.tooltip}
+                        style={{ cursor: "help", marginLeft: "4px" }}
+                      >
+                        <Icon
+                          icon="lucide:info"
+                          width="12"
+                          height="12"
+                        />
+                      </span>
+                    )}
+                  </div>
+                  <div className="fw-semibold">
+                    {metric.format ? metric.format(metric.value) : formatNumber(metric.value)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <h6 className="mb-3">Recent Ledger Entries</h6>
@@ -91,7 +136,7 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         {entry.source_reference || "-"}
                       </td>
                       <td className="small text-muted">
-                        {new Date(entry.created_at).toLocaleString()}
+                        {entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}
                       </td>
                     </tr>
                   ))}
@@ -414,29 +459,65 @@ const StockManagementPage = () => {
   const inventoryStateRef = useRef(null); // Ref to track current state
   const [inventoryIsMounted, setInventoryIsMounted] = useState(false);
 
+  // Inventory state
   const [inventoryState, setInventoryState] = useState({
     data: [],
     pagination: { page: 1, totalPages: 1, total: 0 },
     loading: false,
     search: "",
+<<<<<<< HEAD
     limit: 25,
     displayedItemsCount: 25, // For infinite scroll
     isLoadingMore: false, // For infinite scroll
+=======
+    debouncedSearch: "",
+    limit: 20,
+    sortField: null,
+    sortDirection: "asc",
+    lowStockFilter: "all", // "all", "low", "normal"
+>>>>>>> origin/master
   });
+
+  // Infinite scroll state for inventory
+  const [inventoryDisplayedCount, setInventoryDisplayedCount] = useState(20);
+  const [inventoryLoadingMore, setInventoryLoadingMore] = useState(false);
+  const inventoryLoadingMoreRef = useRef(false); // Ref for immediate synchronous access
+  const inventoryTableRef = useRef(null);
+  const inventoryItemsPerPage = 20;
+
+  // Returns state
+  const [returnsState, setReturnsState] = useState({
+    data: [],
+    pagination: { page: 1, totalPages: 1, total: 0 },
+    loading: false,
+    status: "pending",
+    busyCaseId: null,
+    sortField: null,
+    sortDirection: "asc",
+  });
+
+  // Infinite scroll state for returns
+  const [returnsDisplayedCount, setReturnsDisplayedCount] = useState(20);
+  const [returnsLoadingMore, setReturnsLoadingMore] = useState(false);
+  const returnsLoadingMoreRef = useRef(false); // Ref for immediate synchronous access
+  const returnsTableRef = useRef(null);
+  const returnsItemsPerPage = 20;
+
   const [inventoryDetail, setInventoryDetail] = useState({
     item: null,
     ledger: null,
     loadingLedger: false,
   });
 
-  const [returnsState, setReturnsState] = useState({
-    data: [],
-    pagination: { page: 1, totalPages: 1 },
-    loading: false,
-    status: "pending",
-    busyCaseId: null,
-  });
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInventoryState((prev) => ({ ...prev, debouncedSearch: prev.search }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [inventoryState.search]);
 
+<<<<<<< HEAD
   const [sampleProductsState, setSampleProductsState] = useState({
     data: [],
     pagination: { page: 1, totalPages: 1 },
@@ -490,6 +571,113 @@ const StockManagementPage = () => {
         setInventoryState((prev) => ({ ...prev, loading: true }));
       } else {
         setInventoryState((prev) => ({ ...prev, isLoadingMore: true }));
+=======
+  // Sort inventory data
+  const sortInventoryData = useCallback(
+    (dataArray, field = inventoryState.sortField, direction = inventoryState.sortDirection) => {
+      if (!field || !Array.isArray(dataArray)) {
+        return dataArray || [];
+      }
+
+      const sortedData = [...dataArray].sort((a, b) => {
+        let valueA = a?.[field];
+        let valueB = b?.[field];
+
+        // Handle net_available - calculate if not present
+        if (field === "net_available") {
+          valueA = a?.net_available ?? (a?.available_quantity - a?.committed_quantity);
+          valueB = b?.net_available ?? (b?.available_quantity - b?.committed_quantity);
+        }
+
+        if (valueA === valueB) return 0;
+        if (valueA == null) return -1;
+        if (valueB == null) return 1;
+
+        // Handle dates
+        if (/_at$/.test(field)) {
+          const dateA = new Date(valueA).getTime();
+          const dateB = new Date(valueB).getTime();
+          return dateA - dateB;
+        }
+
+        // Handle numbers
+        const numA = Number(valueA);
+        const numB = Number(valueB);
+        const bothNumbers = !Number.isNaN(numA) && !Number.isNaN(numB);
+
+        if (bothNumbers) {
+          return numA - numB;
+        }
+
+        return String(valueA)
+          .toLocaleLowerCase()
+          .localeCompare(String(valueB).toLocaleLowerCase(), undefined, {
+            sensitivity: "base",
+          });
+      });
+
+      if (direction === "desc") {
+        sortedData.reverse();
+      }
+
+      return sortedData;
+    },
+    [inventoryState.sortField, inventoryState.sortDirection]
+  );
+
+  // Sort returns data
+  const sortReturnsData = useCallback(
+    (dataArray, field = returnsState.sortField, direction = returnsState.sortDirection) => {
+      if (!field || !Array.isArray(dataArray)) {
+        return dataArray || [];
+      }
+
+      const sortedData = [...dataArray].sort((a, b) => {
+        const valueA = a?.[field];
+        const valueB = b?.[field];
+
+        if (valueA === valueB) return 0;
+        if (valueA == null) return -1;
+        if (valueB == null) return 1;
+
+        // Handle dates
+        if (/_at$/.test(field) || field === "reported_at") {
+          const dateA = new Date(valueA).getTime();
+          const dateB = new Date(valueB).getTime();
+          return dateA - dateB;
+        }
+
+        // Handle numbers
+        const numA = Number(valueA);
+        const numB = Number(valueB);
+        const bothNumbers = !Number.isNaN(numA) && !Number.isNaN(numB);
+
+        if (bothNumbers) {
+          return numA - numB;
+        }
+
+        return String(valueA)
+          .toLocaleLowerCase()
+          .localeCompare(String(valueB).toLocaleLowerCase(), undefined, {
+            sensitivity: "base",
+          });
+      });
+
+      if (direction === "desc") {
+        sortedData.reverse();
+      }
+
+      return sortedData;
+    },
+    [returnsState.sortField, returnsState.sortDirection]
+  );
+
+  // Load inventory
+  const loadInventory = useCallback(
+    async ({ page, limit, search, append = false } = {}) => {
+      if (!append) {
+      setInventoryState((prev) => ({ ...prev, loading: true }));
+>>>>>>> origin/master
       }
 
       try {
@@ -498,9 +686,15 @@ const StockManagementPage = () => {
         const targetSearch = search ?? currentState.search;
 
         const response = await inventoryManagementApi.listInventoryItems({
+<<<<<<< HEAD
           page: targetPage,
           limit: targetLimit,
           search: targetSearch,
+=======
+          page: page ?? inventoryState.pagination.page,
+          limit: limit ?? inventoryState.limit,
+          search: search ?? inventoryState.debouncedSearch,
+>>>>>>> origin/master
         });
 
         const data = Array.isArray(response?.data)
@@ -513,6 +707,7 @@ const StockManagementPage = () => {
             total: data.length,
           };
 
+<<<<<<< HEAD
         setInventoryState((prev) => {
           // Re-read values in case they changed
           const finalPage = page ?? prev.pagination.page;
@@ -540,6 +735,50 @@ const StockManagementPage = () => {
             };
           }
         });
+=======
+        if (append) {
+          // When appending during infinite scroll:
+          // - If client-side sorting is active, don't append (sorting breaks pagination order)
+          // - If no sorting, append and maintain API pagination order
+          setInventoryState((prev) => {
+            if (prev.sortField) {
+              // Client-side sorting is active - don't append to preserve pagination order
+              // User should remove sort or load all data first
+              return {
+                ...prev,
+                loading: false,
+              };
+            }
+            // No sorting active - safe to append and maintain API pagination order
+            const combinedData = [...prev.data, ...data];
+            return {
+              ...prev,
+              data: combinedData,
+              pagination,
+              loading: false,
+            };
+          });
+        } else {
+          // When not appending, sort the new data normally
+          // Use state from setState callback to avoid stale closure issues
+          setInventoryState((prev) => {
+            const processedData = sortInventoryData(
+              data,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              loading: false,
+              limit: limit ?? prev.limit,
+              search: search !== undefined ? search : prev.search,
+            };
+          });
+          setInventoryDisplayedCount(20);
+        }
+>>>>>>> origin/master
       } catch (error) {
         console.error("Failed to load inventory", error);
         toast.error(error.message || "Failed to load inventory");
@@ -550,17 +789,31 @@ const StockManagementPage = () => {
         }));
       }
     },
+<<<<<<< HEAD
     [] // No dependencies - using functional updates
+=======
+    [
+      inventoryState.pagination.page,
+      inventoryState.limit,
+      inventoryState.debouncedSearch,
+      inventoryState.lowStockFilter,
+      sortInventoryData,
+    ]
+>>>>>>> origin/master
   );
 
+  // Load returns
   const loadReturns = useCallback(
-    async ({ page, status } = {}) => {
+    async ({ page, status, append = false } = {}) => {
+      if (!append) {
       setReturnsState((prev) => ({ ...prev, loading: true }));
+      }
+
       try {
         const response = await inventoryManagementApi.listReturnCases({
           status: status ?? returnsState.status,
           page: page ?? returnsState.pagination.page,
-          limit: 25,
+          limit: 20,
         });
 
         const data = Array.isArray(response?.data)
@@ -573,22 +826,57 @@ const StockManagementPage = () => {
             total: data.length,
           };
 
-        setReturnsState((prev) => ({
-          ...prev,
-          data,
-          pagination,
-          status: status ?? prev.status,
-          loading: false,
-        }));
+        if (append) {
+          // When appending during infinite scroll:
+          // - If client-side sorting is active, don't append (sorting breaks pagination order)
+          // - If no sorting, append and maintain API pagination order
+          setReturnsState((prev) => {
+            if (prev.sortField) {
+              // Client-side sorting is active - don't append to preserve pagination order
+              // User should remove sort or load all data first
+              return {
+                ...prev,
+                loading: false,
+              };
+            }
+            // No sorting active - safe to append and maintain API pagination order
+            const combinedData = [...prev.data, ...data];
+            return {
+              ...prev,
+              data: combinedData,
+              pagination,
+              loading: false,
+            };
+          });
+        } else {
+          // When not appending, sort the new data normally
+          // Use state from setState callback to avoid stale closure issues
+          setReturnsState((prev) => {
+            const processedData = sortReturnsData(
+              data,
+              prev.sortField,
+              prev.sortDirection
+            );
+            return {
+              ...prev,
+              data: processedData,
+              pagination,
+              status: status ?? prev.status,
+              loading: false,
+            };
+          });
+          setReturnsDisplayedCount(20);
+        }
       } catch (error) {
         console.error("Failed to load return cases", error);
         toast.error(error.message || "Failed to load return cases");
         setReturnsState((prev) => ({ ...prev, loading: false }));
       }
     },
-    [returnsState.pagination.page, returnsState.status]
+    [returnsState.pagination.page, returnsState.status, sortReturnsData]
   );
 
+<<<<<<< HEAD
   const loadSampleProducts = useCallback(
     async ({ page, search } = {}) => {
       setSampleProductsState((prev) => ({ ...prev, loading: true }));
@@ -711,10 +999,84 @@ const StockManagementPage = () => {
       inventoryPrevSearchRef.current = "";
       inventoryPrevLimitRef.current = 25;
     } else if (activeTab === "returns") {
+=======
+  // Track initial mount
+  const [isMounted, setIsMounted] = useState(false);
+  const prevInventoryFiltersRef = useRef({
+    search: "",
+    lowStock: "all",
+    sort: null,
+    sortDir: "asc",
+  });
+  const prevReturnsFiltersRef = useRef({
+    status: "pending",
+    sort: null,
+    sortDir: "asc",
+  });
+
+  // Initial load
+  useEffect(() => {
+    setIsMounted(true);
+      loadInventory({ page: 1 });
+      loadReturns({ page: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle inventory filter changes
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const currentFilters = {
+      search: inventoryState.debouncedSearch,
+      lowStock: inventoryState.lowStockFilter,
+      sort: inventoryState.sortField,
+      sortDir: inventoryState.sortDirection,
+    };
+
+    const prevFilters = prevInventoryFiltersRef.current;
+    const filtersChanged =
+      prevFilters.search !== currentFilters.search ||
+      prevFilters.lowStock !== currentFilters.lowStock ||
+      prevFilters.sort !== currentFilters.sort ||
+      prevFilters.sortDir !== currentFilters.sortDir;
+
+    if (filtersChanged) {
+      prevInventoryFiltersRef.current = currentFilters;
+      loadInventory({ page: 1 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isMounted,
+    inventoryState.debouncedSearch,
+    inventoryState.lowStockFilter,
+    inventoryState.sortField,
+    inventoryState.sortDirection,
+  ]);
+
+  // Handle returns filter changes
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const currentFilters = {
+      status: returnsState.status,
+      sort: returnsState.sortField,
+      sortDir: returnsState.sortDirection,
+    };
+
+    const prevFilters = prevReturnsFiltersRef.current;
+    const filtersChanged =
+      prevFilters.status !== currentFilters.status ||
+      prevFilters.sort !== currentFilters.sort ||
+      prevFilters.sortDir !== currentFilters.sortDir;
+
+    if (filtersChanged) {
+      prevReturnsFiltersRef.current = currentFilters;
+>>>>>>> origin/master
       loadReturns({ page: 1 });
     } else if (activeTab === "sample-products") {
       loadSampleProducts({ page: 1 });
     }
+<<<<<<< HEAD
   }, [activeTab, loadReturns, loadSampleProducts]);
 
   // Handle QR code deep link - similar to receiving management
@@ -853,6 +1215,291 @@ const StockManagementPage = () => {
     inventoryState.pagination.page,
     loadInventory,
   ]);
+=======
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isMounted,
+    returnsState.status,
+    returnsState.sortField,
+    returnsState.sortDirection,
+  ]);
+
+  // Reset displayed count when filters change
+  useEffect(() => {
+    setInventoryDisplayedCount(20);
+  }, [inventoryState.debouncedSearch, inventoryState.lowStockFilter, inventoryState.sortField, inventoryState.sortDirection]);
+
+  useEffect(() => {
+    setReturnsDisplayedCount(20);
+  }, [returnsState.status, returnsState.sortField, returnsState.sortDirection]);
+
+  // Add custom scrollbar styles
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const styleId = "table-scrollbar-styles";
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+          .table-scroll-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+            -webkit-appearance: none;
+          }
+          .table-scroll-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(128, 128, 128, 0.5);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(128, 128, 128, 0.7);
+          }
+          .table-scroll-container::-webkit-scrollbar-corner {
+            background: rgba(0, 0, 0, 0.05);
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }, []);
+
+  // Initialize Bootstrap tooltips
+  const initializeTooltips = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    import("bootstrap/dist/js/bootstrap.bundle.min.js").then(
+      (bootstrapModule) => {
+        // Wait for DOM to update
+        setTimeout(() => {
+          const Tooltip = bootstrapModule.Tooltip || (window.bootstrap && window.bootstrap.Tooltip);
+          if (!Tooltip) return;
+
+          const tooltipTriggerList = document.querySelectorAll(
+            '[data-bs-toggle="tooltip"]'
+          );
+          
+          // Dispose existing tooltips first
+          tooltipTriggerList.forEach((el) => {
+            const existingTooltip = Tooltip.getInstance(el);
+            if (existingTooltip) {
+              existingTooltip.dispose();
+            }
+          });
+
+          // Initialize new tooltips
+          [...tooltipTriggerList].forEach(
+            (tooltipTriggerEl) => new Tooltip(tooltipTriggerEl)
+          );
+        }, 100);
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    initializeTooltips();
+  }, [inventoryState.data, returnsState.data, initializeTooltips]);
+
+  // Initialize tooltips when modal opens
+  useEffect(() => {
+    if (inventoryDetail.item) {
+      // Wait for modal to be fully rendered
+      setTimeout(() => {
+        initializeTooltips();
+      }, 200);
+    }
+  }, [inventoryDetail.item, initializeTooltips]);
+
+  // Get filtered inventory data (helper function)
+  const getFilteredInventoryData = useCallback(() => {
+    let filteredData = inventoryState.data;
+    
+    // Apply low stock filter based on thresholds
+    if (inventoryState.lowStockFilter === "low") {
+      filteredData = filteredData.filter((item) => {
+        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        return netAvailable <= 0 || 
+               (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) ||
+               (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point);
+      });
+    } else if (inventoryState.lowStockFilter === "normal") {
+      filteredData = filteredData.filter((item) => {
+        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        // Normal stock: must be above minimum_stock_level (if exists) AND above reorder_point (if exists)
+        return netAvailable > 0 && 
+               (item.minimum_stock_level === null || item.minimum_stock_level === undefined || netAvailable > item.minimum_stock_level) &&
+               (item.reorder_point === null || item.reorder_point === undefined || netAvailable > item.reorder_point);
+      });
+    }
+    
+    return filteredData;
+  }, [inventoryState.data, inventoryState.lowStockFilter]);
+
+  // Get displayed inventory data with filters applied
+  const getDisplayedInventoryData = useCallback(() => {
+    return getFilteredInventoryData().slice(0, inventoryDisplayedCount);
+  }, [getFilteredInventoryData, inventoryDisplayedCount]);
+
+  // Get displayed returns data
+  const getDisplayedReturnsData = useCallback(() => {
+    return returnsState.data.slice(0, returnsDisplayedCount);
+  }, [returnsState.data, returnsDisplayedCount]);
+
+  // Check if there's more inventory data
+  const hasMoreInventoryData = useCallback(() => {
+    // If client-side sorting is active, disable infinite scroll to preserve pagination order
+    if (inventoryState.sortField) {
+      return false;
+    }
+    
+    const filteredData = getFilteredInventoryData();
+    
+    return (
+      inventoryDisplayedCount < filteredData.length ||
+      inventoryState.pagination.page < inventoryState.pagination.totalPages
+    );
+  }, [inventoryDisplayedCount, getFilteredInventoryData, inventoryState.pagination, inventoryState.sortField]);
+
+  // Check if there's more returns data
+  const hasMoreReturnsData = useCallback(() => {
+    // If client-side sorting is active, disable infinite scroll to preserve pagination order
+    if (returnsState.sortField) {
+      return false;
+    }
+    
+    return (
+      returnsDisplayedCount < returnsState.data.length ||
+      returnsState.pagination.page < returnsState.pagination.totalPages
+    );
+  }, [returnsDisplayedCount, returnsState.data.length, returnsState.pagination, returnsState.sortField]);
+
+  // Load more inventory data
+  const loadMoreInventoryData = useCallback(async () => {
+    // Use ref for immediate synchronous check to prevent race conditions
+    if (inventoryLoadingMoreRef.current || inventoryState.loading) return;
+
+    // Set both ref and state - ref for immediate access, state for UI updates
+    inventoryLoadingMoreRef.current = true;
+    setInventoryLoadingMore(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Check if we need to fetch more from API
+    // Compare against filtered data length, not total unfiltered data
+    const filteredData = getFilteredInventoryData();
+    if (
+      inventoryDisplayedCount >= filteredData.length &&
+      inventoryState.pagination.page < inventoryState.pagination.totalPages
+    ) {
+      await loadInventory({
+        page: inventoryState.pagination.page + 1,
+        append: true,
+      });
+    }
+
+    setInventoryDisplayedCount((prev) => prev + inventoryItemsPerPage);
+    inventoryLoadingMoreRef.current = false;
+    setInventoryLoadingMore(false);
+  }, [
+    inventoryState.loading,
+    inventoryState.pagination,
+    inventoryDisplayedCount,
+    inventoryItemsPerPage,
+    loadInventory,
+    getFilteredInventoryData,
+  ]);
+
+  // Load more returns data
+  const loadMoreReturnsData = useCallback(async () => {
+    // Use ref for immediate synchronous check to prevent race conditions
+    if (returnsLoadingMoreRef.current || returnsState.loading) return;
+
+    // Set both ref and state - ref for immediate access, state for UI updates
+    returnsLoadingMoreRef.current = true;
+    setReturnsLoadingMore(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Check if we need to fetch more from API
+    if (
+      returnsDisplayedCount >= returnsState.data.length &&
+      returnsState.pagination.page < returnsState.pagination.totalPages
+    ) {
+      await loadReturns({
+        page: returnsState.pagination.page + 1,
+        append: true,
+      });
+    }
+
+    setReturnsDisplayedCount((prev) => prev + returnsItemsPerPage);
+    returnsLoadingMoreRef.current = false;
+    setReturnsLoadingMore(false);
+  }, [
+    returnsState.loading,
+    returnsState.data.length,
+    returnsState.pagination,
+    returnsDisplayedCount,
+    returnsItemsPerPage,
+    loadReturns,
+  ]);
+
+  // Handle inventory sort
+  const handleInventorySort = (field) => {
+    if (inventoryState.sortField === field) {
+      setInventoryState((prev) => ({
+        ...prev,
+        sortDirection: prev.sortDirection === "asc" ? "desc" : "asc",
+      }));
+    } else {
+      setInventoryState((prev) => ({
+        ...prev,
+        sortField: field,
+        sortDirection: "asc",
+      }));
+    }
+  };
+
+  // Handle returns sort
+  const handleReturnsSort = (field) => {
+    if (returnsState.sortField === field) {
+      setReturnsState((prev) => ({
+        ...prev,
+        sortDirection: prev.sortDirection === "asc" ? "desc" : "asc",
+      }));
+    } else {
+      setReturnsState((prev) => ({
+        ...prev,
+        sortField: field,
+        sortDirection: "asc",
+      }));
+    }
+  };
+
+  // Reset inventory filters
+  const handleResetInventoryFilters = () => {
+    setInventoryState((prev) => ({
+      ...prev,
+      search: "",
+      debouncedSearch: "",
+      lowStockFilter: "all",
+      sortField: null,
+      sortDirection: "asc",
+    }));
+    setInventoryDisplayedCount(20);
+  };
+
+  // Reset returns filters
+  const handleResetReturnsFilters = () => {
+    setReturnsState((prev) => ({
+      ...prev,
+      status: "pending",
+      sortField: null,
+      sortDirection: "asc",
+    }));
+    setReturnsDisplayedCount(20);
+  };
+>>>>>>> origin/master
 
   const openInventoryDetail = useCallback(async (item) => {
     setInventoryDetail({ item, ledger: null, loadingLedger: true });
@@ -864,7 +1511,10 @@ const StockManagementPage = () => {
         }),
       ]);
       const resolvedItem = freshItem?.data || freshItem;
-      const resolvedLedger = ledger?.data ? ledger : { data: ledger };
+      // Normalize ledger structure: ensure it always has { data: [...] } format
+      const resolvedLedger = ledger?.data 
+        ? { data: Array.isArray(ledger.data) ? ledger.data : [ledger.data] }
+        : { data: Array.isArray(ledger) ? ledger : (ledger ? [ledger] : []) };
       setInventoryDetail({
         item: resolvedItem,
         ledger: resolvedLedger,
@@ -929,6 +1579,7 @@ const StockManagementPage = () => {
     }
   }, [loadReturns]);
 
+<<<<<<< HEAD
   // Infinite scroll helper functions for inventory
   const getDisplayedInventoryData = useCallback(
     (dataArray) => {
@@ -1174,10 +1825,13 @@ const StockManagementPage = () => {
     ));
   }, [returnsState, handleApproveReturn, handleRejectReturn]);
 
+=======
+>>>>>>> origin/master
   return (
     <SidebarPermissionGuard requiredSidebar="stockManagement">
       <MasterLayout>
         <div className="container-fluid py-4">
+<<<<<<< HEAD
           <div className="card">
             <div className="card-header border-0 pb-0">
               <div className="d-flex gap-3">
@@ -1185,57 +1839,119 @@ const StockManagementPage = () => {
                   { id: "inventory", label: "Inventory" },
                   { id: "returns", label: "Returns" },
                   { id: "sample-products", label: "Sample Products" },
+=======
+          <div className="card h-100 radius-8 border">
+            <div className="card-body p-24">
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h5 className="mb-0 fw-semibold">Stock Management</h5>
+              </div>
+
+              {/* Tab Navigation */}
+              <div
+                className="mb-4 border-bottom pb-0"
+                style={{ overflowX: "auto", overflowY: "hidden" }}
+              >
+                <div
+                  className="d-flex gap-2 gap-md-4"
+                  style={{ minWidth: "max-content", flexWrap: "nowrap" }}
+                >
+                  {[
+                    { id: "inventory", label: "INVENTORY", icon: "mdi:package-variant" },
+                    { id: "returns", label: "RETURNS", icon: "mdi:arrow-left" },
+>>>>>>> origin/master
                 ].map((tab) => (
-                  <button
+                    <div
                     key={tab.id}
-                    type="button"
-                    className={`btn btn-link px-0 text-decoration-none fw-semibold ${
+                      className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
                       activeTab === tab.id ? "text-primary" : "text-muted"
                     }`}
                     onClick={() => setActiveTab(tab.id)}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      <Icon
+                        icon={tab.icon}
+                        className="icon"
+                        style={{ flexShrink: 0 }}
+                      />
+                      <span
+                        className="fw-medium"
+                        style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
                   >
                     {tab.label}
-                  </button>
+                      </span>
+                      {activeTab === tab.id && (
+                        <div
+                          className="position-absolute bottom-0 start-0 end-0"
+                          style={{
+                            height: "2px",
+                            backgroundColor: "#0d6efd",
+                          }}
+                        />
+                      )}
+                    </div>
                 ))}
               </div>
             </div>
-            <div className="card-body">
+
+              {/* Tab Content */}
               {activeTab === "inventory" && (
                 <div>
-                  <div className="row g-3 align-items-end mb-3">
-                    <div className="col-md-4">
-                      <label className="form-label small">Search</label>
+                  {/* Search, Filter, and Action Bar */}
+                  <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
+                    {/* Search Input */}
+                    <div
+                      className="position-relative"
+                      style={{ flex: "1 1 250px", minWidth: "200px" }}
+                    >
+                      <Icon
+                        icon="lucide:search"
+                        width="16"
+                        height="16"
+                        className="position-absolute top-50 translate-middle-y"
+                        style={{ left: "12px", color: "#6c757d", zIndex: 1 }}
+                      />
                       <input
                         type="text"
-                        className="form-control"
-                        placeholder="Product, variant or SKU"
+                        className="form-control form-control-sm"
+                        placeholder="Search products, variants, SKU..."
                         value={inventoryState.search}
-                        onChange={(event) =>
+                        onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                            search: event.target.value,
+                            search: e.target.value,
                           }))
                         }
+                        style={{
+                          paddingLeft: "36px",
+                          height: "36px",
+                          fontSize: "0.875rem",
+                        }}
                       />
                     </div>
-                    <div className="col-md-3">
-                      <label className="form-label small">Page Size</label>
+
+                    {/* Low Stock Filter */}
                       <select
-                        className="form-select"
-                        value={inventoryState.limit}
-                        onChange={(event) =>
+                      className="form-select form-select-sm"
+                      value={inventoryState.lowStockFilter}
+                      onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                            limit: Number(event.target.value) || 25,
-                          }))
-                        }
-                      >
-                        {[25, 50, 75, 100].map((option) => (
-                          <option key={option} value={option}>
-                            {option} rows
-                          </option>
-                        ))}
+                          lowStockFilter: e.target.value,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "150px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="all">All Stock</option>
+                      <option value="low">Low/Critical Stock</option>
+                      <option value="normal">Normal Stock</option>
                       </select>
+<<<<<<< HEAD
                     </div>
                     <div className="col-md-2 d-flex gap-2">
                       <button
@@ -1266,12 +1982,92 @@ const StockManagementPage = () => {
                         disabled={inventoryState.loading}
                       >
                         Clear
+=======
+
+                    {/* Sort Field */}
+                    <select
+                      className="form-select form-select-sm"
+                      value={inventoryState.sortField || ""}
+                      onChange={(e) =>
+                        setInventoryState((prev) => ({
+                          ...prev,
+                          sortField: e.target.value || null,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "170px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="">Sort By</option>
+                      <option value="product_name">Product Name</option>
+                      <option value="variant_display_name">Variant</option>
+                      <option value="sku">SKU</option>
+                      <option value="available_quantity">Available Qty</option>
+                      <option value="committed_quantity">Committed Qty</option>
+                      <option value="net_available">Net Available</option>
+                      <option value="reorder_point">Reorder Point</option>
+                    </select>
+
+                    {/* Sort Order */}
+                    <select
+                      className="form-select form-select-sm"
+                      value={inventoryState.sortDirection}
+                      onChange={(e) =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                          sortDirection: e.target.value,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "130px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+
+                    {/* Reset Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={handleResetInventoryFilters}
+                      title="Reset filters"
+                      style={{
+                        height: "36px",
+                        padding: "6px 12px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <Icon icon="lucide:x" width="14" height="14" />
+>>>>>>> origin/master
                       </button>
-                    </div>
+
+                    {/* Count */}
+                    <span
+                      className="text-muted ms-auto"
+                      style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
+                    >
+                      Showing {getDisplayedInventoryData().length} of{" "}
+                      {inventoryState.lowStockFilter === "all"
+                        ? inventoryState.pagination.total
+                        : getFilteredInventoryData().length}{" "}
+                      items
+                    </span>
                   </div>
 
+<<<<<<< HEAD
                   <div
                     ref={inventoryTableContainerRef}
+=======
+                  {/* Inventory Table */}
+                  <div
+                    ref={inventoryTableRef}
+>>>>>>> origin/master
                     className="table-responsive scroll-sm table-scroll-container"
                     style={{
                       maxHeight: "600px",
@@ -1282,8 +2078,13 @@ const StockManagementPage = () => {
                       borderRadius: "8px",
                       scrollBehavior: "smooth",
                       overscrollBehavior: "auto",
+<<<<<<< HEAD
                       scrollbarWidth: "none",
                       msOverflowStyle: "none",
+=======
+                      scrollbarWidth: "thin",
+                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
+>>>>>>> origin/master
                     }}
                     onScroll={(e) => {
                       const target = e.target;
@@ -1292,15 +2093,20 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+<<<<<<< HEAD
                         if (
                           hasMoreInventoryData() &&
                           !inventoryState.isLoadingMore &&
                           !inventoryState.loading
                         ) {
+=======
+                        if (hasMoreInventoryData() && !inventoryLoadingMoreRef.current && !inventoryState.loading) {
+>>>>>>> origin/master
                           loadMoreInventoryData();
                         }
                       }
                     }}
+<<<<<<< HEAD
                     onWheel={(e) => {
                       const target = e.currentTarget;
                       const scrollTop = target.scrollTop;
@@ -1326,6 +2132,11 @@ const StockManagementPage = () => {
                     <table className="table table-hover mb-0">
                       <thead
                         className="table-light"
+=======
+                  >
+                    <table className="table bordered-table mb-0">
+                      <thead
+>>>>>>> origin/master
                         style={{
                           position: "sticky",
                           top: 0,
@@ -1334,19 +2145,329 @@ const StockManagementPage = () => {
                         }}
                       >
                         <tr>
-                          <th>Product</th>
-                          <th>Variant</th>
-                          <th>SKU</th>
-                          <th className="text-center">Available</th>
-                          <th className="text-center">Committed</th>
-                          <th className="text-center">Cancels</th>
-                          <th className="text-center">Approved Returns</th>
-                          <th className="text-end">Actions</th>
+                          <th scope="col" style={{ width: "60px" }}>
+                            #
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleInventorySort("product_name")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              Product
+                              {inventoryState.sortField === "product_name" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                  </div>
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleInventorySort("variant_display_name")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              Variant
+                              {inventoryState.sortField === "variant_display_name" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                    </div>
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleInventorySort("sku")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              SKU
+                              {inventoryState.sortField === "sku" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("available_quantity")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Available
+                              {inventoryState.sortField === "available_quantity" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("committed_quantity")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Committed
+                              {inventoryState.sortField === "committed_quantity" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("net_available")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Net Available
+                              {inventoryState.sortField === "net_available" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th scope="col" className="text-center">
+                            Status
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleInventorySort("reorder_point")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Reorder Point
+                              {inventoryState.sortField === "reorder_point" && (
+                                <Icon
+                                  icon={
+                                    inventoryState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-end"
+                            style={{ width: "100px" }}
+                          >
+                            Actions
+                          </th>
                         </tr>
                       </thead>
-                      <tbody>{inventoryTable}</tbody>
+                      <tbody>
+                        {inventoryState.loading && inventoryState.data.length === 0 ? (
+                          <>
+                            {Array.from({ length: 5 }).map((_, rowIndex) => (
+                              <tr key={`skeleton-${rowIndex}`}>
+                                {Array.from({ length: 9 }).map((_, colIndex) => (
+                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                                    <div
+                                      className="skeleton"
+                                      style={{
+                                        height: "20px",
+                                        backgroundColor: "#e5e7eb",
+                                        borderRadius: "4px",
+                                        animation:
+                                          "skeletonPulse 1.5s ease-in-out infinite",
+                                      }}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </>
+                        ) : (inventoryState.data.length === 0 || getFilteredInventoryData().length === 0) ? (
+                          <tr>
+                            <td colSpan="9" className="text-center py-4 text-muted">
+                              <div className="d-flex flex-column align-items-center">
+                                <p className="text-muted mb-0">
+                                  {inventoryState.search || inventoryState.lowStockFilter !== "all"
+                                    ? "No inventory items match your search criteria."
+                                    : "No inventory items found."}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {getDisplayedInventoryData().map((item, index) => {
+                              const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+                              
+                              // Determine stock status based on thresholds
+                              const getStockStatus = () => {
+                                if (netAvailable <= 0) {
+                                  return { status: 'out_of_stock', label: 'OUT OF STOCK', color: '#dc3545', bgColor: '#f8d7da' };
+                                }
+                                if (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) {
+                                  return { status: 'critical', label: 'CRITICAL', color: '#fd7e14', bgColor: '#fff3cd' };
+                                }
+                                if (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point) {
+                                  return { status: 'low_stock', label: 'LOW STOCK', color: '#ffc107', bgColor: '#fff3cd' };
+                                }
+                                return { status: 'in_stock', label: 'IN STOCK', color: '#198754', bgColor: '#d1e7dd' };
+                              };
+                              
+                              const stockStatus = getStockStatus();
+                              
+                              return (
+                                <tr key={item.inventory_item_id}>
+                                  <td>
+                                    <span className="text-secondary-light">
+                                      {index + 1}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="text-secondary-light fw-medium">
+                                      {item.product_name}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="text-secondary-light">
+                                      {item.variant_display_name}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="text-secondary-light">
+                                      {item.sku || "-"}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="fw-semibold">
+                                      {formatNumber(item.available_quantity)}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="text-secondary-light">
+                                      {formatNumber(item.committed_quantity)}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className={`fw-semibold ${
+                                      stockStatus.status === 'out_of_stock' ? 'text-danger' :
+                                      stockStatus.status === 'critical' ? 'text-warning' :
+                                      stockStatus.status === 'low_stock' ? 'text-warning' : ''
+                                    }`}>
+                                      {formatNumber(netAvailable)}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span
+                                      className="badge"
+                                      style={{
+                                        backgroundColor: stockStatus.bgColor,
+                                        color: stockStatus.color,
+                                        fontSize: "0.75rem",
+                                        padding: "4px 8px",
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      {stockStatus.label}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="text-secondary-light small">
+                                      {item.reorder_point !== null && item.reorder_point !== undefined
+                                        ? formatNumber(item.reorder_point)
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td className="text-end">
+                      <button
+                        type="button"
+                                      className="btn btn-sm"
+                                      style={{
+                                        border: "1px solid #dee2e6",
+                                        background: "white",
+                                        padding: "4px 8px",
+                                        color: "#495057",
+                                        borderRadius: "4px",
+                                      }}
+                                      onClick={() => openInventoryDetail(item)}
+                                      title="View Details"
+                                    >
+                                      <Icon icon="lucide:eye" width="14" height="14" />
+                      </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            {inventoryLoadingMore && (
+                              <>
+                                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                                  <tr key={`skeleton-more-${rowIndex}`}>
+                                    {Array.from({ length: 9 }).map((_, colIndex) => (
+                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                        <div
+                                          className="skeleton"
+                                          style={{
+                                            height: "20px",
+                                            backgroundColor: "#e5e7eb",
+                                            borderRadius: "4px",
+                                            animation:
+                                              "skeletonPulse 1.5s ease-in-out infinite",
+                                          }}
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </>
+                            )}
+                          </>
+                        )}
+                      </tbody>
                     </table>
-                  </div>
+                    </div>
 
                   {/* Infinite Scroll Footer */}
                   {inventoryState.pagination.total > 0 && (
@@ -1356,6 +2477,7 @@ const StockManagementPage = () => {
                         backgroundColor: "#f8f9fa",
                         borderRadius: "0 0 8px 8px",
                         marginTop: "0",
+<<<<<<< HEAD
                         borderTop: "1px solid #e5e7eb",
                       }}
                     >
@@ -1680,21 +2802,49 @@ const StockManagementPage = () => {
                         Next
                       </button>
                     </div>
+=======
+                      }}
+                    >
+                      <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                        Showing <strong>{getDisplayedInventoryData().length}</strong> of{" "}
+                        <strong>
+                          {inventoryState.lowStockFilter === "all"
+                            ? inventoryState.pagination.total
+                            : getFilteredInventoryData().length}
+                        </strong>{" "}
+                        items
+>>>>>>> origin/master
                   </div>
+                      {hasMoreInventoryData() && (
+                        <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                          Scroll down to load more
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeTab === "returns" && (
                 <div>
-                  <div className="row g-3 align-items-end mb-3">
-                    <div className="col-md-3">
-                      <label className="form-label small">Status</label>
+                  {/* Search, Filter, and Action Bar */}
+                  <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
+                    {/* Status Filter */}
                       <select
-                        className="form-select"
+                      className="form-select form-select-sm"
                         value={returnsState.status}
-                        onChange={(event) =>
-                          loadReturns({ status: event.target.value, page: 1 })
-                        }
+                      onChange={(e) =>
+                        setReturnsState((prev) => ({
+                          ...prev,
+                          status: e.target.value,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "150px",
+                        fontSize: "0.875rem",
+                      }}
                       >
                         <option value="pending">Pending</option>
                         <option value="approved">Approved</option>
@@ -1702,77 +2852,422 @@ const StockManagementPage = () => {
                         <option value="cancelled">Cancelled</option>
                         <option value="">All</option>
                       </select>
-                    </div>
-                    <div className="col-md-3 d-flex gap-2">
+
+                    {/* Sort Field */}
+                    <select
+                      className="form-select form-select-sm"
+                      value={returnsState.sortField || ""}
+                      onChange={(e) =>
+                        setReturnsState((prev) => ({
+                          ...prev,
+                          sortField: e.target.value || null,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "170px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="">Sort By</option>
+                      <option value="order_id">Order ID</option>
+                      <option value="sku">SKU</option>
+                      <option value="variant_display_name">Variant</option>
+                      <option value="quantity">Quantity</option>
+                      <option value="status">Status</option>
+                      <option value="reported_at">Reported At</option>
+                    </select>
+
+                    {/* Sort Order */}
+                    <select
+                      className="form-select form-select-sm"
+                      value={returnsState.sortDirection}
+                      onChange={(e) =>
+                        setReturnsState((prev) => ({
+                          ...prev,
+                          sortDirection: e.target.value,
+                        }))
+                      }
+                      style={{
+                        height: "36px",
+                        width: "auto",
+                        minWidth: "130px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+
+                    {/* Reset Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={handleResetReturnsFilters}
+                      title="Reset filters"
+                      style={{
+                        height: "36px",
+                        padding: "6px 12px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <Icon icon="lucide:x" width="14" height="14" />
+                    </button>
+
+                    {/* Sync Button */}
                       <button
                         type="button"
-                        className="btn btn-outline-secondary"
+                      className="btn btn-outline-secondary btn-sm"
                         onClick={handleSyncReturnCases}
                         disabled={returnsState.loading}
+                      style={{
+                        height: "36px",
+                        padding: "6px 12px",
+                        fontSize: "0.875rem",
+                      }}
                       >
-                        <Icon icon="mdi:refresh" width={18} height={18} />
+                      <Icon icon="mdi:refresh" width="16" height="16" />
                         Sync
                       </button>
-                    </div>
+
+                    {/* Count */}
+                    <span
+                      className="text-muted ms-auto"
+                      style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
+                    >
+                      Showing {getDisplayedReturnsData().length} of{" "}
+                      {returnsState.pagination.total} returns
+                    </span>
                   </div>
 
-                  <div className="table-responsive">
-                    <table className="table table-hover">
-                      <thead className="table-light">
+                  {/* Returns Table */}
+                  <div
+                    ref={returnsTableRef}
+                    className="table-responsive scroll-sm table-scroll-container"
+                    style={{
+                      maxHeight: "600px",
+                      overflowY: "auto",
+                      overflowX: "auto",
+                      position: "relative",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      scrollBehavior: "smooth",
+                      overscrollBehavior: "auto",
+                      scrollbarWidth: "thin",
+                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
+                    }}
+                    onScroll={(e) => {
+                      const target = e.target;
+                      const scrollTop = target.scrollTop;
+                      const scrollHeight = target.scrollHeight;
+                      const clientHeight = target.clientHeight;
+
+                      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+                        if (hasMoreReturnsData() && !returnsLoadingMoreRef.current && !returnsState.loading) {
+                          loadMoreReturnsData();
+                        }
+                      }
+                    }}
+                  >
+                    <table className="table bordered-table mb-0">
+                      <thead
+                        style={{
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                          backgroundColor: "#f8f9fa",
+                        }}
+                      >
                         <tr>
-                          <th>Order</th>
-                          <th>SKU</th>
-                          <th>Variant</th>
-                          <th className="text-center">Qty</th>
-                          <th className="text-center">Status</th>
-                          <th>Reason</th>
-                          <th>Reported At</th>
-                          <th className="text-end">Actions</th>
+                          <th scope="col" style={{ width: "60px" }}>
+                            #
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleReturnsSort("order_id")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              Order
+                              {returnsState.sortField === "order_id" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                  </div>
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleReturnsSort("sku")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              SKU
+                              {returnsState.sortField === "sku" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                    </div>
+                          </th>
+                          <th
+                            scope="col"
+                            onClick={() => handleReturnsSort("variant_display_name")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              Variant
+                              {returnsState.sortField === "variant_display_name" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleReturnsSort("quantity")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Qty
+                              {returnsState.sortField === "quantity" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-center"
+                            onClick={() => handleReturnsSort("status")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2 justify-content-center">
+                              Status
+                              {returnsState.sortField === "status" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th scope="col">Reason</th>
+                          <th
+                            scope="col"
+                            onClick={() => handleReturnsSort("reported_at")}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              Reported At
+                              {returnsState.sortField === "reported_at" && (
+                                <Icon
+                                  icon={
+                                    returnsState.sortDirection === "asc"
+                                      ? "lucide:chevron-up"
+                                      : "lucide:chevron-down"
+                                  }
+                                  width="14"
+                                  height="14"
+                                />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-end"
+                            style={{ width: "150px" }}
+                          >
+                            Actions
+                          </th>
                         </tr>
                       </thead>
-                      <tbody>{returnsTable}</tbody>
+                      <tbody>
+                        {returnsState.loading && returnsState.data.length === 0 ? (
+                          <>
+                            {Array.from({ length: 5 }).map((_, rowIndex) => (
+                              <tr key={`skeleton-${rowIndex}`}>
+                                {Array.from({ length: 9 }).map((_, colIndex) => (
+                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                                    <div
+                                      className="skeleton"
+                                      style={{
+                                        height: "20px",
+                                        backgroundColor: "#e5e7eb",
+                                        borderRadius: "4px",
+                                        animation:
+                                          "skeletonPulse 1.5s ease-in-out infinite",
+                                      }}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </>
+                        ) : returnsState.data.length === 0 ? (
+                          <tr>
+                            <td colSpan="9" className="text-center py-4 text-muted">
+                              <div className="d-flex flex-column align-items-center">
+                                <p className="text-muted mb-0">
+                                  {returnsState.status !== ""
+                                    ? "No return cases match your filter criteria."
+                                    : "No return cases found."}
+                                </p>
+                    </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {getDisplayedReturnsData().map((row, index) => (
+                              <tr key={row.return_case_id}>
+                                <td>
+                                  <span className="text-secondary-light">
+                                    {index + 1}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="text-secondary-light fw-medium">
+                                    {row.order_id}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="text-secondary-light">
+                                    {row.sku || row.shopify_variant_id || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="text-secondary-light">
+                                    {row.variant_display_name || "-"}
+                                  </span>
+                                </td>
+                                <td className="text-center">
+                                  <span className="text-secondary-light">
+                                    {formatNumber(row.quantity)}
+                                  </span>
+                                </td>
+                                <td className="text-center">
+                                  <span
+                                    className={`badge ${
+                                      row.status === "approved"
+                                        ? "bg-success"
+                                        : row.status === "rejected"
+                                        ? "bg-danger"
+                                        : row.status === "pending"
+                                        ? "bg-warning"
+                                        : "bg-secondary"
+                                    }`}
+                                    style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                                  >
+                                    {row.status}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span
+                                    className="text-secondary-light text-truncate d-inline-block"
+                                    style={{ maxWidth: "200px" }}
+                                    title={row.reason || "-"}
+                                  >
+                                    {row.reason || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="text-secondary-light small">
+                                    {row.reported_at ? new Date(row.reported_at).toLocaleString() : "-"}
+                                  </span>
+                                </td>
+                                <td className="text-end">
+                                  <ReturnActionButtons
+                                    row={row}
+                                    busy={
+                                      returnsState.busyCaseId === row.return_case_id
+                                    }
+                                    onApprove={handleApproveReturn}
+                                    onReject={handleRejectReturn}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                            {returnsLoadingMore && (
+                              <>
+                                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                                  <tr key={`skeleton-more-${rowIndex}`}>
+                                    {Array.from({ length: 9 }).map((_, colIndex) => (
+                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                                        <div
+                                          className="skeleton"
+                                          style={{
+                                            height: "20px",
+                                            backgroundColor: "#e5e7eb",
+                                            borderRadius: "4px",
+                                            animation:
+                                              "skeletonPulse 1.5s ease-in-out infinite",
+                                          }}
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </>
+                            )}
+                          </>
+                        )}
+                      </tbody>
                     </table>
                   </div>
 
-                  <div className="d-flex justify-content-between align-items-center mt-3">
-                    <div className="text-muted small">
-                      Page {returnsState.pagination.page} of{" "}
-                      {returnsState.pagination.totalPages}
-                    </div>
-                    <div className="btn-group">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={
-                          returnsState.loading ||
-                          returnsState.pagination.page <= 1
-                        }
-                        onClick={() =>
-                          loadReturns({
-                            page: returnsState.pagination.page - 1,
-                          })
-                        }
-                      >
-                        Prev
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={
-                          returnsState.loading ||
-                          returnsState.pagination.page >=
-                            returnsState.pagination.totalPages
-                        }
-                        onClick={() =>
-                          loadReturns({
-                            page: returnsState.pagination.page + 1,
-                          })
-                        }
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
+                  {/* Infinite Scroll Footer */}
+                  {returnsState.pagination.total > 0 && (
+                    <div
+                      className="d-flex justify-content-between align-items-center px-3 py-2"
+                      style={{
+                        backgroundColor: "#f8f9fa",
+                        borderRadius: "0 0 8px 8px",
+                        marginTop: "0",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                        Showing <strong>{getDisplayedReturnsData().length}</strong> of{" "}
+                        <strong>{returnsState.pagination.total}</strong> returns
+                      </div>
+                      {hasMoreReturnsData() && (
+                        <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                          Scroll down to load more
+                </div>
+              )}
+            </div>
+                  )}
                 </div>
               )}
             </div>
