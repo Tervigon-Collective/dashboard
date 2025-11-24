@@ -1,19 +1,32 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import axios from "axios";
 import { Icon } from "@iconify/react";
-import { getPrioritizedColors, POSITIVE_COLORS, NEGATIVE_COLORS, WARNING_COLORS } from "@/utils/analyticsColors";
+import {
+  getPrioritizedColors,
+  POSITIVE_COLORS,
+  NEGATIVE_COLORS,
+  WARNING_COLORS,
+} from "@/utils/analyticsColors";
+import { apiClient } from "@/api/api";
 
 const ReactECharts = dynamic(
-  () => import("echarts-for-react").catch((err) => {
-    console.error("Failed to load echarts-for-react:", err);
-    return { default: () => <div>Chart library failed to load. Please refresh the page.</div> };
-  }),
+  () =>
+    import("echarts-for-react").catch((err) => {
+      console.error("Failed to load echarts-for-react:", err);
+      return {
+        default: () => (
+          <div>Chart library failed to load. Please refresh the page.</div>
+        ),
+      };
+    }),
   {
     ssr: false,
     loading: () => (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: "400px" }}>
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ height: "400px" }}
+      >
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading chart...</span>
         </div>
@@ -21,8 +34,6 @@ const ReactECharts = dynamic(
     ),
   }
 );
-
-const LOCAL_API_URL = "http://localhost:8000";
 
 const CustomerDistributionWidget = () => {
   const [segmentationData, setSegmentationData] = useState(null);
@@ -40,15 +51,12 @@ const CustomerDistributionWidget = () => {
     setSegmentationError(null);
 
     try {
-      const response = await axios.get(
-        `${LOCAL_API_URL}/api/v1/customers/segmentation`,
-        {
-          params: {
-            period_days: periodDays,
-            churn_threshold_days: churnThresholdDays,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/v1/customers/segmentation`, {
+        params: {
+          period_days: periodDays,
+          churn_threshold_days: churnThresholdDays,
+        },
+      });
 
       if (response.data && response.data.segments) {
         setSegmentationData(response.data);
@@ -84,17 +92,21 @@ const CustomerDistributionWidget = () => {
 
   // Chart options for pie chart
   const pieChartOption = useMemo(() => {
-    if (!segmentationData || !segmentationData.segments || segmentationData.segments.length === 0) {
+    if (
+      !segmentationData ||
+      !segmentationData.segments ||
+      segmentationData.segments.length === 0
+    ) {
       return {};
     }
 
     const segments = segmentationData.segments;
     const colors = getPrioritizedColors(segments.length);
-    
+
     const segmentColorMap = {
-      "Churned": NEGATIVE_COLORS[0],
+      Churned: NEGATIVE_COLORS[0],
       "New Customers": POSITIVE_COLORS[0],
-      "Returning": POSITIVE_COLORS[1],  
+      Returning: POSITIVE_COLORS[1],
       "At Risk": WARNING_COLORS[0],
     };
 
@@ -123,7 +135,9 @@ const CustomerDistributionWidget = () => {
                 ${params.name}
               </div>
               <div style="display: flex; align-items: center; margin: 4px 0;">
-                <span style="display:inline-block;margin-right:8px;border-radius:3px;width:12px;height:12px;background-color:${params.color};"></span>
+                <span style="display:inline-block;margin-right:8px;border-radius:3px;width:12px;height:12px;background-color:${
+                  params.color
+                };"></span>
                 <span style="font-size: 12px;">
                   Customers: <strong style="color: #333;">${params.value.toLocaleString()}</strong>
                 </span>
@@ -197,7 +211,10 @@ const CustomerDistributionWidget = () => {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex gap-3 align-items-center">
             <div>
-              <label htmlFor="periodDays" className="form-label small fw-semibold mb-1">
+              <label
+                htmlFor="periodDays"
+                className="form-label small fw-semibold mb-1"
+              >
                 Analysis Period
               </label>
               <select
@@ -214,7 +231,10 @@ const CustomerDistributionWidget = () => {
                   </option>
                 ))}
               </select>
-              <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
+              <small
+                className="text-muted d-block mt-1"
+                style={{ fontSize: "11px" }}
+              >
                 Churn threshold: {churnThresholdDays} days
               </small>
             </div>
@@ -233,7 +253,10 @@ const CustomerDistributionWidget = () => {
 
         {/* Loading State */}
         {segmentationLoading && !segmentationData && (
-          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ minHeight: "400px" }}
+          >
             <div className="text-center">
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
@@ -247,7 +270,10 @@ const CustomerDistributionWidget = () => {
         {!segmentationLoading && segmentationData && (
           <>
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h6 className="mb-0" style={{ fontSize: "14px", fontWeight: "600" }}>
+              <h6
+                className="mb-0"
+                style={{ fontSize: "14px", fontWeight: "600" }}
+              >
                 Customer Distribution
               </h6>
               <span className="badge bg-primary">
@@ -275,4 +301,3 @@ const CustomerDistributionWidget = () => {
 };
 
 export default CustomerDistributionWidget;
-

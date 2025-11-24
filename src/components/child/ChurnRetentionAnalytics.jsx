@@ -1,20 +1,34 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import axios from "axios";
 import { Icon } from "@iconify/react";
-import { ANALYTICS_COLORS_COMPLETE, getPrioritizedColors, POSITIVE_COLORS, NEGATIVE_COLORS, WARNING_COLORS } from "@/utils/analyticsColors";
+import {
+  ANALYTICS_COLORS_COMPLETE,
+  getPrioritizedColors,
+  POSITIVE_COLORS,
+  NEGATIVE_COLORS,
+  WARNING_COLORS,
+} from "@/utils/analyticsColors";
+import { apiClient } from "@/api/api";
 
 const ReactECharts = dynamic(
-  () => import("echarts-for-react").catch((err) => {
-    console.error("Failed to load echarts-for-react:", err);
-    // Return a fallback component
-    return { default: () => <div>Chart library failed to load. Please refresh the page.</div> };
-  }),
+  () =>
+    import("echarts-for-react").catch((err) => {
+      console.error("Failed to load echarts-for-react:", err);
+      // Return a fallback component
+      return {
+        default: () => (
+          <div>Chart library failed to load. Please refresh the page.</div>
+        ),
+      };
+    }),
   {
     ssr: false,
     loading: () => (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: "400px" }}>
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ height: "400px" }}
+      >
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading chart...</span>
         </div>
@@ -22,8 +36,6 @@ const ReactECharts = dynamic(
     ),
   }
 );
-
-const LOCAL_API_URL = "http://localhost:8000";
 
 // Helper to format date as YYYY-MM-DD
 function formatDate(date) {
@@ -39,26 +51,26 @@ const getDateRangeForPeriod = (period) => {
   const today = new Date();
   const endOfDay = new Date(today);
   endOfDay.setHours(23, 0, 0, 0);
-  
+
   const startOfDay = new Date(today);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   switch (period) {
     case "today":
       return [startOfDay, endOfDay];
-    
+
     case "weekly":
       startOfDay.setDate(today.getDate() - 6);
       return [startOfDay, endOfDay];
-    
+
     case "monthly":
       startOfDay.setDate(today.getDate() - 29);
       return [startOfDay, endOfDay];
-    
+
     case "yearly":
       startOfDay.setFullYear(today.getFullYear() - 1);
       return [startOfDay, endOfDay];
-    
+
     default:
       return [startOfDay, endOfDay];
   }
@@ -67,7 +79,6 @@ const getDateRangeForPeriod = (period) => {
 const ChurnRetentionAnalytics = () => {
   return <CombinedAnalyticsSection />;
 };
-
 
 // Combined Analytics Section
 const CombinedAnalyticsSection = () => {
@@ -80,11 +91,11 @@ const CombinedAnalyticsSection = () => {
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
-  
+
   // Metric selection states
   const [selectedType, setSelectedType] = useState("both"); // "return", "cancel", "both"
   const [selectedMetric, setSelectedMetric] = useState("count"); // "count", "rate"
-  
+
   // Custom date range
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
@@ -111,18 +122,15 @@ const CombinedAnalyticsSection = () => {
 
   // Fetch total orders for rate calculation
   const [totalOrdersData, setTotalOrdersData] = useState(null);
-  
+
   const fetchTotalOrders = async (startDate, endDate) => {
     try {
-      const response = await axios.get(
-        `${LOCAL_API_URL}/api/order_count`,
-        {
-          params: {
-            startDate: startDate,
-            endDate: endDate,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/order_count`, {
+        params: {
+          startDate: startDate,
+          endDate: endDate,
+        },
+      });
       // Store daily order counts if available
       setTotalOrdersData(response.data);
     } catch (err) {
@@ -137,15 +145,12 @@ const CombinedAnalyticsSection = () => {
     setSegmentationError(null);
 
     try {
-      const response = await axios.get(
-        `${LOCAL_API_URL}/api/v1/customers/segmentation`,
-        {
-          params: {
-            period_days: periodDays,
-            churn_threshold_days: churnThresholdDays,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/v1/customers/segmentation`, {
+        params: {
+          period_days: periodDays,
+          churn_threshold_days: churnThresholdDays,
+        },
+      });
 
       if (response.data && response.data.segments) {
         setSegmentationData(response.data);
@@ -174,8 +179,8 @@ const CombinedAnalyticsSection = () => {
 
     try {
       // Fetch returns-cancellations data
-      const response = await axios.get(
-        `${LOCAL_API_URL}/api/v1/erp/sales/returns-cancellations`,
+      const response = await apiClient.get(
+        `/api/v1/erp/sales/returns-cancellations`,
         {
           params: {
             start_date: dateRange.startDate,
@@ -186,11 +191,11 @@ const CombinedAnalyticsSection = () => {
 
       if (response.data && Array.isArray(response.data)) {
         // Sort by date (oldest first)
-        const sortedData = [...response.data].sort((a, b) => 
-          new Date(a.event_date) - new Date(b.event_date)
+        const sortedData = [...response.data].sort(
+          (a, b) => new Date(a.event_date) - new Date(b.event_date)
         );
         setTrendData(sortedData);
-        
+
         // Also fetch total orders for rate calculation
         await fetchTotalOrders(dateRange.startDate, dateRange.endDate);
       } else {
@@ -234,17 +239,21 @@ const CombinedAnalyticsSection = () => {
 
   // Chart options for pie chart
   const pieChartOption = useMemo(() => {
-    if (!segmentationData || !segmentationData.segments || segmentationData.segments.length === 0) {
+    if (
+      !segmentationData ||
+      !segmentationData.segments ||
+      segmentationData.segments.length === 0
+    ) {
       return {};
     }
 
     const segments = segmentationData.segments;
     const colors = getPrioritizedColors(segments.length);
-    
+
     const segmentColorMap = {
-      "Churned": NEGATIVE_COLORS[0],
+      Churned: NEGATIVE_COLORS[0],
       "New Customers": POSITIVE_COLORS[0],
-      "Returning": POSITIVE_COLORS[1],  
+      Returning: POSITIVE_COLORS[1],
       "At Risk": WARNING_COLORS[0],
     };
 
@@ -273,7 +282,9 @@ const CombinedAnalyticsSection = () => {
                 ${params.name}
               </div>
               <div style="display: flex; align-items: center; margin: 4px 0;">
-                <span style="display:inline-block;margin-right:8px;border-radius:3px;width:12px;height:12px;background-color:${params.color};"></span>
+                <span style="display:inline-block;margin-right:8px;border-radius:3px;width:12px;height:12px;background-color:${
+                  params.color
+                };"></span>
                 <span style="font-size: 12px;">
                   Customers: <strong style="color: #333;">${params.value.toLocaleString()}</strong>
                 </span>
@@ -352,19 +363,21 @@ const CombinedAnalyticsSection = () => {
       const cancelledCount = item.cancelled_order_count || 0;
       const returnedQty = item.returned_quantity || 0;
       const cancelledQty = item.cancelled_quantity || 0;
-      
+
       // Calculate rates
       // Note: For accurate rates, we'd need total orders per day from the API
       // For now, we calculate relative rates based on returned + cancelled events
       // This shows the proportion of returns vs cancellations
       const totalEvents = returnedCount + cancelledCount;
-      
+
       // Calculate rates as percentage of total events (returned + cancelled)
       // This is a relative rate showing the distribution between returns and cancellations
       // For absolute rates (return_rate = returned / total_orders), you'd need total orders data
-      const returnRate = totalEvents > 0 ? (returnedCount / totalEvents) * 100 : 0;
-      const cancellationRate = totalEvents > 0 ? (cancelledCount / totalEvents) * 100 : 0;
-      
+      const returnRate =
+        totalEvents > 0 ? (returnedCount / totalEvents) * 100 : 0;
+      const cancellationRate =
+        totalEvents > 0 ? (cancelledCount / totalEvents) * 100 : 0;
+
       return {
         ...item,
         returnRate,
@@ -386,15 +399,20 @@ const CombinedAnalyticsSection = () => {
         avgCancellationRate: 0,
       };
     }
-    
+
     const totals = processedTrendData.reduce(
       (acc, item) => ({
-        totalReturnOrders: acc.totalReturnOrders + (item.returned_order_count || 0),
-        totalCancelOrders: acc.totalCancelOrders + (item.cancelled_order_count || 0),
-        totalReturnQuantity: acc.totalReturnQuantity + (item.returned_quantity || 0),
-        totalCancelQuantity: acc.totalCancelQuantity + (item.cancelled_quantity || 0),
+        totalReturnOrders:
+          acc.totalReturnOrders + (item.returned_order_count || 0),
+        totalCancelOrders:
+          acc.totalCancelOrders + (item.cancelled_order_count || 0),
+        totalReturnQuantity:
+          acc.totalReturnQuantity + (item.returned_quantity || 0),
+        totalCancelQuantity:
+          acc.totalCancelQuantity + (item.cancelled_quantity || 0),
         totalReturnRate: acc.totalReturnRate + (item.returnRate || 0),
-        totalCancellationRate: acc.totalCancellationRate + (item.cancellationRate || 0),
+        totalCancellationRate:
+          acc.totalCancellationRate + (item.cancellationRate || 0),
       }),
       {
         totalReturnOrders: 0,
@@ -411,8 +429,14 @@ const CombinedAnalyticsSection = () => {
       totalCancelOrders: totals.totalCancelOrders,
       totalReturnQuantity: totals.totalReturnQuantity,
       totalCancelQuantity: totals.totalCancelQuantity,
-      avgReturnRate: processedTrendData.length > 0 ? totals.totalReturnRate / processedTrendData.length : 0,
-      avgCancellationRate: processedTrendData.length > 0 ? totals.totalCancellationRate / processedTrendData.length : 0,
+      avgReturnRate:
+        processedTrendData.length > 0
+          ? totals.totalReturnRate / processedTrendData.length
+          : 0,
+      avgCancellationRate:
+        processedTrendData.length > 0
+          ? totals.totalCancellationRate / processedTrendData.length
+          : 0,
     };
   }, [processedTrendData]);
 
@@ -425,19 +449,28 @@ const CombinedAnalyticsSection = () => {
     // Format dates for display
     const dates = processedTrendData.map((item) => {
       const date = new Date(item.event_date);
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     });
 
     // Prepare data based on selected metrics
-    const returnOrders = processedTrendData.map((p) => p.returned_order_count || 0);
-    const cancelOrders = processedTrendData.map((p) => p.cancelled_order_count || 0);
+    const returnOrders = processedTrendData.map(
+      (p) => p.returned_order_count || 0
+    );
+    const cancelOrders = processedTrendData.map(
+      (p) => p.cancelled_order_count || 0
+    );
     const returnRates = processedTrendData.map((p) => p.returnRate || 0);
-    const cancellationRates = processedTrendData.map((p) => p.cancellationRate || 0);
-    
+    const cancellationRates = processedTrendData.map(
+      (p) => p.cancellationRate || 0
+    );
+
     // Determine which series to show based on selections
     const series = [];
     const legendData = [];
-    
+
     if (selectedType === "return" || selectedType === "both") {
       if (selectedMetric === "count" || selectedMetric === "both") {
         series.push({
@@ -456,7 +489,9 @@ const CombinedAnalyticsSection = () => {
           },
           yAxisIndex: 0,
         });
-        legendData.push(`Return Orders (Total: ${aggregatedMetrics.totalReturnOrders.toLocaleString()})`);
+        legendData.push(
+          `Return Orders (Total: ${aggregatedMetrics.totalReturnOrders.toLocaleString()})`
+        );
       }
       if (selectedMetric === "rate" || selectedMetric === "both") {
         series.push({
@@ -473,10 +508,12 @@ const CombinedAnalyticsSection = () => {
           },
           yAxisIndex: 1,
         });
-        legendData.push(`Return Rate (Avg: ${aggregatedMetrics.avgReturnRate.toFixed(2)}%)`);
+        legendData.push(
+          `Return Rate (Avg: ${aggregatedMetrics.avgReturnRate.toFixed(2)}%)`
+        );
       }
     }
-    
+
     if (selectedType === "cancel" || selectedType === "both") {
       if (selectedMetric === "count" || selectedMetric === "both") {
         series.push({
@@ -495,7 +532,9 @@ const CombinedAnalyticsSection = () => {
           },
           yAxisIndex: 0,
         });
-        legendData.push(`Cancel Orders (Total: ${aggregatedMetrics.totalCancelOrders.toLocaleString()})`);
+        legendData.push(
+          `Cancel Orders (Total: ${aggregatedMetrics.totalCancelOrders.toLocaleString()})`
+        );
       }
       if (selectedMetric === "rate" || selectedMetric === "both") {
         series.push({
@@ -512,7 +551,11 @@ const CombinedAnalyticsSection = () => {
           },
           yAxisIndex: 1,
         });
-        legendData.push(`Cancel Rate (Avg: ${aggregatedMetrics.avgCancellationRate.toFixed(2)}%)`);
+        legendData.push(
+          `Cancel Rate (Avg: ${aggregatedMetrics.avgCancellationRate.toFixed(
+            2
+          )}%)`
+        );
       }
     }
 
@@ -527,8 +570,8 @@ const CombinedAnalyticsSection = () => {
             </div>`;
           params.forEach((param) => {
             const value = parseFloat(param.value || 0);
-            const formattedValue = param.seriesName.includes("Rate") 
-              ? `${value.toFixed(2)}%` 
+            const formattedValue = param.seriesName.includes("Rate")
+              ? `${value.toFixed(2)}%`
               : value.toLocaleString();
             result += `<div style="display: flex; align-items: center; margin: 4px 0;">
               <span style="display:inline-block;margin-right:8px;border-radius:3px;width:12px;height:12px;background-color:${param.color};"></span>
@@ -597,7 +640,10 @@ const CombinedAnalyticsSection = () => {
         <div className="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-3">
           <div className="d-flex gap-3 align-items-center flex-wrap">
             <div>
-              <label htmlFor="periodDays" className="form-label small fw-semibold mb-1">
+              <label
+                htmlFor="periodDays"
+                className="form-label small fw-semibold mb-1"
+              >
                 Analysis Period
               </label>
               <select
@@ -614,7 +660,10 @@ const CombinedAnalyticsSection = () => {
                   </option>
                 ))}
               </select>
-              <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
+              <small
+                className="text-muted d-block mt-1"
+                style={{ fontSize: "11px" }}
+              >
                 Churn threshold: {churnThresholdDays} days
               </small>
             </div>
@@ -638,7 +687,10 @@ const CombinedAnalyticsSection = () => {
                   }}
                   className="form-check-input"
                 />
-                <label htmlFor="useCustomDateRange" className="form-check-label small">
+                <label
+                  htmlFor="useCustomDateRange"
+                  className="form-check-label small"
+                >
                   Custom Range
                 </label>
               </div>
@@ -692,7 +744,15 @@ const CombinedAnalyticsSection = () => {
                 >
                   Return
                 </button>
-                <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+                <span
+                  style={{
+                    color: "#e5e7eb",
+                    margin: "0 8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  |
+                </span>
                 <button
                   className="btn btn-link p-0 text-decoration-none"
                   onClick={() => setSelectedType("cancel")}
@@ -709,7 +769,15 @@ const CombinedAnalyticsSection = () => {
                 >
                   Cancel
                 </button>
-                <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+                <span
+                  style={{
+                    color: "#e5e7eb",
+                    margin: "0 8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  |
+                </span>
                 <button
                   className="btn btn-link p-0 text-decoration-none"
                   onClick={() => setSelectedType("both")}
@@ -751,7 +819,15 @@ const CombinedAnalyticsSection = () => {
                 >
                   Count
                 </button>
-                <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+                <span
+                  style={{
+                    color: "#e5e7eb",
+                    margin: "0 8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  |
+                </span>
                 <button
                   className="btn btn-link p-0 text-decoration-none"
                   onClick={() => setSelectedMetric("rate")}
@@ -768,7 +844,15 @@ const CombinedAnalyticsSection = () => {
                 >
                   Rate
                 </button>
-                <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+                <span
+                  style={{
+                    color: "#e5e7eb",
+                    margin: "0 8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  |
+                </span>
                 <button
                   className="btn btn-link p-0 text-decoration-none"
                   onClick={() => setSelectedMetric("both")}
@@ -807,7 +891,11 @@ const CombinedAnalyticsSection = () => {
             >
               Today
             </button>
-            <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+            <span
+              style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}
+            >
+              |
+            </span>
             <button
               className="btn btn-link p-0 text-decoration-none"
               onClick={() => handleTimeFrameChange("weekly")}
@@ -824,7 +912,11 @@ const CombinedAnalyticsSection = () => {
             >
               Weekly
             </button>
-            <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+            <span
+              style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}
+            >
+              |
+            </span>
             <button
               className="btn btn-link p-0 text-decoration-none"
               onClick={() => handleTimeFrameChange("monthly")}
@@ -841,7 +933,11 @@ const CombinedAnalyticsSection = () => {
             >
               Monthly
             </button>
-            <span style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}>|</span>
+            <span
+              style={{ color: "#e5e7eb", margin: "0 8px", fontSize: "14px" }}
+            >
+              |
+            </span>
             <button
               className="btn btn-link p-0 text-decoration-none"
               onClick={() => handleTimeFrameChange("yearly")}
@@ -872,85 +968,104 @@ const CombinedAnalyticsSection = () => {
         )}
 
         {/* Loading State */}
-        {(segmentationLoading || trendLoading) && (!segmentationData || !trendData) && (
-          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
-            <div className="text-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+        {(segmentationLoading || trendLoading) &&
+          (!segmentationData || !trendData) && (
+            <div
+              className="d-flex justify-content-center align-items-center"
+              style={{ minHeight: "400px" }}
+            >
+              <div className="text-center">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-3 text-muted">Loading data...</p>
               </div>
-              <p className="mt-3 text-muted">Loading data...</p>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Charts Row */}
-        {!segmentationLoading && !trendLoading && (segmentationData || trendData) && (
-          <div className="row g-4">
-            {/* Customer Distribution Chart */}
-            {segmentationData && (
-              <div className="col-lg-6 col-md-12">
-                <div className="card border-0 shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h6 className="mb-0" style={{ fontSize: "14px", fontWeight: "600" }}>
-                        Customer Distribution
-                      </h6>
-                      <span className="badge bg-primary">
-                        Total: {segmentationData.total_customers?.toLocaleString() || 0}
-                      </span>
-                    </div>
-                    <ReactECharts
-                      option={pieChartOption}
-                      style={{ height: "400px", width: "100%" }}
-                      opts={{ renderer: "svg" }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Return & Cancel Trends Chart */}
-            {processedTrendData && processedTrendData.length > 0 && (
-              <div className="col-lg-6 col-md-12">
-                <div className="card border-0 shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h6 className="mb-0" style={{ fontSize: "14px", fontWeight: "600" }}>
-                        Return & Cancel Trends
-                      </h6>
-                      <div className="d-flex gap-2 flex-wrap">
-                        <span className="badge bg-warning text-dark">
-                          Returns: {aggregatedMetrics.totalReturnOrders} orders
-                        </span>
-                        <span className="badge bg-danger">
-                          Cancels: {aggregatedMetrics.totalCancelOrders} orders
+        {!segmentationLoading &&
+          !trendLoading &&
+          (segmentationData || trendData) && (
+            <div className="row g-4">
+              {/* Customer Distribution Chart */}
+              {segmentationData && (
+                <div className="col-lg-6 col-md-12">
+                  <div className="card border-0 shadow-sm h-100">
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6
+                          className="mb-0"
+                          style={{ fontSize: "14px", fontWeight: "600" }}
+                        >
+                          Customer Distribution
+                        </h6>
+                        <span className="badge bg-primary">
+                          Total:{" "}
+                          {segmentationData.total_customers?.toLocaleString() ||
+                            0}
                         </span>
                       </div>
+                      <ReactECharts
+                        option={pieChartOption}
+                        style={{ height: "400px", width: "100%" }}
+                        opts={{ renderer: "svg" }}
+                      />
                     </div>
-                    <ReactECharts
-                      option={metricsChartOption}
-                      style={{ height: "400px", width: "100%" }}
-                      opts={{ renderer: "svg" }}
-                    />
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Return & Cancel Trends Chart */}
+              {processedTrendData && processedTrendData.length > 0 && (
+                <div className="col-lg-6 col-md-12">
+                  <div className="card border-0 shadow-sm h-100">
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6
+                          className="mb-0"
+                          style={{ fontSize: "14px", fontWeight: "600" }}
+                        >
+                          Return & Cancel Trends
+                        </h6>
+                        <div className="d-flex gap-2 flex-wrap">
+                          <span className="badge bg-warning text-dark">
+                            Returns: {aggregatedMetrics.totalReturnOrders}{" "}
+                            orders
+                          </span>
+                          <span className="badge bg-danger">
+                            Cancels: {aggregatedMetrics.totalCancelOrders}{" "}
+                            orders
+                          </span>
+                        </div>
+                      </div>
+                      <ReactECharts
+                        option={metricsChartOption}
+                        style={{ height: "400px", width: "100%" }}
+                        opts={{ renderer: "svg" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* No Data State */}
-        {!segmentationLoading && !trendLoading && !segmentationError && !trendError && !segmentationData && !trendData && (
-          <div className="alert alert-info">
-            <Icon icon="mdi:information" className="me-2" />
-            No data available. Please adjust filters.
-          </div>
-        )}
+        {!segmentationLoading &&
+          !trendLoading &&
+          !segmentationError &&
+          !trendError &&
+          !segmentationData &&
+          !trendData && (
+            <div className="alert alert-info">
+              <Icon icon="mdi:information" className="me-2" />
+              No data available. Please adjust filters.
+            </div>
+          )}
       </div>
     </div>
   );
 };
 
-
 export default ChurnRetentionAnalytics;
-
