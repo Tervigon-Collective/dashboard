@@ -21,6 +21,7 @@ import {
   editImage,
   getGenerationResults,
   getBrandkit,
+  deleteGeneratedContent,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -684,6 +685,52 @@ export default function CreateContentPage() {
       }));
     } finally {
       setIsSendingEdit(false);
+    }
+  };
+
+  // Delete generated content handler
+  const handleDeleteContent = async (item) => {
+    // Validate required fields
+    if (!item.run_id || !item.artifact_id) {
+      console.error("Cannot delete: missing run_id or artifact_id", item);
+      alert("Error: Cannot delete this content. Missing required information.");
+      return;
+    }
+
+    // Confirmation dialog
+    const contentType = item.content_type === "video" ? "video" : "image";
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this ${contentType}? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await deleteGeneratedContent(item.run_id, item.artifact_id);
+      
+      if (response.status === "success") {
+        // Remove the item from the local state immediately for better UX
+        setGeneratedContent((prev) =>
+          prev.filter((content) => content.id !== item.id)
+        );
+        
+        // Show success message
+        console.log("Content deleted successfully:", response.message);
+        
+        // Optionally refresh the content list to ensure consistency
+        setTimeout(() => {
+          fetchGeneratedContent();
+        }, 500);
+      } else {
+        throw new Error(response.message || "Failed to delete content");
+      }
+    } catch (error) {
+      console.error("Error deleting content:", error);
+      alert(
+        `Failed to delete content: ${error.response?.data?.detail || error.message || "Unknown error"}`
+      );
     }
   };
 
@@ -2119,6 +2166,21 @@ export default function CreateContentPage() {
                                               />
                                             </button>
                                           ) : null}
+                                          {/* Delete button - for all content types with run_id and artifact_id */}
+                                          {item.run_id && item.artifact_id && (
+                                            <button
+                                              className="btn btn-sm btn-danger d-flex align-items-center justify-content-center"
+                                              onClick={() => handleDeleteContent(item)}
+                                              title={`Delete this ${item.content_type === "video" ? "video" : "image"}`}
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
+                                            >
+                                              <Icon
+                                                icon="solar:trash-bin-trash-bold"
+                                                width="14"
+                                                height="14"
+                                              />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                       <div className="d-flex align-items-center gap-2 small text-muted mt-2">

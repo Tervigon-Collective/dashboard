@@ -457,6 +457,20 @@ export const getGeneratedContent = async () => {
 };
 
 /**
+ * Delete a specific generated content item (direct to Python backend)
+ * @param {string} runId - Run ID
+ * @param {string} artifactId - Artifact ID
+ * @returns {Promise<Object>} Deletion response {status, message, content_type}
+ */
+export const deleteGeneratedContent = async (runId, artifactId) => {
+  // Call Python backend directly
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/content/generated/${runId}/${artifactId}`
+  );
+  return response.data;
+};
+
+/**
  * Get content preview URL
  * @param {string} runId - Run ID
  * @param {string} artifactId - Artifact ID
