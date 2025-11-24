@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { Icon } from "@iconify/react";
 import ExcelJS from "exceljs";
 import { DateRangePicker, CustomProvider } from "rsuite";
@@ -62,6 +68,7 @@ const downloadProductSpendExcel = async (
     "Revenue",
     "Quantity",
     "COGS",
+    "Net Profit",
   ];
 
   // Add headers row
@@ -79,6 +86,8 @@ const downloadProductSpendExcel = async (
 
   // Add data rows
   products.forEach((row) => {
+    const netProfit =
+      Number(row.revenue || 0) - Number(row.spend || 0) - Number(row.cogs || 0);
     const rowData = [
       row.sku || "",
       row.product_title || "",
@@ -86,6 +95,7 @@ const downloadProductSpendExcel = async (
       `₹${Number(row.revenue || 0).toFixed(2)}`,
       row.quantity || 0,
       `₹${Number(row.cogs || 0).toFixed(2)}`,
+      `₹${netProfit.toFixed(2)}`,
     ];
     worksheet.addRow(rowData);
   });
@@ -94,6 +104,11 @@ const downloadProductSpendExcel = async (
   if (summaryData) {
     worksheet.addRow([]); // Empty row for spacing
 
+    const totalNetProfit =
+      Number(summaryData.total_revenue || 0) -
+      Number(summaryData.total_ad_spend || 0) -
+      Number(summaryData.total_cogs || 0);
+
     const totalRow = [
       "TOTAL",
       `${summaryData.total_products} Products`,
@@ -101,6 +116,7 @@ const downloadProductSpendExcel = async (
       `₹${Number(summaryData.total_revenue || 0).toFixed(2)}`,
       summaryData.total_quantity || 0,
       `₹${Number(summaryData.total_cogs || 0).toFixed(2)}`,
+      `₹${totalNetProfit.toFixed(2)}`,
     ];
 
     const totalRowIndex = worksheet.addRow(totalRow);
@@ -153,13 +169,13 @@ const ProductSpendSummaryLayer = () => {
   const [searchSku, setSearchSku] = useState("");
   const [isMobile, setIsMobile] = useState(getIsMobile());
   const [activeChannel, setActiveChannel] = useState("all"); // 'all', 'meta', 'google'
-  
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
     key: "revenue",
     direction: "desc",
   });
-  
+
   // Infinite scroll state
   const [displayedItemsCount, setDisplayedItemsCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -183,7 +199,65 @@ const ProductSpendSummaryLayer = () => {
         throw new Error("Failed to fetch data");
       }
       const data = await res.json();
-      setProducts(data.products || []);
+
+      // Debug: Log all BlueJay Sneaks entries before consolidation
+      const blueJayEntries = (data.products || []).filter(
+        (p) => p.product_title && p.product_title.includes("BlueJay Sneaks")
+      );
+      if (blueJayEntries.length > 0) {
+        console.log("=== BlueJay Sneaks - Before Consolidation ===");
+        blueJayEntries.forEach((entry, idx) => {
+          console.log(`Entry ${idx + 1}:`, {
+            sku: entry.sku,
+            spend: entry.spend,
+            revenue: entry.revenue,
+            quantity: entry.quantity,
+            cogs: entry.cogs,
+          });
+        });
+        const totalSpend = blueJayEntries.reduce(
+          (sum, e) => sum + Number(e.spend || 0),
+          0
+        );
+        console.log("Total Spend (sum of all entries):", totalSpend);
+      }
+
+      // Consolidate products by product_title
+      const consolidatedProducts = {};
+      (data.products || []).forEach((product) => {
+        const title = product.product_title || "";
+        if (!consolidatedProducts[title]) {
+          // First occurrence - keep the SKU and initialize values
+          consolidatedProducts[title] = {
+            sku: product.sku || "",
+            product_title: title,
+            spend: Number(product.spend || 0),
+            revenue: Number(product.revenue || 0),
+            quantity: Number(product.quantity || 0),
+            cogs: Number(product.cogs || 0),
+          };
+        } else {
+          // Subsequent occurrences - sum the values
+          consolidatedProducts[title].spend += Number(product.spend || 0);
+          consolidatedProducts[title].revenue += Number(product.revenue || 0);
+          consolidatedProducts[title].quantity += Number(product.quantity || 0);
+          consolidatedProducts[title].cogs += Number(product.cogs || 0);
+        }
+      });
+
+      // Convert back to array
+      const consolidatedArray = Object.values(consolidatedProducts);
+
+      // Debug: Log consolidated BlueJay Sneaks result
+      const blueJayConsolidated = consolidatedArray.find(
+        (p) => p.product_title && p.product_title.includes("BlueJay Sneaks")
+      );
+      if (blueJayConsolidated) {
+        console.log("=== BlueJay Sneaks - After Consolidation ===");
+        console.log("Consolidated Result:", blueJayConsolidated);
+      }
+
+      setProducts(consolidatedArray);
       setSummaryData(data.summary || null);
     } catch (err) {
       setError("Failed to load data. Please try again.");
@@ -249,10 +323,23 @@ const ProductSpendSummaryLayer = () => {
           sortConfig.key === "spend" ||
           sortConfig.key === "revenue" ||
           sortConfig.key === "quantity" ||
-          sortConfig.key === "cogs"
+          sortConfig.key === "cogs" ||
+          sortConfig.key === "net_profit"
         ) {
-          aValue = Number(aValue || 0);
-          bValue = Number(bValue || 0);
+          // Calculate net_profit if sorting by it
+          if (sortConfig.key === "net_profit") {
+            aValue =
+              Number(a.revenue || 0) -
+              Number(a.spend || 0) -
+              Number(a.cogs || 0);
+            bValue =
+              Number(b.revenue || 0) -
+              Number(b.spend || 0) -
+              Number(b.cogs || 0);
+          } else {
+            aValue = Number(aValue || 0);
+            bValue = Number(bValue || 0);
+          }
           return sortConfig.direction === "asc"
             ? aValue - bValue
             : bValue - aValue;
@@ -261,7 +348,7 @@ const ProductSpendSummaryLayer = () => {
         // Handle string fields (sku, product_title)
         aValue = (aValue || "").toString().toLowerCase();
         bValue = (bValue || "").toString().toLowerCase();
-        
+
         if (aValue < bValue) {
           return sortConfig.direction === "asc" ? -1 : 1;
         }
@@ -275,25 +362,57 @@ const ProductSpendSummaryLayer = () => {
     return filteredProducts;
   }, [products, searchSku, sortConfig]);
 
+  // Calculate dynamic summary from filtered/sorted products
+  const dynamicSummary = useMemo(() => {
+    if (!sortedProducts || sortedProducts.length === 0) {
+      return null;
+    }
+
+    const totals = sortedProducts.reduce(
+      (acc, product) => {
+        acc.total_ad_spend += Number(product.spend || 0);
+        acc.total_revenue += Number(product.revenue || 0);
+        acc.total_quantity += Number(product.quantity || 0);
+        acc.total_cogs += Number(product.cogs || 0);
+        return acc;
+      },
+      {
+        total_products: sortedProducts.length,
+        total_ad_spend: 0,
+        total_revenue: 0,
+        total_quantity: 0,
+        total_cogs: 0,
+      }
+    );
+
+    return totals;
+  }, [sortedProducts]);
+
+  // Use dynamic summary if available, otherwise fall back to API summaryData
+  const displaySummary = dynamicSummary || summaryData;
+
   // Get displayed data for infinite scroll
   const getDisplayedData = (dataArray) => {
     return dataArray.slice(0, displayedItemsCount);
   };
 
   // Check if there's more data to load
-  const hasMoreData = useCallback((dataArray) => {
-    return displayedItemsCount < dataArray.length;
-  }, [displayedItemsCount]);
+  const hasMoreData = useCallback(
+    (dataArray) => {
+      return displayedItemsCount < dataArray.length;
+    },
+    [displayedItemsCount]
+  );
 
   // Load more data callback
   const loadMoreData = useCallback(async () => {
     if (isLoadingMore || loading) return;
-    
+
     setIsLoadingMore(true);
     // Simulate loading delay for skeleton effect
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setDisplayedItemsCount(prev => prev + itemsPerPage);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    setDisplayedItemsCount((prev) => prev + itemsPerPage);
     setIsLoadingMore(false);
   }, [isLoadingMore, loading, itemsPerPage]);
 
@@ -309,24 +428,24 @@ const ProductSpendSummaryLayer = () => {
       const clientHeight = container.clientHeight;
       const isAtTop = scrollTop <= 1;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-      
+
       if (e.deltaY > 0 && isAtBottom) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       } else if (e.deltaY < 0 && isAtTop) {
         window.scrollBy({
           top: e.deltaY,
-          behavior: 'auto'
+          behavior: "auto",
         });
       }
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    
+    container.addEventListener("wheel", handleWheel, { passive: true });
+
     return () => {
-      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -339,7 +458,8 @@ const ProductSpendSummaryLayer = () => {
 
     const startDate = formatLocalISO(dateRange[0]).split(" ")[0]; // Get just the date part
     const endDate = formatLocalISO(dateRange[1]).split(" ")[0];
-    const channelName = activeChannel === "all" ? "ALL" : activeChannel.toUpperCase();
+    const channelName =
+      activeChannel === "all" ? "ALL" : activeChannel.toUpperCase();
 
     await downloadProductSpendExcel(
       sortedProducts,
@@ -360,7 +480,14 @@ const ProductSpendSummaryLayer = () => {
           {/* Header with Date Picker and Download Button */}
           <div className="d-flex justify-content-between align-items-center mb-20">
             <div className="d-flex align-items-center">
-              <h6 className="mb-0 me-2" style={{ fontSize: "x-large", fontWeight: "600", color: "#111827" }}>
+              <h6
+                className="mb-0 me-2"
+                style={{
+                  fontSize: "x-large",
+                  fontWeight: "600",
+                  color: "#111827",
+                }}
+              >
                 Product Spend Dashboard
               </h6>
               <Icon
@@ -533,9 +660,73 @@ const ProductSpendSummaryLayer = () => {
           </div>
 
           {/* Summary Cards */}
-          {summaryData && (
-            <div className="row mb-20" style={{ gap: "16px", marginTop: "20px" }}>
-              <div className="col-md-2 col-6">
+          {displaySummary && (
+            <div
+              className="row mb-20 g-2"
+              style={{
+                marginTop: "20px",
+                flexWrap: "nowrap",
+                overflowX: "auto",
+              }}
+            >
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
+                <div
+                  className="card"
+                  style={{
+                    height: "90px",
+                    border: "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <div className="card-body d-flex flex-column justify-content-between p-1">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "600",
+                          color: "#6B7280",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.4px",
+                        }}
+                      >
+                        TOTAL NET PROFIT
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "x-large",
+                          fontWeight: "600",
+                          color: "#111827",
+                          margin: "0",
+                          lineHeight: "1",
+                          display: "block",
+                        }}
+                      >
+                        ₹
+                        {(
+                          Number(displaySummary.total_revenue || 0) -
+                          Number(displaySummary.total_ad_spend || 0) -
+                          Number(displaySummary.total_cogs || 0)
+                        ).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: "2px",
+                        backgroundColor: "#10B981",
+                        borderRadius: "2px",
+                        width: "100%",
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
                 <div
                   className="card"
                   style={{
@@ -570,7 +761,7 @@ const ProductSpendSummaryLayer = () => {
                           display: "block",
                         }}
                       >
-                        {summaryData.total_products}
+                        {displaySummary.total_products}
                       </span>
                     </div>
                     <div
@@ -584,7 +775,7 @@ const ProductSpendSummaryLayer = () => {
                   </div>
                 </div>
               </div>
-              <div className="col-md-2 col-6">
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
                 <div
                   className="card"
                   style={{
@@ -619,7 +810,8 @@ const ProductSpendSummaryLayer = () => {
                           display: "block",
                         }}
                       >
-                        ₹{Number(summaryData.total_ad_spend).toLocaleString(
+                        ₹
+                        {Number(displaySummary.total_ad_spend).toLocaleString(
                           undefined,
                           {
                             minimumFractionDigits: 2,
@@ -639,7 +831,7 @@ const ProductSpendSummaryLayer = () => {
                   </div>
                 </div>
               </div>
-              <div className="col-md-2 col-6">
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
                 <div
                   className="card"
                   style={{
@@ -674,7 +866,8 @@ const ProductSpendSummaryLayer = () => {
                           display: "block",
                         }}
                       >
-                        ₹{Number(summaryData.total_revenue).toLocaleString(
+                        ₹
+                        {Number(displaySummary.total_revenue).toLocaleString(
                           undefined,
                           {
                             minimumFractionDigits: 2,
@@ -694,7 +887,7 @@ const ProductSpendSummaryLayer = () => {
                   </div>
                 </div>
               </div>
-              <div className="col-md-2 col-6">
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
                 <div
                   className="card"
                   style={{
@@ -729,7 +922,7 @@ const ProductSpendSummaryLayer = () => {
                           display: "block",
                         }}
                       >
-                        {summaryData.total_quantity}
+                        {displaySummary.total_quantity}
                       </span>
                     </div>
                     <div
@@ -743,7 +936,7 @@ const ProductSpendSummaryLayer = () => {
                   </div>
                 </div>
               </div>
-              <div className="col-md-2 col-6">
+              <div className="col" style={{ minWidth: "150px", flex: "1 1 0" }}>
                 <div
                   className="card"
                   style={{
@@ -778,7 +971,8 @@ const ProductSpendSummaryLayer = () => {
                           display: "block",
                         }}
                       >
-                        ₹{Number(summaryData.total_cogs || 0).toLocaleString(
+                        ₹
+                        {Number(displaySummary.total_cogs || 0).toLocaleString(
                           undefined,
                           {
                             minimumFractionDigits: 2,
@@ -806,10 +1000,20 @@ const ProductSpendSummaryLayer = () => {
             className="d-flex flex-column flex-xl-row align-items-start align-items-xl-center justify-content-between mb-3"
             style={{ gap: 24, marginTop: "20px" }}
           >
-            <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center" style={{ gap: 12 }}>
-              <label className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2">Search by SKU</label>
+            <div
+              className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center"
+              style={{ gap: 12 }}
+            >
+              <label className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2">
+                Search by SKU
+              </label>
               <div className="d-flex align-items-center" style={{ gap: 8 }}>
-                <Icon icon="material-symbols:search" width="20" height="20" style={{ color: "#6c757d" }} />
+                <Icon
+                  icon="material-symbols:search"
+                  width="20"
+                  height="20"
+                  style={{ color: "#6c757d" }}
+                />
                 <input
                   type="text"
                   className="form-control form-control-sm"
@@ -888,7 +1092,10 @@ const ProductSpendSummaryLayer = () => {
             }}
           >
             <div className="table-responsive" style={{ position: "relative" }}>
-              <table className="table table-striped table-bordered align-middle" style={{ marginBottom: 0 }}>
+              <table
+                className="table table-striped table-bordered align-middle"
+                style={{ marginBottom: 0 }}
+              >
                 <thead
                   className="table-light"
                   style={{
@@ -900,9 +1107,9 @@ const ProductSpendSummaryLayer = () => {
                 >
                   <tr style={{ backgroundColor: "#f8f9fa" }}>
                     <th
-                      style={{ 
-                        minWidth: 120, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 120,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -927,9 +1134,9 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ 
-                        minWidth: 220, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 220,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -954,9 +1161,9 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ 
-                        minWidth: 120, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 120,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -981,9 +1188,9 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ 
-                        minWidth: 120, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 120,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -1008,9 +1215,9 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ 
-                        minWidth: 100, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 100,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -1035,9 +1242,9 @@ const ProductSpendSummaryLayer = () => {
                       </div>
                     </th>
                     <th
-                      style={{ 
-                        minWidth: 120, 
-                        cursor: "pointer", 
+                      style={{
+                        minWidth: 120,
+                        cursor: "pointer",
                         userSelect: "none",
                         backgroundColor: "#f8f9fa",
                         position: "sticky",
@@ -1061,6 +1268,33 @@ const ProductSpendSummaryLayer = () => {
                         )}
                       </div>
                     </th>
+                    <th
+                      style={{
+                        minWidth: 120,
+                        cursor: "pointer",
+                        userSelect: "none",
+                        backgroundColor: "#f8f9fa",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1001,
+                      }}
+                      onClick={() => handleSort("net_profit")}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        Net Profit
+                        {sortConfig.key === "net_profit" && (
+                          <Icon
+                            icon={
+                              sortConfig.direction === "asc"
+                                ? "lucide:arrow-up"
+                                : "lucide:arrow-down"
+                            }
+                            width="14"
+                            height="14"
+                          />
+                        )}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1068,7 +1302,7 @@ const ProductSpendSummaryLayer = () => {
                     <>
                       {Array.from({ length: 5 }).map((_, rowIndex) => (
                         <tr key={`skeleton-${rowIndex}`}>
-                          {Array.from({ length: 6 }).map((_, colIndex) => (
+                          {Array.from({ length: 7 }).map((_, colIndex) => (
                             <td key={`skeleton-${rowIndex}-${colIndex}`}>
                               <div
                                 className="skeleton"
@@ -1087,13 +1321,13 @@ const ProductSpendSummaryLayer = () => {
                     </>
                   ) : error ? (
                     <tr>
-                      <td colSpan={6} className="text-center text-danger py-4">
+                      <td colSpan={7} className="text-center text-danger py-4">
                         {error}
                       </td>
                     </tr>
                   ) : sortedProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-4">
+                      <td colSpan={7} className="text-center py-4">
                         {searchSku
                           ? `No products found matching SKU: "${searchSku}"`
                           : "No data found for this range."}
@@ -1134,6 +1368,16 @@ const ProductSpendSummaryLayer = () => {
                                 minimumFractionDigits: 2,
                               })}
                             </td>
+                            <td style={{ paddingTop: 12, paddingBottom: 12 }}>
+                              ₹
+                              {(
+                                Number(row.revenue || 0) -
+                                Number(row.spend || 0) -
+                                Number(row.cogs || 0)
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
                           </tr>
                         );
                       })}
@@ -1141,8 +1385,10 @@ const ProductSpendSummaryLayer = () => {
                         <>
                           {Array.from({ length: 5 }).map((_, rowIndex) => (
                             <tr key={`skeleton-more-${rowIndex}`}>
-                              {Array.from({ length: 6 }).map((_, colIndex) => (
-                                <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                              {Array.from({ length: 7 }).map((_, colIndex) => (
+                                <td
+                                  key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                >
                                   <div
                                     className="skeleton"
                                     style={{
@@ -1179,10 +1425,14 @@ const ProductSpendSummaryLayer = () => {
                 }}
               >
                 <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                  Showing <strong>{getDisplayedData(sortedProducts).length}</strong> of{" "}
+                  Showing{" "}
+                  <strong>{getDisplayedData(sortedProducts).length}</strong> of{" "}
                   <strong>{sortedProducts.length}</strong> entries
                   {searchSku && (
-                    <span className="ms-2 text-primary" style={{ fontSize: 13 }}>
+                    <span
+                      className="ms-2 text-primary"
+                      style={{ fontSize: 13 }}
+                    >
                       (filtered by SKU: "{searchSku}")
                     </span>
                   )}
