@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@iconify/react";
+import ExcelJS from "exceljs";
 import {
   ANALYTICS_COLORS_COMPLETE,
   getChannelColor,
@@ -322,6 +323,13 @@ const HourlySpendSalesGraph = () => {
         return spend > 0 ? googleRevenue[idx] / spend : 0;
       });
 
+      const organicRevenue = sortedKeys.map((k) =>
+        parseFloat(map[k].organic.revenue || 0)
+      );
+      const organicOrders = sortedKeys.map((k) =>
+        parseFloat(map[k].organic.orders || 0)
+      );
+
       // Apply aggregation type
       const applyAggregation = (values) => {
         if (aggregationType === "average" && values.length > 0) {
@@ -415,6 +423,16 @@ const HourlySpendSalesGraph = () => {
           name: "Google AOV",
           data: applyAggregation(googleAOV),
           color: getMetricColor("Google AOV", selectedMetrics),
+        },
+        {
+          name: "Organic Revenue",
+          data: applyAggregation(organicRevenue),
+          color: getMetricColor("Organic Revenue", selectedMetrics),
+        },
+        {
+          name: "Organic Orders",
+          data: applyAggregation(organicOrders),
+          color: getMetricColor("Organic Orders", selectedMetrics),
         },
       ];
 
@@ -828,6 +846,8 @@ const HourlySpendSalesGraph = () => {
     "Google Revenue",
     "Google Orders",
     "Google AOV",
+    "Organic Revenue",
+    "Organic Orders",
   ];
 
   const handleMetricToggle = (metric) => {
@@ -851,6 +871,87 @@ const HourlySpendSalesGraph = () => {
   // Reset to default metrics
   const handleResetMetrics = () => {
     setSelectedMetrics(["Total Spend", "Total Revenue"]);
+  };
+
+  // Download chart data as Excel
+  const handleDownload = async () => {
+    if (!chartData || !chartData.categories || chartData.categories.length === 0) {
+      alert("No data available to download");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Hourly Spend & Sales Data");
+
+      // Add metadata row
+      worksheet.addRow(["Report: Hourly Spend & Sales"]);
+      worksheet.addRow(["Date Range:", `${effectiveDateRange.startDate} to ${effectiveDateRange.endDate}`]);
+      worksheet.addRow(["Aggregation:", aggregationType === "sum" ? "Sum" : "Average"]);
+      worksheet.addRow(["X-Axis Type:", xAxisType === "hour" ? "Hour of Day" : "Date"]);
+      worksheet.addRow(["Selected Metrics:", selectedMetrics.join(", ")]);
+      if (zoomedDate) {
+        worksheet.addRow(["Zoomed Date:", zoomedDate]);
+      }
+      worksheet.addRow([]); // Empty row
+
+      // Prepare headers
+      const headers = [xAxisType === "hour" ? "Hour" : "Date", ...selectedMetrics];
+      worksheet.addRow(headers);
+
+      // Style header row
+      const headerRow = worksheet.getRow(worksheet.rowCount);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE6E6FA" },
+      };
+
+      // Add data rows
+      chartData.categories.forEach((category, index) => {
+        const rowData = [category];
+        chartData.series.forEach((series) => {
+          const value = series.data[index] || 0;
+          // Format based on metric type
+          if (series.name.includes("ROAS")) {
+            rowData.push(value.toFixed(2));
+          } else if (series.name.includes("Spend") || series.name.includes("Revenue") || series.name.includes("AOV")) {
+            rowData.push(value.toFixed(2));
+          } else {
+            rowData.push(value.toFixed(0));
+          }
+        });
+        worksheet.addRow(rowData);
+      });
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column, index) => {
+        column.width = index === 0 ? 20 : 15;
+      });
+
+      // Generate and download file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      // Generate filename
+      const metricsStr = selectedMetrics.join("_").replace(/\s+/g, "_");
+      const dateStr = effectiveDateRange.startDate
+        ? effectiveDateRange.startDate.replace(/-/g, "")
+        : "all";
+      link.download = `Hourly_Spend_Sales_${metricsStr}_${dateStr}_${aggregationType}_${xAxisType}.xlsx`;
+      
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading Excel:", err);
+      alert("Failed to download Excel file. Please try again.");
+    }
   };
 
   if (loading) {
@@ -893,11 +994,37 @@ const HourlySpendSalesGraph = () => {
     <>
       <div className="card border-0 shadow-sm position-relative">
         <div className="card-body">
-          {/* Expand Button */}
+          {/* Title & Meta */}
           <div
-            className="position-absolute"
+            className="d-flex justify-content-between align-items-start mb-3 pe-4"
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}
+          >
+            <div>
+              <h6
+                className="mb-0"
+                style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+              >
+                Hourly Spend & Sales
+              </h6>
+            </div>
+          </div>
+          {/* Action Buttons */}
+          <div
+            className="position-absolute d-flex gap-2"
             style={{ top: "10px", right: "10px", zIndex: 10 }}
           >
+            <button
+              className="btn btn-sm btn-light border"
+              onClick={handleDownload}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "4px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+              title="Download Excel"
+            >
+              <Icon icon="mdi:download" style={{ fontSize: "16px" }} />
+            </button>
             <button
               className="btn btn-sm btn-light border"
               onClick={() => setIsExpanded(true)}
@@ -1332,22 +1459,53 @@ const HourlySpendSalesGraph = () => {
               className="card-body position-relative"
               style={{ maxHeight: "95vh", overflow: "auto" }}
             >
-              {/* Close Button */}
-              <button
-                className="btn btn-sm btn-light border position-absolute"
-                onClick={() => setIsExpanded(false)}
+              {/* Title & Meta */}
+              <div
+                className="d-flex justify-content-between align-items-start mb-3 pe-4"
                 style={{
-                  top: "10px",
-                  right: "10px",
-                  zIndex: 10,
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  borderBottom: "1px solid #f1f5f9",
+                  paddingBottom: "10px",
                 }}
-                title="Close expanded view"
               >
-                <Icon icon="mdi:close" style={{ fontSize: "18px" }} />
-              </button>
+                <div>
+                  <h6
+                    className="mb-0"
+                    style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+                  >
+                    Hourly Spend & Sales
+                  </h6>
+                </div>
+              </div>
+              {/* Action Buttons */}
+              <div
+                className="position-absolute d-flex gap-2"
+                style={{ top: "10px", right: "10px", zIndex: 10 }}
+              >
+                <button
+                  className="btn btn-sm btn-light border"
+                  onClick={handleDownload}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                  title="Download Excel"
+                >
+                  <Icon icon="mdi:download" style={{ fontSize: "18px" }} />
+                </button>
+                <button
+                  className="btn btn-sm btn-light border"
+                  onClick={() => setIsExpanded(false)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                  title="Close expanded view"
+                >
+                  <Icon icon="mdi:close" style={{ fontSize: "18px" }} />
+                </button>
+              </div>
 
               {/* Expanded Chart Content */}
               <div style={{ marginTop: "40px" }}>

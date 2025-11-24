@@ -207,6 +207,20 @@ const CustomerDistributionWidget = () => {
   return (
     <div className="card border-0 shadow-sm h-100">
       <div className="card-body">
+        {/* Title & Meta */}
+        <div
+          className="d-flex justify-content-between align-items-start mb-3 pe-4"
+          style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}
+        >
+          <div>
+            <h6
+              className="mb-0"
+              style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+            >
+              Customer Distribution
+            </h6>
+          </div>
+        </div>
         {/* Filters */}
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex gap-3 align-items-center">
@@ -269,13 +283,7 @@ const CustomerDistributionWidget = () => {
         {/* Chart */}
         {!segmentationLoading && segmentationData && (
           <>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h6
-                className="mb-0"
-                style={{ fontSize: "14px", fontWeight: "600" }}
-              >
-                Customer Distribution
-              </h6>
+            <div className="d-flex justify-content-end mb-3">
               <span className="badge bg-primary">
                 Total: {segmentationData.total_customers?.toLocaleString() || 0}
               </span>

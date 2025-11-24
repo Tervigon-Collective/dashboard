@@ -475,6 +475,20 @@ const HourlyEfficiencyHeatmap = () => {
     <>
       <div className="card border-0 shadow-sm position-relative">
         <div className="card-body">
+          {/* Title & Meta */}
+          <div
+            className="d-flex justify-content-between align-items-start mb-3 pe-4"
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}
+          >
+            <div>
+              <h6
+                className="mb-0"
+                style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+              >
+                ROAS Heatmap
+              </h6>
+            </div>
+          </div>
           {/* Expand Button */}
           <div
             className="position-absolute"
@@ -610,18 +624,6 @@ const HourlyEfficiencyHeatmap = () => {
             >
               Yearly
             </button>
-          </div>
-
-          <div className="mb-2">
-            <h6
-              className="mb-1"
-              style={{ fontSize: "13px", fontWeight: "500" }}
-            >
-              Hourly Profit Control Heatmap
-            </h6>
-            <p className="text-muted mb-0" style={{ fontSize: "11px" }}>
-              Size = Spend | Color = ROAS
-            </p>
           </div>
 
           <div className="position-relative">
@@ -813,6 +815,26 @@ const HourlyEfficiencyHeatmap = () => {
               className="card-body position-relative"
               style={{ maxHeight: "95vh", overflow: "auto" }}
             >
+              {/* Title & Meta */}
+              <div
+                className="d-flex justify-content-between align-items-start mb-3 pe-4"
+                style={{
+                  borderBottom: "1px solid #f1f5f9",
+                  paddingBottom: "10px",
+                }}
+              >
+                <div>
+                  <h6
+                    className="mb-1"
+                    style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+                  >
+                    ROAS Heatmap Control Board
+                  </h6>
+                  <p className="text-muted mb-0" style={{ fontSize: "11px" }}>
+                    Hour-level profitability insights & action triggers
+                  </p>
+                </div>
+              </div>
               {/* Close Button */}
               <button
                 className="btn btn-sm btn-light border position-absolute"
@@ -966,18 +988,6 @@ const HourlyEfficiencyHeatmap = () => {
                   >
                     Yearly
                   </button>
-                </div>
-
-                <div className="mb-2">
-                  <h6
-                    className="mb-1"
-                    style={{ fontSize: "13px", fontWeight: "500" }}
-                  >
-                    Hourly Profit Control Heatmap
-                  </h6>
-                  <p className="text-muted mb-0" style={{ fontSize: "11px" }}>
-                    Size = Spend | Color = ROAS
-                  </p>
                 </div>
 
                 <div className="position-relative">

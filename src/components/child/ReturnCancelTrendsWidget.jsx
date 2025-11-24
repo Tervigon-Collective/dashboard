@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@iconify/react";
+import ExcelJS from "exceljs";
 import { NEGATIVE_COLORS, WARNING_COLORS } from "@/utils/analyticsColors";
 import { apiClient } from "@/api/api";
 
@@ -83,6 +84,9 @@ const ReturnCancelTrendsWidget = () => {
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
   const [useCustomDateRange, setUseCustomDateRange] = useState(false);
+
+  // Chart ref for download
+  const chartRef = useRef(null);
 
   // Calculate date range based on selected period or custom dates
   const dateRange = useMemo(() => {
@@ -458,35 +462,166 @@ const ReturnCancelTrendsWidget = () => {
     };
   }, [processedTrendData, aggregatedMetrics, selectedType, selectedMetric]);
 
+  const showAggregates =
+    !trendLoading &&
+    processedTrendData &&
+    Array.isArray(processedTrendData) &&
+    processedTrendData.length > 0;
+
+  // Download chart data as Excel
+  const handleDownload = async () => {
+    if (!processedTrendData || processedTrendData.length === 0) {
+      alert("No data available to download");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Return & Cancel Trends Data");
+
+      // Add metadata row
+      worksheet.addRow(["Report: Return & Cancel Trends"]);
+      worksheet.addRow(["Date Range:", `${dateRange.startDate} to ${dateRange.endDate}`]);
+      worksheet.addRow(["Type:", selectedType === "both" ? "Both" : selectedType === "return" ? "Return" : "Cancel"]);
+      worksheet.addRow(["Metric:", selectedMetric === "both" ? "Both" : selectedMetric === "count" ? "Count" : "Rate"]);
+      worksheet.addRow(["Total Return Orders:", aggregatedMetrics.totalReturnOrders]);
+      worksheet.addRow(["Total Cancel Orders:", aggregatedMetrics.totalCancelOrders]);
+      worksheet.addRow(["Average Return Rate:", `${aggregatedMetrics.avgReturnRate.toFixed(2)}%`]);
+      worksheet.addRow(["Average Cancellation Rate:", `${aggregatedMetrics.avgCancellationRate.toFixed(2)}%`]);
+      worksheet.addRow([]); // Empty row
+
+      // Prepare headers based on selected filters
+      const headers = ["Date"];
+      if (selectedType === "return" || selectedType === "both") {
+        if (selectedMetric === "count" || selectedMetric === "both") {
+          headers.push("Return Orders");
+        }
+        if (selectedMetric === "rate" || selectedMetric === "both") {
+          headers.push("Return Rate (%)");
+        }
+      }
+      if (selectedType === "cancel" || selectedType === "both") {
+        if (selectedMetric === "count" || selectedMetric === "both") {
+          headers.push("Cancel Orders");
+        }
+        if (selectedMetric === "rate" || selectedMetric === "both") {
+          headers.push("Cancel Rate (%)");
+        }
+      }
+      headers.push("Total Orders");
+      worksheet.addRow(headers);
+
+      // Style header row
+      const headerRow = worksheet.getRow(worksheet.rowCount);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE6E6FA" },
+      };
+
+      // Add data rows
+      processedTrendData.forEach((item) => {
+        const rowData = [item.event_date];
+        
+        if (selectedType === "return" || selectedType === "both") {
+          if (selectedMetric === "count" || selectedMetric === "both") {
+            rowData.push(item.returned_order_count || 0);
+          }
+          if (selectedMetric === "rate" || selectedMetric === "both") {
+            rowData.push((item.returnRate || 0).toFixed(2));
+          }
+        }
+        if (selectedType === "cancel" || selectedType === "both") {
+          if (selectedMetric === "count" || selectedMetric === "both") {
+            rowData.push(item.cancelled_order_count || 0);
+          }
+          if (selectedMetric === "rate" || selectedMetric === "both") {
+            rowData.push((item.cancellationRate || 0).toFixed(2));
+          }
+        }
+        rowData.push(item.total_orders || 0);
+        
+        worksheet.addRow(rowData);
+      });
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column, index) => {
+        column.width = index === 0 ? 15 : 15;
+      });
+
+      // Generate and download file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      // Generate filename
+      const typeStr = selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
+      const metricStr = selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1);
+      const dateStr = dateRange.startDate
+        ? dateRange.startDate.replace(/-/g, "")
+        : "all";
+      link.download = `Return_Cancel_Trends_${typeStr}_${metricStr}_${dateStr}.xlsx`;
+      
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading Excel:", err);
+      alert("Failed to download Excel file. Please try again.");
+    }
+  };
+
   return (
     <div className="card border-0 shadow-sm h-100">
       <div className="card-body">
         {/* Header with Title and Badges */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h6
-            className="mb-0"
-            style={{ fontSize: "16px", fontWeight: "600", color: "#1f2937" }}
-          >
-            Return & Cancel Trends
-          </h6>
-          {!trendLoading &&
-            processedTrendData &&
-            processedTrendData.length > 0 && (
-              <div className="d-flex gap-2">
+        <div
+          className="d-flex justify-content-between align-items-start mb-3 pe-4"
+          style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}
+        >
+          <div>
+            <h6
+              className="mb-0"
+              style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+            >
+              Return & Cancel Trends
+            </h6>
+          </div>
+          <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            {showAggregates && (
+              <>
                 <span
                   className="badge bg-warning text-dark"
-                  style={{ fontSize: "12px", padding: "6px 12px" }}
+                  style={{ fontSize: "11px", padding: "4px 10px" }}
                 >
                   Returns: {aggregatedMetrics.totalReturnOrders} orders
                 </span>
                 <span
                   className="badge bg-danger"
-                  style={{ fontSize: "12px", padding: "6px 12px" }}
+                  style={{ fontSize: "11px", padding: "4px 10px" }}
                 >
                   Cancels: {aggregatedMetrics.totalCancelOrders} orders
                 </span>
-              </div>
+              </>
             )}
+            <button
+              className="btn btn-sm btn-light border"
+              onClick={handleDownload}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "4px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+              title="Download Excel"
+              disabled={!processedTrendData || processedTrendData.length === 0}
+            >
+              <Icon icon="mdi:download" style={{ fontSize: "16px" }} />
+            </button>
+          </div>
         </div>
 
         {/* Filters Section */}
@@ -984,6 +1119,7 @@ const ReturnCancelTrendsWidget = () => {
           processedTrendData.length > 0 && (
             <div style={{ marginTop: "8px" }}>
               <ReactECharts
+                ref={chartRef}
                 key={`${selectedType}-${selectedMetric}`}
                 option={metricsChartOption}
                 style={{ height: "400px", width: "100%" }}
