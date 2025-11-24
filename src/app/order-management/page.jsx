@@ -138,6 +138,7 @@ const DispatchScannerModal = ({
     if (!value || value.length === 0) return false;
     return (
       value.includes("receiving/qr") ||
+      value.includes("sample-inventory/qr") ||
       value.includes("token=") ||
       value.startsWith("http") ||
       value.includes("/qr/")

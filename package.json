@@ -49,6 +49,7 @@
     "isotope-layout": "^3.0.6",
     "jquery": "^3.7.1",
     "jsvectormap": "^1.7.0",
+    "jszip": "^3.10.1",
     "katex": "^0.16.11",
     "next": "^15.4.7",
     "postcss-loader": "^8.1.1",

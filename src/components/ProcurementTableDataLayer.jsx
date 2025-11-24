@@ -595,34 +595,12 @@ const ProcurementTableDataLayer = () => {
               />
             </button>
           )}
-          <button
-            className="btn btn-sm"
-            onClick={() => handleStatusClick(product)}
-            title="Update Status"
-            style={{
-              width: "32px",
-              height: "32px",
-              padding: "0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              backgroundColor: "white",
-            }}
-          >
-            <Icon
-              icon="lucide:settings"
-              width="16"
-              height="16"
-              style={{ color: "#f59e0b" }}
-            />
-          </button>
-          {hasOperation("procurement", "delete") && (
+          {/* Only show status update button for pending products */}
+          {product.status?.toLowerCase() === "pending" && (
             <button
               className="btn btn-sm"
-              onClick={() => onDelete(product)}
-              title="Delete Product"
+              onClick={() => handleStatusClick(product)}
+              title="Update Status"
               style={{
                 width: "32px",
                 height: "32px",
@@ -636,13 +614,40 @@ const ProcurementTableDataLayer = () => {
               }}
             >
               <Icon
-                icon="lucide:trash-2"
+                icon="lucide:settings"
                 width="16"
                 height="16"
-                style={{ color: "#ef4444" }}
+                style={{ color: "#f59e0b" }}
               />
             </button>
           )}
+          {/* Hide delete button for approved products - they cannot be deleted */}
+          {hasOperation("procurement", "delete") &&
+            product.status?.toLowerCase() !== "approved" && (
+              <button
+                className="btn btn-sm"
+                onClick={() => onDelete(product)}
+                title="Delete Product"
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  padding: "0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  backgroundColor: "white",
+                }}
+              >
+                <Icon
+                  icon="lucide:trash-2"
+                  width="16"
+                  height="16"
+                  style={{ color: "#ef4444" }}
+                />
+              </button>
+            )}
         </div>
       </td>
     </tr>

@@ -598,12 +598,25 @@ const ReceivingManagementLayer = () => {
   const [requestToUpdate, setRequestToUpdate] = useState(null);
   const [statusUpdateTarget, setStatusUpdateTarget] =
     useState("to_be_delivered");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Reset loading state when modal opens or request changes
+  useEffect(() => {
+    if (statusConfirmModal) {
+      setIsUpdatingStatus(false);
+    } else {
+      // Also reset when modal closes to ensure clean state
+      setIsUpdatingStatus(false);
+    }
+  }, [statusConfirmModal, requestToUpdate]);
 
   // Quality Check Inspection Modal state
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
   const [requestToInspect, setRequestToInspect] = useState(null);
   const [inspectionData, setInspectionData] = useState([]);
   const [isSavingInspection, setIsSavingInspection] = useState(false);
+  const [isEditingInspection, setIsEditingInspection] = useState(false);
+  const [isLoadingInspection, setIsLoadingInspection] = useState(false);
   const [qualityCheckerName, setQualityCheckerName] = useState("");
   const [inspectionDate, setInspectionDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -649,6 +662,12 @@ const ReceivingManagementLayer = () => {
   const [receiptLoadingMore, setReceiptLoadingMore] = useState(false);
   const receiptContainerRef = useRef(null);
 
+  // Track if data has been loaded for each tab (to prevent unnecessary refetching)
+  const [purchaseRequestsLoaded, setPurchaseRequestsLoaded] = useState(false);
+  const [toBeDeliveredLoaded, setToBeDeliveredLoaded] = useState(false);
+  const [qualityCheckLoaded, setQualityCheckLoaded] = useState(false);
+  const [receiptDetailsLoaded, setReceiptDetailsLoaded] = useState(false);
+
   // Vendor form fields (auto-filled from dropdown)
   const [vendorData, setVendorData] = useState({
     companyName: "",
@@ -666,33 +685,56 @@ const ReceivingManagementLayer = () => {
   });
 
   // Load purchase requests
-  const loadPurchaseRequests = async (page = 1, append = false) => {
+  const loadPurchaseRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (purchaseRequestsLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
       const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
 
       if (result.success) {
+        // Filter only requests with status "Pending" or "pending"
+        const filteredRequests = result.data.filter(
+          (request) =>
+            request.status === "Pending" ||
+            request.status?.toLowerCase() === "pending"
+        );
+        
         if (append) {
-          setRequests((prev) => [...prev, ...result.data]);
+          setRequests((prev) => [...prev, ...filteredRequests]);
         } else {
-          setRequests(result.data);
+          setRequests(filteredRequests);
           // Show initial batch, infinite scroll will handle progressive loading
-          setPurchaseRequestDisplayedItems(result.data.slice(0, INITIAL_ITEMS_TO_SHOW));
+          setPurchaseRequestDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
-        setTotalRecords(result.pagination.total);
+        setTotalRecords(filteredRequests.length);
+        setPurchaseRequestsLoaded(true);
       }
     } catch (error) {
       console.error("Error loading purchase requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   // Load to-be-delivered requests
-  const loadToBeDeliveredRequests = async (page = 1, append = false) => {
+  const loadToBeDeliveredRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (toBeDeliveredLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setToBeDeliveredLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -713,16 +755,27 @@ const ReceivingManagementLayer = () => {
         setToBeDeliveredCurrentPage(result.pagination.page);
         setToBeDeliveredTotalPages(result.pagination.totalPages);
         setToBeDeliveredTotalRecords(filteredRequests.length);
+        setToBeDeliveredLoaded(true);
       }
     } catch (error) {
       console.error("Error loading to-be-delivered requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setToBeDeliveredLoading(false);
     }
   };
 
   // Load quality check (arrived) requests
-  const loadQualityCheckRequests = async (page = 1, append = false) => {
+  const loadQualityCheckRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (qualityCheckLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setQualityCheckLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -743,16 +796,27 @@ const ReceivingManagementLayer = () => {
         setQualityCheckCurrentPage(result.pagination.page);
         setQualityCheckTotalPages(result.pagination.totalPages);
         setQualityCheckTotalRecords(filteredRequests.length);
+        setQualityCheckLoaded(true);
       }
     } catch (error) {
       console.error("Error loading quality check requests:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setQualityCheckLoading(false);
     }
   };
 
   // Load receipt details (fulfilled) requests with QC aggregation
-  const loadReceiptDetailsRequests = async (page = 1, append = false) => {
+  const loadReceiptDetailsRequests = async (page = 1, append = false, force = false) => {
+    // Skip if already loaded and not forcing a refresh
+    if (receiptDetailsLoaded && !force && !append) {
+      return;
+    }
+
     try {
       setReceiptLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
@@ -848,9 +912,15 @@ const ReceivingManagementLayer = () => {
         setReceiptCurrentPage(result.pagination.page);
         setReceiptTotalPages(result.pagination.totalPages);
         setReceiptTotalRecords(enriched.length);
+        setReceiptDetailsLoaded(true);
       }
     } catch (error) {
       console.error("Error loading receipt details:", error);
+      // Handle rate limiting errors
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+      }
     } finally {
       setReceiptLoading(false);
     }
@@ -865,6 +935,12 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error loading vendors:", error);
+      // Handle rate limiting errors
+      if (error.status === 429 || (error.message && error.message.includes("429"))) {
+        const retryAfter = error.result?.retryAfter || 60;
+        console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
+        // Don't show alert for vendor loading as it's not critical
+      }
       // Set empty array to prevent errors
       setVendors([]);
     }
@@ -895,18 +971,18 @@ const ReceivingManagementLayer = () => {
     });
   }, []);
 
-  // Load to-be-delivered requests when switching to that tab
+  // Load to-be-delivered requests when switching to that tab (only if not already loaded)
   useEffect(() => {
-    if (activeTab === "to-be-delivered") {
+    if (activeTab === "to-be-delivered" && !toBeDeliveredLoaded) {
       loadToBeDeliveredRequests();
     }
-    if (activeTab === "quality-check") {
+    if (activeTab === "quality-check" && !qualityCheckLoaded) {
       loadQualityCheckRequests();
     }
-    if (activeTab === "receipt-details") {
+    if (activeTab === "receipt-details" && !receiptDetailsLoaded) {
       loadReceiptDetailsRequests();
     }
-  }, [activeTab]);
+  }, [activeTab, toBeDeliveredLoaded, qualityCheckLoaded, receiptDetailsLoaded]);
 
   // Reset displayed items when search term or active tab changes
   useEffect(() => {
@@ -1268,7 +1344,7 @@ const ReceivingManagementLayer = () => {
         setModalOpen(false);
         setIsEditMode(false);
         setEditingRequest(null);
-        await loadPurchaseRequests(currentPage);
+        await loadPurchaseRequests(currentPage, false, true); // force = true after create/update
 
         console.log(
           `Purchase request ${
@@ -1378,7 +1454,7 @@ const ReceivingManagementLayer = () => {
         );
 
         if (result.success) {
-          await loadPurchaseRequests(currentPage);
+          await loadPurchaseRequests(currentPage, false, true); // force = true after delete
           console.log("Purchase request deleted successfully");
         } else {
           alert(`Error: ${result.message}`);
@@ -1400,6 +1476,7 @@ const ReceivingManagementLayer = () => {
   const [grnInfo, setGrnInfo] = useState(null);
   const [isDownloadingGrn, setIsDownloadingGrn] = useState(false);
   const [qrPreviewData, setQrPreviewData] = useState(null);
+  const [qrPreviewSku, setQrPreviewSku] = useState(null);
   const [qrGenerationStatus, setQrGenerationStatus] = useState({});
 
   useEffect(() => {
@@ -1606,33 +1683,225 @@ const ReceivingManagementLayer = () => {
     router,
   ]);
 
+
+  // Helper function to add SKU text to QR code image
+  const addSkuToQrImage = async (imageBlob, sku) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(imageBlob);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        const qrWidth = img.width;
+        const qrHeight = img.height;
+        const padding = 20;
+        const textHeight = sku ? 40 : 0;
+        const canvasWidth = qrWidth + (padding * 2);
+        const canvasHeight = qrHeight + (padding * 2) + textHeight;
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Fill white background
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        // Draw QR code image
+        ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+        
+        // Add SKU text at the bottom if provided
+        if (sku) {
+          ctx.fillStyle = "#000000";
+          ctx.font = "bold 16px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          
+          const textY = qrHeight + padding + (textHeight / 2);
+          ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to create blob from canvas"));
+          }
+        }, "image/png");
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Failed to load image"));
+      };
+      
+      img.src = url;
+    });
+  };
+
   const handleGenerateQrCodes = async (request) => {
     if (!request) return;
     const requestId = request.request_id;
 
-    if (
-      !window.confirm(
-        "Are you sure you want to generate QR codes for this request?"
-      )
-    ) {
-      return;
+    // Check if QR codes already exist
+    const hasQrCodes = request.items?.some(
+      (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+    ) || false;
+
+    if (!hasQrCodes) {
+      // Only show confirmation for generating new QR codes
+      if (
+        !window.confirm(
+          "Are you sure you want to generate QR codes for this request?"
+        )
+      ) {
+        return;
+      }
     }
 
     setQrGenerationStatus((prev) => ({ ...prev, [requestId]: true }));
 
     try {
-      await purchaseRequestApi.generateQrCodes(requestId);
+      // Only generate if QR codes don't exist
+      if (!hasQrCodes) {
+        await purchaseRequestApi.generateQrCodes(requestId);
+      }
 
       try {
+        // Reload the request to get updated QR codes with file names (or use existing if already generated)
+        let updatedRequestResult;
+        if (!hasQrCodes) {
+          updatedRequestResult = await purchaseRequestApi.getPurchaseRequestById(
+            requestId,
+            true
+          );
+        } else {
+          // Use existing request data if QR codes already exist
+          updatedRequestResult = { success: true, data: request };
+        }
+        
+        let itemsWithSku = [];
+        const vendorId = updatedRequestResult.data?.vendor_id || request.vendor_id || '';
+        const requestData = updatedRequestResult.data || request;
+        if (requestData?.items) {
+          itemsWithSku = requestData.items.map(item => ({
+            qrFileName: item.qr_code?.file_name,
+            sku: item.sku,
+            itemId: item.item_id,
+          }));
+        }
+
+        // Download the ZIP
         const zipBlob = await purchaseRequestApi.downloadQrCodesZip(requestId);
-        const url = URL.createObjectURL(zipBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `QR-${requestId}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        
+        // Process ZIP to add SKU to each QR code
+        try {
+          // Dynamic import of JSZip
+          const JSZip = (await import('jszip')).default;
+          const zip = await JSZip.loadAsync(zipBlob);
+          const newZip = new JSZip();
+          
+          // Collect all files first
+          const fileEntries = [];
+          zip.forEach((relativePath, file) => {
+            if (!file.dir) {
+              fileEntries.push({ relativePath, file });
+            }
+          });
+          
+          // Track used filenames to prevent collisions
+          const usedFilenames = new Map();
+          
+          // Process each file sequentially to avoid race conditions with filename generation
+          for (const { relativePath, file } of fileEntries) {
+            if (relativePath.endsWith('.png')) {
+              // Find matching SKU for this file
+              const item = itemsWithSku.find(
+                item => item.qrFileName === relativePath || 
+                relativePath.includes(item.qrFileName?.replace('.png', '') || '') ||
+                item.qrFileName?.includes(relativePath.replace('.png', '')) ||
+                relativePath.includes(String(item.itemId))
+              );
+              const sku = item?.sku ?? null;
+              const itemId = item?.itemId ?? null;
+              
+              // Get the image blob
+              const imageBlob = await file.async('blob');
+              
+              // Add SKU to the image
+              const modifiedBlob = await addSkuToQrImage(imageBlob, sku);
+              
+              // Create new filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
+              // Use itemId as fallback to ensure uniqueness when SKU is missing
+              let newFileName = relativePath;
+              if (sku && vendorId) {
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
+              } else if (sku) {
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedSku}.png`;
+              } else if (vendorId) {
+                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                // Use itemId to ensure uniqueness when SKU is missing
+                if (itemId !== null) {
+                  const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                  newFileName = `QR-${sanitizedVendorId}-${sanitizedItemId}.png`;
+                } else {
+                  newFileName = `QR-${sanitizedVendorId}.png`;
+                }
+              } else if (itemId !== null) {
+                // Fallback: use itemId if neither SKU nor vendorId exists
+                const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                newFileName = `QR-${sanitizedItemId}.png`;
+              }
+              
+              // Ensure filename is unique (handle collisions by appending counter)
+              let finalFileName = newFileName;
+              let counter = 1;
+              while (usedFilenames.has(finalFileName)) {
+                const baseWithoutExt = newFileName.replace(/\.png$/, '');
+                finalFileName = `${baseWithoutExt}-${counter}.png`;
+                counter++;
+              }
+              usedFilenames.set(finalFileName, true);
+              
+              // Add to new ZIP with final unique filename
+              newZip.file(finalFileName, modifiedBlob);
+            } else {
+              // Keep non-image files as-is
+              const content = await file.async('blob');
+              newZip.file(relativePath, content);
+            }
+          }
+          
+          // Generate the new ZIP
+          const modifiedZipBlob = await newZip.generateAsync({ type: 'blob' });
+          
+          // Download the modified ZIP
+          const url = URL.createObjectURL(modifiedZipBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `QR-${requestId}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } catch (zipError) {
+          console.error("Error processing ZIP with SKU:", zipError);
+          // Fallback: download original ZIP if processing fails
+          const url = URL.createObjectURL(zipBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `QR-${requestId}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       } catch (downloadError) {
         console.error("Error downloading QR codes:", downloadError);
         alert(
@@ -1641,13 +1910,13 @@ const ReceivingManagementLayer = () => {
         );
       }
 
-      await loadQualityCheckRequests();
+      await loadQualityCheckRequests(1, false, true); // force = true after QR generation
 
       if (selectedRequest && selectedRequest.request_id === requestId) {
         await handleViewRequest(request, "quality-check");
       }
 
-      alert("QR codes generated successfully.");
+      alert(hasQrCodes ? "QR codes downloaded successfully." : "QR codes generated successfully.");
     } catch (error) {
       console.error("Error generating QR codes:", error);
       alert(error.message || "Failed to generate QR codes. Please try again.");
@@ -1656,16 +1925,110 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  const handleDownloadQrImage = (qrCode) => {
+  const handleDownloadQrImage = async (qrCode, sku = null) => {
     if (!qrCode?.image_base64) {
       return;
     }
-    const link = document.createElement("a");
-    link.href = qrCode.image_base64;
-    link.download = qrCode.file_name || "qr-code.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    try {
+      // Create an image element to load the QR code
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = qrCode.image_base64;
+      });
+
+      // Create a canvas
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Set canvas dimensions: QR code width + padding + text area
+      const qrWidth = img.width;
+      const qrHeight = img.height;
+      const padding = 20;
+      const textHeight = sku ? 40 : 0; // Space for SKU text
+      const canvasWidth = qrWidth + (padding * 2);
+      const canvasHeight = qrHeight + (padding * 2) + textHeight;
+      
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      
+      // Fill white background
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Draw QR code image
+      ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+      
+      // Add SKU text at the bottom if provided
+      if (sku) {
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Draw SKU text
+        const textY = qrHeight + padding + (textHeight / 2);
+        ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
+      }
+      
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.error("Failed to create blob from canvas");
+          // Fallback to original download
+          const link = document.createElement("a");
+          link.href = qrCode.image_base64;
+          link.download = qrCode.file_name || "qr-code.png";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          return;
+        }
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        
+        // Create filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
+        let fileName = "qr-code.png";
+        if (sku) {
+          const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+          // Try to get vendor_id from selectedRequest or item
+          const vendorId = selectedRequest?.vendor_id || '';
+          if (vendorId) {
+            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            fileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
+          } else {
+            fileName = `QR-${sanitizedSku}.png`;
+          }
+        } else {
+          const vendorId = selectedRequest?.vendor_id || '';
+          if (vendorId) {
+            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            fileName = `QR-${sanitizedVendorId}.png`;
+          }
+        }
+        
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    } catch (error) {
+      console.error("Error processing QR code with SKU:", error);
+      // Fallback to original download method
+      const link = document.createElement("a");
+      link.href = qrCode.image_base64;
+      link.download = qrCode.file_name || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Handle settings icon click (open status confirmation modal)
@@ -1715,6 +2078,7 @@ const ReceivingManagementLayer = () => {
 
     setRequestToUpdate(request);
     setStatusUpdateTarget(targetStatus);
+    setIsUpdatingStatus(false); // Reset loading state when opening modal
     setStatusConfirmModal(true);
   };
 
@@ -1730,8 +2094,11 @@ const ReceivingManagementLayer = () => {
 
   // Handle status update confirmation
   const handleStatusUpdateConfirm = async () => {
-    if (!requestToUpdate) return;
+    if (!requestToUpdate || isUpdatingStatus) return;
 
+    // Set loading state immediately - React will handle the re-render automatically
+    setIsUpdatingStatus(true);
+    
     try {
       const result = await purchaseRequestApi.updateStatus(
         requestToUpdate.request_id,
@@ -1742,6 +2109,7 @@ const ReceivingManagementLayer = () => {
         // Close modal
         setStatusConfirmModal(false);
         setRequestToUpdate(null);
+        setIsUpdatingStatus(false); // Reset loading state on success
 
         // Switch tab based on target
         let targetTab = "to-be-delivered"; // default
@@ -1752,17 +2120,36 @@ const ReceivingManagementLayer = () => {
         }
         setActiveTab(targetTab);
 
-        // Reload lists
-        await loadPurchaseRequests(currentPage);
-        await loadToBeDeliveredRequests();
-        await loadQualityCheckRequests();
-        await loadReceiptDetailsRequests();
+        // Reload lists with delays to prevent rate limiting
+        // Force reload after status update to get fresh data
+        // Add small delays between API calls to avoid hitting rate limits
+        try {
+          await loadPurchaseRequests(currentPage, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadToBeDeliveredRequests(1, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadQualityCheckRequests(1, false, true); // force = true
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          
+          await loadReceiptDetailsRequests(1, false, true); // force = true
 
-        // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
-        if (statusUpdateTarget === "to_be_delivered") {
-          setTimeout(async () => {
-            await loadToBeDeliveredRequests();
-          }, 2000); // Wait 2 seconds for PDF generation to complete
+          // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
+          if (statusUpdateTarget === "to_be_delivered") {
+            setTimeout(async () => {
+              try {
+                await loadToBeDeliveredRequests(1, false, true); // force = true
+              } catch (refreshError) {
+                console.error("Error refreshing to-be-delivered requests:", refreshError);
+                // Don't show alert for background refresh errors
+              }
+            }, 2000); // Wait 2 seconds for PDF generation to complete
+          }
+        } catch (reloadError) {
+          console.error("Error reloading lists after status update:", reloadError);
+          // Don't show alert here as the status update was successful
+          // The lists will refresh when user switches tabs
         }
 
         console.log("Purchase request status updated successfully");
@@ -1771,12 +2158,28 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error updating purchase request status:", error);
-      alert("Failed to update purchase request status. Please try again.");
+      // Handle rate limiting errors specifically
+      if (error.message && error.message.includes("429")) {
+        const retryAfter = 60; // Default 60 seconds
+        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+      } else {
+        alert("Failed to update purchase request status. Please try again.");
+      }
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
   // Handle inspect button click - open inspection modal
   const handleInspectClick = async (request) => {
+    // Reset all inspection state first to prevent showing stale data
+    setInspectionData([]);
+    setQualityCheckerName("");
+    setInspectionDate(new Date().toISOString().split("T")[0]);
+    setIsEditingInspection(false);
+    setIsLoadingInspection(true);
+    
+    // Set request and open modal
     setRequestToInspect(request);
     setInspectionModalOpen(true);
 
@@ -1787,7 +2190,8 @@ const ReceivingManagementLayer = () => {
       );
 
       if (result.success && result.data.length > 0) {
-        // Pre-populate with existing data
+        // Pre-populate with existing data - editing mode
+        setIsEditingInspection(true);
         const inspectionItems = request.items.map((item) => {
           const existingCheck = result.data.find(
             (qc) => qc.item_id === item.item_id
@@ -1814,7 +2218,8 @@ const ReceivingManagementLayer = () => {
             new Date().toISOString().split("T")[0]
         );
       } else {
-        // Initialize with empty data
+        // Initialize with empty data - new inspection
+        setIsEditingInspection(false);
         const inspectionItems = request.items.map((item) => ({
           item_id: item.item_id,
           invoice_quantity: item.quantity || 0,
@@ -1833,7 +2238,8 @@ const ReceivingManagementLayer = () => {
       }
     } catch (error) {
       console.error("Error loading quality checks:", error);
-      // Initialize with empty data
+      // Initialize with empty data - new inspection
+      setIsEditingInspection(false);
       const inspectionItems = request.items.map((item) => ({
         item_id: item.item_id,
         invoice_quantity: item.quantity || 0,
@@ -1848,6 +2254,9 @@ const ReceivingManagementLayer = () => {
         user?.email?.split("@")[0] ||
         "Quality Checker";
       setQualityCheckerName(defaultCheckerName);
+      setInspectionDate(new Date().toISOString().split("T")[0]);
+    } finally {
+      setIsLoadingInspection(false);
     }
   };
 
@@ -1902,7 +2311,7 @@ const ReceivingManagementLayer = () => {
       if (result.success) {
         setInspectionModalOpen(false);
         setRequestToInspect(null);
-        await loadQualityCheckRequests();
+        await loadQualityCheckRequests(1, false, true); // force = true after saving inspection
         alert("Quality check inspection saved successfully!");
       } else {
         alert(`Error: ${result.message}`);
@@ -2348,6 +2757,23 @@ const ReceivingManagementLayer = () => {
                               if (!selectedRequest) return;
                               setIsDownloadingGrn(true);
                               try {
+                                // Fetch the latest GRN info to ensure we have the correct grn_number
+                                let currentGrnInfo = grnInfo;
+                                if (!currentGrnInfo || !currentGrnInfo.grn_number) {
+                                  const exists = await qualityCheckApi.checkGrnExists(
+                                    selectedRequest.request_id
+                                  );
+                                  if (exists) {
+                                    const info = await qualityCheckApi.getGrnInfo(
+                                      selectedRequest.request_id
+                                    );
+                                    if (info.success && info.data) {
+                                      currentGrnInfo = info.data;
+                                      setGrnInfo(currentGrnInfo);
+                                    }
+                                  }
+                                }
+                                
                                 const blob =
                                   await qualityCheckApi.downloadGrnPdf(
                                     selectedRequest.request_id
@@ -2356,8 +2782,8 @@ const ReceivingManagementLayer = () => {
                                 const a = document.createElement("a");
                                 a.href = url;
                                 a.download =
-                                  grnInfo.file_name ||
-                                  `${grnInfo.grn_number}.pdf`;
+                                  currentGrnInfo?.file_name ||
+                                  (currentGrnInfo?.grn_number ? `${currentGrnInfo.grn_number}.pdf` : `GRN-${selectedRequest.request_id}.pdf`);
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -2569,9 +2995,10 @@ const ReceivingManagementLayer = () => {
                                         <button
                                           type="button"
                                           className="btn btn-sm btn-outline-primary"
-                                          onClick={() =>
-                                            setQrPreviewData(item.qr_code)
-                                          }
+                                          onClick={() => {
+                                            setQrPreviewData(item.qr_code);
+                                            setQrPreviewSku(item.sku);
+                                          }}
                                         >
                                           View
                                         </button>
@@ -2579,7 +3006,7 @@ const ReceivingManagementLayer = () => {
                                           type="button"
                                           className="btn btn-sm btn-outline-secondary"
                                           onClick={() =>
-                                            handleDownloadQrImage(item.qr_code)
+                                            handleDownloadQrImage(item.qr_code, item.sku)
                                           }
                                         >
                                           Download
@@ -2659,9 +3086,7 @@ const ReceivingManagementLayer = () => {
                                         {item.variant_display_name || "-"}
                                       </td>
                                       <td className="small text-center">
-                                        <span className="badge bg-info">
-                                          {qc.invoice_quantity || 0}
-                                        </span>
+                                        {qc.invoice_quantity || 0}
                                       </td>
                                       <td className="small text-center">
                                         {qc.actual_quantity || 0}
@@ -2789,16 +3214,33 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn-close"
-                    onClick={() => setQrPreviewData(null)}
+                    onClick={() => {
+                      setQrPreviewData(null);
+                      setQrPreviewSku(null);
+                    }}
                   ></button>
                 </div>
-                <div className="modal-body d-flex justify-content-center">
+                <div className="modal-body d-flex flex-column align-items-center">
                   {qrPreviewData.image_base64 ? (
-                    <img
-                      src={qrPreviewData.image_base64}
-                      alt="QR Code"
-                      style={{ maxWidth: "100%", height: "auto" }}
-                    />
+                    <>
+                      <img
+                        src={qrPreviewData.image_base64}
+                        alt="QR Code"
+                        style={{ maxWidth: "100%", height: "auto" }}
+                      />
+                      {qrPreviewSku && (
+                        <div
+                          className="mt-3 text-center"
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "600",
+                            color: "#1f2937",
+                          }}
+                        >
+                          SKU: {qrPreviewSku}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-muted">No preview available.</div>
                   )}
@@ -2807,7 +3249,7 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    onClick={() => handleDownloadQrImage(qrPreviewData)}
+                    onClick={() => handleDownloadQrImage(qrPreviewData, qrPreviewSku)}
                     disabled={!qrPreviewData.image_base64}
                   >
                     Download
@@ -2820,17 +3262,24 @@ const ReceivingManagementLayer = () => {
 
         {/* Status Update Confirmation Modal (Procurement-style UI) */}
         {statusConfirmModal && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1050,
-            }}
-          >
+          <>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1050,
+              }}
+            >
             <div
               style={{
                 width: "100%",
@@ -2845,9 +3294,13 @@ const ReceivingManagementLayer = () => {
               {/* Close button */}
               <button
                 onClick={() => {
-                  setStatusConfirmModal(false);
-                  setRequestToUpdate(null);
+                  if (!isUpdatingStatus) {
+                    setStatusConfirmModal(false);
+                    setRequestToUpdate(null);
+                    setIsUpdatingStatus(false); // Reset loading state when closing
+                  }
                 }}
+                disabled={isUpdatingStatus}
                 style={{
                   position: "absolute",
                   top: "16px",
@@ -2857,8 +3310,9 @@ const ReceivingManagementLayer = () => {
                   border: "none",
                   borderRadius: "8px",
                   background: "transparent",
-                  color: "#6b7280",
-                  cursor: "pointer",
+                  color: isUpdatingStatus ? "#9ca3af" : "#6b7280",
+                  cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                  opacity: isUpdatingStatus ? 0.5 : 1,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -2866,12 +3320,16 @@ const ReceivingManagementLayer = () => {
                   fontSize: "20px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                  e.currentTarget.style.color = "#374151";
+                  if (!isUpdatingStatus) {
+                    e.currentTarget.style.background = "#f3f4f6";
+                    e.currentTarget.style.color = "#374151";
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#6b7280";
+                  if (!isUpdatingStatus) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#6b7280";
+                  }
                 }}
                 aria-label="Close"
               >
@@ -2929,10 +3387,14 @@ const ReceivingManagementLayer = () => {
                 <div className="d-flex flex-column flex-sm-row gap-2">
                   <button
                     onClick={() => {
-                      setStatusConfirmModal(false);
-                      setRequestToUpdate(null);
+                      if (!isUpdatingStatus) {
+                        setStatusConfirmModal(false);
+                        setRequestToUpdate(null);
+                        setIsUpdatingStatus(false); // Reset loading state when canceling
+                      }
                     }}
                     className="w-100 w-sm-auto"
+                    disabled={isUpdatingStatus}
                     style={{
                       padding: "12px 18px",
                       fontSize: "15px",
@@ -2941,16 +3403,21 @@ const ReceivingManagementLayer = () => {
                       borderRadius: "10px",
                       background: "white",
                       color: "#374151",
-                      cursor: "pointer",
+                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                      opacity: isUpdatingStatus ? 0.6 : 1,
                       transition: "all 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#f9fafb";
-                      e.currentTarget.style.borderColor = "#d1d5db";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#f9fafb";
+                        e.currentTarget.style.borderColor = "#d1d5db";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.borderColor = "#e5e7eb";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "white";
+                        e.currentTarget.style.borderColor = "#e5e7eb";
+                      }
                     }}
                   >
                     Cancel
@@ -2958,30 +3425,58 @@ const ReceivingManagementLayer = () => {
                   <button
                     onClick={handleStatusUpdateConfirm}
                     className="w-100 w-sm-auto"
+                    disabled={isUpdatingStatus}
                     style={{
                       padding: "12px 18px",
                       fontSize: "15px",
                       fontWeight: 600,
                       border: "none",
                       borderRadius: "10px",
-                      background: "#4f46e5",
+                      background: isUpdatingStatus ? "#9ca3af" : "#4f46e5",
                       color: "white",
-                      cursor: "pointer",
+                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                      opacity: isUpdatingStatus ? 0.7 : 1,
                       transition: "background 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#4338ca";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#4338ca";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#4f46e5";
+                      if (!isUpdatingStatus) {
+                        e.currentTarget.style.background = "#4f46e5";
+                      }
                     }}
                   >
-                    Yes, Change Status
+                    {isUpdatingStatus ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"
+                          style={{ 
+                            width: "14px", 
+                            height: "14px",
+                            borderWidth: "2px",
+                            flexShrink: 0
+                          }}
+                        />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      "Yes, Change Status"
+                    )}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+          </>
         )}
 
         {/* Quality Check Inspection Modal */}
@@ -3007,6 +3502,12 @@ const ReceivingManagementLayer = () => {
                     onClick={() => {
                       setInspectionModalOpen(false);
                       setRequestToInspect(null);
+                      setIsLoadingInspection(false);
+                      // Reset inspection state when closing
+                      setInspectionData([]);
+                      setQualityCheckerName("");
+                      setInspectionDate(new Date().toISOString().split("T")[0]);
+                      setIsEditingInspection(false);
                     }}
                   ></button>
                 </div>
@@ -3014,6 +3515,21 @@ const ReceivingManagementLayer = () => {
                   className="modal-body"
                   style={{ maxHeight: "70vh", overflowY: "auto" }}
                 >
+                  {isLoadingInspection ? (
+                    <div className="d-flex justify-content-center align-items-center py-5">
+                      <div className="text-center">
+                        <div
+                          className="spinner-border text-primary mb-3"
+                          role="status"
+                          style={{ width: "3rem", height: "3rem" }}
+                        >
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="text-muted">Loading inspection details...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   {/* Request Info */}
                   <div className="row mb-4">
                     <div className="col-md-6">
@@ -3066,6 +3582,7 @@ const ReceivingManagementLayer = () => {
                             }
                             placeholder="Enter checker name"
                             required
+                            disabled
                           />
                         </div>
                         <div>
@@ -3126,9 +3643,7 @@ const ReceivingManagementLayer = () => {
                                   {requestItem?.sku || "-"}
                                 </td>
                                 <td className="small text-center">
-                                  <span className="badge bg-info">
-                                    {item.invoice_quantity || 0}
-                                  </span>
+                                  {item.invoice_quantity || 0}
                                 </td>
                                 <td className="small">
                                   <input
@@ -3211,13 +3726,15 @@ const ReceivingManagementLayer = () => {
                       includes all damaged items found.
                     </div>
                   </div>
+                    </>
+                  )}
                 </div>
                 <div className="modal-footer d-flex flex-column flex-sm-row gap-2 justify-content-end">
                   <button
                     type="button"
                     className="btn btn-primary w-100 w-sm-auto"
                     onClick={handleSaveInspection}
-                    disabled={isSavingInspection}
+                    disabled={isSavingInspection || isLoadingInspection}
                   >
                     {isSavingInspection ? (
                       <>
@@ -5284,9 +5801,25 @@ const QualityCheckTab = ({
     setDownloadingGrn((prev) => ({ ...prev, [requestId]: true }));
 
     try {
+      // Fetch the latest GRN info to ensure we have the correct grn_number
+      let grnInfo = grnInfoCache[requestId];
+      if (!grnInfo || !grnInfo.grn_number) {
+        const exists = await qualityCheckApi.checkGrnExists(requestId);
+        if (exists) {
+          const info = await qualityCheckApi.getGrnInfo(requestId);
+          if (info.success && info.data) {
+            grnInfo = info.data;
+            // Update cache
+            setGrnInfoCache((prev) => ({
+              ...prev,
+              [requestId]: info.data,
+            }));
+          }
+        }
+      }
+      
       const blob = await qualityCheckApi.downloadGrnPdf(requestId);
-      const grnInfo = grnInfoCache[requestId];
-      const fileName = grnInfo?.file_name || `GRN-${requestId}.pdf`;
+      const fileName = grnInfo?.file_name || (grnInfo?.grn_number ? `${grnInfo.grn_number}.pdf` : `GRN-${requestId}.pdf`);
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -5555,12 +6088,19 @@ const QualityCheckTab = ({
                           hasQualityCheckCompletedSync(request);
                         const grnInfo = grnInfoCache[request.request_id];
                         const hasGrn = !!grnInfo;
+                        // Check if QR codes are already generated
+                        const hasQrCodes = request.items?.some(
+                          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+                        ) || false;
+                        // QR button is only disabled if conditions aren't met (not if QR codes already exist)
                         const qrDisabled =
                           isGeneratingQr || !qcCompleted || !hasGrn;
                         const qrTitle = !qcCompleted
                           ? "Complete quality inspection to enable QR codes"
                           : !hasGrn
-                          ? "Generate GRN before creating QR codes"
+                          ? "First generate GRN, then generate QR codes"
+                          : hasQrCodes
+                          ? "Download QR codes"
                           : "Generate QR codes";
 
                         return (
@@ -5646,38 +6186,53 @@ const QualityCheckTab = ({
                                     style={{ color: "#16a34a" }}
                                   />
                                 </button>
-                                <button
-                                  className="btn btn-sm"
-                                  style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    padding: 0,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "6px",
-                                    backgroundColor: "white",
-                                  }}
+                                <div
                                   title={qrTitle}
-                                  onClick={() => handleGenerateQrCodes(request)}
-                                  disabled={qrDisabled}
+                                  style={{
+                                    display: "inline-block",
+                                    position: "relative",
+                                  }}
                                 >
-                                  {isGeneratingQr ? (
-                                    <span
-                                      className="spinner-border spinner-border-sm"
-                                      role="status"
-                                      aria-hidden="true"
-                                    />
-                                  ) : (
-                                    <Icon
-                                      icon="mdi:qrcode"
-                                      width="16"
-                                      height="16"
-                                      style={{ color: "#111827" }}
-                                    />
-                                  )}
-                                </button>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      padding: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "6px",
+                                      backgroundColor: qrDisabled ? "#f3f4f6" : "white",
+                                      opacity: qrDisabled ? 0.6 : 1,
+                                      cursor: qrDisabled ? "not-allowed" : "pointer",
+                                    }}
+                                    onClick={() => {
+                                      if (!qrDisabled) {
+                                        handleGenerateQrCodes(request);
+                                      }
+                                    }}
+                                    disabled={qrDisabled}
+                                  >
+                                    {isGeneratingQr ? (
+                                      <span
+                                        className="spinner-border spinner-border-sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <Icon
+                                        icon="mdi:qrcode"
+                                        width="16"
+                                        height="16"
+                                        style={{ 
+                                          color: qrDisabled ? "#9ca3af" : "#111827" 
+                                        }}
+                                      />
+                                    )}
+                                  </button>
+                                </div>
                                 <button
                                   className="btn btn-sm"
                                   style={{
