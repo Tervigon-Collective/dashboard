@@ -3,6 +3,10 @@ import useReactApexChart from "@/hook/useReactApexChart";
 import dynamic from "next/dynamic";
 import { useState, useMemo } from "react";
 import { useTimeframeData } from "@/helper/TimeframeDataContext";
+import { useInsights } from "@/hook/useInsights";
+import InsightsModal from "@/components/InsightsModal";
+import InsightButton from "@/components/InsightButton";
+import { buildAdSpendRevenueContext } from "@/utils/insightContexts";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
@@ -25,8 +29,18 @@ export const Loader = () => (
 const GeneratedContent = () => {
   const [timeframe, setTimeframe] = useState("Year");
   const { data, loading } = useTimeframeData();
+  const [showInsights, setShowInsights] = useState(false);
   let { paymentStatusChartSeries, paymentStatusChartOptions } =
     useReactApexChart();
+
+  // AI Insights hook
+  const {
+    loading: insightsLoading,
+    insights,
+    error: insightsError,
+    generateInsights,
+    clearInsights,
+  } = useInsights();
 
   // Prepare chart data from context
   const { chartSeries, chartOptions } = useMemo(() => {
@@ -257,6 +271,43 @@ const GeneratedContent = () => {
     };
   }, [data, timeframe]);
 
+  // Handle AI Insights generation
+  const handleGetInsights = async () => {
+    if (!chartSeries || chartSeries.length === 0 || !chartOptions) {
+      alert("No data available to analyze. Please wait for data to load.");
+      return;
+    }
+
+    try {
+      // Build context for insights
+      const context = buildAdSpendRevenueContext(
+        { chartSeries, chartOptions },
+        timeframe
+      );
+
+      // Prepare data for insights API
+      const insightsData = {
+        chart_data: {
+          series: chartSeries,
+          categories: chartOptions.xaxis?.categories || [],
+        },
+      };
+
+      // Generate insights
+      await generateInsights(insightsData, context);
+      setShowInsights(true);
+    } catch (err) {
+      // Error is handled by the hook and displayed in modal
+      setShowInsights(true);
+    }
+  };
+
+  // Handle closing insights modal
+  const handleCloseInsights = () => {
+    setShowInsights(false);
+    clearInsights();
+  };
+
   return (
     <div className="col-xxl-7 col-xl-12 col-lg-12 col-md-12 col-sm-12">
       <div className="card" style={{ padding: 14 }}>
@@ -265,15 +316,22 @@ const GeneratedContent = () => {
             <h6 className="mb-2 fw-bold text-lg mb-0">
               Ad Spend & Revenue Overview
             </h6>
-            <select
-              className="form-select form-select-sm w-auto bg-base border text-secondary-light"
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-            >
-              <option value="Year">Year</option>
-              <option value="Month">Month</option>
-              <option value="Week">Week</option>
-            </select>
+            <div className="d-flex align-items-center gap-2">
+              <InsightButton
+                onClick={handleGetInsights}
+                loading={insightsLoading}
+                disabled={!chartSeries || chartSeries.length === 0 || loading}
+              />
+              <select
+                className="form-select form-select-sm w-auto bg-base border text-secondary-light"
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+              >
+                <option value="Year">Year</option>
+                <option value="Month">Month</option>
+                <option value="Week">Week</option>
+              </select>
+            </div>
           </div>
           {/* Custom legend above chart */}
           <div className="d-flex align-items-center gap-4 mt-3 mb-2">
@@ -331,6 +389,15 @@ const GeneratedContent = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Insights Modal */}
+      <InsightsModal
+        open={showInsights}
+        onClose={handleCloseInsights}
+        insights={insights}
+        loading={insightsLoading}
+        error={insightsError}
+      />
     </div>
   );
 };
