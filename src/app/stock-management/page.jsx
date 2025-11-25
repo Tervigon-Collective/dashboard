@@ -40,7 +40,12 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
           {[
             { label: "Available", value: item.available_quantity },
             { label: "Committed", value: item.committed_quantity },
-            { label: "Net Available", value: item.net_available ?? (item.available_quantity - item.committed_quantity) },
+            {
+              label: "Net Available",
+              value:
+                item.net_available ??
+                item.available_quantity - item.committed_quantity,
+            },
             { label: "Cancelled", value: item.cancelled_quantity },
             {
               label: "Approved Returns",
@@ -57,21 +62,48 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
         </div>
 
         {/* Thresholds Section (Read-Only) */}
-        {(item.reorder_point !== null || item.minimum_stock_level !== null || item.safety_stock !== null) && (
+        {(item.reorder_point !== null ||
+          item.minimum_stock_level !== null ||
+          item.safety_stock !== null) && (
           <div className="mt-4 pt-3 border-top">
             <h6 className="mb-3">
               Inventory Thresholds
-              <span className="badge bg-info ms-2" style={{ fontSize: "0.7rem" }}>
+              <span
+                className="badge bg-info ms-2"
+                style={{ fontSize: "0.7rem" }}
+              >
                 Auto-calculated
               </span>
             </h6>
             <div className="row g-3">
               {[
-                { label: "Reorder Point", value: item.reorder_point, tooltip: "When to reorder" },
-                { label: "Minimum Stock Level", value: item.minimum_stock_level, tooltip: "Critical threshold" },
-                { label: "Safety Stock", value: item.safety_stock, tooltip: "Buffer stock" },
-                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v !== null && v !== undefined ? v.toFixed(2) : "-" },
-                { label: "Lead Time (Days)", value: item.lead_time_days, tooltip: "Expected delivery time" },
+                {
+                  label: "Reorder Point",
+                  value: item.reorder_point,
+                  tooltip: "When to reorder",
+                },
+                {
+                  label: "Minimum Stock Level",
+                  value: item.minimum_stock_level,
+                  tooltip: "Critical threshold",
+                },
+                {
+                  label: "Safety Stock",
+                  value: item.safety_stock,
+                  tooltip: "Buffer stock",
+                },
+                {
+                  label: "Average Daily Sales",
+                  value: item.average_daily_sales,
+                  tooltip: "Based on 90 days of sales",
+                  format: (v) =>
+                    v !== null && v !== undefined ? v.toFixed(2) : "-",
+                },
+                {
+                  label: "Lead Time (Days)",
+                  value: item.lead_time_days,
+                  tooltip: "Expected delivery time",
+                },
               ].map((metric) => (
                 <div className="col-6 col-md-4" key={metric.label}>
                   <div className="text-muted small">
@@ -83,16 +115,14 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         data-bs-title={metric.tooltip}
                         style={{ cursor: "help", marginLeft: "4px" }}
                       >
-                        <Icon
-                          icon="lucide:info"
-                          width="12"
-                          height="12"
-                        />
+                        <Icon icon="lucide:info" width="12" height="12" />
                       </span>
                     )}
                   </div>
                   <div className="fw-semibold">
-                    {metric.format ? metric.format(metric.value) : formatNumber(metric.value)}
+                    {metric.format
+                      ? metric.format(metric.value)
+                      : formatNumber(metric.value)}
                   </div>
                 </div>
               ))}
@@ -136,7 +166,9 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         {entry.source_reference || "-"}
                       </td>
                       <td className="small text-muted">
-                        {entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}
+                        {entry.created_at
+                          ? new Date(entry.created_at).toLocaleString()
+                          : "-"}
                       </td>
                     </tr>
                   ))}
@@ -465,17 +497,13 @@ const StockManagementPage = () => {
     pagination: { page: 1, totalPages: 1, total: 0 },
     loading: false,
     search: "",
-<<<<<<< HEAD
+    debouncedSearch: "",
     limit: 25,
     displayedItemsCount: 25, // For infinite scroll
     isLoadingMore: false, // For infinite scroll
-=======
-    debouncedSearch: "",
-    limit: 20,
     sortField: null,
     sortDirection: "asc",
     lowStockFilter: "all", // "all", "low", "normal"
->>>>>>> origin/master
   });
 
   // Infinite scroll state for inventory
@@ -517,7 +545,6 @@ const StockManagementPage = () => {
     return () => clearTimeout(timer);
   }, [inventoryState.search]);
 
-<<<<<<< HEAD
   const [sampleProductsState, setSampleProductsState] = useState({
     data: [],
     pagination: { page: 1, totalPages: 1 },
@@ -558,23 +585,13 @@ const StockManagementPage = () => {
     return () => clearTimeout(timer);
   }, [inventoryState.search]);
 
-  const loadInventory = useCallback(
-    async ({ page, limit, search, append = false } = {}) => {
-      // Get current state from ref (updated in useEffect)
-      const currentState = inventoryStateRef.current || {
-        pagination: { page: 1, totalPages: 1, total: 0 },
-        limit: 25,
-        search: "",
-      };
-
-      if (!append) {
-        setInventoryState((prev) => ({ ...prev, loading: true }));
-      } else {
-        setInventoryState((prev) => ({ ...prev, isLoadingMore: true }));
-=======
   // Sort inventory data
   const sortInventoryData = useCallback(
-    (dataArray, field = inventoryState.sortField, direction = inventoryState.sortDirection) => {
+    (
+      dataArray,
+      field = inventoryState.sortField,
+      direction = inventoryState.sortDirection
+    ) => {
       if (!field || !Array.isArray(dataArray)) {
         return dataArray || [];
       }
@@ -585,8 +602,10 @@ const StockManagementPage = () => {
 
         // Handle net_available - calculate if not present
         if (field === "net_available") {
-          valueA = a?.net_available ?? (a?.available_quantity - a?.committed_quantity);
-          valueB = b?.net_available ?? (b?.available_quantity - b?.committed_quantity);
+          valueA =
+            a?.net_available ?? a?.available_quantity - a?.committed_quantity;
+          valueB =
+            b?.net_available ?? b?.available_quantity - b?.committed_quantity;
         }
 
         if (valueA === valueB) return 0;
@@ -627,7 +646,11 @@ const StockManagementPage = () => {
 
   // Sort returns data
   const sortReturnsData = useCallback(
-    (dataArray, field = returnsState.sortField, direction = returnsState.sortDirection) => {
+    (
+      dataArray,
+      field = returnsState.sortField,
+      direction = returnsState.sortDirection
+    ) => {
       if (!field || !Array.isArray(dataArray)) {
         return dataArray || [];
       }
@@ -675,26 +698,29 @@ const StockManagementPage = () => {
   // Load inventory
   const loadInventory = useCallback(
     async ({ page, limit, search, append = false } = {}) => {
+      // Get current state from ref (updated in useEffect)
+      const currentState = inventoryStateRef.current || {
+        pagination: { page: 1, totalPages: 1, total: 0 },
+        limit: 25,
+        search: "",
+      };
+
       if (!append) {
-      setInventoryState((prev) => ({ ...prev, loading: true }));
->>>>>>> origin/master
+        setInventoryState((prev) => ({ ...prev, loading: true }));
+      } else {
+        setInventoryState((prev) => ({ ...prev, isLoadingMore: true }));
       }
 
       try {
         const targetPage = page ?? currentState.pagination.page;
         const targetLimit = limit ?? currentState.limit;
-        const targetSearch = search ?? currentState.search;
+        const targetSearch =
+          search ?? currentState.search ?? currentState.debouncedSearch;
 
         const response = await inventoryManagementApi.listInventoryItems({
-<<<<<<< HEAD
           page: targetPage,
           limit: targetLimit,
           search: targetSearch,
-=======
-          page: page ?? inventoryState.pagination.page,
-          limit: limit ?? inventoryState.limit,
-          search: search ?? inventoryState.debouncedSearch,
->>>>>>> origin/master
         });
 
         const data = Array.isArray(response?.data)
@@ -707,35 +733,6 @@ const StockManagementPage = () => {
             total: data.length,
           };
 
-<<<<<<< HEAD
-        setInventoryState((prev) => {
-          // Re-read values in case they changed
-          const finalPage = page ?? prev.pagination.page;
-          const finalLimit = limit ?? prev.limit;
-          const finalSearch = search ?? prev.search;
-
-          if (append) {
-            // Append mode: merge new data with existing
-            return {
-              ...prev,
-              data: [...prev.data, ...data],
-              pagination,
-              isLoadingMore: false,
-            };
-          } else {
-            // Replace mode: replace all data
-            return {
-              ...prev,
-              data,
-              pagination,
-              loading: false,
-              limit: finalLimit,
-              search: finalSearch,
-              displayedItemsCount: finalLimit, // Reset displayed count
-            };
-          }
-        });
-=======
         if (append) {
           // When appending during infinite scroll:
           // - If client-side sorting is active, don't append (sorting breaks pagination order)
@@ -747,6 +744,7 @@ const StockManagementPage = () => {
               return {
                 ...prev,
                 loading: false,
+                isLoadingMore: false,
               };
             }
             // No sorting active - safe to append and maintain API pagination order
@@ -756,12 +754,15 @@ const StockManagementPage = () => {
               data: combinedData,
               pagination,
               loading: false,
+              isLoadingMore: false,
             };
           });
         } else {
           // When not appending, sort the new data normally
           // Use state from setState callback to avoid stale closure issues
           setInventoryState((prev) => {
+            const finalLimit = limit ?? prev.limit;
+            const finalSearch = search !== undefined ? search : prev.search;
             const processedData = sortInventoryData(
               data,
               prev.sortField,
@@ -772,13 +773,13 @@ const StockManagementPage = () => {
               data: processedData,
               pagination,
               loading: false,
-              limit: limit ?? prev.limit,
-              search: search !== undefined ? search : prev.search,
+              limit: finalLimit,
+              search: finalSearch,
+              displayedItemsCount: finalLimit, // Reset displayed count
             };
           });
           setInventoryDisplayedCount(20);
         }
->>>>>>> origin/master
       } catch (error) {
         console.error("Failed to load inventory", error);
         toast.error(error.message || "Failed to load inventory");
@@ -789,9 +790,6 @@ const StockManagementPage = () => {
         }));
       }
     },
-<<<<<<< HEAD
-    [] // No dependencies - using functional updates
-=======
     [
       inventoryState.pagination.page,
       inventoryState.limit,
@@ -799,14 +797,13 @@ const StockManagementPage = () => {
       inventoryState.lowStockFilter,
       sortInventoryData,
     ]
->>>>>>> origin/master
   );
 
   // Load returns
   const loadReturns = useCallback(
     async ({ page, status, append = false } = {}) => {
       if (!append) {
-      setReturnsState((prev) => ({ ...prev, loading: true }));
+        setReturnsState((prev) => ({ ...prev, loading: true }));
       }
 
       try {
@@ -876,7 +873,6 @@ const StockManagementPage = () => {
     [returnsState.pagination.page, returnsState.status, sortReturnsData]
   );
 
-<<<<<<< HEAD
   const loadSampleProducts = useCallback(
     async ({ page, search } = {}) => {
       setSampleProductsState((prev) => ({ ...prev, loading: true }));
@@ -990,16 +986,6 @@ const StockManagementPage = () => {
     }
   };
 
-  // Initial load on mount
-  useEffect(() => {
-    if (activeTab === "inventory") {
-      setInventoryIsMounted(true);
-      loadInventory({ page: 1 });
-      inventoryPrevPageRef.current = 1;
-      inventoryPrevSearchRef.current = "";
-      inventoryPrevLimitRef.current = 25;
-    } else if (activeTab === "returns") {
-=======
   // Track initial mount
   const [isMounted, setIsMounted] = useState(false);
   const prevInventoryFiltersRef = useRef({
@@ -1014,13 +1000,22 @@ const StockManagementPage = () => {
     sortDir: "asc",
   });
 
-  // Initial load
+  // Initial load on mount
   useEffect(() => {
-    setIsMounted(true);
+    if (activeTab === "inventory") {
+      setInventoryIsMounted(true);
+      setIsMounted(true);
       loadInventory({ page: 1 });
+      inventoryPrevPageRef.current = 1;
+      inventoryPrevSearchRef.current = "";
+      inventoryPrevLimitRef.current = 25;
+    } else if (activeTab === "returns") {
+      setIsMounted(true);
       loadReturns({ page: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    } else if (activeTab === "sample-products") {
+      loadSampleProducts({ page: 1 });
+    }
+  }, [activeTab, loadReturns, loadSampleProducts]);
 
   // Handle inventory filter changes
   useEffect(() => {
@@ -1071,13 +1066,15 @@ const StockManagementPage = () => {
 
     if (filtersChanged) {
       prevReturnsFiltersRef.current = currentFilters;
->>>>>>> origin/master
       loadReturns({ page: 1 });
-    } else if (activeTab === "sample-products") {
-      loadSampleProducts({ page: 1 });
     }
-<<<<<<< HEAD
-  }, [activeTab, loadReturns, loadSampleProducts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isMounted,
+    returnsState.status,
+    returnsState.sortField,
+    returnsState.sortDirection,
+  ]);
 
   // Handle QR code deep link - similar to receiving management
   useEffect(() => {
@@ -1215,19 +1212,16 @@ const StockManagementPage = () => {
     inventoryState.pagination.page,
     loadInventory,
   ]);
-=======
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isMounted,
-    returnsState.status,
-    returnsState.sortField,
-    returnsState.sortDirection,
-  ]);
 
   // Reset displayed count when filters change
   useEffect(() => {
     setInventoryDisplayedCount(20);
-  }, [inventoryState.debouncedSearch, inventoryState.lowStockFilter, inventoryState.sortField, inventoryState.sortDirection]);
+  }, [
+    inventoryState.debouncedSearch,
+    inventoryState.lowStockFilter,
+    inventoryState.sortField,
+    inventoryState.sortDirection,
+  ]);
 
   useEffect(() => {
     setReturnsDisplayedCount(20);
@@ -1275,13 +1269,15 @@ const StockManagementPage = () => {
       (bootstrapModule) => {
         // Wait for DOM to update
         setTimeout(() => {
-          const Tooltip = bootstrapModule.Tooltip || (window.bootstrap && window.bootstrap.Tooltip);
+          const Tooltip =
+            bootstrapModule.Tooltip ||
+            (window.bootstrap && window.bootstrap.Tooltip);
           if (!Tooltip) return;
 
           const tooltipTriggerList = document.querySelectorAll(
             '[data-bs-toggle="tooltip"]'
           );
-          
+
           // Dispose existing tooltips first
           tooltipTriggerList.forEach((el) => {
             const existingTooltip = Tooltip.getInstance(el);
@@ -1316,25 +1312,41 @@ const StockManagementPage = () => {
   // Get filtered inventory data (helper function)
   const getFilteredInventoryData = useCallback(() => {
     let filteredData = inventoryState.data;
-    
+
     // Apply low stock filter based on thresholds
     if (inventoryState.lowStockFilter === "low") {
       filteredData = filteredData.filter((item) => {
-        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
-        return netAvailable <= 0 || 
-               (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) ||
-               (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point);
+        const netAvailable =
+          item.net_available ??
+          item.available_quantity - item.committed_quantity;
+        return (
+          netAvailable <= 0 ||
+          (item.minimum_stock_level !== null &&
+            item.minimum_stock_level !== undefined &&
+            netAvailable <= item.minimum_stock_level) ||
+          (item.reorder_point !== null &&
+            item.reorder_point !== undefined &&
+            netAvailable <= item.reorder_point)
+        );
       });
     } else if (inventoryState.lowStockFilter === "normal") {
       filteredData = filteredData.filter((item) => {
-        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        const netAvailable =
+          item.net_available ??
+          item.available_quantity - item.committed_quantity;
         // Normal stock: must be above minimum_stock_level (if exists) AND above reorder_point (if exists)
-        return netAvailable > 0 && 
-               (item.minimum_stock_level === null || item.minimum_stock_level === undefined || netAvailable > item.minimum_stock_level) &&
-               (item.reorder_point === null || item.reorder_point === undefined || netAvailable > item.reorder_point);
+        return (
+          netAvailable > 0 &&
+          (item.minimum_stock_level === null ||
+            item.minimum_stock_level === undefined ||
+            netAvailable > item.minimum_stock_level) &&
+          (item.reorder_point === null ||
+            item.reorder_point === undefined ||
+            netAvailable > item.reorder_point)
+        );
       });
     }
-    
+
     return filteredData;
   }, [inventoryState.data, inventoryState.lowStockFilter]);
 
@@ -1354,14 +1366,19 @@ const StockManagementPage = () => {
     if (inventoryState.sortField) {
       return false;
     }
-    
+
     const filteredData = getFilteredInventoryData();
-    
+
     return (
       inventoryDisplayedCount < filteredData.length ||
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     );
-  }, [inventoryDisplayedCount, getFilteredInventoryData, inventoryState.pagination, inventoryState.sortField]);
+  }, [
+    inventoryDisplayedCount,
+    getFilteredInventoryData,
+    inventoryState.pagination,
+    inventoryState.sortField,
+  ]);
 
   // Check if there's more returns data
   const hasMoreReturnsData = useCallback(() => {
@@ -1369,12 +1386,17 @@ const StockManagementPage = () => {
     if (returnsState.sortField) {
       return false;
     }
-    
+
     return (
       returnsDisplayedCount < returnsState.data.length ||
       returnsState.pagination.page < returnsState.pagination.totalPages
     );
-  }, [returnsDisplayedCount, returnsState.data.length, returnsState.pagination, returnsState.sortField]);
+  }, [
+    returnsDisplayedCount,
+    returnsState.data.length,
+    returnsState.pagination,
+    returnsState.sortField,
+  ]);
 
   // Load more inventory data
   const loadMoreInventoryData = useCallback(async () => {
@@ -1393,6 +1415,8 @@ const StockManagementPage = () => {
       inventoryDisplayedCount >= filteredData.length &&
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     ) {
+      // Set flag to indicate this page change is from infinite scroll
+      inventoryInfiniteScrollRef.current = true;
       await loadInventory({
         page: inventoryState.pagination.page + 1,
         append: true,
@@ -1499,7 +1523,6 @@ const StockManagementPage = () => {
     }));
     setReturnsDisplayedCount(20);
   };
->>>>>>> origin/master
 
   const openInventoryDetail = useCallback(async (item) => {
     setInventoryDetail({ item, ledger: null, loadingLedger: true });
@@ -1512,9 +1535,9 @@ const StockManagementPage = () => {
       ]);
       const resolvedItem = freshItem?.data || freshItem;
       // Normalize ledger structure: ensure it always has { data: [...] } format
-      const resolvedLedger = ledger?.data 
+      const resolvedLedger = ledger?.data
         ? { data: Array.isArray(ledger.data) ? ledger.data : [ledger.data] }
-        : { data: Array.isArray(ledger) ? ledger : (ledger ? [ledger] : []) };
+        : { data: Array.isArray(ledger) ? ledger : ledger ? [ledger] : [] };
       setInventoryDetail({
         item: resolvedItem,
         ledger: resolvedLedger,
@@ -1579,114 +1602,6 @@ const StockManagementPage = () => {
     }
   }, [loadReturns]);
 
-<<<<<<< HEAD
-  // Infinite scroll helper functions for inventory
-  const getDisplayedInventoryData = useCallback(
-    (dataArray) => {
-      return dataArray.slice(0, inventoryState.displayedItemsCount);
-    },
-    [inventoryState.displayedItemsCount]
-  );
-
-  const hasMoreInventoryData = useCallback(() => {
-    return (
-      inventoryState.displayedItemsCount < inventoryState.data.length ||
-      inventoryState.pagination.page < inventoryState.pagination.totalPages
-    );
-  }, [
-    inventoryState.displayedItemsCount,
-    inventoryState.data.length,
-    inventoryState.pagination.page,
-    inventoryState.pagination.totalPages,
-  ]);
-
-  const loadMoreInventoryData = useCallback(async () => {
-    if (
-      inventoryState.isLoadingMore ||
-      inventoryState.loading ||
-      !hasMoreInventoryData()
-    )
-      return;
-
-    setInventoryState((prev) => ({ ...prev, isLoadingMore: true }));
-    // Simulate loading delay for skeleton effect
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Check if we need to fetch more from API
-    if (
-      inventoryState.displayedItemsCount >= inventoryState.data.length &&
-      inventoryState.pagination.page < inventoryState.pagination.totalPages
-    ) {
-      // Set flag to indicate this page change is from infinite scroll
-      inventoryInfiniteScrollRef.current = true;
-      await loadInventory({
-        page: inventoryState.pagination.page + 1,
-        append: true,
-      });
-    }
-
-    setInventoryState((prev) => ({
-      ...prev,
-      displayedItemsCount: prev.displayedItemsCount + prev.limit,
-      isLoadingMore: false,
-    }));
-  }, [
-    inventoryState.isLoadingMore,
-    inventoryState.loading,
-    inventoryState.displayedItemsCount,
-    inventoryState.data.length,
-    inventoryState.pagination.page,
-    inventoryState.pagination.totalPages,
-    inventoryState.limit,
-    hasMoreInventoryData,
-    loadInventory,
-  ]);
-
-  // Reset displayed items when search or limit changes
-  useEffect(() => {
-    if (activeTab === "inventory") {
-      setInventoryState((prev) => ({
-        ...prev,
-        displayedItemsCount: prev.limit,
-      }));
-    }
-  }, [activeTab, debouncedInventorySearch, inventoryState.limit]);
-
-  // Scroll detection for infinite scroll (using event listeners)
-  useEffect(() => {
-    if (activeTab !== "inventory") return;
-
-    const container = inventoryTableContainerRef.current;
-    if (!container) return;
-
-    // Handle wheel events to allow page scrolling when table reaches boundaries
-    const handleWheel = (e) => {
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const isAtTop = scrollTop <= 1;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-
-      if (e.deltaY > 0 && isAtBottom) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: "auto",
-        });
-      } else if (e.deltaY < 0 && isAtTop) {
-        window.scrollBy({
-          top: e.deltaY,
-          behavior: "auto",
-        });
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: true });
-
-    return () => {
-      container.removeEventListener("wheel", handleWheel);
-    };
-  }, [activeTab]);
-
   const inventoryTable = useMemo(() => {
     if (inventoryState.loading && inventoryState.data.length === 0) {
       return (
@@ -1712,7 +1627,7 @@ const StockManagementPage = () => {
       );
     }
 
-    const displayedData = getDisplayedInventoryData(inventoryState.data);
+    const displayedData = getDisplayedInventoryData();
 
     if (!displayedData.length && !inventoryState.loading) {
       return (
@@ -1825,21 +1740,10 @@ const StockManagementPage = () => {
     ));
   }, [returnsState, handleApproveReturn, handleRejectReturn]);
 
-=======
->>>>>>> origin/master
   return (
     <SidebarPermissionGuard requiredSidebar="stockManagement">
       <MasterLayout>
         <div className="container-fluid py-4">
-<<<<<<< HEAD
-          <div className="card">
-            <div className="card-header border-0 pb-0">
-              <div className="d-flex gap-3">
-                {[
-                  { id: "inventory", label: "Inventory" },
-                  { id: "returns", label: "Returns" },
-                  { id: "sample-products", label: "Sample Products" },
-=======
           <div className="card h-100 radius-8 border">
             <div className="card-body p-24">
               {/* Header */}
@@ -1857,16 +1761,24 @@ const StockManagementPage = () => {
                   style={{ minWidth: "max-content", flexWrap: "nowrap" }}
                 >
                   {[
-                    { id: "inventory", label: "INVENTORY", icon: "mdi:package-variant" },
+                    {
+                      id: "inventory",
+                      label: "INVENTORY",
+                      icon: "mdi:package-variant",
+                    },
                     { id: "returns", label: "RETURNS", icon: "mdi:arrow-left" },
->>>>>>> origin/master
-                ].map((tab) => (
+                    {
+                      id: "sample-products",
+                      label: "SAMPLE PRODUCTS",
+                      icon: "mdi:test-tube",
+                    },
+                  ].map((tab) => (
                     <div
-                    key={tab.id}
+                      key={tab.id}
                       className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
-                      activeTab === tab.id ? "text-primary" : "text-muted"
-                    }`}
-                    onClick={() => setActiveTab(tab.id)}
+                        activeTab === tab.id ? "text-primary" : "text-muted"
+                      }`}
+                      onClick={() => setActiveTab(tab.id)}
                       style={{ cursor: "pointer", whiteSpace: "nowrap" }}
                     >
                       <Icon
@@ -1877,8 +1789,8 @@ const StockManagementPage = () => {
                       <span
                         className="fw-medium"
                         style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-                  >
-                    {tab.label}
+                      >
+                        {tab.label}
                       </span>
                       {activeTab === tab.id && (
                         <div
@@ -1890,9 +1802,9 @@ const StockManagementPage = () => {
                         />
                       )}
                     </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
               {/* Tab Content */}
               {activeTab === "inventory" && (
@@ -1931,121 +1843,100 @@ const StockManagementPage = () => {
                     </div>
 
                     {/* Low Stock Filter */}
+                    <div>
                       <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.lowStockFilter}
-                      onChange={(e) =>
+                        className="form-select form-select-sm"
+                        value={inventoryState.lowStockFilter}
+                        onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                          lowStockFilter: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "150px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="all">All Stock</option>
-                      <option value="low">Low/Critical Stock</option>
-                      <option value="normal">Normal Stock</option>
+                            lowStockFilter: e.target.value,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "150px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="all">All Stock</option>
+                        <option value="low">Low/Critical Stock</option>
+                        <option value="normal">Normal Stock</option>
                       </select>
-<<<<<<< HEAD
                     </div>
-                    <div className="col-md-2 d-flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => {
-                          // Reset to page 1 and trigger search
-                          setInventoryState((prev) => ({
-                            ...prev,
-                            pagination: { ...prev.pagination, page: 1 },
-                          }));
-                        }}
-                        disabled={inventoryState.loading}
-                      >
-                        <Icon icon="mdi:magnify" width={18} height={18} />
-                        Search
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                        onClick={() => {
-                          setInventoryState((prev) => ({
-                            ...prev,
-                            search: "",
-                            pagination: { ...prev.pagination, page: 1 },
-                          }));
-                        }}
-                        disabled={inventoryState.loading}
-                      >
-                        Clear
-=======
 
                     {/* Sort Field */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.sortField || ""}
-                      onChange={(e) =>
-                        setInventoryState((prev) => ({
-                          ...prev,
-                          sortField: e.target.value || null,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "170px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="">Sort By</option>
-                      <option value="product_name">Product Name</option>
-                      <option value="variant_display_name">Variant</option>
-                      <option value="sku">SKU</option>
-                      <option value="available_quantity">Available Qty</option>
-                      <option value="committed_quantity">Committed Qty</option>
-                      <option value="net_available">Net Available</option>
-                      <option value="reorder_point">Reorder Point</option>
-                    </select>
-
-                    {/* Sort Order */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.sortDirection}
-                      onChange={(e) =>
+                    <div>
+                      <select
+                        className="form-select form-select-sm"
+                        value={inventoryState.sortField || ""}
+                        onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                          sortDirection: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "130px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
+                            sortField: e.target.value || null,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "170px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="">Sort By</option>
+                        <option value="product_name">Product Name</option>
+                        <option value="variant_display_name">Variant</option>
+                        <option value="sku">SKU</option>
+                        <option value="available_quantity">
+                          Available Qty
+                        </option>
+                        <option value="committed_quantity">
+                          Committed Qty
+                        </option>
+                        <option value="net_available">Net Available</option>
+                        <option value="reorder_point">Reorder Point</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Order */}
+                    <div>
+                      <select
+                        className="form-select form-select-sm"
+                        value={inventoryState.sortDirection}
+                        onChange={(e) =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                            sortDirection: e.target.value,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "130px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                      </select>
+                    </div>
 
                     {/* Reset Button */}
-                    <button
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={handleResetInventoryFilters}
-                      title="Reset filters"
-                      style={{
-                        height: "36px",
-                        padding: "6px 12px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <Icon icon="lucide:x" width="14" height="14" />
->>>>>>> origin/master
+                    <div>
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={handleResetInventoryFilters}
+                        title="Reset filters"
+                        style={{
+                          height: "36px",
+                          padding: "6px 12px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <Icon icon="lucide:x" width="14" height="14" />
                       </button>
+                    </div>
 
                     {/* Count */}
                     <span
@@ -2060,14 +1951,9 @@ const StockManagementPage = () => {
                     </span>
                   </div>
 
-<<<<<<< HEAD
-                  <div
-                    ref={inventoryTableContainerRef}
-=======
                   {/* Inventory Table */}
                   <div
                     ref={inventoryTableRef}
->>>>>>> origin/master
                     className="table-responsive scroll-sm table-scroll-container"
                     style={{
                       maxHeight: "600px",
@@ -2078,13 +1964,9 @@ const StockManagementPage = () => {
                       borderRadius: "8px",
                       scrollBehavior: "smooth",
                       overscrollBehavior: "auto",
-<<<<<<< HEAD
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-=======
                       scrollbarWidth: "thin",
-                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
->>>>>>> origin/master
+                      scrollbarColor:
+                        "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
                     }}
                     onScroll={(e) => {
                       const target = e.target;
@@ -2093,20 +1975,16 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-<<<<<<< HEAD
                         if (
                           hasMoreInventoryData() &&
                           !inventoryState.isLoadingMore &&
+                          !inventoryLoadingMoreRef.current &&
                           !inventoryState.loading
                         ) {
-=======
-                        if (hasMoreInventoryData() && !inventoryLoadingMoreRef.current && !inventoryState.loading) {
->>>>>>> origin/master
                           loadMoreInventoryData();
                         }
                       }
                     }}
-<<<<<<< HEAD
                     onWheel={(e) => {
                       const target = e.currentTarget;
                       const scrollTop = target.scrollTop;
@@ -2129,14 +2007,8 @@ const StockManagementPage = () => {
                       }
                     }}
                   >
-                    <table className="table table-hover mb-0">
-                      <thead
-                        className="table-light"
-=======
-                  >
                     <table className="table bordered-table mb-0">
                       <thead
->>>>>>> origin/master
                         style={{
                           position: "sticky",
                           top: 0,
@@ -2166,16 +2038,19 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                  </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
-                            onClick={() => handleInventorySort("variant_display_name")}
+                            onClick={() =>
+                              handleInventorySort("variant_display_name")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2">
                               Variant
-                              {inventoryState.sortField === "variant_display_name" && (
+                              {inventoryState.sortField ===
+                                "variant_display_name" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -2186,7 +2061,7 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                    </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
@@ -2211,12 +2086,15 @@ const StockManagementPage = () => {
                           <th
                             scope="col"
                             className="text-center"
-                            onClick={() => handleInventorySort("available_quantity")}
+                            onClick={() =>
+                              handleInventorySort("available_quantity")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2 justify-content-center">
                               Available
-                              {inventoryState.sortField === "available_quantity" && (
+                              {inventoryState.sortField ===
+                                "available_quantity" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -2232,12 +2110,15 @@ const StockManagementPage = () => {
                           <th
                             scope="col"
                             className="text-center"
-                            onClick={() => handleInventorySort("committed_quantity")}
+                            onClick={() =>
+                              handleInventorySort("committed_quantity")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2 justify-content-center">
                               Committed
-                              {inventoryState.sortField === "committed_quantity" && (
+                              {inventoryState.sortField ===
+                                "committed_quantity" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -2305,33 +2186,43 @@ const StockManagementPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {inventoryState.loading && inventoryState.data.length === 0 ? (
+                        {inventoryState.loading &&
+                        inventoryState.data.length === 0 ? (
                           <>
                             {Array.from({ length: 5 }).map((_, rowIndex) => (
                               <tr key={`skeleton-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map((_, colIndex) => (
-                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                                    <div
-                                      className="skeleton"
-                                      style={{
-                                        height: "20px",
-                                        backgroundColor: "#e5e7eb",
-                                        borderRadius: "4px",
-                                        animation:
-                                          "skeletonPulse 1.5s ease-in-out infinite",
-                                      }}
-                                    />
-                                  </td>
-                                ))}
+                                {Array.from({ length: 9 }).map(
+                                  (_, colIndex) => (
+                                    <td
+                                      key={`skeleton-${rowIndex}-${colIndex}`}
+                                    >
+                                      <div
+                                        className="skeleton"
+                                        style={{
+                                          height: "20px",
+                                          backgroundColor: "#e5e7eb",
+                                          borderRadius: "4px",
+                                          animation:
+                                            "skeletonPulse 1.5s ease-in-out infinite",
+                                        }}
+                                      />
+                                    </td>
+                                  )
+                                )}
                               </tr>
                             ))}
                           </>
-                        ) : (inventoryState.data.length === 0 || getFilteredInventoryData().length === 0) ? (
+                        ) : inventoryState.data.length === 0 ||
+                          getFilteredInventoryData().length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4 text-muted">
+                            <td
+                              colSpan="9"
+                              className="text-center py-4 text-muted"
+                            >
                               <div className="d-flex flex-column align-items-center">
                                 <p className="text-muted mb-0">
-                                  {inventoryState.search || inventoryState.lowStockFilter !== "all"
+                                  {inventoryState.search ||
+                                  inventoryState.lowStockFilter !== "all"
                                     ? "No inventory items match your search criteria."
                                     : "No inventory items found."}
                                 </p>
@@ -2341,24 +2232,55 @@ const StockManagementPage = () => {
                         ) : (
                           <>
                             {getDisplayedInventoryData().map((item, index) => {
-                              const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
-                              
+                              const netAvailable =
+                                item.net_available ??
+                                item.available_quantity -
+                                  item.committed_quantity;
+
                               // Determine stock status based on thresholds
                               const getStockStatus = () => {
                                 if (netAvailable <= 0) {
-                                  return { status: 'out_of_stock', label: 'OUT OF STOCK', color: '#dc3545', bgColor: '#f8d7da' };
+                                  return {
+                                    status: "out_of_stock",
+                                    label: "OUT OF STOCK",
+                                    color: "#dc3545",
+                                    bgColor: "#f8d7da",
+                                  };
                                 }
-                                if (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) {
-                                  return { status: 'critical', label: 'CRITICAL', color: '#fd7e14', bgColor: '#fff3cd' };
+                                if (
+                                  item.minimum_stock_level !== null &&
+                                  item.minimum_stock_level !== undefined &&
+                                  netAvailable <= item.minimum_stock_level
+                                ) {
+                                  return {
+                                    status: "critical",
+                                    label: "CRITICAL",
+                                    color: "#fd7e14",
+                                    bgColor: "#fff3cd",
+                                  };
                                 }
-                                if (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point) {
-                                  return { status: 'low_stock', label: 'LOW STOCK', color: '#ffc107', bgColor: '#fff3cd' };
+                                if (
+                                  item.reorder_point !== null &&
+                                  item.reorder_point !== undefined &&
+                                  netAvailable <= item.reorder_point
+                                ) {
+                                  return {
+                                    status: "low_stock",
+                                    label: "LOW STOCK",
+                                    color: "#ffc107",
+                                    bgColor: "#fff3cd",
+                                  };
                                 }
-                                return { status: 'in_stock', label: 'IN STOCK', color: '#198754', bgColor: '#d1e7dd' };
+                                return {
+                                  status: "in_stock",
+                                  label: "IN STOCK",
+                                  color: "#198754",
+                                  bgColor: "#d1e7dd",
+                                };
                               };
-                              
+
                               const stockStatus = getStockStatus();
-                              
+
                               return (
                                 <tr key={item.inventory_item_id}>
                                   <td>
@@ -2392,11 +2314,17 @@ const StockManagementPage = () => {
                                     </span>
                                   </td>
                                   <td className="text-center">
-                                    <span className={`fw-semibold ${
-                                      stockStatus.status === 'out_of_stock' ? 'text-danger' :
-                                      stockStatus.status === 'critical' ? 'text-warning' :
-                                      stockStatus.status === 'low_stock' ? 'text-warning' : ''
-                                    }`}>
+                                    <span
+                                      className={`fw-semibold ${
+                                        stockStatus.status === "out_of_stock"
+                                          ? "text-danger"
+                                          : stockStatus.status === "critical"
+                                          ? "text-warning"
+                                          : stockStatus.status === "low_stock"
+                                          ? "text-warning"
+                                          : ""
+                                      }`}
+                                    >
                                       {formatNumber(netAvailable)}
                                     </span>
                                   </td>
@@ -2416,14 +2344,15 @@ const StockManagementPage = () => {
                                   </td>
                                   <td className="text-center">
                                     <span className="text-secondary-light small">
-                                      {item.reorder_point !== null && item.reorder_point !== undefined
+                                      {item.reorder_point !== null &&
+                                      item.reorder_point !== undefined
                                         ? formatNumber(item.reorder_point)
                                         : "-"}
                                     </span>
                                   </td>
                                   <td className="text-end">
-                      <button
-                        type="button"
+                                    <button
+                                      type="button"
                                       className="btn btn-sm"
                                       style={{
                                         border: "1px solid #dee2e6",
@@ -2435,39 +2364,49 @@ const StockManagementPage = () => {
                                       onClick={() => openInventoryDetail(item)}
                                       title="View Details"
                                     >
-                                      <Icon icon="lucide:eye" width="14" height="14" />
-                      </button>
+                                      <Icon
+                                        icon="lucide:eye"
+                                        width="14"
+                                        height="14"
+                                      />
+                                    </button>
                                   </td>
                                 </tr>
                               );
                             })}
                             {inventoryLoadingMore && (
                               <>
-                                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                                  <tr key={`skeleton-more-${rowIndex}`}>
-                                    {Array.from({ length: 9 }).map((_, colIndex) => (
-                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                                        <div
-                                          className="skeleton"
-                                          style={{
-                                            height: "20px",
-                                            backgroundColor: "#e5e7eb",
-                                            borderRadius: "4px",
-                                            animation:
-                                              "skeletonPulse 1.5s ease-in-out infinite",
-                                          }}
-                                        />
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {Array.from({ length: 5 }).map(
+                                  (_, rowIndex) => (
+                                    <tr key={`skeleton-more-${rowIndex}`}>
+                                      {Array.from({ length: 9 }).map(
+                                        (_, colIndex) => (
+                                          <td
+                                            key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                          >
+                                            <div
+                                              className="skeleton"
+                                              style={{
+                                                height: "20px",
+                                                backgroundColor: "#e5e7eb",
+                                                borderRadius: "4px",
+                                                animation:
+                                                  "skeletonPulse 1.5s ease-in-out infinite",
+                                              }}
+                                            />
+                                          </td>
+                                        )
+                                      )}
+                                    </tr>
+                                  )
+                                )}
                               </>
                             )}
                           </>
                         )}
                       </tbody>
                     </table>
-                    </div>
+                  </div>
 
                   {/* Infinite Scroll Footer */}
                   {inventoryState.pagination.total > 0 && (
@@ -2477,20 +2416,13 @@ const StockManagementPage = () => {
                         backgroundColor: "#f8f9fa",
                         borderRadius: "0 0 8px 8px",
                         marginTop: "0",
-<<<<<<< HEAD
                         borderTop: "1px solid #e5e7eb",
                       }}
                     >
                       <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
                         Showing{" "}
-                        <strong>
-                          {
-                            getDisplayedInventoryData(inventoryState.data)
-                              .length
-                          }
-                        </strong>{" "}
-                        of <strong>{inventoryState.pagination.total}</strong>{" "}
-                        items
+                        <strong>{getDisplayedInventoryData().length}</strong> of{" "}
+                        <strong>{inventoryState.pagination.total}</strong> items
                       </div>
                       {hasMoreInventoryData() && (
                         <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
@@ -2802,26 +2734,7 @@ const StockManagementPage = () => {
                         Next
                       </button>
                     </div>
-=======
-                      }}
-                    >
-                      <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                        Showing <strong>{getDisplayedInventoryData().length}</strong> of{" "}
-                        <strong>
-                          {inventoryState.lowStockFilter === "all"
-                            ? inventoryState.pagination.total
-                            : getFilteredInventoryData().length}
-                        </strong>{" "}
-                        items
->>>>>>> origin/master
                   </div>
-                      {hasMoreInventoryData() && (
-                        <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                          Scroll down to load more
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2830,9 +2743,9 @@ const StockManagementPage = () => {
                   {/* Search, Filter, and Action Bar */}
                   <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
                     {/* Status Filter */}
-                      <select
+                    <select
                       className="form-select form-select-sm"
-                        value={returnsState.status}
+                      value={returnsState.status}
                       onChange={(e) =>
                         setReturnsState((prev) => ({
                           ...prev,
@@ -2845,13 +2758,13 @@ const StockManagementPage = () => {
                         minWidth: "150px",
                         fontSize: "0.875rem",
                       }}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="">All</option>
-                      </select>
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="">All</option>
+                    </select>
 
                     {/* Sort Field */}
                     <select
@@ -2915,20 +2828,20 @@ const StockManagementPage = () => {
                     </button>
 
                     {/* Sync Button */}
-                      <button
-                        type="button"
+                    <button
+                      type="button"
                       className="btn btn-outline-secondary btn-sm"
-                        onClick={handleSyncReturnCases}
-                        disabled={returnsState.loading}
+                      onClick={handleSyncReturnCases}
+                      disabled={returnsState.loading}
                       style={{
                         height: "36px",
                         padding: "6px 12px",
                         fontSize: "0.875rem",
                       }}
-                      >
+                    >
                       <Icon icon="mdi:refresh" width="16" height="16" />
-                        Sync
-                      </button>
+                      Sync
+                    </button>
 
                     {/* Count */}
                     <span
@@ -2954,7 +2867,8 @@ const StockManagementPage = () => {
                       scrollBehavior: "smooth",
                       overscrollBehavior: "auto",
                       scrollbarWidth: "thin",
-                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
+                      scrollbarColor:
+                        "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
                     }}
                     onScroll={(e) => {
                       const target = e.target;
@@ -2963,7 +2877,11 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (hasMoreReturnsData() && !returnsLoadingMoreRef.current && !returnsState.loading) {
+                        if (
+                          hasMoreReturnsData() &&
+                          !returnsLoadingMoreRef.current &&
+                          !returnsState.loading
+                        ) {
                           loadMoreReturnsData();
                         }
                       }
@@ -3000,7 +2918,7 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                  </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
@@ -3020,16 +2938,19 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                    </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
-                            onClick={() => handleReturnsSort("variant_display_name")}
+                            onClick={() =>
+                              handleReturnsSort("variant_display_name")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2">
                               Variant
-                              {returnsState.sortField === "variant_display_name" && (
+                              {returnsState.sortField ===
+                                "variant_display_name" && (
                                 <Icon
                                   icon={
                                     returnsState.sortDirection === "asc"
@@ -3115,37 +3036,45 @@ const StockManagementPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {returnsState.loading && returnsState.data.length === 0 ? (
+                        {returnsState.loading &&
+                        returnsState.data.length === 0 ? (
                           <>
                             {Array.from({ length: 5 }).map((_, rowIndex) => (
                               <tr key={`skeleton-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map((_, colIndex) => (
-                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                                    <div
-                                      className="skeleton"
-                                      style={{
-                                        height: "20px",
-                                        backgroundColor: "#e5e7eb",
-                                        borderRadius: "4px",
-                                        animation:
-                                          "skeletonPulse 1.5s ease-in-out infinite",
-                                      }}
-                                    />
-                                  </td>
-                                ))}
+                                {Array.from({ length: 9 }).map(
+                                  (_, colIndex) => (
+                                    <td
+                                      key={`skeleton-${rowIndex}-${colIndex}`}
+                                    >
+                                      <div
+                                        className="skeleton"
+                                        style={{
+                                          height: "20px",
+                                          backgroundColor: "#e5e7eb",
+                                          borderRadius: "4px",
+                                          animation:
+                                            "skeletonPulse 1.5s ease-in-out infinite",
+                                        }}
+                                      />
+                                    </td>
+                                  )
+                                )}
                               </tr>
                             ))}
                           </>
                         ) : returnsState.data.length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4 text-muted">
+                            <td
+                              colSpan="9"
+                              className="text-center py-4 text-muted"
+                            >
                               <div className="d-flex flex-column align-items-center">
                                 <p className="text-muted mb-0">
                                   {returnsState.status !== ""
                                     ? "No return cases match your filter criteria."
                                     : "No return cases found."}
                                 </p>
-                    </div>
+                              </div>
                             </td>
                           </tr>
                         ) : (
@@ -3188,7 +3117,10 @@ const StockManagementPage = () => {
                                         ? "bg-warning"
                                         : "bg-secondary"
                                     }`}
-                                    style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      padding: "4px 8px",
+                                    }}
                                   >
                                     {row.status}
                                   </span>
@@ -3204,14 +3136,19 @@ const StockManagementPage = () => {
                                 </td>
                                 <td>
                                   <span className="text-secondary-light small">
-                                    {row.reported_at ? new Date(row.reported_at).toLocaleString() : "-"}
+                                    {row.reported_at
+                                      ? new Date(
+                                          row.reported_at
+                                        ).toLocaleString()
+                                      : "-"}
                                   </span>
                                 </td>
                                 <td className="text-end">
                                   <ReturnActionButtons
                                     row={row}
                                     busy={
-                                      returnsState.busyCaseId === row.return_case_id
+                                      returnsState.busyCaseId ===
+                                      row.return_case_id
                                     }
                                     onApprove={handleApproveReturn}
                                     onReject={handleRejectReturn}
@@ -3221,24 +3158,30 @@ const StockManagementPage = () => {
                             ))}
                             {returnsLoadingMore && (
                               <>
-                                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                                  <tr key={`skeleton-more-${rowIndex}`}>
-                                    {Array.from({ length: 9 }).map((_, colIndex) => (
-                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                                        <div
-                                          className="skeleton"
-                                          style={{
-                                            height: "20px",
-                                            backgroundColor: "#e5e7eb",
-                                            borderRadius: "4px",
-                                            animation:
-                                              "skeletonPulse 1.5s ease-in-out infinite",
-                                          }}
-                                        />
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {Array.from({ length: 5 }).map(
+                                  (_, rowIndex) => (
+                                    <tr key={`skeleton-more-${rowIndex}`}>
+                                      {Array.from({ length: 9 }).map(
+                                        (_, colIndex) => (
+                                          <td
+                                            key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                          >
+                                            <div
+                                              className="skeleton"
+                                              style={{
+                                                height: "20px",
+                                                backgroundColor: "#e5e7eb",
+                                                borderRadius: "4px",
+                                                animation:
+                                                  "skeletonPulse 1.5s ease-in-out infinite",
+                                              }}
+                                            />
+                                          </td>
+                                        )
+                                      )}
+                                    </tr>
+                                  )
+                                )}
                               </>
                             )}
                           </>
@@ -3258,15 +3201,16 @@ const StockManagementPage = () => {
                       }}
                     >
                       <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                        Showing <strong>{getDisplayedReturnsData().length}</strong> of{" "}
+                        Showing{" "}
+                        <strong>{getDisplayedReturnsData().length}</strong> of{" "}
                         <strong>{returnsState.pagination.total}</strong> returns
                       </div>
                       {hasMoreReturnsData() && (
                         <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
                           Scroll down to load more
-                </div>
-              )}
-            </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

@@ -707,9 +707,12 @@ class InventoryManagementApiService {
   }
 
   acknowledgeAlert(alertId) {
-    return this.makeRequest(`/alerts/${encodeURIComponent(alertId)}/acknowledge`, {
-      method: "POST",
-    });
+    return this.makeRequest(
+      `/alerts/${encodeURIComponent(alertId)}/acknowledge`,
+      {
+        method: "POST",
+      }
+    );
   }
 
   // Reports endpoints
