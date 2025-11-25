@@ -184,9 +184,9 @@ const VariantRowEditor = ({
         </div>
       </div>
 
-      {/* Row 1: MRP, COGS, Quantity, Margin */}
+      {/* Row 1: MRP, COGS, MOQ, Sample Quantity, Margin */}
       <div className="row mb-3">
-        <div className="col-md-3">
+        <div className="col-md-2">
           <label className="shopify-label">MRP *</label>
           <input
             type="number"
@@ -198,7 +198,7 @@ const VariantRowEditor = ({
             onChange={(e) => handleFieldChange("mrp", e.target.value)}
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <label className="shopify-label">COGS *</label>
           <input
             type="number"
@@ -210,18 +210,32 @@ const VariantRowEditor = ({
             onChange={(e) => handleFieldChange("cogs", e.target.value)}
           />
         </div>
-        <div className="col-md-3">
-          <label className="shopify-label">Quantity</label>
+        <div className="col-md-2">
+          <label className="shopify-label">MOQ*</label>
           <input
             type="number"
             className="shopify-input"
             style={{ fontSize: "13px" }}
-            placeholder="Enter quantity"
-            value={variant.quantity}
-            onChange={(e) => handleFieldChange("quantity", e.target.value)}
+            placeholder="Enter MOQ"
+            value={variant.moq || ""}
+            onChange={(e) => handleFieldChange("moq", e.target.value)}
+            required
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
+          <label className="shopify-label">Sample Quantity</label>
+          <input
+            type="number"
+            className="shopify-input"
+            style={{ fontSize: "13px" }}
+            placeholder="Enter sample quantity"
+            value={variant.sample_quantity || ""}
+            onChange={(e) =>
+              handleFieldChange("sample_quantity", e.target.value)
+            }
+          />
+        </div>
+        <div className="col-md-2">
           <label className="shopify-label">Margin</label>
           <input
             type="number"

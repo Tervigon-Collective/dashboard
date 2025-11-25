@@ -14,37 +14,87 @@ const Html5QrScanner = dynamic(() => import("@/components/Html5QrScanner"), {
   ssr: false,
 });
 
+// UUID validation regex: 8-4-4-4-12 hex digits
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Extract numeric ID from Shopify GID format
+ * Handles both GID format (gid://shopify/Order/123) and plain numeric IDs
+ * @param {string} gidOrId - GID string or numeric ID
+ * @returns {string} - Numeric ID as string
+ */
+const extractNumericId = (gidOrId) => {
+  if (!gidOrId) return gidOrId;
+
+  const str = String(gidOrId);
+
+  // If it's already a numeric string, return as-is
+  if (/^\d+$/.test(str)) {
+    return str;
+  }
+
+  // If it's a GID format, extract the numeric part
+  // Format: gid://shopify/Order/123456 or gid://shopify/LineItem/123456
+  const gidMatch = str.match(/gid:\/\/shopify\/(?:Order|LineItem)\/(\d+)/i);
+  if (gidMatch && gidMatch[1]) {
+    return gidMatch[1];
+  }
+
+  // If no match, return original (might be a different format)
+  return str;
+};
+
 const parseQrToken = (rawValue) => {
   if (!rawValue) {
     throw new Error("QR payload is empty");
   }
+
+  let token = null;
 
   if (rawValue.startsWith("http")) {
     try {
       const url = new URL(rawValue);
       const tokenFromQuery = url.searchParams.get("token");
       if (tokenFromQuery) {
-        return tokenFromQuery;
+        token = tokenFromQuery;
+      } else {
+        const segments = url.pathname.split("/").filter(Boolean);
+        token = segments[segments.length - 1];
       }
-
-      const segments = url.pathname.split("/").filter(Boolean);
-      return segments[segments.length - 1];
     } catch (error) {
       console.warn("Failed to parse QR URL, falling back to raw value", error);
     }
   }
 
-  const queryIndex = rawValue.indexOf("token=");
-  if (queryIndex !== -1) {
-    const params = new URLSearchParams(rawValue.slice(queryIndex));
-    const tokenFromQuery = params.get("token");
-    if (tokenFromQuery) {
-      return tokenFromQuery;
+  if (!token) {
+    const queryIndex = rawValue.indexOf("token=");
+    if (queryIndex !== -1) {
+      const params = new URLSearchParams(rawValue.slice(queryIndex));
+      const tokenFromQuery = params.get("token");
+      if (tokenFromQuery) {
+        token = tokenFromQuery;
+      }
     }
   }
 
-  const tokens = rawValue.split("/").filter(Boolean);
-  return tokens[tokens.length - 1];
+  if (!token) {
+    const tokens = rawValue.split("/").filter(Boolean);
+    token = tokens[tokens.length - 1];
+  }
+
+  // Validate UUID format
+  if (token && !UUID_REGEX.test(token)) {
+    console.error("Invalid UUID format detected:", token);
+    throw new Error(
+      `Invalid QR token format. Expected UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx), got: ${token.substring(
+        0,
+        50
+      )}${token.length > 50 ? "..." : ""}`
+    );
+  }
+
+  return token;
 };
 
 const formatDateTime = (value) => {
@@ -64,6 +114,120 @@ const DispatchScannerModal = ({
   scanError,
   isDispatching,
 }) => {
+  const scannerInputRef = useRef(null);
+  const scanTimeoutRef = useRef(null);
+
+  // Auto-focus input when modal opens, blur when closes
+  useEffect(() => {
+    if (isOpen && scannerInputRef.current && !isDispatching) {
+      // Small delay to ensure modal is fully rendered
+      const timeoutId = setTimeout(() => {
+        scannerInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    } else if (!isOpen && scannerInputRef.current) {
+      // Blur input when modal closes to prevent accidental scans
+      scannerInputRef.current.blur();
+      // Clear input value when modal closes
+      scannerInputRef.current.value = "";
+    }
+  }, [isOpen, isDispatching]);
+
+  // Helper function to check if value is a QR code URL
+  const isQrCodeUrl = useCallback((value) => {
+    if (!value || value.length === 0) return false;
+    return (
+      value.includes("receiving/qr") ||
+      value.includes("sample-inventory/qr") ||
+      value.includes("token=") ||
+      value.startsWith("http") ||
+      value.includes("/qr/")
+    );
+  }, []);
+
+  // Handle input from USB barcode scanner
+  const handleScannerInput = useCallback(
+    (e) => {
+      let value = e.target.value;
+
+      // Remove any newlines, carriage returns, or other control characters
+      value = value.replace(/[\r\n\t]/g, "").trim();
+
+      // Clear any existing timeout
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+
+      // USB scanners typically type very fast, so we wait a bit after typing stops
+      // to detect the complete scan (usually ends with Enter or after a pause)
+      scanTimeoutRef.current = setTimeout(() => {
+        if (value && value.length > 0) {
+          // Check if it looks like a QR code URL
+          if (isQrCodeUrl(value)) {
+            // Trigger the same scan handler
+            onScan(value);
+            // Clear input after processing
+            e.target.value = "";
+          } else {
+            // Show error for non-QR barcodes
+            toast.warning(
+              "Please scan a QR code, not a regular barcode. QR codes contain URLs with 'receiving/qr' or 'token='.",
+              { autoClose: 4000 }
+            );
+            // Clear input
+            e.target.value = "";
+          }
+        }
+      }, 300); // Increased to 300ms delay to ensure complete scan is captured
+    },
+    [onScan, isQrCodeUrl]
+  );
+
+  // Handle Enter key press (USB scanners often send Enter after scan)
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        let value = e.target.value;
+
+        // Remove any newlines, carriage returns, or other control characters
+        value = value.replace(/[\r\n\t]/g, "").trim();
+
+        if (value && value.length > 0) {
+          // Clear timeout since we're processing immediately
+          if (scanTimeoutRef.current) {
+            clearTimeout(scanTimeoutRef.current);
+          }
+
+          // Validate: Check if it looks like a QR code URL before processing
+          if (isQrCodeUrl(value)) {
+            // Trigger scan only if it's a valid QR code URL
+            onScan(value);
+          } else {
+            // Show user-friendly error for non-QR barcodes
+            toast.warning(
+              "Please scan a QR code, not a regular barcode. QR codes contain URLs with 'receiving/qr' or 'token='.",
+              { autoClose: 4000 }
+            );
+          }
+
+          // Clear input regardless
+          e.target.value = "";
+        }
+      }
+    },
+    [onScan, isQrCodeUrl]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (!lineItem) return null;
 
   return (
@@ -124,12 +288,39 @@ const DispatchScannerModal = ({
           ) : (
             <>
               <p className="mb-2 small text-muted">
-                Scan the QR code attached to each unit.{" "}
+                Scan the QR code using camera or USB scanner.{" "}
                 <span className="fw-semibold text-primary">
                   {lineItem.remaining_to_dispatch} item
                   {lineItem.remaining_to_dispatch !== 1 ? "s" : ""} remaining.
                 </span>
               </p>
+
+              {/* USB barcode scanner input field */}
+              <div className="mb-3">
+                <label className="form-label small text-muted mb-1">
+                  USB Scanner Input
+                </label>
+                <input
+                  ref={scannerInputRef}
+                  type="text"
+                  className="form-control"
+                  placeholder="Scan QR code with USB scanner..."
+                  onChange={handleScannerInput}
+                  onKeyDown={handleKeyDown}
+                  disabled={isDispatching}
+                  style={{
+                    fontSize: "16px",
+                    padding: "12px",
+                    textAlign: "center",
+                  }}
+                  autoComplete="off"
+                />
+                <div className="small text-muted mt-1">
+                  <Icon icon="mdi:information-outline" className="me-1" />
+                  Point USB scanner here and scan QR code
+                </div>
+              </div>
+
               {isDispatching && (
                 <div className="alert alert-info mb-2 py-2" role="alert">
                   <div className="d-flex align-items-center gap-2">
@@ -144,6 +335,12 @@ const DispatchScannerModal = ({
                   </div>
                 </div>
               )}
+
+              <div className="text-center mb-2">
+                <span className="small text-muted">OR</span>
+              </div>
+
+              {/* Camera scanner - existing */}
               <Html5QrScanner
                 className="w-100"
                 onScan={onScan}
@@ -258,10 +455,20 @@ const OrderManagementPage = () => {
         }
       } catch (err) {
         console.error("Failed to parse QR", err);
+        const errorMessage = err.message || "Invalid QR code";
         setScannerState((prev) => ({
           ...prev,
-          scanError: err.message || "Invalid QR code",
+          scanError: errorMessage,
         }));
+        // Show user-friendly error message
+        if (errorMessage.includes("Invalid QR token format")) {
+          toast.error(
+            "Invalid QR code format. Please scan a valid QR code from the receiving management system.",
+            { autoClose: 4000 }
+          );
+        } else {
+          toast.error(errorMessage, { autoClose: 3000 });
+        }
         return;
       }
 
@@ -296,9 +503,13 @@ const OrderManagementPage = () => {
           orderLineItemId: currentOrderLineItemId,
         };
 
+        // Extract numeric IDs from GID format if needed
+        const orderId = extractNumericId(scannerState.lineItem.order_id);
+        const orderLineItemId = extractNumericId(scannerState.lineItem.item_id);
+
         const response = await inventoryManagementApi.dispatchScan(
-          scannerState.lineItem.order_id,
-          scannerState.lineItem.item_id,
+          orderId,
+          orderLineItemId,
           {
             qrToken: token,
             source: "order_management",
@@ -365,19 +576,45 @@ const OrderManagementPage = () => {
           );
         }
       } catch (err) {
-        console.error("Dispatch failed", err);
         // Reset last scan on error so user can retry
         lastScanRef.current = {
           token: null,
           timestamp: 0,
           orderLineItemId: null,
         };
+
+        const errorMessage = err.message || "Failed to dispatch";
+        let displayMessage = errorMessage;
+
+        // Show user-friendly messages for specific errors
+        if (
+          errorMessage.includes("You are scanning the wrong QR code") ||
+          errorMessage.includes("QR code does not match")
+        ) {
+          displayMessage =
+            "You are scanning the wrong QR code. Please scan the correct QR code for this product.";
+        } else if (errorMessage.includes("Insufficient available quantity")) {
+          displayMessage =
+            "Insufficient available quantity for dispatch. Please check inventory.";
+        } else if (errorMessage.includes("Invalid or unknown QR token")) {
+          displayMessage =
+            "Invalid QR code. Please scan a valid QR code from the receiving management system.";
+        }
+
+        // Log validation errors (400) as warnings, other errors as errors
+        // 400 errors are expected user input validation errors, not system errors
+        if (err.status === 400) {
+          console.warn("Validation error:", displayMessage);
+        } else {
+          console.error("Dispatch failed", err);
+        }
+
         setScannerState((prev) => ({
           ...prev,
           isDispatching: false,
-          scanError: err.message || "Failed to dispatch",
+          scanError: displayMessage,
         }));
-        toast.error(err.message || "Failed to dispatch");
+        toast.error(displayMessage, { autoClose: 4000 });
       } finally {
         // Always reset processing flag to allow next scan
         isProcessingRef.current = false;

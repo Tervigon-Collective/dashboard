@@ -240,7 +240,7 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                    Generated {results?.plan_type === "video" ? "Video" : "Graphic"} Content
                  </h6>
                  <p className="text-muted mb-0 small" style={{ fontSize: '0.8rem' }}>
-                   View the generated plan, prompts, and specifications
+                   View the generated plan, prompts, and {results?.plan_type === "video" ? "voiceover" : "specifications"}
                  </p>
                </div>
                <button
@@ -383,31 +383,33 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                         Prompts
                       </button>
                     </li>
-                    <li className="nav-item" role="presentation">
-                      <button
-                        className={`nav-link ${
-                          activeTab === "specs" ? "active" : ""
-                        }`}
-                        onClick={() => setActiveTab("specs")}
-                        type="button"
-                        role="tab"
-                        style={{
-                          backgroundColor:
-                            activeTab === "specs" ? "#f8fafc" : "transparent",
-                          border: "none",
-                          borderBottom:
-                            activeTab === "specs" ? "2px solid #6b7280" : "2px solid transparent",
-                          color: activeTab === "specs" ? "#374151" : "#6b7280",
-                          fontWeight: activeTab === "specs" ? "500" : "400",
-                          borderRadius: "0",
-                          padding: "8px 16px",
-                          transition: "all 0.2s ease",
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        Specifications
-                      </button>
-                    </li>
+                    {results?.plan_type === "video" && (
+                      <li className="nav-item" role="presentation">
+                        <button
+                          className={`nav-link ${
+                            activeTab === "voiceover" ? "active" : ""
+                          }`}
+                          onClick={() => setActiveTab("voiceover")}
+                          type="button"
+                          role="tab"
+                          style={{
+                            backgroundColor:
+                              activeTab === "voiceover" ? "#f8fafc" : "transparent",
+                            border: "none",
+                            borderBottom:
+                              activeTab === "voiceover" ? "2px solid #6b7280" : "2px solid transparent",
+                            color: activeTab === "voiceover" ? "#374151" : "#6b7280",
+                            fontWeight: activeTab === "voiceover" ? "500" : "400",
+                            borderRadius: "0",
+                            padding: "8px 16px",
+                            transition: "all 0.2s ease",
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          Voiceover
+                        </button>
+                      </li>
+                    )}
                   </ul>
                 </div>
 
@@ -1015,47 +1017,265 @@ export default function GenerationResultsModal({ jobId, isOpen, onClose }) {
                     </div>
                   )}
 
-                  {/* Specifications Tab */}
-                  {activeTab === "specs" && (
+                  {/* Voiceover Tab */}
+                  {activeTab === "voiceover" && (
                     <div className="tab-pane fade show active mt-2" role="tabpanel">
                       <div
                         className="overflow-auto"
-                        style={{ maxHeight: "450px", overflowX: 'hidden' }}
+                        style={{ maxHeight: "450px", overflowX: 'hidden', overflowY: 'auto' }}
                       >
-                        <div>
-                          {results.artifacts && results.artifacts.length > 0 ? (
-                             results.artifacts.map((artifact, index) => (
-                               <div
-                                 key={artifact.shot_id || index}
-                                 className="card mb-2"
-                               >
-                                 <div className="card-header bg-light p-2">
-                                   <h6 className="card-title mb-0 fw-semibold small">
-                                     {artifact.shot_id ||
-                                       `Specification ${index + 1}`}
-                                   </h6>
-                                 </div>
-                                 <div className="card-body p-3">
-                                   <div className="bg-light p-3 rounded">
-                                     <pre className="small mb-0" style={{ maxHeight: "250px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: '0.75rem' }}>
-                                       {JSON.stringify(artifact, null, 2)}
-                                     </pre>
-                                   </div>
-                                 </div>
-                               </div>
-                             ))
-                           ) : (
-                             <div className="text-center py-4 text-muted">
-                               <Icon
-                                 icon="solar:settings-bold"
-                                 width="32"
-                                 height="32"
-                                 className="text-muted mb-2"
-                               />
-                               <p className="fw-medium small">No specifications available</p>
-                             </div>
-                           )}
-                        </div>
+                        {(() => {
+                          // Check if voiceover exists and is valid
+                          if (!results.voiceover || !results.voiceover.clips || Object.keys(results.voiceover.clips).length === 0) {
+                            return (
+                              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#6c757d' }}>
+                                <Icon
+                                  icon="solar:settings-bold"
+                                  width="28"
+                                  height="28"
+                                  style={{ opacity: 0.5, marginBottom: '8px' }}
+                                />
+                                <p style={{ fontSize: '0.8125rem', fontWeight: '500', marginBottom: '4px', color: '#495057' }}>
+                                  No voiceover available
+                                </p>
+                                <p style={{ fontSize: '0.6875rem', margin: 0, color: '#6c757d' }}>
+                                  Voiceover will appear here when available
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          // Get video clips to match with voiceover
+                          const videoClips = results.generated_videos || results.generated_clips || [];
+                          
+                          // Match clips with voiceover lines
+                          const clipsWithVoiceover = videoClips.map((clip, index) => {
+                            const clipId = clip.clip_id || clip.id || `clip_${index}`;
+                            const voiceoverLine = results.voiceover.clips[clipId];
+                            return {
+                              ...clip,
+                              clipId,
+                              voiceover: voiceoverLine,
+                              index
+                            };
+                          });
+
+                          // Also include any voiceover clips that don't have matching video clips
+                          const voiceoverClipIds = Object.keys(results.voiceover.clips);
+                          const matchedClipIds = new Set(clipsWithVoiceover.map(c => c.clipId));
+                          const unmatchedVoiceoverClips = voiceoverClipIds
+                            .filter(clipId => !matchedClipIds.has(clipId))
+                            .map((clipId, idx) => ({
+                              clipId,
+                              voiceover: results.voiceover.clips[clipId],
+                              index: clipsWithVoiceover.length + idx
+                            }));
+                          
+                          const allClipsWithVoiceover = [...clipsWithVoiceover, ...unmatchedVoiceoverClips];
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {/* Display voiceover by clip */}
+                              {allClipsWithVoiceover.map((clip) => (
+                                <div 
+                                  key={clip.clipId}
+                                  style={{
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    padding: '12px 14px',
+                                    border: '1px solid #e9ecef'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <span 
+                                      style={{ 
+                                        fontSize: '0.8125rem',
+                                        fontWeight: '600',
+                                        color: '#212529'
+                                      }}
+                                    >
+                                      Clip {clip.index + 1}{clip.clipId && clip.clipId !== `clip_${clip.index}` && ` - ${clip.clipId}`}
+                                    </span>
+                                    {clip.duration && (
+                                      <span 
+                                        style={{ 
+                                          fontSize: '0.6875rem',
+                                          backgroundColor: '#6c757d',
+                                          color: '#fff',
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          fontWeight: '500'
+                                        }}
+                                      >
+                                        {clip.duration}s
+                                      </span>
+                                    )}
+                                  </div>
+                                  {clip.voiceover ? (
+                                    <div>
+                                      <p 
+                                        style={{ 
+                                          whiteSpace: "pre-wrap", 
+                                          wordBreak: "break-word", 
+                                          fontSize: '0.8125rem',
+                                          lineHeight: '1.5',
+                                          color: '#212529',
+                                          marginBottom: '10px',
+                                          margin: 0,
+                                          padding: 0
+                                        }}
+                                      >
+                                        {clip.voiceover.text}
+                                      </p>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <Icon
+                                            icon="solar:clock-circle-bold"
+                                            width="12"
+                                            height="12"
+                                            style={{ color: '#6c757d' }}
+                                          />
+                                          <span style={{ fontSize: '0.6875rem', color: '#6c757d' }}>
+                                            Timing: {clip.voiceover.start_time}s - {clip.voiceover.end_time}s
+                                          </span>
+                                        </div>
+                                        {clip.voiceover.pacing && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            {clip.voiceover.pacing.split(',').map((pace, idx) => (
+                                              <span 
+                                                key={idx}
+                                                style={{ 
+                                                  fontSize: '0.6875rem',
+                                                  backgroundColor: '#cfe2ff',
+                                                  color: '#084298',
+                                                  padding: '2px 8px',
+                                                  borderRadius: '12px',
+                                                  fontWeight: '500',
+                                                  border: 'none'
+                                                }}
+                                              >
+                                                {pace.trim()}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p style={{ fontSize: '0.6875rem', color: '#6c757d', margin: 0 }}>
+                                      No voiceover available for this clip
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+
+                              {/* Show full script if available */}
+                              {results.voiceover.full_script && (
+                                <div 
+                                  style={{
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    padding: '12px 14px',
+                                    border: '1px solid #e9ecef',
+                                    marginTop: '12px'
+                                  }}
+                                >
+                                  <span 
+                                    style={{ 
+                                      fontSize: '0.8125rem',
+                                      fontWeight: '600',
+                                      color: '#212529',
+                                      display: 'block',
+                                      marginBottom: '10px'
+                                    }}
+                                  >
+                                    Full Script
+                                  </span>
+                                  <p 
+                                    style={{ 
+                                      whiteSpace: "pre-wrap", 
+                                      wordBreak: "break-word", 
+                                      fontSize: '0.8125rem',
+                                      lineHeight: '1.5',
+                                      color: '#212529',
+                                      margin: 0
+                                    }}
+                                  >
+                                    {results.voiceover.full_script}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Show notes if available */}
+                              {results.voiceover.notes && (
+                                <div 
+                                  style={{
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    padding: '12px 14px',
+                                    border: '1px solid #e9ecef',
+                                    marginTop: '12px'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                                    <Icon
+                                      icon="solar:document-text-bold"
+                                      width="12"
+                                      height="12"
+                                      style={{ color: '#6c757d' }}
+                                    />
+                                    <span 
+                                      style={{ 
+                                        fontSize: '0.8125rem',
+                                        fontWeight: '600',
+                                        color: '#212529'
+                                      }}
+                                    >
+                                      Notes
+                                    </span>
+                                  </div>
+                                  <p 
+                                    style={{ 
+                                      whiteSpace: "pre-wrap", 
+                                      wordBreak: "break-word", 
+                                      fontSize: '0.8125rem',
+                                      lineHeight: '1.5',
+                                      color: '#212529',
+                                      margin: 0
+                                    }}
+                                  >
+                                    {results.voiceover.notes}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Show fallback indicator if used */}
+                              {results.voiceover.fallback_used && (
+                                <div 
+                                  style={{ 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    marginTop: '12px',
+                                    padding: '8px 12px',
+                                    backgroundColor: '#cfe2ff',
+                                    borderRadius: '8px',
+                                    fontSize: '0.6875rem',
+                                    color: '#084298',
+                                    border: '1px solid #b6d4fe'
+                                  }}
+                                >
+                                  <Icon
+                                    icon="solar:info-circle-bold"
+                                    width="12"
+                                    height="12"
+                                  />
+                                  <span>Fallback voiceover script was used</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}

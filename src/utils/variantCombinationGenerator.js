@@ -38,7 +38,8 @@ export const generateVariantCombinations = (variantOptions) => {
       // Initialize empty fields
       mrp: "",
       cogs: "",
-      quantity: "",
+      moq: "",
+      sample_quantity: "",
       sku: "",
       dimension_with_packing: "",
       dimension_without_packing: "",

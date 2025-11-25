@@ -10,7 +10,12 @@ const Page = () => {
   return (
     <>
       <MasterLayout>
-        <Breadcrumb title="Video Generator" />
+        <Breadcrumb
+          title="Video Generator"
+          rootLabel="Content Craft"
+          rootIcon="solar:magic-stick-3-bold"
+          rootBreadcrumbLabel="Dashboard"
+        />
 
         <div className="container-fluid">
           <div className="row">

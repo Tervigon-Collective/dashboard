@@ -113,7 +113,7 @@ const ProcurementTableDataLayer = () => {
 
       if (product.variants && product.variants.length > 0) {
         totalQuantity = product.variants.reduce(
-          (sum, variant) => sum + (variant.quantity || 0),
+          (sum, variant) => sum + (variant.moq || 0),
           0
         );
 
@@ -595,34 +595,12 @@ const ProcurementTableDataLayer = () => {
               />
             </button>
           )}
-          <button
-            className="btn btn-sm"
-            onClick={() => handleStatusClick(product)}
-            title="Update Status"
-            style={{
-              width: "32px",
-              height: "32px",
-              padding: "0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              backgroundColor: "white",
-            }}
-          >
-            <Icon
-              icon="lucide:settings"
-              width="16"
-              height="16"
-              style={{ color: "#f59e0b" }}
-            />
-          </button>
-          {hasOperation("procurement", "delete") && (
+          {/* Only show status update button for pending products */}
+          {product.status?.toLowerCase() === "pending" && (
             <button
               className="btn btn-sm"
-              onClick={() => onDelete(product)}
-              title="Delete Product"
+              onClick={() => handleStatusClick(product)}
+              title="Update Status"
               style={{
                 width: "32px",
                 height: "32px",
@@ -636,13 +614,40 @@ const ProcurementTableDataLayer = () => {
               }}
             >
               <Icon
-                icon="lucide:trash-2"
+                icon="lucide:settings"
                 width="16"
                 height="16"
-                style={{ color: "#ef4444" }}
+                style={{ color: "#f59e0b" }}
               />
             </button>
           )}
+          {/* Hide delete button for approved products - they cannot be deleted */}
+          {hasOperation("procurement", "delete") &&
+            product.status?.toLowerCase() !== "approved" && (
+              <button
+                className="btn btn-sm"
+                onClick={() => onDelete(product)}
+                title="Delete Product"
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  padding: "0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  backgroundColor: "white",
+                }}
+              >
+                <Icon
+                  icon="lucide:trash-2"
+                  width="16"
+                  height="16"
+                  style={{ color: "#ef4444" }}
+                />
+              </button>
+            )}
         </div>
       </td>
     </tr>
@@ -1459,7 +1464,10 @@ const ProcurementTableDataLayer = () => {
                                     <th className="small text-end">MRP</th>
                                     <th className="small text-end">COGS</th>
                                     <th className="small text-end">Margin</th>
-                                    <th className="small text-center">Qty</th>
+                                    <th className="small text-center">MOQ</th>
+                                    <th className="small text-center d-none d-lg-table-cell">
+                                      Sample Qty
+                                    </th>
                                     <th className="small">Company Name</th>
                                   </tr>
                                 </thead>
@@ -1498,7 +1506,10 @@ const ProcurementTableDataLayer = () => {
                                           )}
                                         </td>
                                         <td className="small text-center">
-                                          {variant.quantity}
+                                          {variant.moq || 0}
+                                        </td>
+                                        <td className="small text-center d-none d-lg-table-cell">
+                                          {variant.sample_quantity || 0}
                                         </td>
                                         <td className="small">
                                           {variant.vendor_pricing &&

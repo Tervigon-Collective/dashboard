@@ -5,8 +5,13 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
 import ReviewPromptsModal from "@/components/ReviewPromptsModal";
+import BrandkitSelector from "@/components/BrandkitSelector";
+import BrandkitFormModal from "@/components/BrandkitFormModal";
+import BrandkitManagementModal from "@/components/BrandkitManagementModal";
+import BrandkitLogoUpload from "@/components/BrandkitLogoUpload";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
+import { useBrandkit } from "@/contexts/BrandkitContext";
 import {
   getGeneratedContent,
   getGenerationJobs,
@@ -15,6 +20,8 @@ import {
   getGenerationStatus,
   editImage,
   getGenerationResults,
+  getBrandkit,
+  deleteGeneratedContent,
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
@@ -36,14 +43,20 @@ export default function CreateContentPage() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [formData, setFormData] = useState({
     productName: "",
-    shortDescription: "",
     longDescription: "",
-    objective: "",
     channel: "",
-    tone: "",
-    cta: "",
     variantGoal: 1,
   });
+
+  // Brandkit modal states
+  const [showBrandkitFormModal, setShowBrandkitFormModal] = useState(false);
+  const [showBrandkitManagementModal, setShowBrandkitManagementModal] = useState(false);
+  const [showLogoUploadModal, setShowLogoUploadModal] = useState(false);
+  const [editingBrandkit, setEditingBrandkit] = useState(null);
+  const [uploadingLogoBrandkit, setUploadingLogoBrandkit] = useState(null);
+
+  // Get brandkit context
+  const { activeBrandkit, refresh: refreshBrandkit } = useBrandkit();
 
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
@@ -55,6 +68,9 @@ export default function CreateContentPage() {
   const [editPrompts, setEditPrompts] = useState({});
   const [isSendingEdit, setIsSendingEdit] = useState(false);
   const [editErrors, setEditErrors] = useState({});
+  const [editAspectRatios, setEditAspectRatios] = useState({}); // Store aspect ratio per image
+  const [editGuidanceScales, setEditGuidanceScales] = useState({}); // Store guidance scale per image
+  const [editSeeds, setEditSeeds] = useState({}); // Store seed per image
 
   // Helper function to normalize preview URLs
   const normalizePreviewUrl = (url) => {
@@ -190,11 +206,10 @@ export default function CreateContentPage() {
     // Validate required fields
     if (
       !formData.productName ||
-      !formData.shortDescription ||
       !formData.longDescription
     ) {
       setFormError(
-        "Please fill in the required fields: Product Name, Short Description, and Long Description"
+        "Please fill in the required fields: Product Name and Long Description"
       );
       return;
     }
@@ -222,42 +237,11 @@ export default function CreateContentPage() {
         }
       }
 
-      // Map form values to Python backend expected values
-      const mapObjective = (objective) => {
-        const mapping = {
-          "Product Launch": "launch",
-          "Drive Sales": "conv",
-          "Brand Awareness": "view",
-          Remarketing: "remarket",
-          Retention: "retention",
-        };
-        return mapping[objective] || "launch";
-      };
-
-      const mapTone = (tone) => {
-        const mapping = {
-          Warm: "warm",
-          Clinical: "clinical",
-          Playful: "playful",
-          Premium: "premium",
-          Street: "street",
-          Emotional: "emotional",
-          Poetic: "poetic",
-        };
-        return mapping[tone] || "emotional";
-      };
-
       // Start generation
       const response = await quickGenerate({
         product_name: formData.productName,
-        short_description: formData.shortDescription,
         long_description: formData.longDescription,
-        campaign_objective: mapObjective(
-          formData.objective || "Product Launch"
-        ),
         content_channel: formData.channel || "Image",
-        tone: mapTone(formData.tone || "Emotional"),
-        call_to_action: formData.cta || "Let nature lead",
         number_of_variants:
           (formData.channel || "Image") === "Video"
             ? 1
@@ -348,10 +332,7 @@ export default function CreateContentPage() {
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      objective: "Product Launch",
       channel: "Image",
-      tone: "Emotional",
-      cta: "Let nature lead",
     }));
   }, []);
 
@@ -478,7 +459,10 @@ export default function CreateContentPage() {
       // Check if download_url is available from API
       if (item.download_url) {
         // Use the download_url from API (e.g., /api/content/download/run_id/artifact_id)
-        downloadUrl = `${config.pythonApi.baseURL}${item.download_url}`;
+        // Check if it's already a full URL or just a path
+        downloadUrl = item.download_url.startsWith('http') 
+          ? item.download_url 
+          : `${config.pythonApi.baseURL}${item.download_url}`;
       } 
       // If not, try to construct from run_id and artifact_id
       else if (item.run_id && item.artifact_id) {
@@ -551,10 +535,30 @@ export default function CreateContentPage() {
     }
   };
 
+  // Helper function to check if send should be enabled
+  const canSendEdit = (imageId) => {
+    const hasPrompt = editPrompts[imageId]?.trim();
+    // Check if user explicitly selected an aspect ratio (even if it's 1:1)
+    const hasExplicitAspectRatio = explicitlySelectedAspectRatios.has(imageId);
+    
+    // Allow sending if there's a prompt OR if aspect ratio was explicitly selected
+    return hasPrompt || hasExplicitAspectRatio;
+  };
+
+  // Track which aspect ratios were explicitly selected by the user
+  const [explicitlySelectedAspectRatios, setExplicitlySelectedAspectRatios] = useState(new Set());
+
   // Edit image handlers
   const handleEditClick = (imageId) => {
     setEditingImageId(imageId);
     setEditErrors((prev) => ({ ...prev, [imageId]: null }));
+    // Initialize default aspect ratio if not set (but don't mark it as explicitly selected)
+    setEditAspectRatios((prev) => {
+      if (!prev[imageId]) {
+        return { ...prev, [imageId]: "square_1_1" };
+      }
+      return prev;
+    });
   };
 
   const handleEditPromptChange = (imageId, value) => {
@@ -577,24 +581,39 @@ export default function CreateContentPage() {
       delete newErrors[imageId];
       return newErrors;
     });
+    setEditAspectRatios((prev) => {
+      const newRatios = { ...prev };
+      delete newRatios[imageId];
+      return newRatios;
+    });
+    setEditGuidanceScales((prev) => {
+      const newScales = { ...prev };
+      delete newScales[imageId];
+      return newScales;
+    });
+    setEditSeeds((prev) => {
+      const newSeeds = { ...prev };
+      delete newSeeds[imageId];
+      return newSeeds;
+    });
+    // Clear the explicit selection tracking when canceling
+    setExplicitlySelectedAspectRatios((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(imageId);
+      return newSet;
+    });
   };
 
   const handleSendEdit = async (imageId, runId, artifactId) => {
     const editPrompt = editPrompts[imageId]?.trim();
+    const aspectRatio = editAspectRatios[imageId] || "square_1_1";
+    const hasExplicitAspectRatio = explicitlySelectedAspectRatios.has(imageId);
     
-    // Validate prompt
-    if (!editPrompt) {
+    // Validate: need either prompt or explicitly selected aspect ratio
+    if (!editPrompt && !hasExplicitAspectRatio) {
       setEditErrors((prev) => ({ 
         ...prev, 
-        [imageId]: "Please enter a description of changes you want" 
-      }));
-      return;
-    }
-
-    if (editPrompt.length > 500) {
-      setEditErrors((prev) => ({ 
-        ...prev, 
-        [imageId]: "Please keep changes under 500 characters" 
+        [imageId]: "Please enter a description of changes or select an aspect ratio" 
       }));
       return;
     }
@@ -603,11 +622,46 @@ export default function CreateContentPage() {
     setEditErrors((prev) => ({ ...prev, [imageId]: null }));
 
     try {
-      // Call the edit image API
-      const response = await editImage(runId, artifactId, editPrompt);
+      // Get aspect ratio from state - always include it
+      const aspectRatio = editAspectRatios[imageId] || "square_1_1";
+      
+      // Debug: Log current state
+      console.log("Current editAspectRatios state:", editAspectRatios);
+      console.log("Selected aspect ratio for image", imageId, ":", aspectRatio);
+      console.log("Edit prompt:", editPrompt || "(empty - aspect ratio change only)");
+      
+      // Prepare options object - always include aspect_ratio
+      const options = {
+        aspect_ratio: aspectRatio, // Always send aspect ratio
+      };
+      
+      if (editGuidanceScales[imageId] !== undefined) {
+        options.guidance_scale = editGuidanceScales[imageId];
+      }
+      if (editSeeds[imageId] !== undefined && editSeeds[imageId] !== null && editSeeds[imageId] !== "") {
+        options.seed = parseInt(editSeeds[imageId], 10);
+      }
+
+      // Log the complete request for debugging
+      console.log("Sending edit request with options:", {
+        run_id: runId,
+        artifact_id: artifactId,
+        edit_prompt: editPrompt,
+        aspect_ratio: aspectRatio, // Explicitly log aspect_ratio
+        ...options,
+      });
+
+      // Call the edit image API - allow empty prompt for aspect ratio-only changes
+      const response = await editImage(runId, artifactId, editPrompt || "", options);
       
       if (response.success) {
-        // Success! Close edit mode and refresh content
+        // Success! Clear explicit selection tracking before closing edit mode
+        setExplicitlySelectedAspectRatios((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(imageId);
+          return newSet;
+        });
+        // Close edit mode and refresh content
         handleCancelEdit(imageId);
         
         // Wait a bit then refresh to show the new image
@@ -634,9 +688,97 @@ export default function CreateContentPage() {
     }
   };
 
+  // Delete generated content handler
+  const handleDeleteContent = async (item) => {
+    // Validate required fields
+    if (!item.run_id || !item.artifact_id) {
+      console.error("Cannot delete: missing run_id or artifact_id", item);
+      alert("Error: Cannot delete this content. Missing required information.");
+      return;
+    }
+
+    // Confirmation dialog
+    const contentType = item.content_type === "video" ? "video" : "image";
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this ${contentType}? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await deleteGeneratedContent(item.run_id, item.artifact_id);
+      
+      if (response.status === "success") {
+        // Remove the item from the local state immediately for better UX
+        setGeneratedContent((prev) =>
+          prev.filter((content) => content.id !== item.id)
+        );
+        
+        // Show success message
+        console.log("Content deleted successfully:", response.message);
+        
+        // Optionally refresh the content list to ensure consistency
+        setTimeout(() => {
+          fetchGeneratedContent();
+        }, 500);
+      } else {
+        throw new Error(response.message || "Failed to delete content");
+      }
+    } catch (error) {
+      console.error("Error deleting content:", error);
+      alert(
+        `Failed to delete content: ${error.response?.data?.detail || error.message || "Unknown error"}`
+      );
+    }
+  };
+
+  // Brandkit modal handlers
+  const handleCreateNewBrandkit = () => {
+    setEditingBrandkit(null);
+    setShowBrandkitFormModal(true);
+  };
+
+  const handleManageBrandkits = () => {
+    setShowBrandkitManagementModal(true);
+  };
+
+  const handleEditBrandkit = async (brandkitSummary) => {
+    try {
+      // Show management modal is closing but don't close it yet to prevent flash
+      // Fetch full brandkit data before editing
+      const fullBrandkit = await getBrandkit(brandkitSummary.brand_id);
+      setEditingBrandkit(fullBrandkit);
+      setShowBrandkitManagementModal(false);
+      setShowBrandkitFormModal(true);
+    } catch (error) {
+      console.error("Error loading brandkit for edit:", error);
+      alert("Failed to load brandkit details: " + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleUploadLogo = (brandkit) => {
+    setUploadingLogoBrandkit(brandkit);
+    setShowLogoUploadModal(true);
+    setShowBrandkitManagementModal(false);
+  };
+
+  const handleBrandkitFormSuccess = async () => {
+    await refreshBrandkit();
+    setShowBrandkitFormModal(false);
+    setEditingBrandkit(null);
+  };
+
+  const handleLogoUploadSuccess = async () => {
+    await refreshBrandkit();
+    setShowLogoUploadModal(false);
+    setUploadingLogoBrandkit(null);
+  };
+
   return (
     <SidebarPermissionGuard requiredSidebar="createContent">
-      <div className="container-fluid">
+      <div className="container-fluid" style={{ padding: "15px", overflowX: "hidden" }}>
         {/* Tabs */}
         <div className="mb-3">
           <ul
@@ -763,102 +905,215 @@ export default function CreateContentPage() {
           {/* Create Content Tab */}
           {activeTab === "create" && (
             <div className="tab-pane fade show active">
-              <div className="card">
-                <div className="card-header border-bottom p-24">
-                  <h5 className="card-title mb-2">Upload Images & Create Brief</h5>
-                  <p className="card-subtitle text-muted mb-0">
-                    Upload your product images and provide a brief description to generate content
-                  </p>
-                </div>
-                <div className="card-body p-24">
-                  {/* Image Upload */}
-                  <div className="mb-4">
-                    <label className="form-label fw-semibold mb-2 d-block">
-                      Source Images {formData.channel === "Video" && <span className="text-danger">*</span>}
-                      {formData.channel === "Video" && (
-                        <small className="text-muted d-block mt-1">
-                          Required for video generation
-                        </small>
-                      )}
-                      {formData.channel === "Image" && (
-                        <small className="text-muted d-block mt-1">
-                          Optional for image generation
-                        </small>
-                      )}
-                    </label>
-                    
-                    {uploadedImages.length === 0 ? (
-                      // Empty state - drag and drop area
-                      <div className="border border-dashed border-secondary rounded-3 p-24 text-center bg-light position-relative" style={{ minHeight: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div className="d-flex flex-column align-items-center">
-                          <div className="bg-secondary rounded-circle p-3 mb-3">
-                            <Icon
-                              icon="solar:upload-bold"
-                              width="24"
-                              height="24"
-                              className="text-white"
-                            />
-                          </div>
-                          <h6 className="fw-semibold text-dark mb-2">Upload images</h6>
-                          <p className="text-muted mb-3">Drag and drop or click to select</p>
+              <div 
+                style={{
+                  position: "relative",
+                  minHeight: "calc(100vh - 200px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "40px 20px",
+                  overflow: "hidden",
+                  background: "linear-gradient(135deg, #fafbfc 0%, #ffffff 100%)"
+                }}
+              >
+                {/* Background Image - Ultra Subtle & Clean */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundImage: "url('/assets/images/make/dashborad-09.png')",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                    opacity: 0.06,
+                    mixBlendMode: "multiply"
+                  }}
+                />
+
+                {/* Minimal Form Container */}
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 1,
+                    width: "100%",
+                    maxWidth: "800px",
+                    margin: "0 auto"
+                  }}
+                >
+                  {/* Brandkit Selector - Minimal Top Bar */}
+                  <div className="d-flex justify-content-between align-items-center mb-4" style={{ flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                      {activeBrandkit && (
+                        <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
+                          <span className="badge bg-light text-dark border" style={{ fontSize: "12px", padding: "4px 8px" }}>
+                            <Icon icon="solar:palette-bold" width="12" height="12" className="me-1" />
+                            {activeBrandkit.brand_name}
+                          </span>
                         </div>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="position-absolute opacity-0"
-                          style={{ 
-                            top: 0, 
-                            left: 0, 
-                            width: '100%', 
-                            height: '100%', 
-                            cursor: 'pointer',
-                            zIndex: 1
-                          }}
-                          data-max-files="3"
-                        />
-                      </div>
-                    ) : (
-                      // Uploaded state - image thumbnails with counter
-                      <div>
-                        <div className="d-flex gap-3 mb-3">
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: "0 0 auto", maxWidth: "250px", width: "100%" }}>
+                      <BrandkitSelector
+                        onCreateNew={handleCreateNewBrandkit}
+                        onManage={handleManageBrandkits}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Main Form Box - Minimal Design */}
+                  <div
+                    style={{
+                      backgroundColor: "white",
+                      borderRadius: "16px",
+                      padding: "32px",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+                      border: "1px solid rgba(0, 0, 0, 0.05)"
+                    }}
+                  >
+                    {/* Image Upload, Product Name and Description Row */}
+                    <div className="d-flex gap-3 mb-4" style={{ alignItems: "flex-start" }}>
+                      {/* Image Upload - Horizontal Row of Thumbnails */}
+                      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div className="d-flex gap-2" style={{ flexWrap: "wrap" }}>
+                          {/* Show uploaded images as thumbnails */}
                           {uploadedImages.map((file, index) => (
                             <div
                               key={index}
-                              className="position-relative"
-                              style={{ width: '120px', height: '120px' }}
+                              style={{
+                                position: "relative",
+                                width: "100px",
+                                height: "100px",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                border: "2px solid #e5e7eb"
+                              }}
                             >
                               <img
                                 src={imageUrls[index]}
                                 alt={`Upload ${index + 1}`}
-                                className="w-100 h-100 rounded-3"
-                                style={{ objectFit: "cover" }}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover"
+                                }}
                               />
+                              {/* Cancel/Remove Button - Dark gray with pause icon */}
                               <button
                                 type="button"
-                                className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
-                                style={{ width: "24px", height: "24px", padding: "0", fontSize: "12px" }}
-                                onClick={() => removeImage(index)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  removeImage(index);
+                                }}
+                                style={{
+                                  position: "absolute",
+                                  top: "4px",
+                                  right: "4px",
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  backgroundColor: "#374151",
+                                  border: "none",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                  zIndex: 2
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#4b5563";
+                                  e.currentTarget.style.transform = "scale(1.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#374151";
+                                  e.currentTarget.style.transform = "scale(1)";
+                                }}
                                 title="Remove image"
                               >
-                                ×
+                                <Icon
+                                  icon="solar:close-circle-bold"
+                                  width="16"
+                                  height="16"
+                                  style={{ color: "white" }}
+                                />
                               </button>
                             </div>
                           ))}
-                          
-                          {/* Add more images button */}
+
+                          {/* Add More Upload Box - Show if less than 3 images */}
                           {uploadedImages.length < 3 && (
                             <label
-                              className="border border-dashed border-secondary rounded-3 d-flex align-items-center justify-content-center bg-light"
-                              style={{ width: '120px', height: '120px', cursor: 'pointer' }}
+                              style={{
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "100px",
+                                height: "100px",
+                                borderRadius: "8px",
+                                backgroundColor: "#f9fafb",
+                                border: "2px dashed #d1d5db",
+                                transition: "all 0.2s ease",
+                                position: "relative"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#f3f4f6";
+                                e.currentTarget.style.borderColor = "#9ca3af";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#f9fafb";
+                                e.currentTarget.style.borderColor = "#d1d5db";
+                              }}
                             >
-                              <Icon
-                                icon="solar:add-circle-bold"
-                                width="32"
-                                height="32"
-                                className="text-secondary"
-                              />
+                              {/* Landscape Icon with Plus */}
+                              <div style={{ position: "relative", width: "40px", height: "40px" }}>
+                                <svg
+                                  width="40"
+                                  height="40"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  {/* Mountains - multiple peaks */}
+                                  <path
+                                    d="M2 18L6 12L10 15L14 9L18 12L22 18H2Z"
+                                    fill="#9ca3af"
+                                  />
+                                  {/* Sun circle - top right */}
+                                  <circle
+                                    cx="18"
+                                    cy="5"
+                                    r="3.5"
+                                    fill="#9ca3af"
+                                  />
+                                </svg>
+                                {/* Plus sign overlay - bottom right corner */}
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    bottom: "-2px",
+                                    right: "-2px",
+                                    width: "18px",
+                                    height: "18px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#6b7280",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "2px solid white",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                                  }}
+                                >
+                                  <span style={{ color: "white", fontSize: "11px", fontWeight: "bold", lineHeight: "1" }}>+</span>
+                                </div>
+                              </div>
                               <input
                                 type="file"
                                 multiple
@@ -870,216 +1125,268 @@ export default function CreateContentPage() {
                             </label>
                           )}
                         </div>
-                        <div className="text-center">
-                          <span className="text-muted small">
-                            {uploadedImages.length} of 3 images uploaded
-                          </span>
-                        </div>
+                        {/* Image count indicator */}
+                        {uploadedImages.length > 0 && (
+                          <div style={{ fontSize: "11px", color: "#6b7280", textAlign: "center" }}>
+                            {uploadedImages.length} of 3 images
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Brief Form */}
-                  <div>
-                    <style dangerouslySetInnerHTML={{__html: `
-                      .form-control::placeholder {
-                        color: #9ca3af !important;
-                        opacity: 1;
-                      }
-                      .form-control::-webkit-input-placeholder {
-                        color: #9ca3af !important;
-                      }
-                      .form-control::-moz-placeholder {
-                        color: #9ca3af !important;
-                        opacity: 1;
-                      }
-                      .form-control:-ms-input-placeholder {
-                        color: #9ca3af !important;
-                      }
-                    `}} />
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Product Name *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Skin Microbiome Shampoo"
-                        value={formData.productName}
-                        onChange={(e) =>
-                          handleInputChange("productName", e.target.value)
-                        }
-                      />
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Short Description *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="A concise overview of your product"
-                        value={formData.shortDescription}
-                        onChange={(e) =>
-                          handleInputChange("shortDescription", e.target.value)
-                        }
-                        maxLength={200}
-                      />
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Long Description *</label>
-                      <textarea
-                        className="form-control"
-                        rows="4"
-                        placeholder="Detailed product description including key features, benefits, and target audience"
-                        value={formData.longDescription}
-                        onChange={(e) =>
-                          handleInputChange("longDescription", e.target.value)
-                        }
-                      ></textarea>
-                    </div>
-
-                    <div className="row">
-                      <div className="col-md-6">
-                        <div className="mb-3">
-                          <label className="form-label fw-semibold">
-                            Campaign Objective
-                          </label>
-                          <select
-                            className="form-select"
-                            value={formData.objective}
-                            onChange={(e) =>
-                              handleInputChange("objective", e.target.value)
-                            }
-                          >
-                            <option value="Product Launch">
-                              Product Launch
-                            </option>
-                            <option value="Drive Sales">Drive Sales</option>
-                            <option value="Brand Awareness">
-                              Brand Awareness
-                            </option>
-                            <option value="Remarketing">Remarketing</option>
-                            <option value="Retention">Retention</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="col-md-6">
-                        <div className="mb-3">
-                          <label className="form-label fw-semibold">Content Channel</label>
-                          <select
-                            className="form-select"
-                            value={formData.channel}
-                            onChange={(e) =>
-                              handleInputChange("channel", e.target.value)
-                            }
-                          >
-                            <option value="Image">Image</option>
-                            <option value="Video">Video</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="row">
-                      <div className="col-md-6">
-                        <div className="mb-3">
-                          <label className="form-label fw-semibold">Tone</label>
-                          <select
-                            className="form-select"
-                            value={formData.tone}
-                            onChange={(e) =>
-                              handleInputChange("tone", e.target.value)
-                            }
-                          >
-                            <option value="Warm">Warm</option>
-                            <option value="Clinical">Clinical</option>
-                            <option value="Playful">Playful</option>
-                            <option value="Premium">Premium</option>
-                            <option value="Street">Street</option>
-                            <option value="Emotional">Emotional</option>
-                            <option value="Poetic">Poetic</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="col-md-6">
-                        <div className="mb-3">
-                          <label className="form-label fw-semibold">Call to Action</label>
-                          <select
-                            className="form-select"
-                            value={formData.cta}
-                            onChange={(e) =>
-                              handleInputChange("cta", e.target.value)
-                            }
-                          >
-                            <option value="Buy now">Buy now</option>
-                            <option value="Try risk-free">Try risk-free</option>
-                            <option value="Learn more">Learn more</option>
-                            <option value="Shop the kit">Shop the kit</option>
-                            <option value="Let nature lead">
-                              Let nature lead
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {formData.channel !== "Video" && (
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">
-                          Number of Variants
-                        </label>
+                      {/* Product Name and Description - Stacked on Right */}
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {/* Product Name Input - Same style as Description */}
                         <input
-                          type="number"
+                          type="text"
                           className="form-control"
-                          min="1"
-                          max="10"
-                        value={
-                          formData.variantGoal === ""
-                            ? ""
-                            : formData.variantGoal
-                        }
+                          placeholder="Product Name"
+                          value={formData.productName}
                           onChange={(e) =>
-                            handleInputChange("variantGoal", e.target.value)
+                            handleInputChange("productName", e.target.value)
                           }
+                          style={{
+                            border: "none",
+                            borderBottom: "2px solid #e5e7eb",
+                            borderRadius: "0",
+                            padding: "12px 0",
+                            fontSize: "16px",
+                            backgroundColor: "transparent",
+                            transition: "border-color 0.2s ease",
+                            width: "100%"
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderBottomColor = "#3b82f6";
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderBottomColor = "#e5e7eb";
+                          }}
+                        />
+
+                        {/* Description Input */}
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          placeholder="Describe your product: benefits, what it does, who it's for, and ingredients"
+                          value={formData.longDescription}
+                          onChange={(e) =>
+                            handleInputChange("longDescription", e.target.value)
+                          }
+                          style={{
+                            border: "none",
+                            borderBottom: "2px solid #e5e7eb",
+                            borderRadius: "0",
+                            padding: "12px 0",
+                            fontSize: "16px",
+                            backgroundColor: "transparent",
+                            resize: "none",
+                            transition: "border-color 0.2s ease",
+                            width: "100%"
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderBottomColor = "#3b82f6";
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderBottomColor = "#e5e7eb";
+                          }}
                         />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Error Message */}
-                  {formError && (
-                    <div className="alert alert-danger mb-3">
-                      <p className="mb-0">{formError}</p>
                     </div>
-                  )}
 
-                  <button
-                    className="btn btn-primary btn-lg w-100"
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? (
-                      <>
+                    {/* Options Row - Image/Video, Variants, Upload */}
+                    <div 
+                      className="d-flex align-items-center gap-3 mb-4"
+                      style={{
+                        flexWrap: "wrap",
+                        padding: "12px 0",
+                        borderTop: "1px solid #f3f4f6",
+                        borderBottom: "1px solid #f3f4f6"
+                      }}
+                    >
+                      {/* Image or Video Dropdown - Styled as Button */}
+                      <div className="position-relative d-inline-block">
+                        <select
+                          value={formData.channel}
+                          onChange={(e) =>
+                            handleInputChange("channel", e.target.value)
+                          }
+                          style={{
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            MozAppearance: "none",
+                            border: "none",
+                            backgroundColor: "#374151",
+                            color: "white",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            padding: "6px 32px 6px 12px",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            outline: "none",
+                            transition: "all 0.2s ease",
+                            minWidth: "100px"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = "#4b5563";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = "#374151";
+                          }}
+                        >
+                          <option value="Image" style={{ backgroundColor: "#374151", color: "white" }}>Image</option>
+                          <option value="Video" style={{ backgroundColor: "#374151", color: "white" }}>Video</option>
+                        </select>
                         <Icon
-                          icon="solar:refresh-bold"
-                          width="16"
-                          height="16"
-                          className="me-2 spinner"
+                          icon="solar:alt-arrow-down-bold"
+                          width="14"
+                          height="14"
+                          style={{
+                            position: "absolute",
+                            right: "10px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: "white",
+                            pointerEvents: "none"
+                          }}
                         />
-                        Generating Content...
-                      </>
-                    ) : (
-                      <>
-                        <Icon
-                          icon="solar:magic-stick-3-bold"
-                          width="16"
-                          height="16"
-                          className="me-2"
-                        />
-                        Generate Content
-                      </>
+                      </div>
+
+                      {/* Separator */}
+                      <div style={{ width: "1px", height: "20px", backgroundColor: "#e5e7eb" }} />
+
+                      {/* Number of Variants (only for Image) */}
+                      {formData.channel === "Image" && (
+                        <div className="d-flex align-items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={
+                              formData.variantGoal === ""
+                                ? ""
+                                : formData.variantGoal
+                            }
+                            onChange={(e) =>
+                              handleInputChange("variantGoal", e.target.value)
+                            }
+                            placeholder="1"
+                            style={{
+                              border: "none",
+                              backgroundColor: "transparent",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              width: "50px",
+                              padding: "4px 8px",
+                              textAlign: "center",
+                              outline: "none",
+                              color: "#111827"
+                            }}
+                          />
+                          <span style={{ fontSize: "12px", color: "#6b7280" }}>variants</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Error Message */}
+                    {formError && (
+                      <div 
+                        className="mb-3"
+                        style={{
+                          padding: "12px",
+                          backgroundColor: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          borderRadius: "8px",
+                          color: "#dc2626",
+                          fontSize: "14px"
+                        }}
+                      >
+                        {formError}
+                      </div>
                     )}
-                  </button>
+
+                    {/* Generate Button */}
+                    <button
+                      className="btn w-100"
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      style={{
+                        backgroundColor: "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "12px",
+                        padding: "14px 24px",
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)"
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isGenerating) {
+                          e.target.style.backgroundColor = "#2563eb";
+                          e.target.style.transform = "translateY(-1px)";
+                          e.target.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isGenerating) {
+                          e.target.style.backgroundColor = "#3b82f6";
+                          e.target.style.transform = "translateY(0)";
+                          e.target.style.boxShadow = "0 2px 8px rgba(59, 130, 246, 0.3)";
+                        }
+                      }}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Icon
+                            icon="solar:refresh-bold"
+                            width="18"
+                            height="18"
+                            className="spinner"
+                            style={{ animation: "spin 1s linear infinite" }}
+                          />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Icon
+                            icon="solar:magic-stick-3-bold"
+                            width="18"
+                            height="18"
+                          />
+                          Generate Content
+                        </>
+                      )}
+                    </button>
+
+                  </div>
                 </div>
+
+                {/* Spinner Animation & Custom Styles */}
+                <style dangerouslySetInnerHTML={{__html: `
+                  @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                  }
+                  .form-control::placeholder {
+                    color: #9ca3af !important;
+                    opacity: 1;
+                  }
+                  select option {
+                    background-color: #374151 !important;
+                    color: white !important;
+                    padding: 8px 12px !important;
+                  }
+                  select option:hover {
+                    background-color: #4b5563 !important;
+                  }
+                  select:focus {
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+                  }
+                `}} />
               </div>
             </div>
           )}
@@ -1087,267 +1394,322 @@ export default function CreateContentPage() {
           {/* Generated Prompts Tab */}
           {activeTab === "prompts" && (
             <div className="tab-pane fade show active">
-              <div className="card">
-                <div className="card-header border-bottom p-24">
-                  <h5 className="card-title mb-2">Generated Prompts</h5>
-                  <p className="card-subtitle text-muted mb-0">
-                    AI-generated prompts based on your product images and brief
-                  </p>
-                </div>
-                <div className="card-body p-24">
-                  <div className="mb-4">
-                    {/* Show loading state */}
-                    {isLoadingJobs && (
-                      <div className="d-flex align-items-center justify-content-center p-4">
+              <div 
+                style={{
+                  position: "relative",
+                  height: "calc(100vh - 200px)",
+                  overflow: "hidden",
+                  background: "linear-gradient(135deg, #fafbfc 0%, #ffffff 100%)"
+                }}
+              >
+                {/* Background Image - Same as Create Content */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundImage: "url('/assets/images/make/dashborad-09.png')",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                    opacity: 0.06,
+                    mixBlendMode: "multiply"
+                  }}
+                />
+                
+                {/* Scrollable Content Container */}
+                <div 
+                  className="custom-scrollbar-hidden"
+                  style={{
+                    position: "relative",
+                    zIndex: 1,
+                    height: "100%",
+                    overflowY: "auto",
+                    padding: "24px 20px",
+                    maxWidth: "900px",
+                    margin: "0 auto"
+                  }}
+                >
+                {/* Show loading state */}
+                {isLoadingJobs && (
+                  <div className="d-flex align-items-center justify-content-center p-5">
+                    <Icon
+                      icon="solar:refresh-bold"
+                      width="20"
+                      height="20"
+                      className="text-primary"
+                      style={{ animation: "spin 1s linear infinite" }}
+                    />
+                  </div>
+                )}
+
+                {/* Show generation status if generating */}
+                {generationResult &&
+                  generationResult.status === "processing" && (
+                    <div 
+                      className="mb-3"
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        padding: "20px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-2 mb-3">
                         <Icon
                           icon="solar:refresh-bold"
-                          width="24"
-                          height="24"
-                          className="text-primary me-2"
+                          width="18"
+                          height="18"
+                          className="text-primary"
+                          style={{ animation: "spin 1s linear infinite" }}
                         />
-                        <span className="text-muted">
-                          Loading generation history...
+                        <span className="fw-medium text-dark" style={{ fontSize: "15px" }}>
+                          {formData.productName}
                         </span>
                       </div>
-                    )}
-
-                    {/* Show generation status if generating */}
-                    {generationResult &&
-                      generationResult.status === "processing" && (
-                        <div className="border rounded p-3 mb-3">
-                          <div className="d-flex align-items-center justify-content-between mb-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <Icon
-                                icon="solar:package-bold"
-                                width="16"
-                                height="16"
-                                className="text-muted"
-                              />
-                              <span className="fw-medium">
-                                Generating content...
-                              </span>
-                              <Icon
-                                icon="solar:refresh-bold"
-                                width="16"
-                                height="16"
-                                className="text-primary"
-                              />
-                            </div>
-                          </div>
-                          <div className="mb-2">
-                            <div className="progress" style={{ height: "8px" }}>
-                              <div
-                                className="progress-bar bg-primary"
-                                style={{
-                                  width: `${generationResult.progress}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <p className="small text-muted mb-0">
-                              {(() => {
-                                const planType = generationResult.result?.plan_type || "graphic";
-                                if (planType === "video") {
-                                  const summary = generationResult.result?.generation_summary || {};
-                                  const successful = summary.successful_clips || 0;
-                                  const total = summary.total_clips || 3;
-                                  if (successful === 0) {
-                                    return "Planning video clips...";
-                                  } else if (successful < total) {
-                                    return `Generating clip ${successful + 1}/${total}...`;
-                                  } else {
-                                    return "Finalizing video...";
-                                  }
-                                }
-                                return `${generationResult.progress}% complete`;
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Show completed generation */}
-                    {generationResult &&
-                      generationResult.status === "completed" && (
-                        <div className="border rounded p-3 mb-3">
-                          <div className="d-flex align-items-start justify-content-between mb-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <Icon
-                                icon="solar:package-bold"
-                                width="16"
-                                height="16"
-                                className="text-muted"
-                              />
-                              <span className="fw-medium">
-                                {formData.productName}
-                              </span>
-                              <Icon
-                                icon="solar:check-circle-bold"
-                                width="16"
-                                height="16"
-                                className="text-success"
-                              />
-                            </div>
-                            <div className="d-flex align-items-center gap-2">
-                              <button
-                                onClick={() =>
-                                  handleViewResults(generationResult.job_id)
-                                }
-                                className="btn btn-sm btn-outline-primary"
-                              >
-                                <Icon
-                                  icon="solar:eye-bold"
-                                  width="14"
-                                  height="14"
-                                  className="me-1"
-                                />
-                                View Results
-                              </button>
-                            </div>
-                          </div>
-                          <p className="text-muted bg-light p-3 rounded mb-0">
-                            Content generation completed! Click "View Results"
-                            to see the generated prompts and plans.
-                          </p>
-                        </div>
-                      )}
-
-                    {/* Show error if failed */}
-                    {generationResult &&
-                      generationResult.status === "failed" && (
-                        <div className="border border-danger rounded p-3 mb-3 bg-danger bg-opacity-10">
-                          <div className="d-flex align-items-start justify-content-between mb-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <Icon
-                                icon="solar:package-bold"
-                                width="16"
-                                height="16"
-                                className="text-danger"
-                              />
-                              <span className="fw-medium text-danger">
-                                Generation Failed
-                              </span>
-                              <Icon
-                                icon="solar:danger-circle-bold"
-                                width="16"
-                                height="16"
-                                className="text-danger"
-                              />
-                            </div>
-                          </div>
-                          <p className="text-danger bg-danger bg-opacity-10 p-3 rounded mb-0">
-                            {generationResult.error ||
-                              "An error occurred during generation. Please try again."}
-                          </p>
-                        </div>
-                      )}
-
-                    {/* Show real generation jobs */}
-                    {!isLoadingJobs &&
-                      generationJobs.length > 0 &&
-                      generationJobs.map((job) => (
+                      <div className="progress" style={{ height: "4px", borderRadius: "2px", backgroundColor: "#f3f4f6" }}>
                         <div
-                          key={job.job_id}
-                          className="border rounded p-3 mb-3"
-                        >
-                          <div className="d-flex align-items-start justify-content-between mb-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <Icon
-                                icon="solar:package-bold"
-                                width="16"
-                                height="16"
-                                className="text-muted"
-                              />
-                              <span className="fw-medium">
-                                {job.product_name}
-                              </span>
-                              {getStatusIcon(job.status)}
-                              <span className="badge bg-secondary small">
-                                {job.plan_type}
-                              </span>
-                            </div>
-                            <div className="d-flex align-items-center gap-2">
-                              <Icon
-                                icon="solar:calendar-bold"
-                                width="16"
-                                height="16"
-                                className="text-muted"
-                              />
-                              <span className="small text-muted">
-                                {new Date(job.created_at).toLocaleDateString()}{" "}
-                                at{" "}
-                                {new Date(job.created_at).toLocaleTimeString()}
-                              </span>
-                              {job.status === "pending_review" && (
-                                <button
-                                  onClick={() => {
-                                    setReviewJobId(job.job_id);
-                                    setIsReviewModalOpen(true);
-                                  }}
-                                  className="btn btn-sm btn-warning"
-                                >
-                                  <Icon
-                                    icon="solar:file-text-bold"
-                                    width="14"
-                                    height="14"
-                                    className="me-1"
-                                  />
-                                  Review Prompts
-                                </button>
-                              )}
-                              {job.status === "completed" && (
-                                <button
-                                  onClick={() => handleViewResults(job.job_id)}
-                                  className="btn btn-sm btn-outline-primary"
-                                >
-                                  <Icon
-                                    icon="solar:eye-bold"
-                                    width="14"
-                                    height="14"
-                                    className="me-1"
-                                  />
-                                  View Prompts
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-muted bg-light p-3 rounded">
-                            <p className="small mb-0">
-                              <strong>Status:</strong> {getStatusBadge(job.status)}
-                              {job.status === "completed" &&
-                                ' - Click "View Prompts" to see generated content'}
-                              {job.status === "pending_review" &&
-                                ' - Click "Review Prompts" to edit before generating images'}
-                              {job.status === "generating" &&
-                                ` - Generating images in progress`}
-                              {job.status === "pending" &&
-                                ` - Generating prompts`}
-                              {job.status === "failed" &&
-                                " - Generation failed"}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                          className="progress-bar bg-primary"
+                          style={{
+                            width: `${generationResult.progress}%`,
+                            borderRadius: "2px"
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Show message if no generations */}
-                    {!isLoadingJobs &&
-                      generationJobs.length === 0 &&
-                      !generationResult && (
-                        <div className="text-center p-4 text-muted">
+                {/* Show completed generation */}
+                {generationResult &&
+                  generationResult.status === "completed" && (
+                    <div 
+                      className="mb-3"
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        padding: "20px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
+                      }}
+                    >
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
                           <Icon
-                            icon="solar:package-bold"
-                            width="48"
-                            height="48"
-                            className="text-muted mb-3"
+                            icon="solar:check-circle-bold"
+                            width="18"
+                            height="18"
+                            className="text-success"
                           />
-                          <p className="h5 mb-2">No generated prompts yet</p>
-                          <p className="small">
-                            Create your first content generation to see prompts
-                            here
-                          </p>
+                          <span className="fw-medium text-dark" style={{ fontSize: "15px" }}>
+                            {formData.productName}
+                          </span>
                         </div>
-                      )}
-                  </div>
+                        <button
+                          onClick={() =>
+                            handleViewResults(generationResult.job_id)
+                          }
+                          className="btn btn-sm"
+                          style={{
+                            backgroundColor: "#3b82f6",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "6px 16px",
+                            fontSize: "13px",
+                            fontWeight: "500"
+                          }}
+                        >
+                          <Icon
+                            icon="solar:eye-bold"
+                            width="14"
+                            height="14"
+                            className="me-1"
+                          />
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Show error if failed */}
+                {generationResult &&
+                  generationResult.status === "failed" && (
+                    <div 
+                      className="mb-3"
+                      style={{
+                        backgroundColor: "#fef2f2",
+                        borderRadius: "12px",
+                        padding: "20px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <Icon
+                          icon="solar:danger-circle-bold"
+                          width="18"
+                          height="18"
+                          className="text-danger"
+                        />
+                        <span className="fw-medium text-danger" style={{ fontSize: "15px" }}>
+                          {generationResult.error || "Generation failed"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Show real generation jobs */}
+                {!isLoadingJobs &&
+                  generationJobs.length > 0 &&
+                  generationJobs.map((job) => (
+                    <div
+                      key={job.job_id}
+                      className="mb-3"
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        padding: "20px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                        transition: "all 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.04)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
+                          {getStatusIcon(job.status)}
+                          <span className="fw-medium text-dark" style={{ fontSize: "15px" }}>
+                            {job.product_name}
+                          </span>
+                          <span 
+                            className="badge"
+                            style={{
+                              backgroundColor: "#f3f4f6",
+                              color: "#6b7280",
+                              fontSize: "11px",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontWeight: "500"
+                            }}
+                          >
+                            {job.plan_type}
+                          </span>
+                        </div>
+                        <div className="d-flex align-items-center gap-3">
+                          <span 
+                            className="text-muted"
+                            style={{
+                              fontSize: "12px"
+                            }}
+                          >
+                            {new Date(job.created_at).toLocaleDateString("en-US", { 
+                              month: "short", 
+                              day: "numeric",
+                              year: "numeric"
+                            })}
+                          </span>
+                          {job.status === "pending_review" && (
+                            <button
+                              onClick={() => {
+                                setReviewJobId(job.job_id);
+                                setIsReviewModalOpen(true);
+                              }}
+                              className="btn btn-sm"
+                              style={{
+                                backgroundColor: "#f59e0b",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "6px 16px",
+                                fontSize: "13px",
+                                fontWeight: "500"
+                              }}
+                            >
+                              <Icon
+                                icon="solar:file-text-bold"
+                                width="14"
+                                height="14"
+                                className="me-1"
+                              />
+                              Review
+                            </button>
+                          )}
+                          {job.status === "completed" && (
+                            <button
+                              onClick={() => handleViewResults(job.job_id)}
+                              className="btn btn-sm"
+                              style={{
+                                backgroundColor: "#3b82f6",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "6px 16px",
+                                fontSize: "13px",
+                                fontWeight: "500"
+                              }}
+                            >
+                              <Icon
+                                icon="solar:eye-bold"
+                                width="14"
+                                height="14"
+                                className="me-1"
+                              />
+                              View
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                {/* Show message if no generations */}
+                {!isLoadingJobs &&
+                  generationJobs.length === 0 &&
+                  !generationResult && (
+                    <div 
+                      className="text-center"
+                      style={{
+                        padding: "60px 20px",
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
+                      }}
+                    >
+                      <Icon
+                        icon="solar:package-bold"
+                        width="48"
+                        height="48"
+                        className="text-muted mb-3"
+                        style={{ opacity: 0.3 }}
+                      />
+                      <p 
+                        className="text-muted mb-0"
+                        style={{ fontSize: "15px" }}
+                      >
+                        No prompts yet
+                      </p>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Hide Scrollbar Styles */}
+                <style dangerouslySetInnerHTML={{__html: `
+                  .custom-scrollbar-hidden {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                  }
+                  .custom-scrollbar-hidden::-webkit-scrollbar {
+                    display: none;  /* Chrome, Safari and Opera */
+                  }
+                `}} />
               </div>
             </div>
           )}
@@ -1355,15 +1717,48 @@ export default function CreateContentPage() {
           {/* Generated Content Tab */}
           {activeTab === "content" && (
             <div className="tab-pane fade show active">
-              <div className="card">
-                <div className="card-header border-bottom p-24">
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div>
-                      <h5 className="card-title mb-2">Generated Content</h5>
-                      <p className="card-subtitle text-muted mb-0">
-                        View and manage your generated content organized by product and time
-                      </p>
-                    </div>
+              <div 
+                style={{
+                  position: "relative",
+                  height: "calc(100vh - 200px)",
+                  overflow: "hidden",
+                  background: "linear-gradient(135deg, #fafbfc 0%, #ffffff 100%)"
+                }}
+              >
+                {/* Background Image - Same as Create Content */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundImage: "url('/assets/images/make/dashborad-09.png')",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                    opacity: 0.06,
+                    mixBlendMode: "multiply"
+                  }}
+                />
+                
+                {/* Scrollable Content Container */}
+                <div 
+                  className="custom-scrollbar-hidden"
+                  style={{
+                    position: "relative",
+                    zIndex: 1,
+                    height: "100%",
+                    overflowY: "auto",
+                    padding: "24px 20px",
+                    maxWidth: "1400px",
+                    margin: "0 auto"
+                  }}
+                >
+                  {/* Header - Filter Buttons Only */}
+                  <div className="d-flex align-items-center justify-content-end mb-4" style={{ padding: "0 4px" }}>
                     {/* Content Type Filter - Icon Only */}
                     <div className="d-flex align-items-center gap-1">
                       <button
@@ -1440,8 +1835,9 @@ export default function CreateContentPage() {
                       </button>
                     </div>
                   </div>
-                </div>
-                <div className="card-body p-24">
+                  
+                  {/* Content Body */}
+                  <div style={{ padding: "0 4px" }}>
                   {isLoadingContent ? (
                     <div className="d-flex align-items-center justify-content-center p-4">
                       <Icon
@@ -1490,7 +1886,7 @@ export default function CreateContentPage() {
                             </span>
                           </div>
 
-                          <div className="row g-3">
+                          <div className="generated-content-gallery">
                             {generatedContent
                               .filter((item) => {
                                 if (item.product !== product) return false;
@@ -1498,7 +1894,7 @@ export default function CreateContentPage() {
                                 return item.content_type === contentTypeFilter;
                               })
                               .map((item) => (
-                                <div key={item.id} className="col-md-4">
+                                <div key={item.id} style={{ width: "100%" }}>
                                   <div className="card">
                                     <div
                                       className="position-relative"
@@ -1721,22 +2117,23 @@ export default function CreateContentPage() {
                                       </div>
                                     </div>
                                     <div className="card-body">
-                                      <div className="d-flex align-items-center justify-content-between mb-2">
-                                        <h6 className="card-title small mb-0">
+                                      <div className="d-flex align-items-center justify-content-between mb-3">
+                                        <h6 className="card-title fw-bold mb-0">
                                           {item.title}
                                         </h6>
-                                        <div className="d-flex gap-1">
+                                        <div className="d-flex gap-2">
                                           {/* Edit button - only for images */}
                                           {item.content_type === "image" && (item.image_url || item.local_url) && (
                                             <button
-                                              className="btn btn-sm btn-outline-info"
+                                              className="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
                                               onClick={() => handleEditClick(item.id)}
                                               title="Edit this image"
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:pen-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
                                               />
                                             </button>
                                           )}
@@ -1744,7 +2141,7 @@ export default function CreateContentPage() {
                                           {(item.content_type === "image" && (item.image_url || item.local_url)) ||
                                            (item.content_type === "video" && item.video_url) ? (
                                             <button
-                                              className="btn btn-sm btn-outline-secondary"
+                                              className="btn btn-sm btn-light border d-flex align-items-center justify-content-center"
                                               onClick={() => {
                                                 if (item.content_type === "video") {
                                                   downloadVideo(
@@ -1759,21 +2156,38 @@ export default function CreateContentPage() {
                                                 }
                                               }}
                                               title={`Download this ${item.content_type === "video" ? "video" : "image"}`}
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
                                             >
                                               <Icon
                                                 icon="solar:download-bold"
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
+                                                className="text-dark"
                                               />
                                             </button>
                                           ) : null}
+                                          {/* Delete button - for all content types with run_id and artifact_id */}
+                                          {item.run_id && item.artifact_id && (
+                                            <button
+                                              className="btn btn-sm btn-danger d-flex align-items-center justify-content-center"
+                                              onClick={() => handleDeleteContent(item)}
+                                              title={`Delete this ${item.content_type === "video" ? "video" : "image"}`}
+                                              style={{ width: "32px", height: "32px", padding: 0 }}
+                                            >
+                                              <Icon
+                                                icon="solar:trash-bin-trash-bold"
+                                                width="14"
+                                                height="14"
+                                              />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
-                                      <div className="d-flex align-items-center gap-2 small text-muted">
+                                      <div className="d-flex align-items-center gap-2 small text-muted mt-2">
                                         <Icon
                                           icon="solar:calendar-bold"
-                                          width="12"
-                                          height="12"
+                                          width="14"
+                                          height="14"
                                         />
                                         {new Date(
                                           item.timestamp
@@ -1788,17 +2202,17 @@ export default function CreateContentPage() {
                                     
                                     {/* Edit Input Section */}
                                     {editingImageId === item.id && (
-                                      <div className="card-footer bg-light border-top">
-                                        <div className="mb-2">
-                                          <label className="form-label small fw-semibold">
+                                      <div className="card-footer border-top p-4" style={{ backgroundColor: "#fafafa" }}>
+                                        <div className="mb-4">
+                                          <label className="d-block mb-2" style={{ fontSize: "13px", color: "#374151", fontWeight: "500" }}>
                                             Describe the changes you want:
                                           </label>
                                           <textarea
-                                            className={`form-control form-control-sm ${
+                                            className={`form-control ${
                                               editErrors[item.id] ? "is-invalid" : ""
                                             }`}
                                             rows="3"
-                                            placeholder="e.g., Make it brighter with more vibrant colors..."
+                                            placeholder="Make it brighter with more vibrant colors..."
                                             value={editPrompts[item.id] || ""}
                                             onChange={(e) =>
                                               handleEditPromptChange(
@@ -1807,61 +2221,205 @@ export default function CreateContentPage() {
                                               )
                                             }
                                             disabled={isSendingEdit}
+                                            style={{
+                                              resize: "vertical",
+                                              minHeight: "80px",
+                                              border: "1px solid #e5e7eb",
+                                              borderRadius: "8px",
+                                              padding: "10px 12px",
+                                              fontSize: "14px",
+                                              backgroundColor: "white",
+                                              transition: "border-color 0.15s ease",
+                                            }}
+                                            onFocus={(e) => {
+                                              e.target.style.borderColor = "#3b82f6";
+                                              e.target.style.outline = "none";
+                                            }}
+                                            onBlur={(e) => {
+                                              e.target.style.borderColor = "#e5e7eb";
+                                            }}
                                           />
                                           {editErrors[item.id] && (
-                                            <div className="invalid-feedback d-block small">
+                                            <div className="mt-2" style={{ fontSize: "12px", color: "#dc2626" }}>
                                               {editErrors[item.id]}
                                             </div>
                                           )}
                                         </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                          <small className="text-muted">
-                                            {(editPrompts[item.id]?.length || 0)} / 500 characters
-                                          </small>
-                                          <div className="d-flex gap-2">
-                                            <button
-                                              className="btn btn-sm btn-secondary"
-                                              onClick={() => handleCancelEdit(item.id)}
-                                              disabled={isSendingEdit}
-                                            >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              className="btn btn-sm btn-primary"
-                                              onClick={() =>
-                                                handleSendEdit(
-                                                  item.id,
-                                                  item.run_id,
-                                                  item.artifact_id
-                                                )
-                                              }
-                                              disabled={
-                                                isSendingEdit ||
-                                                !editPrompts[item.id]?.trim() ||
-                                                (editPrompts[item.id]?.length || 0) > 500
-                                              }
-                                            >
-                                              {isSendingEdit ? (
-                                                <>
-                                                  <span
-                                                    className="spinner-border spinner-border-sm me-1"
-                                                    role="status"
+
+                                        {/* Aspect Ratio Selection */}
+                                        <div className="mb-4">
+                                          <label className="d-block mb-2" style={{ fontSize: "13px", color: "#374151", fontWeight: "500" }}>
+                                            Aspect ratio:
+                                          </label>
+                                          <div className="d-flex flex-wrap" style={{ gap: "4px" }}>
+                                            {[
+                                              { value: "square_1_1", label: "1:1", preview: { w: 1, h: 1 } },
+                                              { value: "traditional_3_4", label: "3:4", preview: { w: 3, h: 4 } },
+                                              { value: "classic_4_3", label: "4:3", preview: { w: 4, h: 3 } },
+                                              { value: "widescreen_16_9", label: "16:9", preview: { w: 16, h: 9 } },
+                                              { value: "social_story_9_16", label: "9:16", preview: { w: 9, h: 16 } },
+                                              { value: "portrait_2_3", label: "2:3", preview: { w: 2, h: 3 } },
+                                              { value: "standard_3_2", label: "3:2", preview: { w: 3, h: 2 } },
+                                            ].map((ratio) => {
+                                              const isSelected = (editAspectRatios[item.id] || "square_1_1") === ratio.value;
+                                              const maxSize = 18;
+                                              const aspectRatio = ratio.preview.w / ratio.preview.h;
+                                              const previewWidth = aspectRatio >= 1 ? maxSize : maxSize * aspectRatio;
+                                              const previewHeight = aspectRatio >= 1 ? maxSize / aspectRatio : maxSize;
+                                              
+                                              return (
+                                                <button
+                                                  key={ratio.value}
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const newRatios = {
+                                                      ...editAspectRatios,
+                                                      [item.id]: ratio.value,
+                                                    };
+                                                    setEditAspectRatios(newRatios);
+                                                    // Mark this aspect ratio as explicitly selected by the user
+                                                    setExplicitlySelectedAspectRatios((prev) => {
+                                                      const newSet = new Set(prev);
+                                                      newSet.add(item.id);
+                                                      return newSet;
+                                                    });
+                                                    console.log("Aspect ratio selected:", ratio.value, "for image:", item.id, "State:", newRatios);
+                                                  }}
+                                                  disabled={isSendingEdit}
+                                                  style={{
+                                                    padding: "5px 8px",
+                                                    minWidth: "48px",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "center",
+                                                    gap: "3px",
+                                                    border: isSelected ? "1.5px solid #6b7280" : "1px solid #e5e7eb",
+                                                    borderRadius: "6px",
+                                                    backgroundColor: isSelected ? "#f3f4f6" : "white",
+                                                    color: "#374151",
+                                                    transition: "all 0.15s ease",
+                                                    cursor: isSendingEdit ? "not-allowed" : "pointer",
+                                                    opacity: isSendingEdit ? 0.6 : 1,
+                                                  }}
+                                                  onMouseEnter={(e) => {
+                                                    if (!isSendingEdit && !isSelected) {
+                                                      e.currentTarget.style.borderColor = "#d1d5db";
+                                                      e.currentTarget.style.backgroundColor = "#f9fafb";
+                                                    }
+                                                  }}
+                                                  onMouseLeave={(e) => {
+                                                    if (!isSendingEdit && !isSelected) {
+                                                      e.currentTarget.style.borderColor = "#e5e7eb";
+                                                      e.currentTarget.style.backgroundColor = "white";
+                                                    }
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      width: `${previewWidth}px`,
+                                                      height: `${previewHeight}px`,
+                                                      backgroundColor: "#e5e7eb",
+                                                      border: "1px solid #d1d5db",
+                                                      borderRadius: "2px",
+                                                    }}
                                                   />
-                                                  Sending...
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <Icon
-                                                    icon="solar:plain-2-bold"
-                                                    width="14"
-                                                    height="14"
-                                                    className="me-1"
-                                                  />
-                                                  Send
-                                                </>
-                                              )}
-                                            </button>
+                                                  <span style={{ fontSize: "10px", fontWeight: "400", color: "#6b7280" }}>
+                                                    {ratio.label}
+                                                  </span>
+                                                </button>
+                                              );
+                                            })}
                                           </div>
+                                        </div>
+
+                                        <div className="d-flex align-items-center justify-content-end" style={{ gap: "8px" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCancelEdit(item.id)}
+                                            disabled={isSendingEdit}
+                                            style={{
+                                              padding: "8px 16px",
+                                              border: "1px solid #d1d5db",
+                                              borderRadius: "6px",
+                                              backgroundColor: "white",
+                                              color: "#374151",
+                                              fontSize: "13px",
+                                              fontWeight: "500",
+                                              cursor: isSendingEdit ? "not-allowed" : "pointer",
+                                              transition: "all 0.15s ease",
+                                              opacity: isSendingEdit ? 0.6 : 1,
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (!isSendingEdit) {
+                                                e.currentTarget.style.backgroundColor = "#f9fafb";
+                                                e.currentTarget.style.borderColor = "#9ca3af";
+                                              }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (!isSendingEdit) {
+                                                e.currentTarget.style.backgroundColor = "white";
+                                                e.currentTarget.style.borderColor = "#d1d5db";
+                                              }
+                                            }}
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleSendEdit(
+                                                item.id,
+                                                item.run_id,
+                                                item.artifact_id
+                                              )
+                                            }
+                                            disabled={isSendingEdit || !canSendEdit(item.id)}
+                                            style={{
+                                              padding: "8px 16px",
+                                              border: "none",
+                                              borderRadius: "6px",
+                                              backgroundColor: "#3b82f6",
+                                              color: "white",
+                                              fontSize: "13px",
+                                              fontWeight: "500",
+                                              cursor: (isSendingEdit || !canSendEdit(item.id)) ? "not-allowed" : "pointer",
+                                              transition: "all 0.15s ease",
+                                              opacity: (isSendingEdit || !canSendEdit(item.id)) ? 0.6 : 1,
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "6px",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (!isSendingEdit && canSendEdit(item.id)) {
+                                                e.currentTarget.style.backgroundColor = "#2563eb";
+                                              }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (!isSendingEdit && canSendEdit(item.id)) {
+                                                e.currentTarget.style.backgroundColor = "#3b82f6";
+                                              }
+                                            }}
+                                          >
+                                            {isSendingEdit ? (
+                                              <>
+                                                <span
+                                                  className="spinner-border spinner-border-sm"
+                                                  role="status"
+                                                  style={{ width: "12px", height: "12px", borderWidth: "2px" }}
+                                                />
+                                                Sending...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Icon
+                                                  icon="solar:plain-2-bold"
+                                                  width="14"
+                                                  height="14"
+                                                />
+                                                Send
+                                              </>
+                                            )}
+                                          </button>
                                         </div>
                                       </div>
                                     )}
@@ -1902,7 +2460,19 @@ export default function CreateContentPage() {
                       )}
                     </div>
                   )}
+                  </div>
                 </div>
+                
+                {/* Hide Scrollbar Styles */}
+                <style dangerouslySetInnerHTML={{__html: `
+                  .custom-scrollbar-hidden {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                  }
+                  .custom-scrollbar-hidden::-webkit-scrollbar {
+                    display: none;  /* Chrome, Safari and Opera */
+                  }
+                `}} />
               </div>
             </div>
           )}
@@ -1933,6 +2503,36 @@ export default function CreateContentPage() {
           }}
         />
       )}
+
+      {/* Brandkit Form Modal */}
+      <BrandkitFormModal
+        isOpen={showBrandkitFormModal}
+        onClose={() => {
+          setShowBrandkitFormModal(false);
+          setEditingBrandkit(null);
+        }}
+        onSuccess={handleBrandkitFormSuccess}
+        editBrandkit={editingBrandkit}
+      />
+
+      {/* Brandkit Management Modal */}
+      <BrandkitManagementModal
+        isOpen={showBrandkitManagementModal}
+        onClose={() => setShowBrandkitManagementModal(false)}
+        onEdit={handleEditBrandkit}
+        onUploadLogo={handleUploadLogo}
+      />
+
+      {/* Logo Upload Modal */}
+      <BrandkitLogoUpload
+        isOpen={showLogoUploadModal}
+        onClose={() => {
+          setShowLogoUploadModal(false);
+          setUploadingLogoBrandkit(null);
+        }}
+        brandkit={uploadingLogoBrandkit}
+        onSuccess={handleLogoUploadSuccess}
+      />
     </SidebarPermissionGuard>
   );
 }

@@ -13,7 +13,6 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     procurement: { enabled: false, operations: [] },
     customerData: { enabled: false, operations: [] },
     shipping: { enabled: false, operations: [] },
-    skuList: { enabled: false, operations: [] },
     productSpendSummary: { enabled: false, operations: [] },
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
@@ -32,7 +31,6 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     }, // Full CRUD
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
-    skuList: { enabled: false, operations: [] },
     productSpendSummary: { enabled: false, operations: [] },
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
@@ -51,10 +49,6 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     }, // Full CRUD
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
-    skuList: {
-      enabled: true,
-      operations: ["read", "create", "update", "delete"],
-    }, // Full CRUD
     productSpendSummary: { enabled: true, operations: ["read"] }, // Read-only
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: { enabled: false, operations: [] },
@@ -85,10 +79,6 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     }, // Full CRUD
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
-    skuList: {
-      enabled: true,
-      operations: ["read", "create", "update", "delete"],
-    }, // Full CRUD
     productSpendSummary: { enabled: true, operations: ["read"] }, // Read-only
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: {
@@ -122,10 +112,6 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     },
     customerData: { enabled: true, operations: ["read"] },
     shipping: { enabled: true, operations: ["read", "create"] },
-    skuList: {
-      enabled: true,
-      operations: ["read", "create", "update", "delete"],
-    },
     productSpendSummary: { enabled: true, operations: ["read"] },
     entityReport: { enabled: true, operations: ["read"] },
     userManagement: {
@@ -297,20 +283,6 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [OPERATION_TYPES.READ], // Dashboard is read-only
     supportsCRUD: false,
-  },
-  skuList: {
-    key: "skuList",
-    label: "SKU List",
-    description: "View and manage product SKU list",
-    icon: "mage:box",
-    requiredRoles: ["manager", "admin", "super_admin"],
-    availableOperations: [
-      OPERATION_TYPES.READ,
-      OPERATION_TYPES.CREATE,
-      OPERATION_TYPES.UPDATE,
-      OPERATION_TYPES.DELETE,
-    ],
-    supportsCRUD: true, // Supports full CRUD
   },
   productSpendSummary: {
     key: "productSpendSummary",

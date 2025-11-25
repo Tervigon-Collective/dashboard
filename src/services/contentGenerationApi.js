@@ -457,6 +457,20 @@ export const getGeneratedContent = async () => {
 };
 
 /**
+ * Delete a specific generated content item (direct to Python backend)
+ * @param {string} runId - Run ID
+ * @param {string} artifactId - Artifact ID
+ * @returns {Promise<Object>} Deletion response {status, message, content_type}
+ */
+export const deleteGeneratedContent = async (runId, artifactId) => {
+  // Call Python backend directly
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/content/generated/${runId}/${artifactId}`
+  );
+  return response.data;
+};
+
+/**
  * Get content preview URL
  * @param {string} runId - Run ID
  * @param {string} artifactId - Artifact ID
@@ -481,16 +495,39 @@ export const getContentDownloadUrl = (runId, artifactId) => {
  * @param {string} runId - Run ID
  * @param {string} artifactId - Artifact ID
  * @param {string} editPrompt - User's modification request
+ * @param {Object} options - Optional parameters
+ * @param {string} options.aspect_ratio - Aspect ratio (e.g., "square_1_1", "widescreen_16_9")
+ * @param {number} options.guidance_scale - Guidance scale (0-20, default: 2.5)
+ * @param {number} options.seed - Seed for reproducibility (optional)
  * @returns {Promise<Object>} Edit job response {job_id, status}
  */
-export const editImage = async (runId, artifactId, editPrompt) => {
+export const editImage = async (runId, artifactId, editPrompt, options = {}) => {
+  const requestBody = {
+    run_id: runId,
+    artifact_id: artifactId,
+    // Allow empty prompt for aspect ratio-only changes
+    edit_prompt: editPrompt || "",
+  };
+
+  // Always include aspect_ratio (required by backend)
+  if (options.aspect_ratio) {
+    requestBody.aspect_ratio = options.aspect_ratio;
+  }
+  
+  // Add optional parameters if provided
+  if (options.guidance_scale !== undefined) {
+    requestBody.guidance_scale = options.guidance_scale;
+  }
+  if (options.seed !== undefined && options.seed !== null) {
+    requestBody.seed = options.seed;
+  }
+
+  // Debug log
+  console.log("editImage API call - Request body:", requestBody);
+
   const response = await axios.post(
     `${config.pythonApi.baseURL}/api/content/edit-image`,
-    {
-      run_id: runId,
-      artifact_id: artifactId,
-      edit_prompt: editPrompt,
-    }
+    requestBody
   );
   return response.data;
 };
@@ -514,6 +551,133 @@ export const getAssets = async () => {
 export const deleteAsset = async (assetId) => {
   const response = await apiClient.delete(
     `/api/content-generation/assets/${assetId}`
+  );
+  return response.data;
+};
+
+// ========== Brandkit Management ==========
+
+/**
+ * Get all brandkits
+ * @returns {Promise<Object>} Brandkits response {brandkits: Array}
+ */
+export const getBrandkits = async () => {
+  const response = await axios.get(`${config.pythonApi.baseURL}/api/brandkits`);
+  // Backend returns array directly, wrap it for consistency
+  const brandkits = Array.isArray(response.data) ? response.data : response.data.brandkits || [];
+  return { brandkits };
+};
+
+/**
+ * Get active brandkit
+ * @returns {Promise<Object>} Active brandkit data
+ */
+export const getActiveBrandkit = async () => {
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/brandkits/active`
+  );
+  return response.data;
+};
+
+/**
+ * Get a specific brandkit by ID
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Brandkit data
+ */
+export const getBrandkit = async (brandId) => {
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`
+  );
+  return response.data;
+};
+
+/**
+ * Create a new brandkit
+ * @param {Object} brandkitData - Brandkit data
+ * @returns {Promise<Object>} Created brandkit response
+ */
+export const createBrandkit = async (brandkitData) => {
+  console.log('createBrandkit - Data before sending:', brandkitData);
+  console.log('createBrandkit - Data type checks:', {
+    style_guide_dos: Array.isArray(brandkitData.style_guide?.dos),
+    hero_words: Array.isArray(brandkitData.brand_vocabulary?.hero_words),
+    color_palette: Array.isArray(brandkitData.color_palette),
+  });
+  
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits`,
+    brandkitData,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Update an existing brandkit
+ * @param {string} brandId - Brand ID
+ * @param {Object} updates - Updates to apply
+ * @returns {Promise<Object>} Update response
+ */
+export const updateBrandkit = async (brandId, updates) => {
+  console.log('updateBrandkit - Data before sending:', updates);
+  
+  const response = await axios.put(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`,
+    updates,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Delete a brandkit
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Deletion response
+ */
+export const deleteBrandkit = async (brandId) => {
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`
+  );
+  return response.data;
+};
+
+/**
+ * Activate a brandkit (switch to it)
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Activation response
+ */
+export const activateBrandkit = async (brandId) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/activate`
+  );
+  return response.data;
+};
+
+/**
+ * Upload a logo for a brandkit
+ * @param {string} brandId - Brand ID
+ * @param {File} logoFile - Logo file
+ * @returns {Promise<Object>} Upload response
+ */
+export const uploadBrandkitLogo = async (brandId, logoFile) => {
+  const formData = new FormData();
+  formData.append("file", logoFile);
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response.data;
 };

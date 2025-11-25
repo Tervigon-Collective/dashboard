@@ -14,7 +14,12 @@ const Page = () => {
       {/* MasterLayout */}
       <MasterLayout>
         {/* Breadcrumb */}
-        <Breadcrumb title='Image Generator' />
+        <Breadcrumb
+          title='Image Generator'
+          rootLabel='Content Craft'
+          rootIcon='solar:magic-stick-3-bold'
+          rootBreadcrumbLabel='Dashboard'
+        />
 
         {/* ImageGeneratorLayer */}
         <ImageGeneratorLayer />
