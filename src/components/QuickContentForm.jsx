@@ -13,12 +13,8 @@ import GenerationResultsModal from "./GenerationResultsModal";
 export default function QuickContentForm() {
   const [formData, setFormData] = useState({
     product_name: "",
-    short_description: "",
     long_description: "",
-    campaign_objective: "Product Launch",
     content_channel: "Image",
-    tone: "Emotional",
-    call_to_action: "Let nature lead",
     number_of_variants: 1,
   });
 
@@ -88,7 +84,6 @@ export default function QuickContentForm() {
     // Validation
     if (
       !formData.product_name ||
-      !formData.short_description ||
       !formData.long_description
     ) {
       toast.error("Please fill in all required fields");
@@ -367,22 +362,6 @@ export default function QuickContentForm() {
 
             <div className="col-12">
               <label className="form-label">
-                Short Description <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.short_description}
-                onChange={(e) =>
-                  handleInputChange("short_description", e.target.value)
-                }
-                placeholder="Brief product description"
-                required
-              />
-            </div>
-
-            <div className="col-12">
-              <label className="form-label">
                 Long Description <span className="text-danger">*</span>
               </label>
               <textarea
@@ -401,22 +380,6 @@ export default function QuickContentForm() {
           {/* Campaign Settings */}
           <div className="row g-3 mb-4">
             <div className="col-md-6">
-              <label className="form-label">Campaign Objective</label>
-              <select
-                className="form-select"
-                value={formData.campaign_objective}
-                onChange={(e) =>
-                  handleInputChange("campaign_objective", e.target.value)
-                }
-              >
-                <option value="Product Launch">Product Launch</option>
-                <option value="Brand Awareness">Brand Awareness</option>
-                <option value="Sales">Sales</option>
-                <option value="Engagement">Engagement</option>
-              </select>
-            </div>
-
-            <div className="col-md-6">
               <label className="form-label">Content Channel</label>
               <select
                 className="form-select"
@@ -427,38 +390,6 @@ export default function QuickContentForm() {
               >
                 <option value="Image">Image</option>
                 <option value="Video">Video</option>
-              </select>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Tone</label>
-              <select
-                className="form-select"
-                value={formData.tone}
-                onChange={(e) => handleInputChange("tone", e.target.value)}
-              >
-                <option value="Emotional">Emotional</option>
-                <option value="Professional">Professional</option>
-                <option value="Casual">Casual</option>
-                <option value="Humorous">Humorous</option>
-                <option value="Inspirational">Inspirational</option>
-              </select>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Call to Action</label>
-              <select
-                className="form-select"
-                value={formData.call_to_action}
-                onChange={(e) =>
-                  handleInputChange("call_to_action", e.target.value)
-                }
-              >
-                <option value="Let nature lead">Let nature lead</option>
-                <option value="Shop now">Shop now</option>
-                <option value="Learn more">Learn more</option>
-                <option value="Get started">Get started</option>
-                <option value="Try it now">Try it now</option>
               </select>
             </div>
 
@@ -493,7 +424,6 @@ export default function QuickContentForm() {
             disabled={
               isGenerating ||
               !formData.product_name ||
-              !formData.short_description ||
               !formData.long_description
             }
           >
