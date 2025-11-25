@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
@@ -25,6 +25,51 @@ import {
 } from "@/services/contentGenerationApi";
 import config from "@/config";
 
+const ASPECT_RATIO_OPTIONS = [
+  {
+    value: "film_horizontal_21_9",
+    title: "Film Horizontal",
+    ratioLabel: "21:9",
+    preview: { w: 21, h: 9 },
+  },
+  {
+    value: "widescreen_16_9",
+    title: "Widescreen",
+    ratioLabel: "16:9",
+    preview: { w: 16, h: 9 },
+  },
+  {
+    value: "classic_4_3",
+    title: "Classic",
+    ratioLabel: "4:3",
+    preview: { w: 4, h: 3 },
+  },
+  {
+    value: "square_1_1",
+    title: "Square",
+    ratioLabel: "1:1",
+    preview: { w: 1, h: 1 },
+  },
+  {
+    value: "traditional_3_4",
+    title: "Traditional",
+    ratioLabel: "3:4",
+    preview: { w: 3, h: 4 },
+  },
+  {
+    value: "social_story_9_16",
+    title: "Social Story",
+    ratioLabel: "9:16",
+    preview: { w: 9, h: 16 },
+  },
+  {
+    value: "film_vertical_9_21",
+    title: "Film Vertical",
+    ratioLabel: "9:21",
+    preview: { w: 9, h: 21 },
+  },
+];
+
 export default function CreateContentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,6 +91,7 @@ export default function CreateContentPage() {
     longDescription: "",
     channel: "",
     variantGoal: 1,
+    aspectRatio: "widescreen_16_9", // Default aspect ratio for video
   });
 
   // Brandkit modal states
@@ -71,6 +117,8 @@ export default function CreateContentPage() {
   const [editAspectRatios, setEditAspectRatios] = useState({}); // Store aspect ratio per image
   const [editGuidanceScales, setEditGuidanceScales] = useState({}); // Store guidance scale per image
   const [editSeeds, setEditSeeds] = useState({}); // Store seed per image
+  const [isAspectRatioPanelOpen, setIsAspectRatioPanelOpen] = useState(false);
+  const aspectRatioPanelRef = useRef(null);
 
   // Helper function to normalize preview URLs
   const normalizePreviewUrl = (url) => {
@@ -238,7 +286,7 @@ export default function CreateContentPage() {
       }
 
       // Start generation
-      const response = await quickGenerate({
+      const requestData = {
         product_name: formData.productName,
         long_description: formData.longDescription,
         content_channel: formData.channel || "Image",
@@ -247,7 +295,14 @@ export default function CreateContentPage() {
             ? 1
             : parseInt(formData.variantGoal, 10) || 1,
         uploaded_images: imageUrls,
-      });
+      };
+
+      // Add aspect_ratio for video generation
+      if (formData.channel === "Video" && formData.aspectRatio) {
+        requestData.aspect_ratio = formData.aspectRatio;
+      }
+
+      const response = await quickGenerate(requestData);
 
       const jobId = response.job_id;
       setGenerationResult({
@@ -568,6 +623,41 @@ export default function CreateContentPage() {
       setEditErrors((prev) => ({ ...prev, [imageId]: null }));
     }
   };
+
+  const selectedAspectRatioOption = ASPECT_RATIO_OPTIONS.find(
+    (option) => option.value === formData.aspectRatio
+  ) || ASPECT_RATIO_OPTIONS[1]; // default to widescreen if missing
+
+  const handleAspectRatioSelect = (value) => {
+    handleInputChange("aspectRatio", value);
+    setIsAspectRatioPanelOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isAspectRatioPanelOpen) {
+      return undefined;
+    }
+
+    const handleClickOutside = (event) => {
+      if (
+        aspectRatioPanelRef.current &&
+        !aspectRatioPanelRef.current.contains(event.target)
+      ) {
+        setIsAspectRatioPanelOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAspectRatioPanelOpen]);
+
+  useEffect(() => {
+    if (formData.channel !== "Video" && isAspectRatioPanelOpen) {
+      setIsAspectRatioPanelOpen(false);
+    }
+  }, [formData.channel, isAspectRatioPanelOpen]);
 
   const handleCancelEdit = (imageId) => {
     setEditingImageId(null);
@@ -1283,6 +1373,157 @@ export default function CreateContentPage() {
                           />
                           <span style={{ fontSize: "12px", color: "#6b7280" }}>variants</span>
                         </div>
+                      )}
+
+                      {/* Aspect Ratio (only for Video) */}
+                      {formData.channel === "Video" && (
+                        <>
+                          <div style={{ width: "1px", height: "20px", backgroundColor: "#e5e7eb" }} />
+                          <div
+                            className="position-relative d-inline-block"
+                            ref={aspectRatioPanelRef}
+                          >
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setIsAspectRatioPanelOpen((prev) => !prev)
+                              }
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                backgroundColor: "#fff",
+                                color: "#111827",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                                padding: "6px 14px",
+                                borderRadius: "0",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                minWidth: "185px",
+                                transition: "border 0.2s ease, box-shadow 0.2s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.border = "1px solid #cbd5f5";
+                                e.target.style.boxShadow = "0 2px 8px rgba(99, 102, 241, 0.15)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.border = "1px solid #e5e7eb";
+                                e.target.style.boxShadow = "none";
+                              }}
+                            >
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                                <span style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Aspect ratio
+                                </span>
+                                <span style={{ fontSize: "13px", color: "#111827" }}>
+                                  {selectedAspectRatioOption?.ratioLabel || "16:9"}
+                                </span>
+                              </div>
+                              <Icon
+                                icon="solar:alt-arrow-down-bold"
+                                width="14"
+                                height="14"
+                                style={{ color: "#6b7280", marginLeft: "auto" }}
+                              />
+                            </button>
+
+                            {isAspectRatioPanelOpen && (
+                              <div
+                                className="shadow"
+                                style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 8px)",
+                                  left: "0",
+                                  backgroundColor: "white",
+                                  borderRadius: "0",
+                                  padding: "18px",
+                                  border: "1px solid #e5e7eb",
+                                  minWidth: "420px",
+                                  maxWidth: "520px",
+                                  zIndex: 30,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: "13px",
+                                    fontWeight: "600",
+                                    color: "#111827",
+                                    marginBottom: "12px",
+                                  }}
+                                >
+                                  Choose aspect ratio
+                                </div>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: "12px",
+                                    overflowX: "auto",
+                                    paddingBottom: "4px",
+                                  }}
+                                >
+                                  {ASPECT_RATIO_OPTIONS.map((option) => {
+                                    const ratioValue = option.preview.w / option.preview.h;
+                                    const maxSize = 34;
+                                    const previewWidth = ratioValue >= 1 ? maxSize : maxSize * ratioValue;
+                                    const previewHeight = ratioValue >= 1 ? maxSize / ratioValue : maxSize;
+                                    const isActive = option.value === formData.aspectRatio;
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={option.value}
+                                        onClick={() => handleAspectRatioSelect(option.value)}
+                                        style={{
+                                          border: isActive ? "2px solid #6366f1" : "1px solid #e5e7eb",
+                                          backgroundColor: isActive ? "#f4f4ff" : "white",
+                                          borderRadius: "0",
+                                          padding: "10px 12px",
+                                          minWidth: "80px",
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          alignItems: "center",
+                                          gap: "8px",
+                                          cursor: "pointer",
+                                          transition: "all 0.2s ease",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                              width: "58px",
+                                              height: "58px",
+                                              borderRadius: "0",
+                                              backgroundColor: "#f4f4f5",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: `${previewWidth}px`,
+                                              height: `${previewHeight}px`,
+                                                borderRadius: "0",
+                                                background: isActive ? "#6366f1" : "#cbd5f5",
+                                                boxShadow: isActive ? "0 0 0 2px rgba(99, 102, 241, 0.15)" : "none",
+                                                transition: "background 0.2s ease",
+                                            }}
+                                          />
+                                        </div>
+                                        <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827" }}>
+                                          {option.ratioLabel}
+                                        </span>
+                                        <span style={{ fontSize: "11px", color: "#6b7280" }}>
+                                          {option.title}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
 
