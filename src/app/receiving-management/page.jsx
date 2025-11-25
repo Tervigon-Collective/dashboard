@@ -1696,12 +1696,12 @@ const ReceivingManagementLayer = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         
-        const qrWidth = img.width;
-        const qrHeight = img.height;
-        const padding = 20;
-        const textHeight = sku ? 40 : 0;
-        const canvasWidth = qrWidth + (padding * 2);
-        const canvasHeight = qrHeight + (padding * 2) + textHeight;
+        // Paper size: 1 x 1.5 inches at 300 DPI = 300 x 450 pixels
+        const DPI = 300;
+        const PAPER_WIDTH_INCHES = 1;
+        const PAPER_HEIGHT_INCHES = 1.5;
+        const canvasWidth = PAPER_WIDTH_INCHES * DPI; // 300 pixels
+        const canvasHeight = PAPER_HEIGHT_INCHES * DPI; // 450 pixels
         
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
@@ -1710,8 +1710,38 @@ const ReceivingManagementLayer = () => {
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         
+        // Spacing configuration for proper printing gaps
+        const topPadding = 20;
+        const bottomPadding = 20;
+        const sidePadding = 20;
+        const gapBetweenQrAndText = 15; // Gap between QR code and SKU text
+        
+        // Calculate space for SKU text if provided
+        const textHeight = sku ? 30 : 0;
+        const textBottomMargin = sku ? 15 : 0;
+        const totalTextSpace = textHeight + textBottomMargin + gapBetweenQrAndText;
+        
+        // Available space for QR code
+        const availableHeight = canvasHeight - topPadding - totalTextSpace;
+        const maxQrWidth = canvasWidth - (sidePadding * 2);
+        const maxQrHeight = availableHeight;
+        
+        // Scale QR code to fit while maintaining aspect ratio
+        const qrAspectRatio = img.width / img.height;
+        let qrDisplayWidth = Math.min(maxQrWidth, img.width);
+        let qrDisplayHeight = qrDisplayWidth / qrAspectRatio;
+        
+        if (qrDisplayHeight > maxQrHeight) {
+          qrDisplayHeight = maxQrHeight;
+          qrDisplayWidth = qrDisplayHeight * qrAspectRatio;
+        }
+        
+        // Center the QR code horizontally
+        const qrX = (canvasWidth - qrDisplayWidth) / 2;
+        const qrY = topPadding;
+        
         // Draw QR code image
-        ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+        ctx.drawImage(img, qrX, qrY, qrDisplayWidth, qrDisplayHeight);
         
         // Add SKU text at the bottom if provided
         if (sku) {
@@ -1720,7 +1750,8 @@ const ReceivingManagementLayer = () => {
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           
-          const textY = qrHeight + padding + (textHeight / 2);
+          // Position text with proper gap from QR code and bottom margin
+          const textY = qrY + qrDisplayHeight + gapBetweenQrAndText + (textHeight / 2);
           ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
         }
         
@@ -1945,13 +1976,12 @@ const ReceivingManagementLayer = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       
-      // Set canvas dimensions: QR code width + padding + text area
-      const qrWidth = img.width;
-      const qrHeight = img.height;
-      const padding = 20;
-      const textHeight = sku ? 40 : 0; // Space for SKU text
-      const canvasWidth = qrWidth + (padding * 2);
-      const canvasHeight = qrHeight + (padding * 2) + textHeight;
+      // Paper size: 1 x 1.5 inches at 300 DPI = 300 x 450 pixels
+      const DPI = 300;
+      const PAPER_WIDTH_INCHES = 1;
+      const PAPER_HEIGHT_INCHES = 1.5;
+      const canvasWidth = PAPER_WIDTH_INCHES * DPI; // 300 pixels
+      const canvasHeight = PAPER_HEIGHT_INCHES * DPI; // 450 pixels
       
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
@@ -1960,8 +1990,38 @@ const ReceivingManagementLayer = () => {
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
       
+      // Spacing configuration for proper printing gaps
+      const topPadding = 20;
+      const bottomPadding = 20;
+      const sidePadding = 20;
+      const gapBetweenQrAndText = 15; // Gap between QR code and SKU text
+      
+      // Calculate space for SKU text if provided
+      const textHeight = sku ? 30 : 0;
+      const textBottomMargin = sku ? 15 : 0;
+      const totalTextSpace = textHeight + textBottomMargin + gapBetweenQrAndText;
+      
+      // Available space for QR code
+      const availableHeight = canvasHeight - topPadding - totalTextSpace;
+      const maxQrWidth = canvasWidth - (sidePadding * 2);
+      const maxQrHeight = availableHeight;
+      
+      // Scale QR code to fit while maintaining aspect ratio
+      const qrAspectRatio = img.width / img.height;
+      let qrDisplayWidth = Math.min(maxQrWidth, img.width);
+      let qrDisplayHeight = qrDisplayWidth / qrAspectRatio;
+      
+      if (qrDisplayHeight > maxQrHeight) {
+        qrDisplayHeight = maxQrHeight;
+        qrDisplayWidth = qrDisplayHeight * qrAspectRatio;
+      }
+      
+      // Center the QR code horizontally
+      const qrX = (canvasWidth - qrDisplayWidth) / 2;
+      const qrY = topPadding;
+      
       // Draw QR code image
-      ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+      ctx.drawImage(img, qrX, qrY, qrDisplayWidth, qrDisplayHeight);
       
       // Add SKU text at the bottom if provided
       if (sku) {
@@ -1970,8 +2030,8 @@ const ReceivingManagementLayer = () => {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
-        // Draw SKU text
-        const textY = qrHeight + padding + (textHeight / 2);
+        // Position text with proper gap from QR code and bottom margin
+        const textY = qrY + qrDisplayHeight + gapBetweenQrAndText + (textHeight / 2);
         ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
       }
       
