@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { Modal, Button } from "react-bootstrap";
@@ -506,6 +512,10 @@ const StockManagementPage = () => {
     lowStockFilter: "all", // "all", "low", "normal"
   });
 
+  // View mode: 'variant' (current) or 'product' (new)
+  const [inventoryViewMode, setInventoryViewMode] = useState("variant");
+  const [expandedProducts, setExpandedProducts] = useState(new Set());
+
   // Infinite scroll state for inventory
   const [inventoryDisplayedCount, setInventoryDisplayedCount] = useState(20);
   const [inventoryLoadingMore, setInventoryLoadingMore] = useState(false);
@@ -585,27 +595,53 @@ const StockManagementPage = () => {
     return () => clearTimeout(timer);
   }, [inventoryState.search]);
 
-  // Sort inventory data
+  // Sort inventory data (handles both variant and product view)
   const sortInventoryData = useCallback(
     (
       dataArray,
       field = inventoryState.sortField,
-      direction = inventoryState.sortDirection
+      direction = inventoryState.sortDirection,
+      viewMode = inventoryViewMode
     ) => {
       if (!field || !Array.isArray(dataArray)) {
         return dataArray || [];
       }
 
       const sortedData = [...dataArray].sort((a, b) => {
-        let valueA = a?.[field];
-        let valueB = b?.[field];
+        let valueA, valueB;
 
-        // Handle net_available - calculate if not present
-        if (field === "net_available") {
-          valueA =
-            a?.net_available ?? a?.available_quantity - a?.committed_quantity;
-          valueB =
-            b?.net_available ?? b?.available_quantity - b?.committed_quantity;
+        // Handle product view mode
+        if (viewMode === "product") {
+          // Map variant-level fields to product-level aggregated fields
+          if (field === "available_quantity") {
+            valueA = a.total_available;
+            valueB = b.total_available;
+          } else if (field === "committed_quantity") {
+            valueA = a.total_committed;
+            valueB = b.total_committed;
+          } else if (field === "net_available") {
+            valueA = a.total_net_available;
+            valueB = b.total_net_available;
+          } else if (field === "product_name") {
+            valueA = a.product_name;
+            valueB = b.product_name;
+          } else {
+            // For other fields, use product-level values
+            valueA = a[field];
+            valueB = b[field];
+          }
+        } else {
+          // Variant view mode (existing logic)
+          valueA = a?.[field];
+          valueB = b?.[field];
+
+          // Handle net_available - calculate if not present
+          if (field === "net_available") {
+            valueA =
+              a?.net_available ?? a?.available_quantity - a?.committed_quantity;
+            valueB =
+              b?.net_available ?? b?.available_quantity - b?.committed_quantity;
+          }
         }
 
         if (valueA === valueB) return 0;
@@ -641,7 +677,7 @@ const StockManagementPage = () => {
 
       return sortedData;
     },
-    [inventoryState.sortField, inventoryState.sortDirection]
+    [inventoryState.sortField, inventoryState.sortDirection, inventoryViewMode]
   );
 
   // Sort returns data
@@ -766,7 +802,8 @@ const StockManagementPage = () => {
             const processedData = sortInventoryData(
               data,
               prev.sortField,
-              prev.sortDirection
+              prev.sortDirection,
+              inventoryViewMode
             );
             return {
               ...prev,
@@ -796,6 +833,7 @@ const StockManagementPage = () => {
       inventoryState.debouncedSearch,
       inventoryState.lowStockFilter,
       sortInventoryData,
+      inventoryViewMode,
     ]
   );
 
@@ -1350,10 +1388,157 @@ const StockManagementPage = () => {
     return filteredData;
   }, [inventoryState.data, inventoryState.lowStockFilter]);
 
+  // Group inventory by product
+  const groupInventoryByProduct = useCallback((variantData) => {
+    if (!Array.isArray(variantData) || variantData.length === 0) {
+      return [];
+    }
+
+    const grouped = {};
+
+    variantData.forEach((item) => {
+      const productId = item.product_id;
+
+      if (!grouped[productId]) {
+        grouped[productId] = {
+          // Product-level info
+          product_id: productId,
+          product_name: item.product_name,
+          hsn_code: item.hsn_code,
+
+          // Aggregated totals
+          total_available: 0,
+          total_committed: 0,
+          total_net_available: 0,
+          total_cancelled: 0,
+          total_approved_returns: 0,
+          total_damaged: 0,
+          total_received: 0,
+
+          // Counts
+          variant_count: 0,
+
+          // Status tracking (worst case)
+          worst_status: "in_stock", // 'out_of_stock' | 'critical' | 'low_stock' | 'in_stock'
+          worst_status_label: "IN STOCK",
+          worst_status_color: "#198754",
+          worst_status_bgColor: "#d1e7dd",
+
+          // Variants array
+          variants: [],
+
+          // For sorting compatibility
+          variant_display_name: "", // Not used in product view
+          sku: "", // Not used in product view
+          inventory_item_id: null, // Not used in product view
+          reorder_point: null, // Will be set to minimum reorder point from variants
+          reorder_points: [], // Track all reorder points for aggregation
+        };
+      }
+
+      // Add variant to group
+      grouped[productId].variants.push(item);
+
+      // Track reorder points for aggregation
+      if (item.reorder_point !== null && item.reorder_point !== undefined) {
+        grouped[productId].reorder_points.push(item.reorder_point);
+      }
+
+      // Aggregate quantities
+      grouped[productId].total_available += item.available_quantity || 0;
+      grouped[productId].total_committed += item.committed_quantity || 0;
+      grouped[productId].total_net_available += item.net_available || 0;
+      grouped[productId].total_cancelled += item.cancelled_quantity || 0;
+      grouped[productId].total_approved_returns +=
+        item.approved_returns_quantity || 0;
+      grouped[productId].total_damaged += item.damaged_quantity || 0;
+      grouped[productId].total_received += item.total_received_quantity || 0;
+      grouped[productId].variant_count++;
+
+      // Determine worst status (priority: out_of_stock > critical > low_stock > in_stock)
+      const netAvailable =
+        item.net_available ?? item.available_quantity - item.committed_quantity;
+
+      let itemStatus = "in_stock";
+      let itemStatusLabel = "IN STOCK";
+      let itemStatusColor = "#198754";
+      let itemStatusBgColor = "#d1e7dd";
+
+      if (netAvailable <= 0) {
+        itemStatus = "out_of_stock";
+        itemStatusLabel = "OUT OF STOCK";
+        itemStatusColor = "#dc3545";
+        itemStatusBgColor = "#f8d7da";
+      } else if (
+        item.minimum_stock_level !== null &&
+        item.minimum_stock_level !== undefined &&
+        netAvailable <= item.minimum_stock_level
+      ) {
+        itemStatus = "critical";
+        itemStatusLabel = "CRITICAL";
+        itemStatusColor = "#fd7e14";
+        itemStatusBgColor = "#fff3cd";
+      } else if (
+        item.reorder_point !== null &&
+        item.reorder_point !== undefined &&
+        netAvailable <= item.reorder_point
+      ) {
+        itemStatus = "low_stock";
+        itemStatusLabel = "LOW STOCK";
+        itemStatusColor = "#ffc107";
+        itemStatusBgColor = "#fff3cd";
+      }
+
+      // Update worst status if this variant has worse status
+      const statusPriority = {
+        out_of_stock: 4,
+        critical: 3,
+        low_stock: 2,
+        in_stock: 1,
+      };
+
+      if (
+        statusPriority[itemStatus] >
+        statusPriority[grouped[productId].worst_status]
+      ) {
+        grouped[productId].worst_status = itemStatus;
+        grouped[productId].worst_status_label = itemStatusLabel;
+        grouped[productId].worst_status_color = itemStatusColor;
+        grouped[productId].worst_status_bgColor = itemStatusBgColor;
+      }
+    });
+
+    // After processing all variants, calculate aggregated reorder_point
+    Object.values(grouped).forEach((product) => {
+      if (product.reorder_points && product.reorder_points.length > 0) {
+        // Use minimum reorder point (most conservative - if any variant needs reordering, product needs attention)
+        product.reorder_point = Math.min(...product.reorder_points);
+        // Clean up temporary array
+        delete product.reorder_points;
+      }
+    });
+
+    return Object.values(grouped);
+  }, []);
+
   // Get displayed inventory data with filters applied
   const getDisplayedInventoryData = useCallback(() => {
-    return getFilteredInventoryData().slice(0, inventoryDisplayedCount);
-  }, [getFilteredInventoryData, inventoryDisplayedCount]);
+    const filteredData = getFilteredInventoryData();
+
+    // If product view mode, group by product first
+    if (inventoryViewMode === "product") {
+      const groupedData = groupInventoryByProduct(filteredData);
+      return groupedData.slice(0, inventoryDisplayedCount);
+    }
+
+    // Variant view mode (existing behavior)
+    return filteredData.slice(0, inventoryDisplayedCount);
+  }, [
+    getFilteredInventoryData,
+    inventoryDisplayedCount,
+    inventoryViewMode,
+    groupInventoryByProduct,
+  ]);
 
   // Get displayed returns data
   const getDisplayedReturnsData = useCallback(() => {
@@ -1369,6 +1554,16 @@ const StockManagementPage = () => {
 
     const filteredData = getFilteredInventoryData();
 
+    // In product view, count products, not variants
+    if (inventoryViewMode === "product") {
+      const groupedData = groupInventoryByProduct(filteredData);
+      return (
+        inventoryDisplayedCount < groupedData.length ||
+        inventoryState.pagination.page < inventoryState.pagination.totalPages
+      );
+    }
+
+    // Variant view (existing logic)
     return (
       inventoryDisplayedCount < filteredData.length ||
       inventoryState.pagination.page < inventoryState.pagination.totalPages
@@ -1378,6 +1573,8 @@ const StockManagementPage = () => {
     getFilteredInventoryData,
     inventoryState.pagination,
     inventoryState.sortField,
+    inventoryViewMode,
+    groupInventoryByProduct,
   ]);
 
   // Check if there's more returns data
@@ -1511,6 +1708,7 @@ const StockManagementPage = () => {
       sortDirection: "asc",
     }));
     setInventoryDisplayedCount(20);
+    setExpandedProducts(new Set()); // Reset expanded products
   };
 
   // Reset returns filters
@@ -1922,6 +2120,56 @@ const StockManagementPage = () => {
                       </select>
                     </div>
 
+                    {/* View Mode Toggle */}
+                    <div>
+                      <div className="btn-group btn-group-sm" role="group">
+                        <button
+                          type="button"
+                          className={`btn ${
+                            inventoryViewMode === "variant"
+                              ? "btn-primary"
+                              : "btn-outline-secondary"
+                          }`}
+                          onClick={() => {
+                            setInventoryViewMode("variant");
+                            setExpandedProducts(new Set()); // Reset expanded state
+                          }}
+                          title="Show variants"
+                          style={{ height: "36px", fontSize: "0.875rem" }}
+                        >
+                          <Icon
+                            icon="lucide:list"
+                            width="14"
+                            height="14"
+                            className="me-1"
+                          />
+                          Variants
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn ${
+                            inventoryViewMode === "product"
+                              ? "btn-primary"
+                              : "btn-outline-secondary"
+                          }`}
+                          onClick={() => {
+                            setInventoryViewMode("product");
+                            setExpandedProducts(new Set()); // Reset expanded state
+                          }}
+                          title="Show products"
+                          style={{ height: "36px", fontSize: "0.875rem" }}
+                        >
+                          <Icon
+                            icon="lucide:package"
+                            width="14"
+                            height="14"
+                            className="me-1"
+                          />
+                          Products
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Reset Button */}
                     <div>
                       <button
@@ -1945,9 +2193,14 @@ const StockManagementPage = () => {
                     >
                       Showing {getDisplayedInventoryData().length} of{" "}
                       {inventoryState.lowStockFilter === "all"
-                        ? inventoryState.pagination.total
+                        ? inventoryViewMode === "product"
+                          ? groupInventoryByProduct(inventoryState.data).length
+                          : inventoryState.pagination.total
+                        : inventoryViewMode === "product"
+                        ? groupInventoryByProduct(getFilteredInventoryData())
+                            .length
                         : getFilteredInventoryData().length}{" "}
-                      items
+                      {inventoryViewMode === "product" ? "products" : "items"}
                     </span>
                   </div>
 
@@ -2232,6 +2485,306 @@ const StockManagementPage = () => {
                         ) : (
                           <>
                             {getDisplayedInventoryData().map((item, index) => {
+                              // Product view mode
+                              if (inventoryViewMode === "product") {
+                                const isExpanded = expandedProducts.has(
+                                  item.product_id
+                                );
+
+                                return (
+                                  <React.Fragment
+                                    key={`product-${item.product_id}`}
+                                  >
+                                    {/* Product Row */}
+                                    <tr
+                                      style={{
+                                        backgroundColor: isExpanded
+                                          ? "#f8f9fa"
+                                          : "white",
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={() => {
+                                        const newExpanded = new Set(
+                                          expandedProducts
+                                        );
+                                        if (newExpanded.has(item.product_id)) {
+                                          newExpanded.delete(item.product_id);
+                                        } else {
+                                          newExpanded.add(item.product_id);
+                                        }
+                                        setExpandedProducts(newExpanded);
+                                      }}
+                                    >
+                                      <td>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <Icon
+                                            icon={
+                                              isExpanded
+                                                ? "lucide:chevron-down"
+                                                : "lucide:chevron-right"
+                                            }
+                                            width="16"
+                                            height="16"
+                                            style={{ color: "#6c757d" }}
+                                          />
+                                          <span className="text-secondary-light">
+                                            {index + 1}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span className="text-secondary-light fw-medium">
+                                          {item.product_name}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className="text-secondary-light">
+                                          {item.variant_count} variant
+                                          {item.variant_count !== 1 ? "s" : ""}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className="text-muted small">
+                                          -
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="fw-semibold">
+                                          {formatNumber(item.total_available)}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="text-secondary-light">
+                                          {formatNumber(item.total_committed)}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span
+                                          className={`fw-semibold ${
+                                            item.worst_status === "out_of_stock"
+                                              ? "text-danger"
+                                              : item.worst_status === "critical"
+                                              ? "text-warning"
+                                              : item.worst_status ===
+                                                "low_stock"
+                                              ? "text-warning"
+                                              : ""
+                                          }`}
+                                        >
+                                          {formatNumber(
+                                            item.total_net_available
+                                          )}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span
+                                          className="badge"
+                                          style={{
+                                            backgroundColor:
+                                              item.worst_status_bgColor,
+                                            color: item.worst_status_color,
+                                            fontSize: "0.75rem",
+                                            padding: "4px 8px",
+                                            fontWeight: "600",
+                                          }}
+                                        >
+                                          {item.worst_status_label}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="text-secondary-light small">
+                                          {item.reorder_point !== null &&
+                                          item.reorder_point !== undefined
+                                            ? formatNumber(item.reorder_point)
+                                            : "-"}
+                                        </span>
+                                      </td>
+                                      <td className="text-end">
+                                        {/* No action button for product row */}
+                                      </td>
+                                    </tr>
+
+                                    {/* Variant Rows (when expanded) */}
+                                    {isExpanded &&
+                                      item.variants.map(
+                                        (variant, variantIndex) => {
+                                          const netAvailable =
+                                            variant.net_available ??
+                                            variant.available_quantity -
+                                              variant.committed_quantity;
+
+                                          const getStockStatus = () => {
+                                            if (netAvailable <= 0) {
+                                              return {
+                                                status: "out_of_stock",
+                                                label: "OUT OF STOCK",
+                                                color: "#dc3545",
+                                                bgColor: "#f8d7da",
+                                              };
+                                            }
+                                            if (
+                                              variant.minimum_stock_level !==
+                                                null &&
+                                              variant.minimum_stock_level !==
+                                                undefined &&
+                                              netAvailable <=
+                                                variant.minimum_stock_level
+                                            ) {
+                                              return {
+                                                status: "critical",
+                                                label: "CRITICAL",
+                                                color: "#fd7e14",
+                                                bgColor: "#fff3cd",
+                                              };
+                                            }
+                                            if (
+                                              variant.reorder_point !== null &&
+                                              variant.reorder_point !==
+                                                undefined &&
+                                              netAvailable <=
+                                                variant.reorder_point
+                                            ) {
+                                              return {
+                                                status: "low_stock",
+                                                label: "LOW STOCK",
+                                                color: "#ffc107",
+                                                bgColor: "#fff3cd",
+                                              };
+                                            }
+                                            return {
+                                              status: "in_stock",
+                                              label: "IN STOCK",
+                                              color: "#198754",
+                                              bgColor: "#d1e7dd",
+                                            };
+                                          };
+
+                                          const stockStatus = getStockStatus();
+
+                                          return (
+                                            <tr
+                                              key={`variant-${variant.inventory_item_id}`}
+                                              style={{
+                                                backgroundColor: "#fafafa",
+                                              }}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <td>
+                                                <span className="text-muted small ms-4">
+                                                  {index + 1}.{variantIndex + 1}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-muted small ms-4">
+                                                  {variant.product_name}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-secondary-light ms-4">
+                                                  {variant.variant_display_name}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-secondary-light ms-4">
+                                                  {variant.sku || "-"}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="fw-semibold">
+                                                  {formatNumber(
+                                                    variant.available_quantity
+                                                  )}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="text-secondary-light">
+                                                  {formatNumber(
+                                                    variant.committed_quantity
+                                                  )}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span
+                                                  className={`fw-semibold ${
+                                                    stockStatus.status ===
+                                                    "out_of_stock"
+                                                      ? "text-danger"
+                                                      : stockStatus.status ===
+                                                        "critical"
+                                                      ? "text-warning"
+                                                      : stockStatus.status ===
+                                                        "low_stock"
+                                                      ? "text-warning"
+                                                      : ""
+                                                  }`}
+                                                >
+                                                  {formatNumber(netAvailable)}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span
+                                                  className="badge"
+                                                  style={{
+                                                    backgroundColor:
+                                                      stockStatus.bgColor,
+                                                    color: stockStatus.color,
+                                                    fontSize: "0.75rem",
+                                                    padding: "4px 8px",
+                                                    fontWeight: "600",
+                                                  }}
+                                                >
+                                                  {stockStatus.label}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="text-secondary-light small">
+                                                  {variant.reorder_point !==
+                                                    null &&
+                                                  variant.reorder_point !==
+                                                    undefined
+                                                    ? formatNumber(
+                                                        variant.reorder_point
+                                                      )
+                                                    : "-"}
+                                                </span>
+                                              </td>
+                                              <td className="text-end">
+                                                <button
+                                                  type="button"
+                                                  className="btn btn-sm"
+                                                  style={{
+                                                    border: "1px solid #dee2e6",
+                                                    background: "white",
+                                                    padding: "4px 8px",
+                                                    color: "#495057",
+                                                    borderRadius: "4px",
+                                                  }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openInventoryDetail(
+                                                      variant
+                                                    );
+                                                  }}
+                                                  title="View Details"
+                                                >
+                                                  <Icon
+                                                    icon="lucide:eye"
+                                                    width="14"
+                                                    height="14"
+                                                  />
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          );
+                                        }
+                                      )}
+                                  </React.Fragment>
+                                );
+                              }
+
+                              // Variant view mode (existing code)
                               const netAvailable =
                                 item.net_available ??
                                 item.available_quantity -
@@ -2422,7 +2975,19 @@ const StockManagementPage = () => {
                       <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
                         Showing{" "}
                         <strong>{getDisplayedInventoryData().length}</strong> of{" "}
-                        <strong>{inventoryState.pagination.total}</strong> items
+                        <strong>
+                          {inventoryState.lowStockFilter === "all"
+                            ? inventoryViewMode === "product"
+                              ? groupInventoryByProduct(inventoryState.data)
+                                  .length
+                              : inventoryState.pagination.total
+                            : inventoryViewMode === "product"
+                            ? groupInventoryByProduct(
+                                getFilteredInventoryData()
+                              ).length
+                            : getFilteredInventoryData().length}
+                        </strong>{" "}
+                        {inventoryViewMode === "product" ? "products" : "items"}
                       </div>
                       {hasMoreInventoryData() && (
                         <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
