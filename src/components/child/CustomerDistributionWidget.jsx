@@ -9,6 +9,10 @@ import {
   WARNING_COLORS,
 } from "@/utils/analyticsColors";
 import { apiClient } from "@/api/api";
+import { useInsights } from "@/hook/useInsights";
+import InsightsModal from "@/components/InsightsModal";
+import InsightButton from "@/components/InsightButton";
+import { buildCustomerSegmentationContext } from "@/utils/insightContexts";
 
 const ReactECharts = dynamic(
   () =>
@@ -40,6 +44,16 @@ const CustomerDistributionWidget = () => {
   const [segmentationLoading, setSegmentationLoading] = useState(false);
   const [segmentationError, setSegmentationError] = useState(null);
   const [periodDays, setPeriodDays] = useState(90);
+  const [showInsights, setShowInsights] = useState(false);
+
+  // AI Insights hook
+  const {
+    loading: insightsLoading,
+    insights,
+    error: insightsError,
+    generateInsightsStream,
+    clearInsights,
+  } = useInsights();
 
   // Dropdown options
   const periodOptions = [30, 60, 90, 180, 365];
@@ -204,9 +218,41 @@ const CustomerDistributionWidget = () => {
     };
   }, [segmentationData]);
 
+  // Handle AI Insights generation
+  const handleGetInsights = async () => {
+    if (!segmentationData || !segmentationData.segments || segmentationData.segments.length === 0) {
+      alert("No data available to analyze. Please wait for data to load.");
+      return;
+    }
+
+    // Open modal immediately with loading state
+    setShowInsights(true);
+
+    try {
+      // Build context for insights
+      const context = buildCustomerSegmentationContext(segmentationData, periodDays);
+
+      // Prepare data for insights API
+      const insightsData = {
+        segmentation_data: segmentationData,
+      };
+
+      // Generate insights using streaming (modal is already open, will show loading then stream)
+      await generateInsightsStream(insightsData, context);
+    } catch (err) {
+      // Error is handled by the hook and displayed in modal
+    }
+  };
+
+  // Handle closing insights modal
+  const handleCloseInsights = () => {
+    setShowInsights(false);
+    clearInsights();
+  };
+
   return (
     <div className="card border-0 shadow-sm h-100">
-      <div className="card-body">
+      <div className="card-body position-relative">
         {/* Title & Meta */}
         <div
           className="d-flex justify-content-between align-items-start mb-3 pe-4"
@@ -220,6 +266,14 @@ const CustomerDistributionWidget = () => {
               Customer Distribution
             </h6>
           </div>
+        </div>
+        {/* Action Buttons */}
+        <div className="position-absolute d-flex gap-2" style={{ top: "10px", right: "10px", zIndex: 10 }}>
+          <InsightButton
+            onClick={handleGetInsights}
+            loading={insightsLoading}
+            disabled={!segmentationData || !segmentationData.segments || segmentationData.segments.length === 0}
+          />
         </div>
         {/* Filters */}
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -303,6 +357,15 @@ const CustomerDistributionWidget = () => {
             No data available. Please adjust filters.
           </div>
         )}
+
+        {/* AI Insights Modal */}
+        <InsightsModal
+          open={showInsights}
+          onClose={handleCloseInsights}
+          insights={insights}
+          loading={insightsLoading}
+          error={insightsError}
+        />
       </div>
     </div>
   );

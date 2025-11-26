@@ -8,6 +8,9 @@ import {
   GREEN_GRADIENT,
 } from "@/utils/analyticsColors";
 import { apiClient } from "@/api/api";
+import { useInsights } from "@/hook/useInsights";
+import InsightsModal from "@/components/InsightsModal";
+import { buildHourlyEfficiencyContext } from "@/utils/insightContexts";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), {
   ssr: false,
@@ -90,7 +93,17 @@ const HourlyEfficiencyHeatmap = () => {
   const [isExpanded, setIsExpanded] = useState(false); // Expanded view state
   const [selectedPeriod, setSelectedPeriod] = useState("today"); // Time period selection
   const [internalDateRange, setInternalDateRange] = useState(null); // Internal date range state
+  const [showInsights, setShowInsights] = useState(false); // AI Insights modal state
   const chartRef = useRef(null);
+  
+  // AI Insights hook
+  const {
+    loading: insightsLoading,
+    insights,
+    error: insightsError,
+    generateInsightsStream,
+    clearInsights,
+  } = useInsights();
 
   // Initialize date range on mount
   useEffect(() => {
@@ -421,6 +434,50 @@ const HourlyEfficiencyHeatmap = () => {
     );
   };
 
+  // Handle AI Insights generation
+  const handleGetInsights = async () => {
+    if (!hourlyData || !hourlyData.data || hourlyData.data.length === 0) {
+      alert("No data available to analyze. Please wait for data to load.");
+      return;
+    }
+
+    // Open modal immediately with loading state
+    setShowInsights(true);
+
+    try {
+      // Build context for insights
+      const context = buildHourlyEfficiencyContext(
+        hourlyData,
+        effectiveDateRange.startDate,
+        effectiveDateRange.endDate,
+        selectedPeriod
+      );
+
+      // Prepare data for insights API (send aggregated hourly data)
+      const insightsData = {
+        hourly_data: hourlyData.data,
+        summary: {
+          total_spend: hourlyData.data.reduce((sum, item) => sum + (item.spend || 0), 0),
+          total_revenue: hourlyData.data.reduce((sum, item) => sum + (item.revenue || 0), 0),
+          total_orders: hourlyData.data.reduce((sum, item) => sum + (item.orders || 0), 0),
+          max_roas: hourlyData.maxROAS,
+          min_roas: hourlyData.minROAS,
+        },
+      };
+
+      // Generate insights using streaming (modal is already open, will show loading then stream)
+      await generateInsightsStream(insightsData, context);
+    } catch (err) {
+      // Error is handled by the hook and displayed in modal
+    }
+  };
+
+  // Handle closing insights modal
+  const handleCloseInsights = () => {
+    setShowInsights(false);
+    clearInsights();
+  };
+
   if (loading) {
     return (
       <div
@@ -489,11 +546,42 @@ const HourlyEfficiencyHeatmap = () => {
               </h6>
             </div>
           </div>
-          {/* Expand Button */}
+          {/* Action Buttons - Expand & AI Insights */}
           <div
-            className="position-absolute"
+            className="position-absolute d-flex gap-2"
             style={{ top: "10px", right: "10px", zIndex: 10 }}
           >
+            <button
+              className="btn btn-sm btn-light border"
+              onClick={handleGetInsights}
+              disabled={insightsLoading || !hourlyData || !hourlyData.data || hourlyData.data.length === 0}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "4px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+              title="Get AI Insights"
+            >
+              {insightsLoading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                    style={{ width: "12px", height: "12px" }}
+                  />
+                  <span style={{ fontSize: "12px" }}>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Icon icon="mdi:lightbulb-on-outline" style={{ fontSize: "16px", color: "#FFA726" }} />
+                  <span style={{ fontSize: "12px" }}>AI Insights</span>
+                </>
+              )}
+            </button>
             <button
               className="btn btn-sm btn-light border"
               onClick={() => setIsExpanded(true)}
@@ -835,22 +923,55 @@ const HourlyEfficiencyHeatmap = () => {
                   </p>
                 </div>
               </div>
-              {/* Close Button */}
-              <button
-                className="btn btn-sm btn-light border position-absolute"
-                onClick={() => setIsExpanded(false)}
-                style={{
-                  top: "10px",
-                  right: "10px",
-                  zIndex: 10,
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-                title="Close expanded view"
+              {/* Action Buttons - AI Insights & Close */}
+              <div
+                className="position-absolute d-flex gap-2"
+                style={{ top: "10px", right: "10px", zIndex: 10 }}
               >
-                <Icon icon="mdi:close" style={{ fontSize: "18px" }} />
-              </button>
+                <button
+                  className="btn btn-sm btn-light border"
+                  onClick={handleGetInsights}
+                  disabled={insightsLoading || !hourlyData || !hourlyData.data || hourlyData.data.length === 0}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                  title="Get AI Insights"
+                >
+                  {insightsLoading ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                        style={{ width: "12px", height: "12px" }}
+                      />
+                      <span style={{ fontSize: "12px" }}>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon icon="mdi:lightbulb-on-outline" style={{ fontSize: "16px", color: "#FFA726" }} />
+                      <span style={{ fontSize: "12px" }}>AI Insights</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  className="btn btn-sm btn-light border"
+                  onClick={() => setIsExpanded(false)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                  title="Close expanded view"
+                >
+                  <Icon icon="mdi:close" style={{ fontSize: "18px" }} />
+                </button>
+              </div>
 
               {/* Expanded Chart Content */}
               <div style={{ marginTop: "40px" }}>
@@ -1168,6 +1289,15 @@ const HourlyEfficiencyHeatmap = () => {
           </div>
         </div>
       )}
+
+      {/* AI Insights Modal */}
+      <InsightsModal
+        open={showInsights}
+        onClose={handleCloseInsights}
+        insights={insights}
+        loading={insightsLoading}
+        error={insightsError}
+      />
     </>
   );
 };
