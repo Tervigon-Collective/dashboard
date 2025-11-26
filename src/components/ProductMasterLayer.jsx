@@ -75,7 +75,10 @@ const isDefaultVariantRecord = (variant) => {
   }
 
   const displayName =
-    variant.variant_display_name || variant.displayName || variant.groupBy || "";
+    variant.variant_display_name ||
+    variant.displayName ||
+    variant.groupBy ||
+    "";
 
   return (
     keys.length === 1 &&
@@ -90,6 +93,7 @@ const ProductMasterLayer = () => {
   const [formData, setFormData] = useState({
     productName: "",
     hsnCode: "",
+    commonName: "",
   });
   // Variant management state
   const [variantOptions, setVariantOptions] = useState([]);
@@ -170,10 +174,8 @@ const ProductMasterLayer = () => {
       }
 
       const sortedData = [...dataArray].sort((a, b) => {
-        const valueA =
-          field === "sku" ? getPrimarySku(a) : a?.[field];
-        const valueB =
-          field === "sku" ? getPrimarySku(b) : b?.[field];
+        const valueA = field === "sku" ? getPrimarySku(a) : a?.[field];
+        const valueB = field === "sku" ? getPrimarySku(b) : b?.[field];
 
         if (valueA === valueB) return 0;
         if (valueA == null) return -1;
@@ -327,13 +329,7 @@ const ProductMasterLayer = () => {
       isInfiniteScrollRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isMounted,
-    debouncedSearchTerm,
-    sortField,
-    sortDirection,
-    currentPage,
-  ]);
+  }, [isMounted, debouncedSearchTerm, sortField, sortDirection, currentPage]);
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -519,11 +515,7 @@ const ProductMasterLayer = () => {
       });
 
       return Array.from(
-        new Set(
-          derived
-            .map((value) => value.trim())
-            .filter(Boolean)
-        )
+        new Set(derived.map((value) => value.trim()).filter(Boolean))
       );
     };
 
@@ -591,6 +583,7 @@ const ProductMasterLayer = () => {
           const fieldMap = {
             product_name: "productName",
             hsn_code: "hsnCode",
+            common_name: "commonName",
           };
 
           const frontendField = fieldMap[fieldName] || fieldName;
@@ -715,7 +708,9 @@ const ProductMasterLayer = () => {
       setVariantOptions(cloneVariantOptions(restoredOptions));
       setVariants(
         restoredVariants.length > 0
-          ? restoredVariants.map((variant) => cloneVariant(variant)).filter(Boolean)
+          ? restoredVariants
+              .map((variant) => cloneVariant(variant))
+              .filter(Boolean)
           : []
       );
     }
@@ -743,7 +738,11 @@ const ProductMasterLayer = () => {
   };
 
   useEffect(() => {
-    if (variantMode === "default" && Array.isArray(variants) && variants.length > 0) {
+    if (
+      variantMode === "default" &&
+      Array.isArray(variants) &&
+      variants.length > 0
+    ) {
       defaultVariantCacheRef.current = cloneVariant(variants[0]);
     }
   }, [variantMode, variants]);
@@ -789,6 +788,7 @@ const ProductMasterLayer = () => {
       const apiData = {
         product_name: trimmedName,
         hsn_code: formData.hsnCode?.trim() || null,
+        common_name: formData.commonName?.trim() || null,
         item_description: null,
         variants: variants.map((variant, index) => {
           const variantType = sanitizeVariantType(variant.variant_type);
@@ -826,6 +826,7 @@ const ProductMasterLayer = () => {
         setFormData({
           productName: "",
           hsnCode: "",
+          commonName: "",
         });
         setFormErrors({});
 
@@ -896,6 +897,7 @@ const ProductMasterLayer = () => {
     setFormData({
       productName: "",
       hsnCode: "",
+      commonName: "",
     });
   };
 
@@ -906,6 +908,7 @@ const ProductMasterLayer = () => {
     setFormData({
       productName: "",
       hsnCode: "",
+      commonName: "",
     });
     setVariantOptions([]);
     setVariantMode("default");
@@ -920,6 +923,7 @@ const ProductMasterLayer = () => {
     setFormData({
       productName: product.product_name || "",
       hsnCode: product.hsn_code || "",
+      commonName: product.common_name || "",
     });
 
     let productWithVariants = product;
@@ -1290,7 +1294,7 @@ const ProductMasterLayer = () => {
               >
                 <div className="d-flex align-items-center gap-2">
                   Product Name
-              {sortField === "product_name" && (
+                  {sortField === "product_name" && (
                     <Icon
                       icon={
                         sortDirection === "asc"
@@ -1323,6 +1327,7 @@ const ProductMasterLayer = () => {
                   )}
                 </div>
               </th>
+              <th scope="col">Common Name</th>
               <th
                 scope="col"
                 onClick={() => handleSort("sku")}
@@ -1357,7 +1362,7 @@ const ProductMasterLayer = () => {
               <>
                 {Array.from({ length: 5 }).map((_, rowIndex) => (
                   <tr key={`skeleton-${rowIndex}`}>
-                    {Array.from({ length: 5 }).map((_, colIndex) => (
+                    {Array.from({ length: 6 }).map((_, colIndex) => (
                       <td key={`skeleton-${rowIndex}-${colIndex}`}>
                         <div
                           className="skeleton"
@@ -1376,7 +1381,7 @@ const ProductMasterLayer = () => {
               </>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-muted">
+                <td colSpan="6" className="text-center py-4 text-muted">
                   <div className="d-flex flex-column align-items-center">
                     <p className="text-muted mb-0">
                       {searchTerm
@@ -1404,11 +1409,17 @@ const ProductMasterLayer = () => {
                       </span>
                     </td>
                     <td>
+                      <span className="text-secondary-light">
+                        {product.common_name || "-"}
+                      </span>
+                    </td>
+                    <td>
                       <span
                         className="text-secondary-light text-truncate d-inline-block"
                         style={{ maxWidth: "220px" }}
                         title={
-                          Array.isArray(product.variants) && product.variants.length
+                          Array.isArray(product.variants) &&
+                          product.variants.length
                             ? Array.from(
                                 new Set(
                                   product.variants
@@ -1425,7 +1436,8 @@ const ProductMasterLayer = () => {
                             : "-"
                         }
                       >
-                        {Array.isArray(product.variants) && product.variants.length
+                        {Array.isArray(product.variants) &&
+                        product.variants.length
                           ? (() => {
                               const skuList = Array.from(
                                 new Set(
@@ -1442,7 +1454,9 @@ const ProductMasterLayer = () => {
                               );
                               if (!skuList.length) return "-";
                               if (skuList.length === 1) return skuList[0];
-                              return `${skuList[0]} (+${skuList.length - 1} more)`;
+                              return `${skuList[0]} (+${
+                                skuList.length - 1
+                              } more)`;
                             })()
                           : "-"}
                       </span>
@@ -1485,7 +1499,7 @@ const ProductMasterLayer = () => {
                   <>
                     {Array.from({ length: 5 }).map((_, rowIndex) => (
                       <tr key={`skeleton-more-${rowIndex}`}>
-                        {Array.from({ length: 5 }).map((_, colIndex) => (
+                        {Array.from({ length: 6 }).map((_, colIndex) => (
                           <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
                             <div
                               className="skeleton"
@@ -1602,11 +1616,32 @@ const ProductMasterLayer = () => {
                     </div>
                   </div>
 
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Common Name</label>
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          formErrors.commonName ? "is-invalid" : ""
+                        }`}
+                        name="commonName"
+                        value={formData.commonName}
+                        onChange={handleInputChange}
+                      />
+                      {formErrors.commonName && (
+                        <div className="invalid-feedback d-block">
+                          {formErrors.commonName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Variant Mode & Options */}
                   <div className="mb-3">
                     <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2 gap-lg-3 mb-3">
                       <label className="form-label mb-0">
-                        <strong>Variants</strong> <span className="text-danger">*</span>
+                        <strong>Variants</strong>{" "}
+                        <span className="text-danger">*</span>
                       </label>
                       <div className="btn-group btn-group-sm" role="group">
                         <input
@@ -1620,7 +1655,9 @@ const ProductMasterLayer = () => {
                         />
                         <label
                           className={`btn btn-outline-secondary px-3 ${
-                            variantMode === "default" ? "active text-primary border-primary" : ""
+                            variantMode === "default"
+                              ? "active text-primary border-primary"
+                              : ""
                           }`}
                           htmlFor="variantModeDefault"
                         >
@@ -1637,7 +1674,9 @@ const ProductMasterLayer = () => {
                         />
                         <label
                           className={`btn btn-outline-secondary px-3 ${
-                            variantMode === "custom" ? "active text-primary border-primary" : ""
+                            variantMode === "custom"
+                              ? "active text-primary border-primary"
+                              : ""
                           }`}
                           htmlFor="variantModeCustom"
                         >
@@ -1678,9 +1717,7 @@ const ProductMasterLayer = () => {
                         )}
                       </label>
                     </div>
-                    <div
-                      className="border rounded px-3 py-3 bg-body-tertiary"
-                    >
+                    <div className="border rounded px-3 py-3 bg-body-tertiary">
                       {variants.length === 0 && (
                         <div className="text-muted small">
                           {variantMode === "custom"
@@ -1691,7 +1728,9 @@ const ProductMasterLayer = () => {
                       {variants.map((variant, index) => (
                         <div
                           key={variant.id || `variant_${index}`}
-                          className={index === variants.length - 1 ? "" : "mb-3"}
+                          className={
+                            index === variants.length - 1 ? "" : "mb-3"
+                          }
                         >
                           <label className="form-label small text-uppercase text-muted mb-1">
                             {variant.displayName ||

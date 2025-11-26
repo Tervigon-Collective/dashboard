@@ -513,7 +513,7 @@ const StockManagementPage = () => {
   });
 
   // View mode: 'variant' (current) or 'product' (new)
-  const [inventoryViewMode, setInventoryViewMode] = useState("variant");
+  const [inventoryViewMode, setInventoryViewMode] = useState("product");
   const [expandedProducts, setExpandedProducts] = useState(new Set());
 
   // Infinite scroll state for inventory
