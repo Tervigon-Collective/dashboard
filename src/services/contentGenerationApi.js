@@ -457,6 +457,20 @@ export const getGeneratedContent = async () => {
 };
 
 /**
+ * Delete a specific generated content item (direct to Python backend)
+ * @param {string} runId - Run ID
+ * @param {string} artifactId - Artifact ID
+ * @returns {Promise<Object>} Deletion response {status, message, content_type}
+ */
+export const deleteGeneratedContent = async (runId, artifactId) => {
+  // Call Python backend directly
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/content/generated/${runId}/${artifactId}`
+  );
+  return response.data;
+};
+
+/**
  * Get content preview URL
  * @param {string} runId - Run ID
  * @param {string} artifactId - Artifact ID
@@ -481,16 +495,39 @@ export const getContentDownloadUrl = (runId, artifactId) => {
  * @param {string} runId - Run ID
  * @param {string} artifactId - Artifact ID
  * @param {string} editPrompt - User's modification request
+ * @param {Object} options - Optional parameters
+ * @param {string} options.aspect_ratio - Aspect ratio (e.g., "square_1_1", "widescreen_16_9")
+ * @param {number} options.guidance_scale - Guidance scale (0-20, default: 2.5)
+ * @param {number} options.seed - Seed for reproducibility (optional)
  * @returns {Promise<Object>} Edit job response {job_id, status}
  */
-export const editImage = async (runId, artifactId, editPrompt) => {
+export const editImage = async (runId, artifactId, editPrompt, options = {}) => {
+  const requestBody = {
+    run_id: runId,
+    artifact_id: artifactId,
+    // Allow empty prompt for aspect ratio-only changes
+    edit_prompt: editPrompt || "",
+  };
+
+  // Always include aspect_ratio (required by backend)
+  if (options.aspect_ratio) {
+    requestBody.aspect_ratio = options.aspect_ratio;
+  }
+  
+  // Add optional parameters if provided
+  if (options.guidance_scale !== undefined) {
+    requestBody.guidance_scale = options.guidance_scale;
+  }
+  if (options.seed !== undefined && options.seed !== null) {
+    requestBody.seed = options.seed;
+  }
+
+  // Debug log
+  console.log("editImage API call - Request body:", requestBody);
+
   const response = await axios.post(
     `${config.pythonApi.baseURL}/api/content/edit-image`,
-    {
-      run_id: runId,
-      artifact_id: artifactId,
-      edit_prompt: editPrompt,
-    }
+    requestBody
   );
   return response.data;
 };

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { Modal, Button } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -39,7 +46,12 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
           {[
             { label: "Available", value: item.available_quantity },
             { label: "Committed", value: item.committed_quantity },
-            { label: "Net Available", value: item.net_available ?? (item.available_quantity - item.committed_quantity) },
+            {
+              label: "Net Available",
+              value:
+                item.net_available ??
+                item.available_quantity - item.committed_quantity,
+            },
             { label: "Cancelled", value: item.cancelled_quantity },
             {
               label: "Approved Returns",
@@ -56,21 +68,48 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
         </div>
 
         {/* Thresholds Section (Read-Only) */}
-        {(item.reorder_point !== null || item.minimum_stock_level !== null || item.safety_stock !== null) && (
+        {(item.reorder_point !== null ||
+          item.minimum_stock_level !== null ||
+          item.safety_stock !== null) && (
           <div className="mt-4 pt-3 border-top">
             <h6 className="mb-3">
               Inventory Thresholds
-              <span className="badge bg-info ms-2" style={{ fontSize: "0.7rem" }}>
+              <span
+                className="badge bg-info ms-2"
+                style={{ fontSize: "0.7rem" }}
+              >
                 Auto-calculated
               </span>
             </h6>
             <div className="row g-3">
               {[
-                { label: "Reorder Point", value: item.reorder_point, tooltip: "When to reorder" },
-                { label: "Minimum Stock Level", value: item.minimum_stock_level, tooltip: "Critical threshold" },
-                { label: "Safety Stock", value: item.safety_stock, tooltip: "Buffer stock" },
-                { label: "Average Daily Sales", value: item.average_daily_sales, tooltip: "Based on 90 days of sales", format: (v) => v !== null && v !== undefined ? v.toFixed(2) : "-" },
-                { label: "Lead Time (Days)", value: item.lead_time_days, tooltip: "Expected delivery time" },
+                {
+                  label: "Reorder Point",
+                  value: item.reorder_point,
+                  tooltip: "When to reorder",
+                },
+                {
+                  label: "Minimum Stock Level",
+                  value: item.minimum_stock_level,
+                  tooltip: "Critical threshold",
+                },
+                {
+                  label: "Safety Stock",
+                  value: item.safety_stock,
+                  tooltip: "Buffer stock",
+                },
+                {
+                  label: "Average Daily Sales",
+                  value: item.average_daily_sales,
+                  tooltip: "Based on 90 days of sales",
+                  format: (v) =>
+                    v !== null && v !== undefined ? v.toFixed(2) : "-",
+                },
+                {
+                  label: "Lead Time (Days)",
+                  value: item.lead_time_days,
+                  tooltip: "Expected delivery time",
+                },
               ].map((metric) => (
                 <div className="col-6 col-md-4" key={metric.label}>
                   <div className="text-muted small">
@@ -82,16 +121,14 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         data-bs-title={metric.tooltip}
                         style={{ cursor: "help", marginLeft: "4px" }}
                       >
-                        <Icon
-                          icon="lucide:info"
-                          width="12"
-                          height="12"
-                        />
+                        <Icon icon="lucide:info" width="12" height="12" />
                       </span>
                     )}
                   </div>
                   <div className="fw-semibold">
-                    {metric.format ? metric.format(metric.value) : formatNumber(metric.value)}
+                    {metric.format
+                      ? metric.format(metric.value)
+                      : formatNumber(metric.value)}
                   </div>
                 </div>
               ))}
@@ -135,7 +172,9 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
                         {entry.source_reference || "-"}
                       </td>
                       <td className="small text-muted">
-                        {entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}
+                        {entry.created_at
+                          ? new Date(entry.created_at).toLocaleString()
+                          : "-"}
                       </td>
                     </tr>
                   ))}
@@ -185,8 +224,278 @@ const ReturnActionButtons = ({ row, onApprove, onReject, busy }) => {
   );
 };
 
+const MoveToInventoryModal = ({
+  variant,
+  isOpen,
+  onClose,
+  onMove,
+  loading,
+}) => {
+  const [sku, setSku] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [skuValidation, setSkuValidation] = useState(null);
+  const [validatingSku, setValidatingSku] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSku("");
+      setQuantity(1);
+      setSkuValidation(null);
+    }
+  }, [isOpen]);
+
+  const handleValidateSku = async () => {
+    if (!sku.trim()) {
+      setSkuValidation({ valid: false, message: "Please enter a SKU" });
+      return;
+    }
+
+    setValidatingSku(true);
+    try {
+      const response = await inventoryManagementApi.validateSkuForSampleMove(
+        sku.trim()
+      );
+      if (response.success && response.data.valid) {
+        setSkuValidation({
+          valid: true,
+          message: "SKU validated successfully",
+          ...response.data,
+        });
+      } else {
+        setSkuValidation({
+          valid: false,
+          message: response.message || "SKU validation failed",
+        });
+      }
+    } catch (error) {
+      setSkuValidation({
+        valid: false,
+        message: error.message || "SKU not found in master product variants",
+      });
+    } finally {
+      setValidatingSku(false);
+    }
+  };
+
+  const handleConfirmMove = () => {
+    if (!skuValidation?.valid) {
+      toast.error("Please validate SKU first");
+      return;
+    }
+    if (quantity <= 0 || quantity > variant.available_to_move) {
+      toast.error("Invalid quantity");
+      return;
+    }
+    onMove(variant, sku.trim(), quantity, skuValidation.variant_id);
+  };
+
+  const formatVariantType = (variantType) => {
+    if (!variantType || typeof variantType !== "object") return "-";
+    return Object.entries(variantType)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(", ");
+  };
+
+  if (!variant) return null;
+
+  return (
+    <Modal show={isOpen} onHide={onClose} size="md" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Move Sample to Inventory</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="mb-3">
+          <div className="text-muted small">Product</div>
+          <div className="fw-semibold">{variant.product_name}</div>
+        </div>
+        <div className="mb-3">
+          <div className="text-muted small">Variant</div>
+          <div className="fw-semibold">
+            {formatVariantType(variant.variant_type)}
+          </div>
+        </div>
+        <div className="mb-3">
+          <div className="text-muted small">Available to Move</div>
+          <div className="fw-semibold">{variant.available_to_move} units</div>
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">
+            SKU (from Master) <span className="text-danger">*</span>
+          </label>
+          <div className="input-group">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Enter SKU from product_variants"
+              value={sku}
+              onChange={(e) => {
+                setSku(e.target.value);
+                setSkuValidation(null);
+              }}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  handleValidateSku();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              onClick={handleValidateSku}
+              disabled={validatingSku || !sku.trim()}
+            >
+              {validatingSku ? (
+                <span className="spinner-border spinner-border-sm" />
+              ) : (
+                "Validate"
+              )}
+            </button>
+          </div>
+          {skuValidation && (
+            <div
+              className={`mt-2 small ${
+                skuValidation.valid ? "text-success" : "text-danger"
+              }`}
+            >
+              {skuValidation.message}
+            </div>
+          )}
+        </div>
+
+        {skuValidation?.valid && (
+          <div className="mb-3">
+            <div className="text-muted small">Master Variant</div>
+            <div className="fw-semibold">
+              {skuValidation.variant_display_name || skuValidation.sku}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-3">
+          <label className="form-label">
+            Quantity to Move <span className="text-danger">*</span>
+          </label>
+          <input
+            type="number"
+            className="form-control"
+            min="1"
+            max={variant.available_to_move}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+          />
+          <div className="form-text">
+            Maximum: {variant.available_to_move} units
+          </div>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleConfirmMove}
+          disabled={
+            loading ||
+            !skuValidation?.valid ||
+            quantity <= 0 ||
+            quantity > variant.available_to_move
+          }
+        >
+          {loading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" />
+              Moving...
+            </>
+          ) : (
+            "Move to Inventory"
+          )}
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+const QrCodeModal = ({
+  qrCodeUrl,
+  isOpen,
+  onClose,
+  productName,
+  variantName,
+}) => {
+  const handleDownload = () => {
+    if (!qrCodeUrl) return;
+    const link = document.createElement("a");
+    link.href = qrCodeUrl;
+    link.download = `sample-qr-${productName}-${variantName}.png`.replace(
+      /[^a-z0-9.-]/gi,
+      "-"
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <Modal show={isOpen} onHide={onClose} size="sm" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>QR Code Generated</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className="text-center">
+        <div className="mb-3">
+          <div className="text-muted small mb-2">Product: {productName}</div>
+          <div className="text-muted small mb-3">Variant: {variantName}</div>
+        </div>
+        {qrCodeUrl && (
+          <div className="mb-3">
+            <img
+              src={qrCodeUrl}
+              alt="Sample Inventory QR Code"
+              style={{
+                maxWidth: "100%",
+                height: "auto",
+                border: "1px solid #dee2e6",
+                borderRadius: "8px",
+              }}
+            />
+          </div>
+        )}
+        <div className="text-muted small">
+          This QR code can be scanned multiple times for dispatch (once per
+          unit).
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+        {qrCodeUrl && (
+          <Button variant="primary" onClick={handleDownload}>
+            <Icon icon="mdi:download" width={18} height={18} className="me-1" />
+            Download QR Code
+          </Button>
+        )}
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
 const StockManagementPage = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("inventory");
+  const qrHandledRef = useRef(false);
+  const [highlightedVariantId, setHighlightedVariantId] = useState(null);
+
+  // Infinite scroll state for inventory
+  const inventoryTableContainerRef = useRef(null);
+  const inventoryInfiniteScrollRef = useRef(false);
+  const inventoryPrevPageRef = useRef(1);
+  const inventoryPrevSearchRef = useRef("");
+  const inventoryPrevLimitRef = useRef(25);
+  const inventoryStateRef = useRef(null); // Ref to track current state
+  const [inventoryIsMounted, setInventoryIsMounted] = useState(false);
 
   // Inventory state
   const [inventoryState, setInventoryState] = useState({
@@ -195,11 +504,17 @@ const StockManagementPage = () => {
     loading: false,
     search: "",
     debouncedSearch: "",
-    limit: 20,
+    limit: 25,
+    displayedItemsCount: 25, // For infinite scroll
+    isLoadingMore: false, // For infinite scroll
     sortField: null,
     sortDirection: "asc",
     lowStockFilter: "all", // "all", "low", "normal"
   });
+
+  // View mode: 'variant' (current) or 'product' (new)
+  const [inventoryViewMode, setInventoryViewMode] = useState("variant");
+  const [expandedProducts, setExpandedProducts] = useState(new Set());
 
   // Infinite scroll state for inventory
   const [inventoryDisplayedCount, setInventoryDisplayedCount] = useState(20);
@@ -240,21 +555,93 @@ const StockManagementPage = () => {
     return () => clearTimeout(timer);
   }, [inventoryState.search]);
 
-  // Sort inventory data
+  const [sampleProductsState, setSampleProductsState] = useState({
+    data: [],
+    pagination: { page: 1, totalPages: 1 },
+    loading: false,
+    search: "",
+    limit: 50,
+  });
+
+  const [moveModalState, setMoveModalState] = useState({
+    isOpen: false,
+    variant: null,
+    loading: false,
+    qrCodeUrl: null,
+    showQrCode: false,
+  });
+
+  const [qrPreviewState, setQrPreviewState] = useState({
+    isOpen: false,
+    qrCodeUrl: null,
+    productName: "",
+    variantName: "",
+    procurementVariantId: null,
+    masterVariantId: null,
+  });
+
+  // Debounced search for inventory (like VendorMasterLayer)
+  const [debouncedInventorySearch, setDebouncedInventorySearch] = useState("");
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    inventoryStateRef.current = inventoryState;
+  }, [inventoryState]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedInventorySearch(inventoryState.search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [inventoryState.search]);
+
+  // Sort inventory data (handles both variant and product view)
   const sortInventoryData = useCallback(
-    (dataArray, field = inventoryState.sortField, direction = inventoryState.sortDirection) => {
+    (
+      dataArray,
+      field = inventoryState.sortField,
+      direction = inventoryState.sortDirection,
+      viewMode = inventoryViewMode
+    ) => {
       if (!field || !Array.isArray(dataArray)) {
         return dataArray || [];
       }
 
       const sortedData = [...dataArray].sort((a, b) => {
-        let valueA = a?.[field];
-        let valueB = b?.[field];
+        let valueA, valueB;
 
-        // Handle net_available - calculate if not present
-        if (field === "net_available") {
-          valueA = a?.net_available ?? (a?.available_quantity - a?.committed_quantity);
-          valueB = b?.net_available ?? (b?.available_quantity - b?.committed_quantity);
+        // Handle product view mode
+        if (viewMode === "product") {
+          // Map variant-level fields to product-level aggregated fields
+          if (field === "available_quantity") {
+            valueA = a.total_available;
+            valueB = b.total_available;
+          } else if (field === "committed_quantity") {
+            valueA = a.total_committed;
+            valueB = b.total_committed;
+          } else if (field === "net_available") {
+            valueA = a.total_net_available;
+            valueB = b.total_net_available;
+          } else if (field === "product_name") {
+            valueA = a.product_name;
+            valueB = b.product_name;
+          } else {
+            // For other fields, use product-level values
+            valueA = a[field];
+            valueB = b[field];
+          }
+        } else {
+          // Variant view mode (existing logic)
+          valueA = a?.[field];
+          valueB = b?.[field];
+
+          // Handle net_available - calculate if not present
+          if (field === "net_available") {
+            valueA =
+              a?.net_available ?? a?.available_quantity - a?.committed_quantity;
+            valueB =
+              b?.net_available ?? b?.available_quantity - b?.committed_quantity;
+          }
         }
 
         if (valueA === valueB) return 0;
@@ -290,12 +677,16 @@ const StockManagementPage = () => {
 
       return sortedData;
     },
-    [inventoryState.sortField, inventoryState.sortDirection]
+    [inventoryState.sortField, inventoryState.sortDirection, inventoryViewMode]
   );
 
   // Sort returns data
   const sortReturnsData = useCallback(
-    (dataArray, field = returnsState.sortField, direction = returnsState.sortDirection) => {
+    (
+      dataArray,
+      field = returnsState.sortField,
+      direction = returnsState.sortDirection
+    ) => {
       if (!field || !Array.isArray(dataArray)) {
         return dataArray || [];
       }
@@ -343,15 +734,29 @@ const StockManagementPage = () => {
   // Load inventory
   const loadInventory = useCallback(
     async ({ page, limit, search, append = false } = {}) => {
+      // Get current state from ref (updated in useEffect)
+      const currentState = inventoryStateRef.current || {
+        pagination: { page: 1, totalPages: 1, total: 0 },
+        limit: 25,
+        search: "",
+      };
+
       if (!append) {
-      setInventoryState((prev) => ({ ...prev, loading: true }));
+        setInventoryState((prev) => ({ ...prev, loading: true }));
+      } else {
+        setInventoryState((prev) => ({ ...prev, isLoadingMore: true }));
       }
 
       try {
+        const targetPage = page ?? currentState.pagination.page;
+        const targetLimit = limit ?? currentState.limit;
+        const targetSearch =
+          search ?? currentState.search ?? currentState.debouncedSearch;
+
         const response = await inventoryManagementApi.listInventoryItems({
-          page: page ?? inventoryState.pagination.page,
-          limit: limit ?? inventoryState.limit,
-          search: search ?? inventoryState.debouncedSearch,
+          page: targetPage,
+          limit: targetLimit,
+          search: targetSearch,
         });
 
         const data = Array.isArray(response?.data)
@@ -375,6 +780,7 @@ const StockManagementPage = () => {
               return {
                 ...prev,
                 loading: false,
+                isLoadingMore: false,
               };
             }
             // No sorting active - safe to append and maintain API pagination order
@@ -384,24 +790,29 @@ const StockManagementPage = () => {
               data: combinedData,
               pagination,
               loading: false,
+              isLoadingMore: false,
             };
           });
         } else {
           // When not appending, sort the new data normally
           // Use state from setState callback to avoid stale closure issues
           setInventoryState((prev) => {
+            const finalLimit = limit ?? prev.limit;
+            const finalSearch = search !== undefined ? search : prev.search;
             const processedData = sortInventoryData(
               data,
               prev.sortField,
-              prev.sortDirection
+              prev.sortDirection,
+              inventoryViewMode
             );
             return {
               ...prev,
               data: processedData,
               pagination,
               loading: false,
-              limit: limit ?? prev.limit,
-              search: search !== undefined ? search : prev.search,
+              limit: finalLimit,
+              search: finalSearch,
+              displayedItemsCount: finalLimit, // Reset displayed count
             };
           });
           setInventoryDisplayedCount(20);
@@ -409,7 +820,11 @@ const StockManagementPage = () => {
       } catch (error) {
         console.error("Failed to load inventory", error);
         toast.error(error.message || "Failed to load inventory");
-        setInventoryState((prev) => ({ ...prev, loading: false }));
+        setInventoryState((prev) => ({
+          ...prev,
+          loading: false,
+          isLoadingMore: false,
+        }));
       }
     },
     [
@@ -418,6 +833,7 @@ const StockManagementPage = () => {
       inventoryState.debouncedSearch,
       inventoryState.lowStockFilter,
       sortInventoryData,
+      inventoryViewMode,
     ]
   );
 
@@ -425,7 +841,7 @@ const StockManagementPage = () => {
   const loadReturns = useCallback(
     async ({ page, status, append = false } = {}) => {
       if (!append) {
-      setReturnsState((prev) => ({ ...prev, loading: true }));
+        setReturnsState((prev) => ({ ...prev, loading: true }));
       }
 
       try {
@@ -495,6 +911,119 @@ const StockManagementPage = () => {
     [returnsState.pagination.page, returnsState.status, sortReturnsData]
   );
 
+  const loadSampleProducts = useCallback(
+    async ({ page, search } = {}) => {
+      setSampleProductsState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await inventoryManagementApi.getSampleProducts({
+          page: page ?? sampleProductsState.pagination.page,
+          limit: sampleProductsState.limit,
+          search: search ?? sampleProductsState.search,
+        });
+
+        const data = response?.data?.data || [];
+        const pagination = response?.data?.pagination || {
+          page: 1,
+          totalPages: 1,
+          total: data.length,
+        };
+
+        setSampleProductsState((prev) => ({
+          ...prev,
+          data,
+          pagination,
+          loading: false,
+        }));
+      } catch (error) {
+        console.error("Failed to load sample products", error);
+        toast.error(error.message || "Failed to load sample products");
+        setSampleProductsState((prev) => ({ ...prev, loading: false }));
+      }
+    },
+    [
+      sampleProductsState.pagination.page,
+      sampleProductsState.limit,
+      sampleProductsState.search,
+    ]
+  );
+
+  const handleMoveToInventory = (variant) => {
+    setMoveModalState({ isOpen: true, variant, loading: false });
+  };
+
+  const handleCloseMoveModal = () => {
+    // Clean up QR code URL if it exists
+    if (moveModalState.qrCodeUrl) {
+      URL.revokeObjectURL(moveModalState.qrCodeUrl);
+    }
+    setMoveModalState({
+      isOpen: false,
+      variant: null,
+      loading: false,
+      qrCodeUrl: null,
+      showQrCode: false,
+    });
+  };
+
+  const handleConfirmMove = async (variant, sku, quantity, masterVariantId) => {
+    setMoveModalState((prev) => ({ ...prev, loading: true }));
+    try {
+      const response = await inventoryManagementApi.moveSampleToInventory(
+        variant.procurement_variant_id,
+        { sku, quantity }
+      );
+
+      if (response.success && response.data?.qr_code) {
+        const qrCode = response.data.qr_code;
+        toast.success(
+          `Sample quantity moved to inventory successfully${
+            qrCode.is_new ? " (QR code generated)" : " (QR code reused)"
+          }`
+        );
+
+        // Close move modal first
+        setMoveModalState((prev) => ({
+          ...prev,
+          isOpen: false,
+          loading: false,
+        }));
+
+        // Show QR code modal
+        if (masterVariantId) {
+          try {
+            const qrImageUrl = await inventoryManagementApi.getSampleQrCode({
+              procurementVariantId: variant.procurement_variant_id,
+              masterVariantId: masterVariantId,
+            });
+            setMoveModalState((prev) => ({
+              ...prev,
+              qrCodeUrl: qrImageUrl,
+              showQrCode: true,
+              variant: variant, // Keep variant for QR modal display
+            }));
+          } catch (qrError) {
+            console.error("Failed to load QR code:", qrError);
+            // Don't block the success - QR code generation succeeded, just display failed
+            toast.warning(
+              "QR code generated but could not be displayed. You can access it later."
+            );
+          }
+        }
+      } else {
+        toast.success("Sample quantity moved to inventory successfully");
+        handleCloseMoveModal();
+      }
+
+      loadSampleProducts({ page: sampleProductsState.pagination.page });
+    } catch (error) {
+      console.error("Failed to move sample to inventory", error);
+      toast.error(error.message || "Failed to move sample to inventory");
+      handleCloseMoveModal();
+    } finally {
+      setMoveModalState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
   // Track initial mount
   const [isMounted, setIsMounted] = useState(false);
   const prevInventoryFiltersRef = useRef({
@@ -509,13 +1038,22 @@ const StockManagementPage = () => {
     sortDir: "asc",
   });
 
-  // Initial load
+  // Initial load on mount
   useEffect(() => {
-    setIsMounted(true);
+    if (activeTab === "inventory") {
+      setInventoryIsMounted(true);
+      setIsMounted(true);
       loadInventory({ page: 1 });
+      inventoryPrevPageRef.current = 1;
+      inventoryPrevSearchRef.current = "";
+      inventoryPrevLimitRef.current = 25;
+    } else if (activeTab === "returns") {
+      setIsMounted(true);
       loadReturns({ page: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    } else if (activeTab === "sample-products") {
+      loadSampleProducts({ page: 1 });
+    }
+  }, [activeTab, loadReturns, loadSampleProducts]);
 
   // Handle inventory filter changes
   useEffect(() => {
@@ -576,10 +1114,152 @@ const StockManagementPage = () => {
     returnsState.sortDirection,
   ]);
 
+  // Handle QR code deep link - similar to receiving management
+  useEffect(() => {
+    if (!searchParams) return;
+    if (qrHandledRef.current) return;
+
+    const fromQr = searchParams.get("fromQr");
+    const procurementVariantIdParam = searchParams.get("procurementVariantId");
+    const masterVariantIdParam = searchParams.get("masterVariantId");
+    const tokenParam = searchParams.get("token");
+
+    if (!fromQr || !procurementVariantIdParam) {
+      return;
+    }
+
+    const procurementVariantIdNum = Number(procurementVariantIdParam);
+
+    if (!Number.isFinite(procurementVariantIdNum)) {
+      qrHandledRef.current = true;
+      return;
+    }
+
+    const openFromQr = async () => {
+      try {
+        // Switch to sample products tab
+        setActiveTab("sample-products");
+
+        // Load sample products if not already loaded
+        if (sampleProductsState.data.length === 0) {
+          await loadSampleProducts({ page: 1 });
+        }
+
+        // Find the variant in the loaded data
+        let variantToHighlight = sampleProductsState.data.find(
+          (v) => Number(v.procurement_variant_id) === procurementVariantIdNum
+        );
+
+        // If not found in current data, try loading it
+        if (!variantToHighlight) {
+          try {
+            const response = await inventoryManagementApi.getSampleProducts({
+              page: 1,
+              limit: 1000, // Load more to find the variant
+              search: "",
+            });
+            const allVariants = response?.data?.data || [];
+            variantToHighlight = allVariants.find(
+              (v) =>
+                Number(v.procurement_variant_id) === procurementVariantIdNum
+            );
+            if (variantToHighlight) {
+              // Update state with found variant
+              setSampleProductsState((prev) => ({
+                ...prev,
+                data: allVariants,
+              }));
+            }
+          } catch (error) {
+            console.error("Failed to load variant for QR deep link:", error);
+          }
+        }
+
+        // Highlight the variant
+        if (variantToHighlight) {
+          setHighlightedVariantId(procurementVariantIdNum);
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedVariantId(null);
+          }, 3000);
+        }
+
+        // Mark as handled and remove query params
+        setTimeout(() => {
+          qrHandledRef.current = true;
+          router.replace("/stock-management", { scroll: false });
+        }, 100);
+      } catch (error) {
+        console.error("Error opening QR deep link:", error);
+        // Don't mark as handled on error, so it can retry if needed
+      }
+    };
+
+    openFromQr();
+  }, [searchParams, sampleProductsState.data, loadSampleProducts, router]);
+
+  // Handle inventory data loading with infinite scroll logic (similar to VendorMasterLayer)
+  useEffect(() => {
+    if (!inventoryIsMounted || activeTab !== "inventory") return;
+
+    const currentSearch = debouncedInventorySearch;
+    const currentLimit = inventoryState.limit;
+    const currentPage = inventoryState.pagination.page;
+
+    const prevSearch = inventoryPrevSearchRef.current;
+    const prevLimit = inventoryPrevLimitRef.current;
+    const prevPage = inventoryPrevPageRef.current;
+
+    // Check if search or limit changed
+    const searchChanged = prevSearch !== currentSearch;
+    const limitChanged = prevLimit !== currentLimit;
+    const pageChanged = prevPage !== currentPage;
+
+    // If search or limit changed, reset to page 1 and load
+    if (searchChanged || limitChanged) {
+      inventoryPrevSearchRef.current = currentSearch;
+      inventoryPrevLimitRef.current = currentLimit;
+      inventoryInfiniteScrollRef.current = false;
+      if (currentPage !== 1) {
+        inventoryPrevPageRef.current = currentPage;
+        setInventoryState((prev) => ({
+          ...prev,
+          pagination: { ...prev.pagination, page: 1 },
+        }));
+      } else {
+        inventoryPrevPageRef.current = 1;
+        loadInventory({ page: 1, search: currentSearch, limit: currentLimit });
+      }
+      return;
+    }
+
+    // If only page changed (not from infinite scroll), load that page
+    if (pageChanged && currentPage > 0 && !inventoryInfiniteScrollRef.current) {
+      inventoryPrevPageRef.current = currentPage;
+      loadInventory({ page: currentPage });
+    } else if (pageChanged && inventoryInfiniteScrollRef.current) {
+      // Page changed from infinite scroll, just update the ref and reset flag
+      inventoryPrevPageRef.current = currentPage;
+      inventoryInfiniteScrollRef.current = false;
+    }
+  }, [
+    inventoryIsMounted,
+    activeTab,
+    debouncedInventorySearch,
+    inventoryState.limit,
+    inventoryState.pagination.page,
+    loadInventory,
+  ]);
+
   // Reset displayed count when filters change
   useEffect(() => {
     setInventoryDisplayedCount(20);
-  }, [inventoryState.debouncedSearch, inventoryState.lowStockFilter, inventoryState.sortField, inventoryState.sortDirection]);
+  }, [
+    inventoryState.debouncedSearch,
+    inventoryState.lowStockFilter,
+    inventoryState.sortField,
+    inventoryState.sortDirection,
+  ]);
 
   useEffect(() => {
     setReturnsDisplayedCount(20);
@@ -627,13 +1307,15 @@ const StockManagementPage = () => {
       (bootstrapModule) => {
         // Wait for DOM to update
         setTimeout(() => {
-          const Tooltip = bootstrapModule.Tooltip || (window.bootstrap && window.bootstrap.Tooltip);
+          const Tooltip =
+            bootstrapModule.Tooltip ||
+            (window.bootstrap && window.bootstrap.Tooltip);
           if (!Tooltip) return;
 
           const tooltipTriggerList = document.querySelectorAll(
             '[data-bs-toggle="tooltip"]'
           );
-          
+
           // Dispose existing tooltips first
           tooltipTriggerList.forEach((el) => {
             const existingTooltip = Tooltip.getInstance(el);
@@ -668,32 +1350,195 @@ const StockManagementPage = () => {
   // Get filtered inventory data (helper function)
   const getFilteredInventoryData = useCallback(() => {
     let filteredData = inventoryState.data;
-    
+
     // Apply low stock filter based on thresholds
     if (inventoryState.lowStockFilter === "low") {
       filteredData = filteredData.filter((item) => {
-        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
-        return netAvailable <= 0 || 
-               (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) ||
-               (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point);
+        const netAvailable =
+          item.net_available ??
+          item.available_quantity - item.committed_quantity;
+        return (
+          netAvailable <= 0 ||
+          (item.minimum_stock_level !== null &&
+            item.minimum_stock_level !== undefined &&
+            netAvailable <= item.minimum_stock_level) ||
+          (item.reorder_point !== null &&
+            item.reorder_point !== undefined &&
+            netAvailable <= item.reorder_point)
+        );
       });
     } else if (inventoryState.lowStockFilter === "normal") {
       filteredData = filteredData.filter((item) => {
-        const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
+        const netAvailable =
+          item.net_available ??
+          item.available_quantity - item.committed_quantity;
         // Normal stock: must be above minimum_stock_level (if exists) AND above reorder_point (if exists)
-        return netAvailable > 0 && 
-               (item.minimum_stock_level === null || item.minimum_stock_level === undefined || netAvailable > item.minimum_stock_level) &&
-               (item.reorder_point === null || item.reorder_point === undefined || netAvailable > item.reorder_point);
+        return (
+          netAvailable > 0 &&
+          (item.minimum_stock_level === null ||
+            item.minimum_stock_level === undefined ||
+            netAvailable > item.minimum_stock_level) &&
+          (item.reorder_point === null ||
+            item.reorder_point === undefined ||
+            netAvailable > item.reorder_point)
+        );
       });
     }
-    
+
     return filteredData;
   }, [inventoryState.data, inventoryState.lowStockFilter]);
 
+  // Group inventory by product
+  const groupInventoryByProduct = useCallback((variantData) => {
+    if (!Array.isArray(variantData) || variantData.length === 0) {
+      return [];
+    }
+
+    const grouped = {};
+
+    variantData.forEach((item) => {
+      const productId = item.product_id;
+
+      if (!grouped[productId]) {
+        grouped[productId] = {
+          // Product-level info
+          product_id: productId,
+          product_name: item.product_name,
+          hsn_code: item.hsn_code,
+
+          // Aggregated totals
+          total_available: 0,
+          total_committed: 0,
+          total_net_available: 0,
+          total_cancelled: 0,
+          total_approved_returns: 0,
+          total_damaged: 0,
+          total_received: 0,
+
+          // Counts
+          variant_count: 0,
+
+          // Status tracking (worst case)
+          worst_status: "in_stock", // 'out_of_stock' | 'critical' | 'low_stock' | 'in_stock'
+          worst_status_label: "IN STOCK",
+          worst_status_color: "#198754",
+          worst_status_bgColor: "#d1e7dd",
+
+          // Variants array
+          variants: [],
+
+          // For sorting compatibility
+          variant_display_name: "", // Not used in product view
+          sku: "", // Not used in product view
+          inventory_item_id: null, // Not used in product view
+          reorder_point: null, // Will be set to minimum reorder point from variants
+          reorder_points: [], // Track all reorder points for aggregation
+        };
+      }
+
+      // Add variant to group
+      grouped[productId].variants.push(item);
+
+      // Track reorder points for aggregation
+      if (item.reorder_point !== null && item.reorder_point !== undefined) {
+        grouped[productId].reorder_points.push(item.reorder_point);
+      }
+
+      // Aggregate quantities
+      grouped[productId].total_available += item.available_quantity || 0;
+      grouped[productId].total_committed += item.committed_quantity || 0;
+      grouped[productId].total_net_available += item.net_available || 0;
+      grouped[productId].total_cancelled += item.cancelled_quantity || 0;
+      grouped[productId].total_approved_returns +=
+        item.approved_returns_quantity || 0;
+      grouped[productId].total_damaged += item.damaged_quantity || 0;
+      grouped[productId].total_received += item.total_received_quantity || 0;
+      grouped[productId].variant_count++;
+
+      // Determine worst status (priority: out_of_stock > critical > low_stock > in_stock)
+      const netAvailable =
+        item.net_available ?? item.available_quantity - item.committed_quantity;
+
+      let itemStatus = "in_stock";
+      let itemStatusLabel = "IN STOCK";
+      let itemStatusColor = "#198754";
+      let itemStatusBgColor = "#d1e7dd";
+
+      if (netAvailable <= 0) {
+        itemStatus = "out_of_stock";
+        itemStatusLabel = "OUT OF STOCK";
+        itemStatusColor = "#dc3545";
+        itemStatusBgColor = "#f8d7da";
+      } else if (
+        item.minimum_stock_level !== null &&
+        item.minimum_stock_level !== undefined &&
+        netAvailable <= item.minimum_stock_level
+      ) {
+        itemStatus = "critical";
+        itemStatusLabel = "CRITICAL";
+        itemStatusColor = "#fd7e14";
+        itemStatusBgColor = "#fff3cd";
+      } else if (
+        item.reorder_point !== null &&
+        item.reorder_point !== undefined &&
+        netAvailable <= item.reorder_point
+      ) {
+        itemStatus = "low_stock";
+        itemStatusLabel = "LOW STOCK";
+        itemStatusColor = "#ffc107";
+        itemStatusBgColor = "#fff3cd";
+      }
+
+      // Update worst status if this variant has worse status
+      const statusPriority = {
+        out_of_stock: 4,
+        critical: 3,
+        low_stock: 2,
+        in_stock: 1,
+      };
+
+      if (
+        statusPriority[itemStatus] >
+        statusPriority[grouped[productId].worst_status]
+      ) {
+        grouped[productId].worst_status = itemStatus;
+        grouped[productId].worst_status_label = itemStatusLabel;
+        grouped[productId].worst_status_color = itemStatusColor;
+        grouped[productId].worst_status_bgColor = itemStatusBgColor;
+      }
+    });
+
+    // After processing all variants, calculate aggregated reorder_point
+    Object.values(grouped).forEach((product) => {
+      if (product.reorder_points && product.reorder_points.length > 0) {
+        // Use minimum reorder point (most conservative - if any variant needs reordering, product needs attention)
+        product.reorder_point = Math.min(...product.reorder_points);
+        // Clean up temporary array
+        delete product.reorder_points;
+      }
+    });
+
+    return Object.values(grouped);
+  }, []);
+
   // Get displayed inventory data with filters applied
   const getDisplayedInventoryData = useCallback(() => {
-    return getFilteredInventoryData().slice(0, inventoryDisplayedCount);
-  }, [getFilteredInventoryData, inventoryDisplayedCount]);
+    const filteredData = getFilteredInventoryData();
+
+    // If product view mode, group by product first
+    if (inventoryViewMode === "product") {
+      const groupedData = groupInventoryByProduct(filteredData);
+      return groupedData.slice(0, inventoryDisplayedCount);
+    }
+
+    // Variant view mode (existing behavior)
+    return filteredData.slice(0, inventoryDisplayedCount);
+  }, [
+    getFilteredInventoryData,
+    inventoryDisplayedCount,
+    inventoryViewMode,
+    groupInventoryByProduct,
+  ]);
 
   // Get displayed returns data
   const getDisplayedReturnsData = useCallback(() => {
@@ -706,14 +1551,31 @@ const StockManagementPage = () => {
     if (inventoryState.sortField) {
       return false;
     }
-    
+
     const filteredData = getFilteredInventoryData();
-    
+
+    // In product view, count products, not variants
+    if (inventoryViewMode === "product") {
+      const groupedData = groupInventoryByProduct(filteredData);
+      return (
+        inventoryDisplayedCount < groupedData.length ||
+        inventoryState.pagination.page < inventoryState.pagination.totalPages
+      );
+    }
+
+    // Variant view (existing logic)
     return (
       inventoryDisplayedCount < filteredData.length ||
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     );
-  }, [inventoryDisplayedCount, getFilteredInventoryData, inventoryState.pagination, inventoryState.sortField]);
+  }, [
+    inventoryDisplayedCount,
+    getFilteredInventoryData,
+    inventoryState.pagination,
+    inventoryState.sortField,
+    inventoryViewMode,
+    groupInventoryByProduct,
+  ]);
 
   // Check if there's more returns data
   const hasMoreReturnsData = useCallback(() => {
@@ -721,12 +1583,17 @@ const StockManagementPage = () => {
     if (returnsState.sortField) {
       return false;
     }
-    
+
     return (
       returnsDisplayedCount < returnsState.data.length ||
       returnsState.pagination.page < returnsState.pagination.totalPages
     );
-  }, [returnsDisplayedCount, returnsState.data.length, returnsState.pagination, returnsState.sortField]);
+  }, [
+    returnsDisplayedCount,
+    returnsState.data.length,
+    returnsState.pagination,
+    returnsState.sortField,
+  ]);
 
   // Load more inventory data
   const loadMoreInventoryData = useCallback(async () => {
@@ -745,6 +1612,8 @@ const StockManagementPage = () => {
       inventoryDisplayedCount >= filteredData.length &&
       inventoryState.pagination.page < inventoryState.pagination.totalPages
     ) {
+      // Set flag to indicate this page change is from infinite scroll
+      inventoryInfiniteScrollRef.current = true;
       await loadInventory({
         page: inventoryState.pagination.page + 1,
         append: true,
@@ -839,6 +1708,7 @@ const StockManagementPage = () => {
       sortDirection: "asc",
     }));
     setInventoryDisplayedCount(20);
+    setExpandedProducts(new Set()); // Reset expanded products
   };
 
   // Reset returns filters
@@ -863,9 +1733,9 @@ const StockManagementPage = () => {
       ]);
       const resolvedItem = freshItem?.data || freshItem;
       // Normalize ledger structure: ensure it always has { data: [...] } format
-      const resolvedLedger = ledger?.data 
+      const resolvedLedger = ledger?.data
         ? { data: Array.isArray(ledger.data) ? ledger.data : [ledger.data] }
-        : { data: Array.isArray(ledger) ? ledger : (ledger ? [ledger] : []) };
+        : { data: Array.isArray(ledger) ? ledger : ledger ? [ledger] : [] };
       setInventoryDetail({
         item: resolvedItem,
         ledger: resolvedLedger,
@@ -930,6 +1800,144 @@ const StockManagementPage = () => {
     }
   }, [loadReturns]);
 
+  const inventoryTable = useMemo(() => {
+    if (inventoryState.loading && inventoryState.data.length === 0) {
+      return (
+        <>
+          {Array.from({ length: 5 }).map((_, rowIndex) => (
+            <tr key={`skeleton-${rowIndex}`}>
+              {Array.from({ length: 8 }).map((_, colIndex) => (
+                <td key={`skeleton-${rowIndex}-${colIndex}`}>
+                  <div
+                    className="skeleton"
+                    style={{
+                      height: "20px",
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "4px",
+                      animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </>
+      );
+    }
+
+    const displayedData = getDisplayedInventoryData();
+
+    if (!displayedData.length && !inventoryState.loading) {
+      return (
+        <tr>
+          <td colSpan={8} className="text-center text-muted py-4">
+            No inventory records found
+          </td>
+        </tr>
+      );
+    }
+
+    return (
+      <>
+        {displayedData.map((item) => (
+          <tr key={item.inventory_item_id}>
+            <td>{item.product_name}</td>
+            <td>{item.variant_display_name}</td>
+            <td>{item.sku || "-"}</td>
+            <td className="text-center">
+              {formatNumber(item.available_quantity)}
+            </td>
+            <td className="text-center">
+              {formatNumber(item.committed_quantity)}
+            </td>
+            <td className="text-center">
+              {formatNumber(item.cancelled_quantity)}
+            </td>
+            <td className="text-center">
+              {formatNumber(item.approved_returns_quantity)}
+            </td>
+            <td className="text-end">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => openInventoryDetail(item)}
+              >
+                <Icon icon="mdi:eye" width={16} height={16} />
+              </button>
+            </td>
+          </tr>
+        ))}
+        {inventoryState.isLoadingMore && (
+          <>
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+              <tr key={`skeleton-more-${rowIndex}`}>
+                {Array.from({ length: 8 }).map((_, colIndex) => (
+                  <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
+                    <div
+                      className="skeleton"
+                      style={{
+                        height: "20px",
+                        backgroundColor: "#e5e7eb",
+                        borderRadius: "4px",
+                        animation: "skeletonPulse 1.5s ease-in-out infinite",
+                      }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </>
+        )}
+      </>
+    );
+  }, [inventoryState, openInventoryDetail, getDisplayedInventoryData]);
+
+  const returnsTable = useMemo(() => {
+    if (returnsState.loading) {
+      return (
+        <tr>
+          <td colSpan={8} className="text-center py-5">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    if (!returnsState.data.length) {
+      return (
+        <tr>
+          <td colSpan={8} className="text-center text-muted py-4">
+            No return cases
+          </td>
+        </tr>
+      );
+    }
+
+    return returnsState.data.map((row) => (
+      <tr key={row.return_case_id}>
+        <td>{row.order_id}</td>
+        <td>{row.sku || row.shopify_variant_id || "-"}</td>
+        <td>{row.variant_display_name || "-"}</td>
+        <td className="text-center">{formatNumber(row.quantity)}</td>
+        <td className="text-center">{row.status}</td>
+        <td className="text-muted small">{row.reason || "-"}</td>
+        <td className="text-muted small">
+          {new Date(row.reported_at).toLocaleString()}
+        </td>
+        <td className="text-end">
+          <ReturnActionButtons
+            row={row}
+            busy={returnsState.busyCaseId === row.return_case_id}
+            onApprove={handleApproveReturn}
+            onReject={handleRejectReturn}
+          />
+        </td>
+      </tr>
+    ));
+  }, [returnsState, handleApproveReturn, handleRejectReturn]);
+
   return (
     <SidebarPermissionGuard requiredSidebar="stockManagement">
       <MasterLayout>
@@ -951,15 +1959,24 @@ const StockManagementPage = () => {
                   style={{ minWidth: "max-content", flexWrap: "nowrap" }}
                 >
                   {[
-                    { id: "inventory", label: "INVENTORY", icon: "mdi:package-variant" },
+                    {
+                      id: "inventory",
+                      label: "INVENTORY",
+                      icon: "mdi:package-variant",
+                    },
                     { id: "returns", label: "RETURNS", icon: "mdi:arrow-left" },
-                ].map((tab) => (
+                    {
+                      id: "sample-products",
+                      label: "SAMPLE PRODUCTS",
+                      icon: "mdi:test-tube",
+                    },
+                  ].map((tab) => (
                     <div
-                    key={tab.id}
+                      key={tab.id}
                       className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
-                      activeTab === tab.id ? "text-primary" : "text-muted"
-                    }`}
-                    onClick={() => setActiveTab(tab.id)}
+                        activeTab === tab.id ? "text-primary" : "text-muted"
+                      }`}
+                      onClick={() => setActiveTab(tab.id)}
                       style={{ cursor: "pointer", whiteSpace: "nowrap" }}
                     >
                       <Icon
@@ -970,8 +1987,8 @@ const StockManagementPage = () => {
                       <span
                         className="fw-medium"
                         style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-                  >
-                    {tab.label}
+                      >
+                        {tab.label}
                       </span>
                       {activeTab === tab.id && (
                         <div
@@ -983,9 +2000,9 @@ const StockManagementPage = () => {
                         />
                       )}
                     </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
               {/* Tab Content */}
               {activeTab === "inventory" && (
@@ -1024,88 +2041,150 @@ const StockManagementPage = () => {
                     </div>
 
                     {/* Low Stock Filter */}
+                    <div>
                       <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.lowStockFilter}
-                      onChange={(e) =>
+                        className="form-select form-select-sm"
+                        value={inventoryState.lowStockFilter}
+                        onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                          lowStockFilter: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "150px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="all">All Stock</option>
-                      <option value="low">Low/Critical Stock</option>
-                      <option value="normal">Normal Stock</option>
+                            lowStockFilter: e.target.value,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "150px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="all">All Stock</option>
+                        <option value="low">Low/Critical Stock</option>
+                        <option value="normal">Normal Stock</option>
                       </select>
+                    </div>
 
                     {/* Sort Field */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.sortField || ""}
-                      onChange={(e) =>
-                        setInventoryState((prev) => ({
-                          ...prev,
-                          sortField: e.target.value || null,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "170px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="">Sort By</option>
-                      <option value="product_name">Product Name</option>
-                      <option value="variant_display_name">Variant</option>
-                      <option value="sku">SKU</option>
-                      <option value="available_quantity">Available Qty</option>
-                      <option value="committed_quantity">Committed Qty</option>
-                      <option value="net_available">Net Available</option>
-                      <option value="reorder_point">Reorder Point</option>
-                    </select>
-
-                    {/* Sort Order */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={inventoryState.sortDirection}
-                      onChange={(e) =>
+                    <div>
+                      <select
+                        className="form-select form-select-sm"
+                        value={inventoryState.sortField || ""}
+                        onChange={(e) =>
                           setInventoryState((prev) => ({
                             ...prev,
-                          sortDirection: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "130px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
+                            sortField: e.target.value || null,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "170px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="">Sort By</option>
+                        <option value="product_name">Product Name</option>
+                        <option value="variant_display_name">Variant</option>
+                        <option value="sku">SKU</option>
+                        <option value="available_quantity">
+                          Available Qty
+                        </option>
+                        <option value="committed_quantity">
+                          Committed Qty
+                        </option>
+                        <option value="net_available">Net Available</option>
+                        <option value="reorder_point">Reorder Point</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Order */}
+                    <div>
+                      <select
+                        className="form-select form-select-sm"
+                        value={inventoryState.sortDirection}
+                        onChange={(e) =>
+                          setInventoryState((prev) => ({
+                            ...prev,
+                            sortDirection: e.target.value,
+                          }))
+                        }
+                        style={{
+                          height: "36px",
+                          width: "auto",
+                          minWidth: "130px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                      </select>
+                    </div>
+
+                    {/* View Mode Toggle */}
+                    <div>
+                      <div className="btn-group btn-group-sm" role="group">
+                        <button
+                          type="button"
+                          className={`btn ${
+                            inventoryViewMode === "variant"
+                              ? "btn-primary"
+                              : "btn-outline-secondary"
+                          }`}
+                          onClick={() => {
+                            setInventoryViewMode("variant");
+                            setExpandedProducts(new Set()); // Reset expanded state
+                          }}
+                          title="Show variants"
+                          style={{ height: "36px", fontSize: "0.875rem" }}
+                        >
+                          <Icon
+                            icon="lucide:list"
+                            width="14"
+                            height="14"
+                            className="me-1"
+                          />
+                          Variants
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn ${
+                            inventoryViewMode === "product"
+                              ? "btn-primary"
+                              : "btn-outline-secondary"
+                          }`}
+                          onClick={() => {
+                            setInventoryViewMode("product");
+                            setExpandedProducts(new Set()); // Reset expanded state
+                          }}
+                          title="Show products"
+                          style={{ height: "36px", fontSize: "0.875rem" }}
+                        >
+                          <Icon
+                            icon="lucide:package"
+                            width="14"
+                            height="14"
+                            className="me-1"
+                          />
+                          Products
+                        </button>
+                      </div>
+                    </div>
 
                     {/* Reset Button */}
-                    <button
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={handleResetInventoryFilters}
-                      title="Reset filters"
-                      style={{
-                        height: "36px",
-                        padding: "6px 12px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <Icon icon="lucide:x" width="14" height="14" />
+                    <div>
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={handleResetInventoryFilters}
+                        title="Reset filters"
+                        style={{
+                          height: "36px",
+                          padding: "6px 12px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <Icon icon="lucide:x" width="14" height="14" />
                       </button>
+                    </div>
 
                     {/* Count */}
                     <span
@@ -1114,9 +2193,14 @@ const StockManagementPage = () => {
                     >
                       Showing {getDisplayedInventoryData().length} of{" "}
                       {inventoryState.lowStockFilter === "all"
-                        ? inventoryState.pagination.total
+                        ? inventoryViewMode === "product"
+                          ? groupInventoryByProduct(inventoryState.data).length
+                          : inventoryState.pagination.total
+                        : inventoryViewMode === "product"
+                        ? groupInventoryByProduct(getFilteredInventoryData())
+                            .length
                         : getFilteredInventoryData().length}{" "}
-                      items
+                      {inventoryViewMode === "product" ? "products" : "items"}
                     </span>
                   </div>
 
@@ -1134,7 +2218,8 @@ const StockManagementPage = () => {
                       scrollBehavior: "smooth",
                       overscrollBehavior: "auto",
                       scrollbarWidth: "thin",
-                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
+                      scrollbarColor:
+                        "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
                     }}
                     onScroll={(e) => {
                       const target = e.target;
@@ -1143,9 +2228,35 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (hasMoreInventoryData() && !inventoryLoadingMoreRef.current && !inventoryState.loading) {
+                        if (
+                          hasMoreInventoryData() &&
+                          !inventoryState.isLoadingMore &&
+                          !inventoryLoadingMoreRef.current &&
+                          !inventoryState.loading
+                        ) {
                           loadMoreInventoryData();
                         }
+                      }
+                    }}
+                    onWheel={(e) => {
+                      const target = e.currentTarget;
+                      const scrollTop = target.scrollTop;
+                      const scrollHeight = target.scrollHeight;
+                      const clientHeight = target.clientHeight;
+                      const isAtTop = scrollTop <= 1;
+                      const isAtBottom =
+                        scrollTop + clientHeight >= scrollHeight - 1;
+
+                      if (e.deltaY > 0 && isAtBottom) {
+                        window.scrollBy({
+                          top: e.deltaY,
+                          behavior: "auto",
+                        });
+                      } else if (e.deltaY < 0 && isAtTop) {
+                        window.scrollBy({
+                          top: e.deltaY,
+                          behavior: "auto",
+                        });
                       }
                     }}
                   >
@@ -1180,16 +2291,19 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                  </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
-                            onClick={() => handleInventorySort("variant_display_name")}
+                            onClick={() =>
+                              handleInventorySort("variant_display_name")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2">
                               Variant
-                              {inventoryState.sortField === "variant_display_name" && (
+                              {inventoryState.sortField ===
+                                "variant_display_name" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -1200,7 +2314,7 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                    </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
@@ -1225,12 +2339,15 @@ const StockManagementPage = () => {
                           <th
                             scope="col"
                             className="text-center"
-                            onClick={() => handleInventorySort("available_quantity")}
+                            onClick={() =>
+                              handleInventorySort("available_quantity")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2 justify-content-center">
                               Available
-                              {inventoryState.sortField === "available_quantity" && (
+                              {inventoryState.sortField ===
+                                "available_quantity" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -1246,12 +2363,15 @@ const StockManagementPage = () => {
                           <th
                             scope="col"
                             className="text-center"
-                            onClick={() => handleInventorySort("committed_quantity")}
+                            onClick={() =>
+                              handleInventorySort("committed_quantity")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2 justify-content-center">
                               Committed
-                              {inventoryState.sortField === "committed_quantity" && (
+                              {inventoryState.sortField ===
+                                "committed_quantity" && (
                                 <Icon
                                   icon={
                                     inventoryState.sortDirection === "asc"
@@ -1319,33 +2439,43 @@ const StockManagementPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {inventoryState.loading && inventoryState.data.length === 0 ? (
+                        {inventoryState.loading &&
+                        inventoryState.data.length === 0 ? (
                           <>
                             {Array.from({ length: 5 }).map((_, rowIndex) => (
                               <tr key={`skeleton-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map((_, colIndex) => (
-                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                                    <div
-                                      className="skeleton"
-                                      style={{
-                                        height: "20px",
-                                        backgroundColor: "#e5e7eb",
-                                        borderRadius: "4px",
-                                        animation:
-                                          "skeletonPulse 1.5s ease-in-out infinite",
-                                      }}
-                                    />
-                                  </td>
-                                ))}
+                                {Array.from({ length: 9 }).map(
+                                  (_, colIndex) => (
+                                    <td
+                                      key={`skeleton-${rowIndex}-${colIndex}`}
+                                    >
+                                      <div
+                                        className="skeleton"
+                                        style={{
+                                          height: "20px",
+                                          backgroundColor: "#e5e7eb",
+                                          borderRadius: "4px",
+                                          animation:
+                                            "skeletonPulse 1.5s ease-in-out infinite",
+                                        }}
+                                      />
+                                    </td>
+                                  )
+                                )}
                               </tr>
                             ))}
                           </>
-                        ) : (inventoryState.data.length === 0 || getFilteredInventoryData().length === 0) ? (
+                        ) : inventoryState.data.length === 0 ||
+                          getFilteredInventoryData().length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4 text-muted">
+                            <td
+                              colSpan="9"
+                              className="text-center py-4 text-muted"
+                            >
                               <div className="d-flex flex-column align-items-center">
                                 <p className="text-muted mb-0">
-                                  {inventoryState.search || inventoryState.lowStockFilter !== "all"
+                                  {inventoryState.search ||
+                                  inventoryState.lowStockFilter !== "all"
                                     ? "No inventory items match your search criteria."
                                     : "No inventory items found."}
                                 </p>
@@ -1355,24 +2485,355 @@ const StockManagementPage = () => {
                         ) : (
                           <>
                             {getDisplayedInventoryData().map((item, index) => {
-                              const netAvailable = item.net_available ?? (item.available_quantity - item.committed_quantity);
-                              
+                              // Product view mode
+                              if (inventoryViewMode === "product") {
+                                const isExpanded = expandedProducts.has(
+                                  item.product_id
+                                );
+
+                                return (
+                                  <React.Fragment
+                                    key={`product-${item.product_id}`}
+                                  >
+                                    {/* Product Row */}
+                                    <tr
+                                      style={{
+                                        backgroundColor: isExpanded
+                                          ? "#f8f9fa"
+                                          : "white",
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={() => {
+                                        const newExpanded = new Set(
+                                          expandedProducts
+                                        );
+                                        if (newExpanded.has(item.product_id)) {
+                                          newExpanded.delete(item.product_id);
+                                        } else {
+                                          newExpanded.add(item.product_id);
+                                        }
+                                        setExpandedProducts(newExpanded);
+                                      }}
+                                    >
+                                      <td>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <Icon
+                                            icon={
+                                              isExpanded
+                                                ? "lucide:chevron-down"
+                                                : "lucide:chevron-right"
+                                            }
+                                            width="16"
+                                            height="16"
+                                            style={{ color: "#6c757d" }}
+                                          />
+                                          <span className="text-secondary-light">
+                                            {index + 1}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span className="text-secondary-light fw-medium">
+                                          {item.product_name}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className="text-secondary-light">
+                                          {item.variant_count} variant
+                                          {item.variant_count !== 1 ? "s" : ""}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className="text-muted small">
+                                          -
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="fw-semibold">
+                                          {formatNumber(item.total_available)}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="text-secondary-light">
+                                          {formatNumber(item.total_committed)}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span
+                                          className={`fw-semibold ${
+                                            item.worst_status === "out_of_stock"
+                                              ? "text-danger"
+                                              : item.worst_status === "critical"
+                                              ? "text-warning"
+                                              : item.worst_status ===
+                                                "low_stock"
+                                              ? "text-warning"
+                                              : ""
+                                          }`}
+                                        >
+                                          {formatNumber(
+                                            item.total_net_available
+                                          )}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span
+                                          className="badge"
+                                          style={{
+                                            backgroundColor:
+                                              item.worst_status_bgColor,
+                                            color: item.worst_status_color,
+                                            fontSize: "0.75rem",
+                                            padding: "4px 8px",
+                                            fontWeight: "600",
+                                          }}
+                                        >
+                                          {item.worst_status_label}
+                                        </span>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="text-secondary-light small">
+                                          {item.reorder_point !== null &&
+                                          item.reorder_point !== undefined
+                                            ? formatNumber(item.reorder_point)
+                                            : "-"}
+                                        </span>
+                                      </td>
+                                      <td className="text-end">
+                                        {/* No action button for product row */}
+                                      </td>
+                                    </tr>
+
+                                    {/* Variant Rows (when expanded) */}
+                                    {isExpanded &&
+                                      item.variants.map(
+                                        (variant, variantIndex) => {
+                                          const netAvailable =
+                                            variant.net_available ??
+                                            variant.available_quantity -
+                                              variant.committed_quantity;
+
+                                          const getStockStatus = () => {
+                                            if (netAvailable <= 0) {
+                                              return {
+                                                status: "out_of_stock",
+                                                label: "OUT OF STOCK",
+                                                color: "#dc3545",
+                                                bgColor: "#f8d7da",
+                                              };
+                                            }
+                                            if (
+                                              variant.minimum_stock_level !==
+                                                null &&
+                                              variant.minimum_stock_level !==
+                                                undefined &&
+                                              netAvailable <=
+                                                variant.minimum_stock_level
+                                            ) {
+                                              return {
+                                                status: "critical",
+                                                label: "CRITICAL",
+                                                color: "#fd7e14",
+                                                bgColor: "#fff3cd",
+                                              };
+                                            }
+                                            if (
+                                              variant.reorder_point !== null &&
+                                              variant.reorder_point !==
+                                                undefined &&
+                                              netAvailable <=
+                                                variant.reorder_point
+                                            ) {
+                                              return {
+                                                status: "low_stock",
+                                                label: "LOW STOCK",
+                                                color: "#ffc107",
+                                                bgColor: "#fff3cd",
+                                              };
+                                            }
+                                            return {
+                                              status: "in_stock",
+                                              label: "IN STOCK",
+                                              color: "#198754",
+                                              bgColor: "#d1e7dd",
+                                            };
+                                          };
+
+                                          const stockStatus = getStockStatus();
+
+                                          return (
+                                            <tr
+                                              key={`variant-${variant.inventory_item_id}`}
+                                              style={{
+                                                backgroundColor: "#fafafa",
+                                              }}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <td>
+                                                <span className="text-muted small ms-4">
+                                                  {index + 1}.{variantIndex + 1}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-muted small ms-4">
+                                                  {variant.product_name}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-secondary-light ms-4">
+                                                  {variant.variant_display_name}
+                                                </span>
+                                              </td>
+                                              <td>
+                                                <span className="text-secondary-light ms-4">
+                                                  {variant.sku || "-"}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="fw-semibold">
+                                                  {formatNumber(
+                                                    variant.available_quantity
+                                                  )}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="text-secondary-light">
+                                                  {formatNumber(
+                                                    variant.committed_quantity
+                                                  )}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span
+                                                  className={`fw-semibold ${
+                                                    stockStatus.status ===
+                                                    "out_of_stock"
+                                                      ? "text-danger"
+                                                      : stockStatus.status ===
+                                                        "critical"
+                                                      ? "text-warning"
+                                                      : stockStatus.status ===
+                                                        "low_stock"
+                                                      ? "text-warning"
+                                                      : ""
+                                                  }`}
+                                                >
+                                                  {formatNumber(netAvailable)}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span
+                                                  className="badge"
+                                                  style={{
+                                                    backgroundColor:
+                                                      stockStatus.bgColor,
+                                                    color: stockStatus.color,
+                                                    fontSize: "0.75rem",
+                                                    padding: "4px 8px",
+                                                    fontWeight: "600",
+                                                  }}
+                                                >
+                                                  {stockStatus.label}
+                                                </span>
+                                              </td>
+                                              <td className="text-center">
+                                                <span className="text-secondary-light small">
+                                                  {variant.reorder_point !==
+                                                    null &&
+                                                  variant.reorder_point !==
+                                                    undefined
+                                                    ? formatNumber(
+                                                        variant.reorder_point
+                                                      )
+                                                    : "-"}
+                                                </span>
+                                              </td>
+                                              <td className="text-end">
+                                                <button
+                                                  type="button"
+                                                  className="btn btn-sm"
+                                                  style={{
+                                                    border: "1px solid #dee2e6",
+                                                    background: "white",
+                                                    padding: "4px 8px",
+                                                    color: "#495057",
+                                                    borderRadius: "4px",
+                                                  }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openInventoryDetail(
+                                                      variant
+                                                    );
+                                                  }}
+                                                  title="View Details"
+                                                >
+                                                  <Icon
+                                                    icon="lucide:eye"
+                                                    width="14"
+                                                    height="14"
+                                                  />
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          );
+                                        }
+                                      )}
+                                  </React.Fragment>
+                                );
+                              }
+
+                              // Variant view mode (existing code)
+                              const netAvailable =
+                                item.net_available ??
+                                item.available_quantity -
+                                  item.committed_quantity;
+
                               // Determine stock status based on thresholds
                               const getStockStatus = () => {
                                 if (netAvailable <= 0) {
-                                  return { status: 'out_of_stock', label: 'OUT OF STOCK', color: '#dc3545', bgColor: '#f8d7da' };
+                                  return {
+                                    status: "out_of_stock",
+                                    label: "OUT OF STOCK",
+                                    color: "#dc3545",
+                                    bgColor: "#f8d7da",
+                                  };
                                 }
-                                if (item.minimum_stock_level !== null && item.minimum_stock_level !== undefined && netAvailable <= item.minimum_stock_level) {
-                                  return { status: 'critical', label: 'CRITICAL', color: '#fd7e14', bgColor: '#fff3cd' };
+                                if (
+                                  item.minimum_stock_level !== null &&
+                                  item.minimum_stock_level !== undefined &&
+                                  netAvailable <= item.minimum_stock_level
+                                ) {
+                                  return {
+                                    status: "critical",
+                                    label: "CRITICAL",
+                                    color: "#fd7e14",
+                                    bgColor: "#fff3cd",
+                                  };
                                 }
-                                if (item.reorder_point !== null && item.reorder_point !== undefined && netAvailable <= item.reorder_point) {
-                                  return { status: 'low_stock', label: 'LOW STOCK', color: '#ffc107', bgColor: '#fff3cd' };
+                                if (
+                                  item.reorder_point !== null &&
+                                  item.reorder_point !== undefined &&
+                                  netAvailable <= item.reorder_point
+                                ) {
+                                  return {
+                                    status: "low_stock",
+                                    label: "LOW STOCK",
+                                    color: "#ffc107",
+                                    bgColor: "#fff3cd",
+                                  };
                                 }
-                                return { status: 'in_stock', label: 'IN STOCK', color: '#198754', bgColor: '#d1e7dd' };
+                                return {
+                                  status: "in_stock",
+                                  label: "IN STOCK",
+                                  color: "#198754",
+                                  bgColor: "#d1e7dd",
+                                };
                               };
-                              
+
                               const stockStatus = getStockStatus();
-                              
+
                               return (
                                 <tr key={item.inventory_item_id}>
                                   <td>
@@ -1406,11 +2867,17 @@ const StockManagementPage = () => {
                                     </span>
                                   </td>
                                   <td className="text-center">
-                                    <span className={`fw-semibold ${
-                                      stockStatus.status === 'out_of_stock' ? 'text-danger' :
-                                      stockStatus.status === 'critical' ? 'text-warning' :
-                                      stockStatus.status === 'low_stock' ? 'text-warning' : ''
-                                    }`}>
+                                    <span
+                                      className={`fw-semibold ${
+                                        stockStatus.status === "out_of_stock"
+                                          ? "text-danger"
+                                          : stockStatus.status === "critical"
+                                          ? "text-warning"
+                                          : stockStatus.status === "low_stock"
+                                          ? "text-warning"
+                                          : ""
+                                      }`}
+                                    >
                                       {formatNumber(netAvailable)}
                                     </span>
                                   </td>
@@ -1430,14 +2897,15 @@ const StockManagementPage = () => {
                                   </td>
                                   <td className="text-center">
                                     <span className="text-secondary-light small">
-                                      {item.reorder_point !== null && item.reorder_point !== undefined
+                                      {item.reorder_point !== null &&
+                                      item.reorder_point !== undefined
                                         ? formatNumber(item.reorder_point)
                                         : "-"}
                                     </span>
                                   </td>
                                   <td className="text-end">
-                      <button
-                        type="button"
+                                    <button
+                                      type="button"
                                       className="btn btn-sm"
                                       style={{
                                         border: "1px solid #dee2e6",
@@ -1449,39 +2917,49 @@ const StockManagementPage = () => {
                                       onClick={() => openInventoryDetail(item)}
                                       title="View Details"
                                     >
-                                      <Icon icon="lucide:eye" width="14" height="14" />
-                      </button>
+                                      <Icon
+                                        icon="lucide:eye"
+                                        width="14"
+                                        height="14"
+                                      />
+                                    </button>
                                   </td>
                                 </tr>
                               );
                             })}
                             {inventoryLoadingMore && (
                               <>
-                                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                                  <tr key={`skeleton-more-${rowIndex}`}>
-                                    {Array.from({ length: 9 }).map((_, colIndex) => (
-                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                                        <div
-                                          className="skeleton"
-                                          style={{
-                                            height: "20px",
-                                            backgroundColor: "#e5e7eb",
-                                            borderRadius: "4px",
-                                            animation:
-                                              "skeletonPulse 1.5s ease-in-out infinite",
-                                          }}
-                                        />
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {Array.from({ length: 5 }).map(
+                                  (_, rowIndex) => (
+                                    <tr key={`skeleton-more-${rowIndex}`}>
+                                      {Array.from({ length: 9 }).map(
+                                        (_, colIndex) => (
+                                          <td
+                                            key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                          >
+                                            <div
+                                              className="skeleton"
+                                              style={{
+                                                height: "20px",
+                                                backgroundColor: "#e5e7eb",
+                                                borderRadius: "4px",
+                                                animation:
+                                                  "skeletonPulse 1.5s ease-in-out infinite",
+                                              }}
+                                            />
+                                          </td>
+                                        )
+                                      )}
+                                    </tr>
+                                  )
+                                )}
                               </>
                             )}
                           </>
                         )}
                       </tbody>
                     </table>
-                    </div>
+                  </div>
 
                   {/* Infinite Scroll Footer */}
                   {inventoryState.pagination.total > 0 && (
@@ -1491,17 +2969,26 @@ const StockManagementPage = () => {
                         backgroundColor: "#f8f9fa",
                         borderRadius: "0 0 8px 8px",
                         marginTop: "0",
+                        borderTop: "1px solid #e5e7eb",
                       }}
                     >
                       <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                        Showing <strong>{getDisplayedInventoryData().length}</strong> of{" "}
+                        Showing{" "}
+                        <strong>{getDisplayedInventoryData().length}</strong> of{" "}
                         <strong>
                           {inventoryState.lowStockFilter === "all"
-                            ? inventoryState.pagination.total
+                            ? inventoryViewMode === "product"
+                              ? groupInventoryByProduct(inventoryState.data)
+                                  .length
+                              : inventoryState.pagination.total
+                            : inventoryViewMode === "product"
+                            ? groupInventoryByProduct(
+                                getFilteredInventoryData()
+                              ).length
                             : getFilteredInventoryData().length}
                         </strong>{" "}
-                        items
-                  </div>
+                        {inventoryViewMode === "product" ? "products" : "items"}
+                      </div>
                       {hasMoreInventoryData() && (
                         <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
                           Scroll down to load more
@@ -1512,14 +2999,318 @@ const StockManagementPage = () => {
                 </div>
               )}
 
+              {activeTab === "sample-products" && (
+                <div>
+                  <div className="row g-3 align-items-end mb-3">
+                    <div className="col-md-4">
+                      <label className="form-label small">Search</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Product name or SKU"
+                        value={sampleProductsState.search}
+                        onChange={(event) =>
+                          setSampleProductsState((prev) => ({
+                            ...prev,
+                            search: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="col-md-2 d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => loadSampleProducts({ page: 1 })}
+                        disabled={sampleProductsState.loading}
+                      >
+                        <Icon icon="mdi:magnify" width={18} height={18} />
+                        Search
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={() =>
+                          setSampleProductsState((prev) => ({
+                            ...prev,
+                            search: "",
+                          }))
+                        }
+                        disabled={sampleProductsState.loading}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Product Name</th>
+                          <th>Variant</th>
+                          <th>Procurement SKU</th>
+                          <th className="text-center">Total Sample Qty</th>
+                          <th className="text-center">Moved to Inventory</th>
+                          <th className="text-center">Available to Move</th>
+                          <th>Last Moved</th>
+                          <th>QR Code</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sampleProductsState.loading ? (
+                          <tr>
+                            <td colSpan="9" className="text-center py-4">
+                              <div className="spinner-border" role="status">
+                                <span className="visually-hidden">
+                                  Loading...
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : sampleProductsState.data.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan="9"
+                              className="text-center text-muted py-4"
+                            >
+                              No sample products found
+                            </td>
+                          </tr>
+                        ) : (
+                          sampleProductsState.data.map((variant) => {
+                            const formatVariantType = (variantType) => {
+                              if (
+                                !variantType ||
+                                typeof variantType !== "object"
+                              )
+                                return "-";
+                              return Object.entries(variantType)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join(", ");
+                            };
+
+                            const isHighlighted =
+                              highlightedVariantId ===
+                              variant.procurement_variant_id;
+
+                            return (
+                              <tr
+                                key={variant.procurement_variant_id}
+                                className={isHighlighted ? "table-warning" : ""}
+                                style={
+                                  isHighlighted
+                                    ? {
+                                        animation: "highlight 2s ease-in-out",
+                                        backgroundColor: "#fff3cd",
+                                      }
+                                    : {}
+                                }
+                              >
+                                <td>{variant.product_name}</td>
+                                <td>
+                                  {formatVariantType(variant.variant_type)}
+                                </td>
+                                <td>{variant.sku || "—"}</td>
+                                <td className="text-center">
+                                  {variant.sample_quantity}
+                                </td>
+                                <td className="text-center">
+                                  {variant.sample_quantity_in_inventory}
+                                </td>
+                                <td className="text-center">
+                                  <span
+                                    className={`badge ${
+                                      variant.available_to_move > 0
+                                        ? "bg-success"
+                                        : "bg-secondary"
+                                    }`}
+                                  >
+                                    {variant.available_to_move}
+                                  </span>
+                                </td>
+                                <td>
+                                  {variant.sample_moved_to_inventory_at
+                                    ? new Date(
+                                        variant.sample_moved_to_inventory_at
+                                      ).toLocaleDateString()
+                                    : "—"}
+                                </td>
+                                <td>
+                                  {variant.has_qr_code ? (
+                                    <div className="d-flex gap-1">
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary"
+                                        onClick={async () => {
+                                          try {
+                                            const qrImageUrl =
+                                              await inventoryManagementApi.getSampleQrCode(
+                                                {
+                                                  procurementVariantId:
+                                                    variant.procurement_variant_id,
+                                                  masterVariantId:
+                                                    variant.master_variant_id_for_qr,
+                                                }
+                                              );
+                                            setQrPreviewState({
+                                              isOpen: true,
+                                              qrCodeUrl: qrImageUrl,
+                                              productName: variant.product_name,
+                                              variantName: formatVariantType(
+                                                variant.variant_type
+                                              ),
+                                              procurementVariantId:
+                                                variant.procurement_variant_id,
+                                              masterVariantId:
+                                                variant.master_variant_id_for_qr,
+                                            });
+                                          } catch (error) {
+                                            console.error(
+                                              "Failed to load QR code:",
+                                              error
+                                            );
+                                            toast.error(
+                                              error.message ||
+                                                "Failed to load QR code"
+                                            );
+                                          }
+                                        }}
+                                        title="View QR Code"
+                                      >
+                                        <Icon
+                                          icon="mdi:eye"
+                                          width={16}
+                                          height={16}
+                                        />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-secondary"
+                                        onClick={async () => {
+                                          try {
+                                            const qrImageUrl =
+                                              await inventoryManagementApi.getSampleQrCode(
+                                                {
+                                                  procurementVariantId:
+                                                    variant.procurement_variant_id,
+                                                  masterVariantId:
+                                                    variant.master_variant_id_for_qr,
+                                                }
+                                              );
+                                            const link =
+                                              document.createElement("a");
+                                            link.href = qrImageUrl;
+                                            link.download = `sample-qr-${
+                                              variant.product_name
+                                            }-${formatVariantType(
+                                              variant.variant_type
+                                            )}.png`.replace(
+                                              /[^a-z0-9.-]/gi,
+                                              "-"
+                                            );
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            URL.revokeObjectURL(qrImageUrl);
+                                            toast.success("QR code downloaded");
+                                          } catch (error) {
+                                            console.error(
+                                              "Failed to download QR code:",
+                                              error
+                                            );
+                                            toast.error(
+                                              error.message ||
+                                                "Failed to download QR code"
+                                            );
+                                          }
+                                        }}
+                                        title="Download QR Code"
+                                      >
+                                        <Icon
+                                          icon="mdi:download"
+                                          width={16}
+                                          height={16}
+                                        />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted small">
+                                      Not generated
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="text-end">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() =>
+                                      handleMoveToInventory(variant)
+                                    }
+                                    disabled={variant.available_to_move === 0}
+                                  >
+                                    Move to Inventory
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="text-muted small">
+                      Page {sampleProductsState.pagination.page} of{" "}
+                      {sampleProductsState.pagination.totalPages}
+                    </div>
+                    <div className="btn-group">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          sampleProductsState.loading ||
+                          sampleProductsState.pagination.page <= 1
+                        }
+                        onClick={() =>
+                          loadSampleProducts({
+                            page: sampleProductsState.pagination.page - 1,
+                          })
+                        }
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={
+                          sampleProductsState.loading ||
+                          sampleProductsState.pagination.page >=
+                            sampleProductsState.pagination.totalPages
+                        }
+                        onClick={() =>
+                          loadSampleProducts({
+                            page: sampleProductsState.pagination.page + 1,
+                          })
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeTab === "returns" && (
                 <div>
                   {/* Search, Filter, and Action Bar */}
                   <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
                     {/* Status Filter */}
-                      <select
+                    <select
                       className="form-select form-select-sm"
-                        value={returnsState.status}
+                      value={returnsState.status}
                       onChange={(e) =>
                         setReturnsState((prev) => ({
                           ...prev,
@@ -1532,13 +3323,13 @@ const StockManagementPage = () => {
                         minWidth: "150px",
                         fontSize: "0.875rem",
                       }}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="">All</option>
-                      </select>
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="">All</option>
+                    </select>
 
                     {/* Sort Field */}
                     <select
@@ -1602,20 +3393,20 @@ const StockManagementPage = () => {
                     </button>
 
                     {/* Sync Button */}
-                      <button
-                        type="button"
+                    <button
+                      type="button"
                       className="btn btn-outline-secondary btn-sm"
-                        onClick={handleSyncReturnCases}
-                        disabled={returnsState.loading}
+                      onClick={handleSyncReturnCases}
+                      disabled={returnsState.loading}
                       style={{
                         height: "36px",
                         padding: "6px 12px",
                         fontSize: "0.875rem",
                       }}
-                      >
+                    >
                       <Icon icon="mdi:refresh" width="16" height="16" />
-                        Sync
-                      </button>
+                      Sync
+                    </button>
 
                     {/* Count */}
                     <span
@@ -1641,7 +3432,8 @@ const StockManagementPage = () => {
                       scrollBehavior: "smooth",
                       overscrollBehavior: "auto",
                       scrollbarWidth: "thin",
-                      scrollbarColor: "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
+                      scrollbarColor:
+                        "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
                     }}
                     onScroll={(e) => {
                       const target = e.target;
@@ -1650,7 +3442,11 @@ const StockManagementPage = () => {
                       const clientHeight = target.clientHeight;
 
                       if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (hasMoreReturnsData() && !returnsLoadingMoreRef.current && !returnsState.loading) {
+                        if (
+                          hasMoreReturnsData() &&
+                          !returnsLoadingMoreRef.current &&
+                          !returnsState.loading
+                        ) {
                           loadMoreReturnsData();
                         }
                       }
@@ -1687,7 +3483,7 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                  </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
@@ -1707,16 +3503,19 @@ const StockManagementPage = () => {
                                   height="14"
                                 />
                               )}
-                    </div>
+                            </div>
                           </th>
                           <th
                             scope="col"
-                            onClick={() => handleReturnsSort("variant_display_name")}
+                            onClick={() =>
+                              handleReturnsSort("variant_display_name")
+                            }
                             style={{ cursor: "pointer", userSelect: "none" }}
                           >
                             <div className="d-flex align-items-center gap-2">
                               Variant
-                              {returnsState.sortField === "variant_display_name" && (
+                              {returnsState.sortField ===
+                                "variant_display_name" && (
                                 <Icon
                                   icon={
                                     returnsState.sortDirection === "asc"
@@ -1802,37 +3601,45 @@ const StockManagementPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {returnsState.loading && returnsState.data.length === 0 ? (
+                        {returnsState.loading &&
+                        returnsState.data.length === 0 ? (
                           <>
                             {Array.from({ length: 5 }).map((_, rowIndex) => (
                               <tr key={`skeleton-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map((_, colIndex) => (
-                                  <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                                    <div
-                                      className="skeleton"
-                                      style={{
-                                        height: "20px",
-                                        backgroundColor: "#e5e7eb",
-                                        borderRadius: "4px",
-                                        animation:
-                                          "skeletonPulse 1.5s ease-in-out infinite",
-                                      }}
-                                    />
-                                  </td>
-                                ))}
+                                {Array.from({ length: 9 }).map(
+                                  (_, colIndex) => (
+                                    <td
+                                      key={`skeleton-${rowIndex}-${colIndex}`}
+                                    >
+                                      <div
+                                        className="skeleton"
+                                        style={{
+                                          height: "20px",
+                                          backgroundColor: "#e5e7eb",
+                                          borderRadius: "4px",
+                                          animation:
+                                            "skeletonPulse 1.5s ease-in-out infinite",
+                                        }}
+                                      />
+                                    </td>
+                                  )
+                                )}
                               </tr>
                             ))}
                           </>
                         ) : returnsState.data.length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4 text-muted">
+                            <td
+                              colSpan="9"
+                              className="text-center py-4 text-muted"
+                            >
                               <div className="d-flex flex-column align-items-center">
                                 <p className="text-muted mb-0">
                                   {returnsState.status !== ""
                                     ? "No return cases match your filter criteria."
                                     : "No return cases found."}
                                 </p>
-                    </div>
+                              </div>
                             </td>
                           </tr>
                         ) : (
@@ -1875,7 +3682,10 @@ const StockManagementPage = () => {
                                         ? "bg-warning"
                                         : "bg-secondary"
                                     }`}
-                                    style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      padding: "4px 8px",
+                                    }}
                                   >
                                     {row.status}
                                   </span>
@@ -1891,14 +3701,19 @@ const StockManagementPage = () => {
                                 </td>
                                 <td>
                                   <span className="text-secondary-light small">
-                                    {row.reported_at ? new Date(row.reported_at).toLocaleString() : "-"}
+                                    {row.reported_at
+                                      ? new Date(
+                                          row.reported_at
+                                        ).toLocaleString()
+                                      : "-"}
                                   </span>
                                 </td>
                                 <td className="text-end">
                                   <ReturnActionButtons
                                     row={row}
                                     busy={
-                                      returnsState.busyCaseId === row.return_case_id
+                                      returnsState.busyCaseId ===
+                                      row.return_case_id
                                     }
                                     onApprove={handleApproveReturn}
                                     onReject={handleRejectReturn}
@@ -1908,24 +3723,30 @@ const StockManagementPage = () => {
                             ))}
                             {returnsLoadingMore && (
                               <>
-                                {Array.from({ length: 5 }).map((_, rowIndex) => (
-                                  <tr key={`skeleton-more-${rowIndex}`}>
-                                    {Array.from({ length: 9 }).map((_, colIndex) => (
-                                      <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
-                                        <div
-                                          className="skeleton"
-                                          style={{
-                                            height: "20px",
-                                            backgroundColor: "#e5e7eb",
-                                            borderRadius: "4px",
-                                            animation:
-                                              "skeletonPulse 1.5s ease-in-out infinite",
-                                          }}
-                                        />
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {Array.from({ length: 5 }).map(
+                                  (_, rowIndex) => (
+                                    <tr key={`skeleton-more-${rowIndex}`}>
+                                      {Array.from({ length: 9 }).map(
+                                        (_, colIndex) => (
+                                          <td
+                                            key={`skeleton-more-${rowIndex}-${colIndex}`}
+                                          >
+                                            <div
+                                              className="skeleton"
+                                              style={{
+                                                height: "20px",
+                                                backgroundColor: "#e5e7eb",
+                                                borderRadius: "4px",
+                                                animation:
+                                                  "skeletonPulse 1.5s ease-in-out infinite",
+                                              }}
+                                            />
+                                          </td>
+                                        )
+                                      )}
+                                    </tr>
+                                  )
+                                )}
                               </>
                             )}
                           </>
@@ -1945,15 +3766,16 @@ const StockManagementPage = () => {
                       }}
                     >
                       <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                        Showing <strong>{getDisplayedReturnsData().length}</strong> of{" "}
+                        Showing{" "}
+                        <strong>{getDisplayedReturnsData().length}</strong> of{" "}
                         <strong>{returnsState.pagination.total}</strong> returns
                       </div>
                       {hasMoreReturnsData() && (
                         <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
                           Scroll down to load more
-                </div>
-              )}
-            </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -1967,6 +3789,55 @@ const StockManagementPage = () => {
           isOpen={Boolean(inventoryDetail.item)}
           onClose={closeInventoryDetail}
           loading={inventoryDetail.loadingLedger}
+        />
+
+        <MoveToInventoryModal
+          variant={moveModalState.variant}
+          isOpen={moveModalState.isOpen}
+          onClose={handleCloseMoveModal}
+          onMove={handleConfirmMove}
+          loading={moveModalState.loading}
+        />
+        <QrCodeModal
+          qrCodeUrl={moveModalState.qrCodeUrl}
+          isOpen={moveModalState.showQrCode}
+          onClose={() => {
+            if (moveModalState.qrCodeUrl) {
+              URL.revokeObjectURL(moveModalState.qrCodeUrl);
+            }
+            setMoveModalState((prev) => ({
+              ...prev,
+              showQrCode: false,
+              qrCodeUrl: null,
+            }));
+          }}
+          productName={moveModalState.variant?.product_name || ""}
+          variantName={
+            moveModalState.variant?.variant_type
+              ? Object.entries(moveModalState.variant.variant_type)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ")
+              : ""
+          }
+        />
+        <QrCodeModal
+          qrCodeUrl={qrPreviewState.qrCodeUrl}
+          isOpen={qrPreviewState.isOpen}
+          onClose={() => {
+            if (qrPreviewState.qrCodeUrl) {
+              URL.revokeObjectURL(qrPreviewState.qrCodeUrl);
+            }
+            setQrPreviewState({
+              isOpen: false,
+              qrCodeUrl: null,
+              productName: "",
+              variantName: "",
+              procurementVariantId: null,
+              masterVariantId: null,
+            });
+          }}
+          productName={qrPreviewState.productName}
+          variantName={qrPreviewState.variantName}
         />
       </MasterLayout>
     </SidebarPermissionGuard>
