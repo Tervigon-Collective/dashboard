@@ -939,7 +939,7 @@ const ProcurementTableDataLayer = () => {
                         padding: "12px",
                       }}
                     >
-                      Total Quantity
+                      Total MOQ
                     </th>
                     <th
                       style={{
