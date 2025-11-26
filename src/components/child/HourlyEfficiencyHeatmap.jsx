@@ -101,7 +101,7 @@ const HourlyEfficiencyHeatmap = () => {
     loading: insightsLoading,
     insights,
     error: insightsError,
-    generateInsights,
+    generateInsightsStream,
     clearInsights,
   } = useInsights();
 
@@ -441,6 +441,9 @@ const HourlyEfficiencyHeatmap = () => {
       return;
     }
 
+    // Open modal immediately with loading state
+    setShowInsights(true);
+
     try {
       // Build context for insights
       const context = buildHourlyEfficiencyContext(
@@ -462,12 +465,10 @@ const HourlyEfficiencyHeatmap = () => {
         },
       };
 
-      // Generate insights
-      await generateInsights(insightsData, context);
-      setShowInsights(true);
+      // Generate insights using streaming (modal is already open, will show loading then stream)
+      await generateInsightsStream(insightsData, context);
     } catch (err) {
       // Error is handled by the hook and displayed in modal
-      setShowInsights(true);
     }
   };
 
