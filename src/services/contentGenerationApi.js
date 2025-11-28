@@ -682,5 +682,193 @@ export const uploadBrandkitLogo = async (brandId, logoFile) => {
   return response.data;
 };
 
+// ========== New Brandkit Creation System ==========
+
+/**
+ * Extract website data for existing brand continuation
+ * @param {string} url - Website URL
+ * @returns {Promise<Object>} Extracted brand data
+ */
+export const extractWebsiteData = async (url) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/extract-website`,
+    { url }
+  );
+  return response.data;
+};
+
+/**
+ * Generate a single field using AI
+ * @param {string} fieldName - Field name (brand_name, tagline, color_palette, typography, target_audience, icp_generic, icp_name, icp_age_range, icp_region, icp_gender, icp_title, icp_all_fields)
+ * @param {string} brandType - Brand type
+ * @param {Object} context - Additional context
+ * @param {Object} existingData - Existing form data
+ * @param {Object} extraParams - Extra parameters (e.g., color_tone)
+ * @returns {Promise<Object>} Generated field data
+ */
+export const generateField = async (fieldName, brandType, context = {}, existingData = {}, extraParams = {}) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/generate-field`,
+    {
+      field_name: fieldName,
+      brand_type: brandType,
+      context,
+      existing_data: existingData,
+      ...extraParams, // Include color_tone and other extra params
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Generate full brandkit using AI
+ * @param {string} brandType - Brand type
+ * @param {Object} context - Additional context (industry, target_market, etc.)
+ * @param {Object} existingData - Existing form data
+ * @returns {Promise<Object>} Generated brandkit data
+ */
+export const generateGlobalBrandkit = async (brandType, context = {}, existingData = {}) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/generate-global`,
+    {
+      brand_type: brandType,
+      context,
+      existing_data: existingData,
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Generate logo using AI
+ * @param {string} brandName - Brand name
+ * @param {string} brandType - Brand type
+ * @param {Array<string>} colorPalette - Color palette
+ * @param {string} prompt - Optional custom prompt
+ * @param {string} method - Generation method (gemini or seedream)
+ * @returns {Promise<Object>} Logo generation response {success, task_id, logo_path, method}
+ */
+export const generateLogo = async (brandName, brandType, colorPalette = [], prompt = "", method = "gemini") => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/generate-logo`,
+    {
+      brand_name: brandName,
+      brand_type: brandType,
+      color_palette: colorPalette,
+      prompt,
+      method,
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Generate ICP from database
+ * @param {Object} connectionConfig - Database connection configuration
+ * @param {Object} timeRange - Time range filter
+ * @param {string} brandType - Brand type
+ * @returns {Promise<Object>} Generated ICP persona
+ */
+export const generateICPFromDatabase = async (connectionConfig, timeRange, brandType) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/generate-icp-from-db`,
+    {
+      connection_config: connectionConfig,
+      time_range: timeRange,
+      brand_type: brandType,
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Get Google Fonts list
+ * @returns {Promise<Object>} Google Fonts data {success: boolean, fonts: Array, error: string|null}
+ */
+export const getGoogleFonts = async () => {
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/brandkits/google-fonts`
+  );
+  return response.data;
+};
+
+/**
+ * Create new brandkit (Mode 1: New Brand Creation)
+ * @param {Object} brandkitData - Complete brandkit data
+ * @returns {Promise<Object>} Created brandkit
+ */
+export const createNewBrandkit = async (brandkitData) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/create/new`,
+    brandkitData,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Create existing brandkit (Mode 2: Existing Brand Continuation)
+ * @param {Object} brandkitData - Complete brandkit data
+ * @returns {Promise<Object>} Created brandkit
+ */
+export const createExistingBrandkit = async (brandkitData) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/create/existing`,
+    brandkitData,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Remove logo from a brandkit
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Updated brandkit
+ */
+export const removeBrandkitLogo = async (brandId) => {
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`
+  );
+  return response.data;
+};
+
+/**
+ * Generate brandkit from description
+ * @param {string} description - Brand description
+ * @param {string} brandType - Optional brand type
+ * @returns {Promise<Object>} Generated brandkit data
+ */
+export const generateFromDescription = async (description, brandType = null) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/generate-from-description`,
+    {
+      description,
+      brand_type: brandType,
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Fetch database schema
+ * @param {Object} connectionConfig - Database connection configuration
+ * @returns {Promise<Object>} Schema data with tables and columns
+ */
+export const fetchDatabaseSchema = async (connectionConfig) => {
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/brandkits/fetch-db-schema`,
+    connectionConfig
+  );
+  return response.data;
+};
+
 // Export client for custom requests if needed
 export { apiClient };

@@ -9,6 +9,9 @@ import BrandkitSelector from "@/components/BrandkitSelector";
 import BrandkitFormModal from "@/components/BrandkitFormModal";
 import BrandkitManagementModal from "@/components/BrandkitManagementModal";
 import BrandkitLogoUpload from "@/components/BrandkitLogoUpload";
+import BrandkitModeSelectionModal from "@/components/BrandkitModeSelectionModal";
+import NewBrandkitForm from "@/components/NewBrandkitForm";
+import ExistingBrandkitForm from "@/components/ExistingBrandkitForm";
 import { useBrief } from "@/contexts/BriefContext";
 import { useGeneration } from "@/contexts/GenerationContext";
 import { useBrandkit } from "@/contexts/BrandkitContext";
@@ -100,6 +103,11 @@ export default function CreateContentPage() {
   const [showLogoUploadModal, setShowLogoUploadModal] = useState(false);
   const [editingBrandkit, setEditingBrandkit] = useState(null);
   const [uploadingLogoBrandkit, setUploadingLogoBrandkit] = useState(null);
+  
+  // New brandkit creation flow states
+  const [showModeSelectionModal, setShowModeSelectionModal] = useState(false);
+  const [showNewBrandkitForm, setShowNewBrandkitForm] = useState(false);
+  const [showExistingBrandkitForm, setShowExistingBrandkitForm] = useState(false);
 
   // Get brandkit context
   const { activeBrandkit, refresh: refreshBrandkit } = useBrandkit();
@@ -827,7 +835,17 @@ export default function CreateContentPage() {
   // Brandkit modal handlers
   const handleCreateNewBrandkit = () => {
     setEditingBrandkit(null);
-    setShowBrandkitFormModal(true);
+    // Show mode selection modal instead of direct form
+    setShowModeSelectionModal(true);
+  };
+
+  const handleModeSelection = (mode) => {
+    setShowModeSelectionModal(false);
+    if (mode === "new_brand") {
+      setShowNewBrandkitForm(true);
+    } else if (mode === "existing_brand") {
+      setShowExistingBrandkitForm(true);
+    }
   };
 
   const handleManageBrandkits = () => {
@@ -858,6 +876,18 @@ export default function CreateContentPage() {
     await refreshBrandkit();
     setShowBrandkitFormModal(false);
     setEditingBrandkit(null);
+  };
+
+  const handleNewBrandkitSuccess = async (brandkit) => {
+    await refreshBrandkit();
+    setShowNewBrandkitForm(false);
+    alert(`Brandkit "${brandkit.brand_name}" created successfully!`);
+  };
+
+  const handleExistingBrandkitSuccess = async (brandkit) => {
+    await refreshBrandkit();
+    setShowExistingBrandkitForm(false);
+    alert(`Brandkit "${brandkit.brand_name}" created successfully!`);
   };
 
   const handleLogoUploadSuccess = async () => {
@@ -2745,7 +2775,7 @@ export default function CreateContentPage() {
         />
       )}
 
-      {/* Brandkit Form Modal */}
+      {/* Brandkit Form Modal (for editing) */}
       <BrandkitFormModal
         isOpen={showBrandkitFormModal}
         onClose={() => {
@@ -2754,6 +2784,27 @@ export default function CreateContentPage() {
         }}
         onSuccess={handleBrandkitFormSuccess}
         editBrandkit={editingBrandkit}
+      />
+
+      {/* Mode Selection Modal */}
+      <BrandkitModeSelectionModal
+        isOpen={showModeSelectionModal}
+        onClose={() => setShowModeSelectionModal(false)}
+        onSelectMode={handleModeSelection}
+      />
+
+      {/* New Brandkit Form (Mode 1) */}
+      <NewBrandkitForm
+        isOpen={showNewBrandkitForm}
+        onClose={() => setShowNewBrandkitForm(false)}
+        onSuccess={handleNewBrandkitSuccess}
+      />
+
+      {/* Existing Brandkit Form (Mode 2) */}
+      <ExistingBrandkitForm
+        isOpen={showExistingBrandkitForm}
+        onClose={() => setShowExistingBrandkitForm(false)}
+        onSuccess={handleExistingBrandkitSuccess}
       />
 
       {/* Brandkit Management Modal */}
