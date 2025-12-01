@@ -5,6 +5,10 @@ import { Icon } from "@iconify/react";
 import ExcelJS from "exceljs";
 import { NEGATIVE_COLORS, WARNING_COLORS } from "@/utils/analyticsColors";
 import { apiClient } from "@/api/api";
+import { useInsights } from "@/hook/useInsights";
+import InsightsModal from "@/components/InsightsModal";
+import InsightButton from "@/components/InsightButton";
+import { buildReturnCancelTrendsContext } from "@/utils/insightContexts";
 
 const ReactECharts = dynamic(
   () =>
@@ -87,6 +91,16 @@ const ReturnCancelTrendsWidget = () => {
 
   // Chart ref for download
   const chartRef = useRef(null);
+  const [showInsights, setShowInsights] = useState(false);
+
+  // AI Insights hook
+  const {
+    loading: insightsLoading,
+    insights,
+    error: insightsError,
+    generateInsightsStream,
+    clearInsights,
+  } = useInsights();
 
   // Calculate date range based on selected period or custom dates
   const dateRange = useMemo(() => {
@@ -468,6 +482,44 @@ const ReturnCancelTrendsWidget = () => {
     Array.isArray(processedTrendData) &&
     processedTrendData.length > 0;
 
+  // Handle AI Insights generation
+  const handleGetInsights = async () => {
+    if (!processedTrendData || processedTrendData.length === 0) {
+      alert("No data available to analyze. Please wait for data to load.");
+      return;
+    }
+
+    // Open modal immediately with loading state
+    setShowInsights(true);
+
+    try {
+      // Build context for insights
+      const context = buildReturnCancelTrendsContext(
+        processedTrendData,
+        dateRange.startDate,
+        dateRange.endDate,
+        aggregatedMetrics
+      );
+
+      // Prepare data for insights API
+      const insightsData = {
+        trend_data: processedTrendData,
+        aggregated_metrics: aggregatedMetrics,
+      };
+
+      // Generate insights using streaming (modal is already open, will show loading then stream)
+      await generateInsightsStream(insightsData, context);
+    } catch (err) {
+      // Error is handled by the hook and displayed in modal
+    }
+  };
+
+  // Handle closing insights modal
+  const handleCloseInsights = () => {
+    setShowInsights(false);
+    clearInsights();
+  };
+
   // Download chart data as Excel
   const handleDownload = async () => {
     if (!processedTrendData || processedTrendData.length === 0) {
@@ -592,6 +644,11 @@ const ReturnCancelTrendsWidget = () => {
             </h6>
           </div>
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <InsightButton
+              onClick={handleGetInsights}
+              loading={insightsLoading}
+              disabled={!processedTrendData || processedTrendData.length === 0}
+            />
             {showAggregates && (
               <>
                 <span
@@ -1137,6 +1194,15 @@ const ReturnCancelTrendsWidget = () => {
               No data available. Please adjust filters.
             </div>
           )}
+
+        {/* AI Insights Modal */}
+        <InsightsModal
+          open={showInsights}
+          onClose={handleCloseInsights}
+          insights={insights}
+          loading={insightsLoading}
+          error={insightsError}
+        />
       </div>
     </div>
   );

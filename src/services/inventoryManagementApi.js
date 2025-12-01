@@ -317,10 +317,13 @@ class InventoryManagementApiService {
     }
   }
 
-  listDispatchQueue(limit = 50) {
+  listDispatchQueue(limit = 50, offset = 0) {
     const params = new URLSearchParams();
     if (limit) {
       params.append("limit", String(limit));
+    }
+    if (offset) {
+      params.append("offset", String(offset));
     }
     const query = params.toString();
     return this.makeRequest(`/dispatch-queue${query ? `?${query}` : ""}`);
@@ -403,6 +406,24 @@ class InventoryManagementApiService {
     return this.makeRequest(`/returns/cases/${caseId}/reject`, {
       method: "POST",
       body: JSON.stringify({ notes: notes || null }),
+    });
+  }
+
+  /**
+   * Manually adjust inventory quantity
+   * @param {number} inventoryItemId - Inventory item ID
+   * @param {number} adjustment - Positive for increase, negative for decrease
+   * @param {string} notes - Optional notes
+   * @returns {Promise<Object>} Updated inventory item
+   */
+  adjustInventoryQuantity(inventoryItemId, adjustment, notes = null) {
+    return this.makeRequest(`/items/${inventoryItemId}/adjust`, {
+      method: "POST",
+      body: JSON.stringify({
+        adjustment,
+        notes,
+        allowNegative: false, // Prevent negative stock
+      }),
     });
   }
 

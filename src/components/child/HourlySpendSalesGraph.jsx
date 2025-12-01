@@ -10,6 +10,10 @@ import {
   getPrioritizedMetricColor,
 } from "@/utils/analyticsColors";
 import { apiClient } from "@/api/api";
+import { useInsights } from "@/hook/useInsights";
+import InsightsModal from "@/components/InsightsModal";
+import InsightButton from "@/components/InsightButton";
+import { buildHourlySpendSalesContext } from "@/utils/insightContexts";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), {
   ssr: false,
@@ -101,7 +105,17 @@ const HourlySpendSalesGraph = () => {
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
   const [useCustomDateRange, setUseCustomDateRange] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const chartRef = useRef(null);
+
+  // AI Insights hook
+  const {
+    loading: insightsLoading,
+    insights,
+    error: insightsError,
+    generateInsightsStream,
+    clearInsights,
+  } = useInsights();
 
   // Initialize date range on mount
   useEffect(() => {
@@ -873,6 +887,51 @@ const HourlySpendSalesGraph = () => {
     setSelectedMetrics(["Total Spend", "Total Revenue"]);
   };
 
+  // Handle AI Insights generation
+  const handleGetInsights = async () => {
+    if (!chartData || !chartData.categories || chartData.categories.length === 0) {
+      alert("No data available to analyze. Please wait for data to load.");
+      return;
+    }
+
+    // Open modal immediately with loading state
+    setShowInsights(true);
+
+    try {
+      // Build context for insights
+      const context = buildHourlySpendSalesContext(
+        chartData,
+        effectiveDateRange.startDate,
+        effectiveDateRange.endDate,
+        selectedPeriod,
+        selectedMetrics
+      );
+
+      // Prepare data for insights API
+      const insightsData = {
+        chart_data: {
+          categories: chartData.categories,
+          series: chartData.series.map(s => ({
+            name: s.name,
+            data: s.data,
+          })),
+        },
+        summary: context.summary,
+      };
+
+      // Generate insights using streaming (modal is already open, will show loading then stream)
+      await generateInsightsStream(insightsData, context);
+    } catch (err) {
+      // Error is handled by the hook and displayed in modal
+    }
+  };
+
+  // Handle closing insights modal
+  const handleCloseInsights = () => {
+    setShowInsights(false);
+    clearInsights();
+  };
+
   // Download chart data as Excel
   const handleDownload = async () => {
     if (!chartData || !chartData.categories || chartData.categories.length === 0) {
@@ -1013,6 +1072,11 @@ const HourlySpendSalesGraph = () => {
             className="position-absolute d-flex gap-2"
             style={{ top: "10px", right: "10px", zIndex: 10 }}
           >
+            <InsightButton
+              onClick={handleGetInsights}
+              loading={insightsLoading}
+              disabled={!chartData || !chartData.categories || chartData.categories.length === 0}
+            />
             <button
               className="btn btn-sm btn-light border"
               onClick={handleDownload}
@@ -1481,6 +1545,11 @@ const HourlySpendSalesGraph = () => {
                 className="position-absolute d-flex gap-2"
                 style={{ top: "10px", right: "10px", zIndex: 10 }}
               >
+                <InsightButton
+                  onClick={handleGetInsights}
+                  loading={insightsLoading}
+                  disabled={!chartData || !chartData.categories || chartData.categories.length === 0}
+                />
                 <button
                   className="btn btn-sm btn-light border"
                   onClick={handleDownload}
@@ -1918,6 +1987,16 @@ const HourlySpendSalesGraph = () => {
           </div>
         </div>
       )}
+
+      {/* AI Insights Modal */}
+      <InsightsModal
+        key={insights?._updateTimestamp || showInsights ? 'insights-modal' : 'insights-modal-closed'}
+        open={showInsights}
+        onClose={handleCloseInsights}
+        insights={insights}
+        loading={insightsLoading}
+        error={insightsError}
+      />
     </>
   );
 };
