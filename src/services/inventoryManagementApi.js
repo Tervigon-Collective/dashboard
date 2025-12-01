@@ -689,6 +689,84 @@ class InventoryManagementApiService {
       `/sample-products/qr-code/info${query ? `?${query}` : ""}`
     );
   }
+
+  // Alerts endpoints
+  getLowStockItems() {
+    return this.makeRequest(`/alerts/low-stock`);
+  }
+
+  getAlertSummary(date) {
+    const params = new URLSearchParams();
+    if (date) params.append("date", date);
+    const query = params.toString();
+    return this.makeRequest(`/alerts/summary${query ? `?${query}` : ""}`);
+  }
+
+  getUnresolvedAlerts() {
+    return this.makeRequest(`/alerts/unresolved`);
+  }
+
+  acknowledgeAlert(alertId) {
+    return this.makeRequest(
+      `/alerts/${encodeURIComponent(alertId)}/acknowledge`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  // Reports endpoints
+  getValuationReport(includeZeroStock = false) {
+    const params = new URLSearchParams();
+    if (includeZeroStock !== undefined) {
+      params.append("includeZeroStock", String(includeZeroStock));
+    }
+    const query = params.toString();
+    return this.makeRequest(`/reports/valuation${query ? `?${query}` : ""}`);
+  }
+
+  getMovementReport(startDate, endDate) {
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    const query = params.toString();
+    return this.makeRequest(`/reports/movement${query ? `?${query}` : ""}`);
+  }
+
+  getLowStockReport() {
+    return this.makeRequest(`/reports/low-stock`);
+  }
+
+  getAgingReport(daysThreshold = 90) {
+    const params = new URLSearchParams();
+    if (daysThreshold) params.append("daysThreshold", String(daysThreshold));
+    const query = params.toString();
+    return this.makeRequest(`/reports/aging${query ? `?${query}` : ""}`);
+  }
+
+  getABCAnalysis() {
+    return this.makeRequest(`/reports/abc-analysis`);
+  }
+
+  getTurnoverReport(startDate, endDate) {
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    const query = params.toString();
+    return this.makeRequest(`/reports/turnover${query ? `?${query}` : ""}`);
+  }
+
+  // Thresholds endpoints (read-only)
+  getSalesStatistics(inventoryItemId, daysLookback = 90) {
+    const params = new URLSearchParams();
+    if (daysLookback) params.append("daysLookback", String(daysLookback));
+    const query = params.toString();
+    return this.makeRequest(
+      `/thresholds/sales-stats/${encodeURIComponent(inventoryItemId)}${
+        query ? `?${query}` : ""
+      }`
+    );
+  }
 }
 
 export default new InventoryManagementApiService();

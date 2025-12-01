@@ -29,6 +29,8 @@ export default function SidebarPermissionGuard({
   const routeToSidebarMap = {
     "/dashboard": "dashboard",
     "/": "dashboard",
+    "/historical-data": "dashboard",
+    "/advanced-analytics": "dashboard",
     "/sku-list": "skuList",
     "/product-spend-summary": "productSpendSummary",
     "/procurement": "procurement",
