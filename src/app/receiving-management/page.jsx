@@ -2110,7 +2110,7 @@ const ReceivingManagementLayer = () => {
     request,
     targetStatus = "to_be_delivered"
   ) => {
-    // If attempting arrived -> fulfilled, enforce QC + Documents presence
+    // If attempting arrived -> fulfilled, enforce QC + Documents + GRN + QR Codes presence
     if (targetStatus === "fulfilled") {
       try {
         // 1) Quality checks present
@@ -2126,25 +2126,33 @@ const ReceivingManagementLayer = () => {
           docsRes?.success && Array.isArray(docsRes.data) ? docsRes.data : [];
         const hasAnyDoc = docs.length > 0;
 
-        if (!hasAnyQC || !hasAnyDoc) {
-          let msg = "";
-          if (!hasAnyQC && !hasAnyDoc) {
-            msg =
-              "Please complete Item Inspection Details and upload at least one document before marking as Fulfilled.";
-          } else if (!hasAnyQC) {
-            msg =
-              "Please complete Item Inspection Details before marking as Fulfilled.";
-          } else if (!hasAnyDoc) {
-            msg =
-              "Please upload at least one document (e.g., invoice or purchase order) before marking as Fulfilled.";
-          }
+        // 3) GRN PDF exists
+        const grnExists = await qualityCheckApi.checkGrnExists(request.request_id);
+
+        // 4) QR codes exist - need to fetch fresh request data to check
+        const requestData = await purchaseRequestApi.getPurchaseRequestById(
+          request.request_id
+        );
+        const hasQrCodes = requestData?.success && requestData?.data?.items?.some(
+          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+        ) || false;
+
+        // Build validation message with all missing items
+        const missingItems = [];
+        if (!hasAnyQC) missingItems.push("Quality Check inspection");
+        if (!hasAnyDoc) missingItems.push("at least one document (invoice/PO)");
+        if (!grnExists) missingItems.push("GRN PDF");
+        if (!hasQrCodes) missingItems.push("QR codes");
+
+        if (missingItems.length > 0) {
+          const msg = `⚠️ Cannot mark as Fulfilled!\n\nPlease complete the following:\n\n${missingItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n\n📋 Required Workflow:\n  1. Complete Quality Check inspection (Inspect button)\n  2. Upload documents (invoice/PO) in View modal\n  3. Generate GRN PDF (button in Quality Check tab)\n  4. Generate QR codes (button in Quality Check tab)\n  5. Then mark as Fulfilled`;
           alert(msg);
           return; // Do not open confirmation modal
         }
       } catch (e) {
         console.error("Pre-check before fulfillment failed", e);
         alert(
-          "Unable to verify inspection or documents. Please try again in a moment."
+          "Unable to verify requirements. Please try again in a moment."
         );
         return;
       }
