@@ -163,6 +163,45 @@ apiClient.interceptors.response.use(
   }
 );
 
+// ========== Helper Functions ==========
+
+/**
+ * Get Firebase authentication token for Python API calls
+ * @returns {Promise<string|null>} Auth token or null if not available
+ */
+const getAuthToken = async () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user) {
+      return await user.getIdToken();
+    }
+  } catch (error) {
+    console.error("Error getting ID token:", error);
+  }
+  return null;
+};
+
+/**
+ * Get headers with authentication for Python API calls
+ * @param {Object} additionalHeaders - Additional headers to include
+ * @returns {Promise<Object>} Headers object with auth token
+ */
+const getAuthHeaders = async (additionalHeaders = {}) => {
+  const token = await getAuthToken();
+  const headers = { ...additionalHeaders };
+  
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
+
 // ========== Creative Briefs ==========
 
 /**
@@ -259,12 +298,27 @@ export const generateGraphic = async (briefId) => {
  * @returns {Promise<Object>} Generation job response {job_id, status}
  */
 export const quickGenerate = async (formData) => {
-  // Call Python backend directly
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/generate/quick`,
-    formData
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+    // Call Python backend directly
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/quick`,
+      formData,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Quick generate error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `${config.pythonApi.baseURL}/api/generate/quick`,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -273,11 +327,22 @@ export const quickGenerate = async (formData) => {
  * @returns {Promise<Object>} Status response {status, progress, result?, error?}
  */
 export const getGenerationStatus = async (jobId) => {
-  // Call Python backend directly
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/generate/status/${jobId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/generate/status/${jobId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get generation status error details:", {
+      message: error.message,
+      status: error.response?.status,
+      jobId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -286,11 +351,22 @@ export const getGenerationStatus = async (jobId) => {
  * @returns {Promise<Object>} Generation results
  */
 export const getGenerationResults = async (jobId) => {
-  // Call Python backend directly
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/generate/results/${jobId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/generate/results/${jobId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get generation results error details:", {
+      message: error.message,
+      status: error.response?.status,
+      jobId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -298,11 +374,21 @@ export const getGenerationResults = async (jobId) => {
  * @returns {Promise<Object>} All jobs {jobs: Array}
  */
 export const getGenerationJobs = async () => {
-  // Call Python backend directly
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/generate/jobs`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/generate/jobs`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get generation jobs error details:", {
+      message: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -312,11 +398,24 @@ export const getGenerationJobs = async () => {
  * @returns {Promise<Object>} Retry response
  */
 export const retryImageGeneration = async (jobId, artifactId) => {
-  // Call Python backend directly
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/generate/retry-image/${jobId}/${artifactId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/retry-image/${jobId}/${artifactId}`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Retry image generation error details:", {
+      message: error.message,
+      status: error.response?.status,
+      jobId,
+      artifactId,
+    });
+    throw error;
+  }
 };
 
 // ========== Review Workflow ==========
@@ -327,11 +426,22 @@ export const retryImageGeneration = async (jobId, artifactId) => {
  * @returns {Promise<Object>} Review data with prompts
  */
 export const getReviewPrompts = async (jobId) => {
-  // Call Python backend directly
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/generate/review/${jobId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get review prompts error details:", {
+      message: error.message,
+      status: error.response?.status,
+      jobId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -342,15 +452,14 @@ export const getReviewPrompts = async (jobId) => {
  */
 export const updateReviewPrompts = async (jobId, data) => {
   try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
     // Call Python backend directly
     const response = await axios.put(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts`,
       data,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -372,15 +481,14 @@ export const updateReviewPrompts = async (jobId, data) => {
  */
 export const approveReview = async (jobId) => {
   try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
     // Call Python backend directly
     const response = await axios.post(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}/approve`,
       {},
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -408,17 +516,42 @@ export const uploadImages = async (files) => {
     formData.append("images", file);
   });
 
-  // Call Python backend directly
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/upload/images`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "multipart/form-data",
+    });
+    // Call Python backend directly
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/upload/images`,
+      formData,
+      {
+        headers,
+        timeout: 60000, // 60 second timeout for file uploads
+      }
+    );
+    return response.data;
+  } catch (error) {
+    // Enhanced error logging
+    console.error("Image upload error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `${config.pythonApi.baseURL}/api/upload/images`,
+    });
+
+    // Re-throw with more context if it's a network error
+    if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+      const networkError = new Error(
+        `Network error uploading images. Please check your connection and ensure the Python API is accessible at ${config.pythonApi.baseURL}`
+      );
+      networkError.originalError = error;
+      networkError.code = "NETWORK_ERROR";
+      throw networkError;
     }
-  );
-  return response.data;
+
+    throw error;
+  }
 };
 
 /**
@@ -449,11 +582,24 @@ export const uploadLogo = async (file) => {
  * @returns {Promise<Object>} Generated content {content: Array}
  */
 export const getGeneratedContent = async () => {
-  // Call Python backend directly since Node.js proxy isn't working
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/content/generated`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly since Node.js proxy isn't working
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/content/generated`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get generated content error details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `${config.pythonApi.baseURL}/api/content/generated`,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -463,11 +609,23 @@ export const getGeneratedContent = async () => {
  * @returns {Promise<Object>} Deletion response {status, message, content_type}
  */
 export const deleteGeneratedContent = async (runId, artifactId) => {
-  // Call Python backend directly
-  const response = await axios.delete(
-    `${config.pythonApi.baseURL}/api/content/generated/${runId}/${artifactId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    // Call Python backend directly
+    const response = await axios.delete(
+      `${config.pythonApi.baseURL}/api/content/generated/${runId}/${artifactId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Delete generated content error details:", {
+      message: error.message,
+      status: error.response?.status,
+      runId,
+      artifactId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -525,11 +683,25 @@ export const editImage = async (runId, artifactId, editPrompt, options = {}) => 
   // Debug log
   console.log("editImage API call - Request body:", requestBody);
 
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/content/edit-image`,
-    requestBody
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/content/edit-image`,
+      requestBody,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Edit image error details:", {
+      message: error.message,
+      status: error.response?.status,
+      runId,
+      artifactId,
+    });
+    throw error;
+  }
 };
 
 // ========== Assets ==========
@@ -562,10 +734,22 @@ export const deleteAsset = async (assetId) => {
  * @returns {Promise<Object>} Brandkits response {brandkits: Array}
  */
 export const getBrandkits = async () => {
-  const response = await axios.get(`${config.pythonApi.baseURL}/api/brandkits`);
-  // Backend returns array directly, wrap it for consistency
-  const brandkits = Array.isArray(response.data) ? response.data : response.data.brandkits || [];
-  return { brandkits };
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/brandkits`,
+      { headers }
+    );
+    // Backend returns array directly, wrap it for consistency
+    const brandkits = Array.isArray(response.data) ? response.data : response.data.brandkits || [];
+    return { brandkits };
+  } catch (error) {
+    console.error("Get brandkits error details:", {
+      message: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -573,10 +757,20 @@ export const getBrandkits = async () => {
  * @returns {Promise<Object>} Active brandkit data
  */
 export const getActiveBrandkit = async () => {
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/brandkits/active`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/brandkits/active`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get active brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -585,10 +779,21 @@ export const getActiveBrandkit = async () => {
  * @returns {Promise<Object>} Brandkit data
  */
 export const getBrandkit = async (brandId) => {
-  const response = await axios.get(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -604,16 +809,23 @@ export const createBrandkit = async (brandkitData) => {
     color_palette: Array.isArray(brandkitData.color_palette),
   });
   
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/brandkits`,
-    brandkitData,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders({
+      'Content-Type': 'application/json',
+    });
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/brandkits`,
+      brandkitData,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Create brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -625,16 +837,24 @@ export const createBrandkit = async (brandkitData) => {
 export const updateBrandkit = async (brandId, updates) => {
   console.log('updateBrandkit - Data before sending:', updates);
   
-  const response = await axios.put(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`,
-    updates,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders({
+      'Content-Type': 'application/json',
+    });
+    const response = await axios.put(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}`,
+      updates,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Update brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -643,10 +863,21 @@ export const updateBrandkit = async (brandId, updates) => {
  * @returns {Promise<Object>} Deletion response
  */
 export const deleteBrandkit = async (brandId) => {
-  const response = await axios.delete(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.delete(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Delete brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -655,10 +886,22 @@ export const deleteBrandkit = async (brandId) => {
  * @returns {Promise<Object>} Activation response
  */
 export const activateBrandkit = async (brandId) => {
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/activate`
-  );
-  return response.data;
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/activate`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Activate brandkit error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -670,16 +913,25 @@ export const activateBrandkit = async (brandId) => {
 export const uploadBrandkitLogo = async (brandId, logoFile) => {
   const formData = new FormData();
   formData.append("file", logoFile);
-  const response = await axios.post(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-  return response.data;
+  
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "multipart/form-data",
+    });
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`,
+      formData,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Upload brandkit logo error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
 };
 
 // Export client for custom requests if needed
