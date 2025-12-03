@@ -2013,13 +2013,20 @@ const ReceivingManagementLayer = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      // Set canvas dimensions: QR code width + padding + text area
+      // Set dimensions for a single block
       const qrWidth = img.width;
       const qrHeight = img.height;
       const padding = 20;
       const textHeight = sku ? 40 : 0; // Space for SKU text
-      const canvasWidth = qrWidth + padding * 2;
-      const canvasHeight = qrHeight + padding * 2 + textHeight;
+      const blockSpacing = 40; // Space between the two blocks
+      
+      // Single block dimensions
+      const singleBlockWidth = qrWidth + padding * 2;
+      const singleBlockHeight = qrHeight + padding * 2 + textHeight;
+      
+      // Canvas dimensions: two blocks side by side with spacing
+      const canvasWidth = (singleBlockWidth * 2) + blockSpacing;
+      const canvasHeight = singleBlockHeight;
 
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
@@ -2028,20 +2035,30 @@ const ReceivingManagementLayer = () => {
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      // Draw QR code image
-      ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+      // Helper function to draw a single QR code block
+      const drawBlock = (xOffset) => {
+        // Draw QR code image
+        ctx.drawImage(img, xOffset + padding, padding, qrWidth, qrHeight);
 
-      // Add SKU text at the bottom if provided
-      if (sku) {
-        ctx.fillStyle = "#000000";
-        ctx.font = "bold 16px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        // Add SKU text at the bottom if provided
+        if (sku) {
+          ctx.fillStyle = "#000000";
+          ctx.font = "bold 16px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
 
-        // Draw SKU text
-        const textY = qrHeight + padding + textHeight / 2;
-        ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
-      }
+          // Draw SKU text
+          const textY = qrHeight + padding + textHeight / 2;
+          const blockCenterX = xOffset + singleBlockWidth / 2;
+          ctx.fillText(`SKU: ${sku}`, blockCenterX, textY);
+        }
+      };
+
+      // Draw first block at x = 0 (left side)
+      drawBlock(0);
+      
+      // Draw second identical block at x = singleBlockWidth + blockSpacing (right side)
+      drawBlock(singleBlockWidth + blockSpacing);
 
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
