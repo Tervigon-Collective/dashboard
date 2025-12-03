@@ -370,8 +370,11 @@ const DispatchScannerModal = ({
 const OrderManagementPage = () => {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [limit, setLimit] = useState(50);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [activeTab, setActiveTab] = useState("pending"); // "pending", "in-progress", or "fully-dispatched"
   const [scannerState, setScannerState] = useState({
     isOpen: false,
@@ -387,25 +390,96 @@ const OrderManagementPage = () => {
   });
   // Synchronous flag to prevent concurrent processing
   const isProcessingRef = useRef(false);
+  // Ref for scroll container
+  const scrollContainerRef = useRef(null);
 
-  const loadQueue = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await inventoryManagementApi.listDispatchQueue(limit);
-      setQueue(response?.data || response || []);
-    } catch (err) {
-      console.error("Failed to load dispatch queue", err);
-      setError(err.message || "Failed to load dispatch queue");
-      toast.error(err.message || "Failed to load dispatch queue");
-    } finally {
-      setLoading(false);
+  const loadQueue = useCallback(
+    async (reset = true) => {
+      if (reset) {
+        setLoading(true);
+        setOffset(0);
+        setError("");
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const currentOffset = reset ? 0 : offset;
+        const response = await inventoryManagementApi.listDispatchQueue(
+          limit,
+          currentOffset
+        );
+
+        // Handle both old format (array) and new format (object with data, hasMore)
+        const responseData = response?.data || response || [];
+        const responseHasMore = response?.hasMore ?? false;
+        const newItems = Array.isArray(responseData) ? responseData : [];
+
+        if (reset) {
+          setQueue(newItems);
+        } else {
+          // Append new data to existing queue, deduplicating by order_id + item_id
+          setQueue((prev) => {
+            const existingKeys = new Set(
+              prev.map((item) => `${item.order_id}-${item.item_id}`)
+            );
+            const uniqueNewItems = newItems.filter(
+              (item) => !existingKeys.has(`${item.order_id}-${item.item_id}`)
+            );
+            return [...prev, ...uniqueNewItems];
+          });
+        }
+
+        setHasMore(responseHasMore);
+        setOffset(
+          currentOffset +
+            (Array.isArray(responseData) ? responseData.length : 0)
+        );
+      } catch (err) {
+        console.error("Failed to load dispatch queue", err);
+        setError(err.message || "Failed to load dispatch queue");
+        if (reset) {
+          toast.error(err.message || "Failed to load dispatch queue");
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [limit, offset]
+  );
+
+  // Load more items when scrolling near bottom
+  const loadMore = useCallback(() => {
+    if (!loadingMore && !loading && hasMore) {
+      loadQueue(false);
     }
-  }, [limit]);
+  }, [loadingMore, loading, hasMore, loadQueue]);
+
+  // Handle scroll event for infinite scrolling
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Load more when user is within 200px of bottom
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        loadMore();
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+      return () => container.removeEventListener("scroll", handleScroll);
+    }
+  }, [loadMore]);
 
   useEffect(() => {
-    loadQueue();
-  }, [loadQueue]);
+    loadQueue(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit]); // Reset and reload when limit changes
 
   const handleOpenScanner = useCallback((lineItem) => {
     // Reset scan tracking when opening scanner for a new line item
@@ -520,35 +594,20 @@ const OrderManagementPage = () => {
         const remainingAfterScan =
           response?.data?.remaining_to_dispatch ?? null;
 
-        // Reload queue to get updated data
-        const queueResponse = await inventoryManagementApi.listDispatchQueue(
-          limit
-        );
-        const updatedQueue = queueResponse?.data || queueResponse || [];
-        setQueue(updatedQueue);
+        // Reload queue to get updated data (reset to start)
+        await loadQueue(true);
 
-        // Find the updated line item from the fresh queue data
-        const updatedLine = updatedQueue.find(
-          (line) =>
-            line.order_id === scannerState.lineItem.order_id &&
-            line.item_id === scannerState.lineItem.item_id
-        );
-
-        // Get final remaining quantity (from updatedLine or response)
+        // Get final remaining quantity from response
         const finalRemaining =
-          updatedLine?.remaining_to_dispatch ??
-          remainingAfterScan ??
-          scannerState.lineItem.remaining_to_dispatch;
+          remainingAfterScan ?? scannerState.lineItem.remaining_to_dispatch;
 
-        const totalQuantity = Number(
-          updatedLine?.quantity || scannerState.lineItem.quantity || 0
-        );
-        const dispatchedCount = Number(updatedLine?.dispatched_quantity || 0);
+        const totalQuantity = Number(scannerState.lineItem.quantity || 0);
+        const dispatchedCount =
+          Number(scannerState.lineItem.dispatched_quantity || 0) + 1; // Increment by 1 since we just dispatched one
 
-        // Update scanner state with fresh data
+        // Update scanner state - lineItem will be updated when queue reloads
         setScannerState((prev) => ({
           ...prev,
-          lineItem: updatedLine || prev.lineItem,
           isDispatching: false,
           scanError: "",
         }));
@@ -628,10 +687,20 @@ const OrderManagementPage = () => {
     ]
   );
 
-  // Group queue items by order_id
+  // Group queue items by order_id, deduplicating line items
   const groupedOrders = useMemo(() => {
     const groups = {};
+    const seenLineItems = new Set();
+
     queue.forEach((line) => {
+      const lineKey = `${line.order_id}-${line.item_id}`;
+
+      // Skip if we've already seen this line item
+      if (seenLineItems.has(lineKey)) {
+        return;
+      }
+      seenLineItems.add(lineKey);
+
       const orderId = line.order_id;
       if (!groups[orderId]) {
         groups[orderId] = {
@@ -758,11 +827,11 @@ const OrderManagementPage = () => {
     }
 
     const rows = [];
-    filteredGroupedOrders.forEach((orderGroup) => {
+    filteredGroupedOrders.forEach((orderGroup, orderGroupIndex) => {
       // Order summary row
       rows.push(
         <tr
-          key={`order-${orderGroup.order_id}`}
+          key={`order-${orderGroup.order_id}-${orderGroupIndex}`}
           style={{ backgroundColor: "#f8f9fa", fontWeight: "600" }}
         >
           <td>
@@ -802,8 +871,11 @@ const OrderManagementPage = () => {
         const isLast = index === orderGroup.lineItems.length - 1;
         const treePrefix = isLast ? "└─" : "├─";
 
+        // Create unique key with order group index and line item index to prevent duplicates
+        const uniqueKey = `order-${orderGroupIndex}-line-${index}-${line.order_id}-${line.item_id}`;
+
         rows.push(
-          <tr key={`${line.order_id}-${line.item_id}`}>
+          <tr key={uniqueKey}>
             <td>
               <div className="d-flex align-items-center gap-2 ps-3">
                 <span style={{ color: "#6b7280", fontFamily: "monospace" }}>
@@ -890,7 +962,7 @@ const OrderManagementPage = () => {
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-secondary"
-                  onClick={loadQueue}
+                  onClick={() => loadQueue(true)}
                   disabled={loading}
                 >
                   <Icon icon="mdi:refresh" width={18} height={18} />
@@ -954,7 +1026,11 @@ const OrderManagementPage = () => {
               </ul>
             </div>
             <div className="card-body p-0">
-              <div className="table-responsive">
+              <div
+                className="table-responsive"
+                ref={scrollContainerRef}
+                style={{ maxHeight: "70vh", overflowY: "auto" }}
+              >
                 <table
                   className="table table-hover mb-0"
                   style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
@@ -963,6 +1039,9 @@ const OrderManagementPage = () => {
                     style={{
                       backgroundColor: "#f9fafb",
                       borderBottom: "1px solid #e5e7eb",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 10,
                     }}
                   >
                     <tr>
@@ -978,7 +1057,37 @@ const OrderManagementPage = () => {
                       <th className="text-end">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>{tableBody}</tbody>
+                  <tbody>
+                    {tableBody}
+                    {loadingMore && (
+                      <tr>
+                        <td colSpan={10} className="text-center py-3">
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <div
+                              className="spinner-border spinner-border-sm"
+                              role="status"
+                            >
+                              <span className="visually-hidden">
+                                Loading more...
+                              </span>
+                            </div>
+                            <span className="text-muted small">
+                              Loading more orders...
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!hasMore && queue.length > 0 && !loading && (
+                      <tr>
+                        <td colSpan={10} className="text-center py-3">
+                          <span className="text-muted small">
+                            No more orders to load
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
                 </table>
               </div>
             </div>

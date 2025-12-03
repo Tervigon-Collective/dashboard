@@ -513,7 +513,7 @@ const StockManagementPage = () => {
   });
 
   // View mode: 'variant' (current) or 'product' (new)
-  const [inventoryViewMode, setInventoryViewMode] = useState("variant");
+  const [inventoryViewMode, setInventoryViewMode] = useState("product");
   const [expandedProducts, setExpandedProducts] = useState(new Set());
 
   // Infinite scroll state for inventory
@@ -546,6 +546,8 @@ const StockManagementPage = () => {
     ledger: null,
     loadingLedger: false,
   });
+
+  const [adjustingItemId, setAdjustingItemId] = useState(null);
 
   // Debounce search term
   useEffect(() => {
@@ -835,6 +837,55 @@ const StockManagementPage = () => {
       sortInventoryData,
       inventoryViewMode,
     ]
+  );
+
+  // Handle stock adjustment
+  const handleStockAdjustment = useCallback(
+    async (inventoryItemId, adjustment) => {
+      if (adjustingItemId) {
+        return; // Prevent concurrent adjustments
+      }
+
+      setAdjustingItemId(inventoryItemId);
+
+      try {
+        const result = await inventoryManagementApi.adjustInventoryQuantity(
+          inventoryItemId,
+          adjustment
+        );
+
+        if (result.success) {
+          toast.success(
+            `Stock ${adjustment > 0 ? "increased" : "decreased"} by ${Math.abs(
+              adjustment
+            )}`
+          );
+
+          // Update the item in local state immediately
+          setInventoryState((prev) => ({
+            ...prev,
+            data: prev.data.map((item) =>
+              item.inventory_item_id === inventoryItemId
+                ? {
+                    ...item,
+                    available_quantity: result.data.new_quantity,
+                  }
+                : item
+            ),
+          }));
+
+          // Don't reload - we've already updated the state
+          // This preserves infinite scroll state (inventoryDisplayedCount)
+          // If you need fresh data, user can manually refresh
+        }
+      } catch (error) {
+        console.error("Failed to adjust stock:", error);
+        toast.error(error.message || "Failed to adjust stock");
+      } finally {
+        setAdjustingItemId(null);
+      }
+    },
+    [adjustingItemId]
   );
 
   // Load returns
@@ -1857,13 +1908,50 @@ const StockManagementPage = () => {
               {formatNumber(item.approved_returns_quantity)}
             </td>
             <td className="text-end">
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={() => openInventoryDetail(item)}
-              >
-                <Icon icon="mdi:eye" width={16} height={16} />
-              </button>
+              <div className="d-flex gap-1 align-items-center justify-content-end">
+                {/* Stock Adjustment Buttons */}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-danger"
+                  style={{
+                    padding: "2px 6px",
+                    minWidth: "28px",
+                    fontSize: "0.875rem",
+                  }}
+                  onClick={() =>
+                    handleStockAdjustment(item.inventory_item_id, -1)
+                  }
+                  disabled={adjustingItemId === item.inventory_item_id}
+                  title="Decrease by 1"
+                >
+                  <Icon icon="lucide:minus" width="14" height="14" />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-success"
+                  style={{
+                    padding: "2px 6px",
+                    minWidth: "28px",
+                    fontSize: "0.875rem",
+                  }}
+                  onClick={() =>
+                    handleStockAdjustment(item.inventory_item_id, 1)
+                  }
+                  disabled={adjustingItemId === item.inventory_item_id}
+                  title="Increase by 1"
+                >
+                  <Icon icon="lucide:plus" width="14" height="14" />
+                </button>
+                {/* View Details Button */}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => openInventoryDetail(item)}
+                  title="View Details"
+                >
+                  <Icon icon="mdi:eye" width={16} height={16} />
+                </button>
+              </div>
             </td>
           </tr>
         ))}
@@ -2751,30 +2839,89 @@ const StockManagementPage = () => {
                                                 </span>
                                               </td>
                                               <td className="text-end">
-                                                <button
-                                                  type="button"
-                                                  className="btn btn-sm"
-                                                  style={{
-                                                    border: "1px solid #dee2e6",
-                                                    background: "white",
-                                                    padding: "4px 8px",
-                                                    color: "#495057",
-                                                    borderRadius: "4px",
-                                                  }}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    openInventoryDetail(
-                                                      variant
-                                                    );
-                                                  }}
-                                                  title="View Details"
-                                                >
-                                                  <Icon
-                                                    icon="lucide:eye"
-                                                    width="14"
-                                                    height="14"
-                                                  />
-                                                </button>
+                                                <div className="d-flex gap-1 align-items-center justify-content-end">
+                                                  {/* Stock Adjustment Buttons */}
+                                                  <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    style={{
+                                                      padding: "2px 6px",
+                                                      minWidth: "28px",
+                                                      fontSize: "0.875rem",
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleStockAdjustment(
+                                                        variant.inventory_item_id,
+                                                        -1
+                                                      );
+                                                    }}
+                                                    disabled={
+                                                      adjustingItemId ===
+                                                      variant.inventory_item_id
+                                                    }
+                                                    title="Decrease by 1"
+                                                  >
+                                                    <Icon
+                                                      icon="lucide:minus"
+                                                      width="14"
+                                                      height="14"
+                                                    />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-outline-success"
+                                                    style={{
+                                                      padding: "2px 6px",
+                                                      minWidth: "28px",
+                                                      fontSize: "0.875rem",
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleStockAdjustment(
+                                                        variant.inventory_item_id,
+                                                        1
+                                                      );
+                                                    }}
+                                                    disabled={
+                                                      adjustingItemId ===
+                                                      variant.inventory_item_id
+                                                    }
+                                                    title="Increase by 1"
+                                                  >
+                                                    <Icon
+                                                      icon="lucide:plus"
+                                                      width="14"
+                                                      height="14"
+                                                    />
+                                                  </button>
+                                                  {/* View Details Button */}
+                                                  <button
+                                                    type="button"
+                                                    className="btn btn-sm"
+                                                    style={{
+                                                      border:
+                                                        "1px solid #dee2e6",
+                                                      background: "white",
+                                                      padding: "4px 8px",
+                                                      color: "#495057",
+                                                      borderRadius: "4px",
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      openInventoryDetail(
+                                                        variant
+                                                      );
+                                                    }}
+                                                    title="View Details"
+                                                  >
+                                                    <Icon
+                                                      icon="lucide:eye"
+                                                      width="14"
+                                                      height="14"
+                                                    />
+                                                  </button>
+                                                </div>
                                               </td>
                                             </tr>
                                           );
@@ -2904,25 +3051,83 @@ const StockManagementPage = () => {
                                     </span>
                                   </td>
                                   <td className="text-end">
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm"
-                                      style={{
-                                        border: "1px solid #dee2e6",
-                                        background: "white",
-                                        padding: "4px 8px",
-                                        color: "#495057",
-                                        borderRadius: "4px",
-                                      }}
-                                      onClick={() => openInventoryDetail(item)}
-                                      title="View Details"
-                                    >
-                                      <Icon
-                                        icon="lucide:eye"
-                                        width="14"
-                                        height="14"
-                                      />
-                                    </button>
+                                    <div className="d-flex gap-1 align-items-center justify-content-end">
+                                      {/* Stock Adjustment Buttons */}
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-danger"
+                                        style={{
+                                          padding: "2px 6px",
+                                          minWidth: "28px",
+                                          fontSize: "0.875rem",
+                                        }}
+                                        onClick={() =>
+                                          handleStockAdjustment(
+                                            item.inventory_item_id,
+                                            -1
+                                          )
+                                        }
+                                        disabled={
+                                          adjustingItemId ===
+                                          item.inventory_item_id
+                                        }
+                                        title="Decrease by 1"
+                                      >
+                                        <Icon
+                                          icon="lucide:minus"
+                                          width="14"
+                                          height="14"
+                                        />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-success"
+                                        style={{
+                                          padding: "2px 6px",
+                                          minWidth: "28px",
+                                          fontSize: "0.875rem",
+                                        }}
+                                        onClick={() =>
+                                          handleStockAdjustment(
+                                            item.inventory_item_id,
+                                            1
+                                          )
+                                        }
+                                        disabled={
+                                          adjustingItemId ===
+                                          item.inventory_item_id
+                                        }
+                                        title="Increase by 1"
+                                      >
+                                        <Icon
+                                          icon="lucide:plus"
+                                          width="14"
+                                          height="14"
+                                        />
+                                      </button>
+                                      {/* View Details Button */}
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm"
+                                        style={{
+                                          border: "1px solid #dee2e6",
+                                          background: "white",
+                                          padding: "4px 8px",
+                                          color: "#495057",
+                                          borderRadius: "4px",
+                                        }}
+                                        onClick={() =>
+                                          openInventoryDetail(item)
+                                        }
+                                        title="View Details"
+                                      >
+                                        <Icon
+                                          icon="lucide:eye"
+                                          width="14"
+                                          height="14"
+                                        />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );

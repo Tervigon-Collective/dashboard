@@ -685,7 +685,11 @@ const ReceivingManagementLayer = () => {
   });
 
   // Load purchase requests
-  const loadPurchaseRequests = async (page = 1, append = false, force = false) => {
+  const loadPurchaseRequests = async (
+    page = 1,
+    append = false,
+    force = false
+  ) => {
     // Skip if already loaded and not forcing a refresh
     if (purchaseRequestsLoaded && !force && !append) {
       return;
@@ -694,7 +698,10 @@ const ReceivingManagementLayer = () => {
     try {
       setIsLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
+      const result = await purchaseRequestApi.getAllPurchaseRequests(
+        page,
+        1000
+      );
 
       if (result.success) {
         // Filter only requests with status "Pending" or "pending"
@@ -703,13 +710,15 @@ const ReceivingManagementLayer = () => {
             request.status === "Pending" ||
             request.status?.toLowerCase() === "pending"
         );
-        
+
         if (append) {
           setRequests((prev) => [...prev, ...filteredRequests]);
         } else {
           setRequests(filteredRequests);
           // Show initial batch, infinite scroll will handle progressive loading
-          setPurchaseRequestDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
+          setPurchaseRequestDisplayedItems(
+            filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
+          );
         }
         setCurrentPage(result.pagination.page);
         setTotalPages(result.pagination.totalPages);
@@ -721,7 +730,9 @@ const ReceivingManagementLayer = () => {
       // Handle rate limiting errors
       if (error.message && error.message.includes("429")) {
         const retryAfter = 60; // Default 60 seconds
-        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+        alert(
+          `Too many requests. Please wait ${retryAfter} seconds before trying again.`
+        );
       }
     } finally {
       setIsLoading(false);
@@ -729,7 +740,11 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load to-be-delivered requests
-  const loadToBeDeliveredRequests = async (page = 1, append = false, force = false) => {
+  const loadToBeDeliveredRequests = async (
+    page = 1,
+    append = false,
+    force = false
+  ) => {
     // Skip if already loaded and not forcing a refresh
     if (toBeDeliveredLoaded && !force && !append) {
       return;
@@ -738,7 +753,10 @@ const ReceivingManagementLayer = () => {
     try {
       setToBeDeliveredLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
+      const result = await purchaseRequestApi.getAllPurchaseRequests(
+        page,
+        1000
+      );
 
       if (result.success) {
         // Filter only requests with status "to_be_delivered"
@@ -750,7 +768,9 @@ const ReceivingManagementLayer = () => {
         } else {
           setToBeDeliveredRequests(filteredRequests);
           // Show initial batch, infinite scroll will handle progressive loading
-          setToBeDeliveredDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
+          setToBeDeliveredDisplayedItems(
+            filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
+          );
         }
         setToBeDeliveredCurrentPage(result.pagination.page);
         setToBeDeliveredTotalPages(result.pagination.totalPages);
@@ -770,7 +790,11 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load quality check (arrived) requests
-  const loadQualityCheckRequests = async (page = 1, append = false, force = false) => {
+  const loadQualityCheckRequests = async (
+    page = 1,
+    append = false,
+    force = false
+  ) => {
     // Skip if already loaded and not forcing a refresh
     if (qualityCheckLoaded && !force && !append) {
       return;
@@ -779,7 +803,10 @@ const ReceivingManagementLayer = () => {
     try {
       setQualityCheckLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
+      const result = await purchaseRequestApi.getAllPurchaseRequests(
+        page,
+        1000
+      );
 
       if (result.success) {
         // Filter only requests with status "arrived"
@@ -791,7 +818,9 @@ const ReceivingManagementLayer = () => {
         } else {
           setQualityCheckRequests(filteredRequests);
           // Show initial batch, infinite scroll will handle progressive loading
-          setQualityCheckDisplayedItems(filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
+          setQualityCheckDisplayedItems(
+            filteredRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
+          );
         }
         setQualityCheckCurrentPage(result.pagination.page);
         setQualityCheckTotalPages(result.pagination.totalPages);
@@ -811,7 +840,11 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load receipt details (fulfilled) requests with QC aggregation
-  const loadReceiptDetailsRequests = async (page = 1, append = false, force = false) => {
+  const loadReceiptDetailsRequests = async (
+    page = 1,
+    append = false,
+    force = false
+  ) => {
     // Skip if already loaded and not forcing a refresh
     if (receiptDetailsLoaded && !force && !append) {
       return;
@@ -820,7 +853,10 @@ const ReceivingManagementLayer = () => {
     try {
       setReceiptLoading(true);
       // Use large limit to fetch all data at once for infinite scrolling
-      const result = await purchaseRequestApi.getAllPurchaseRequests(page, 1000);
+      const result = await purchaseRequestApi.getAllPurchaseRequests(
+        page,
+        1000
+      );
 
       if (result.success) {
         // Filter only requests with status "fulfilled"
@@ -936,7 +972,10 @@ const ReceivingManagementLayer = () => {
     } catch (error) {
       console.error("Error loading vendors:", error);
       // Handle rate limiting errors
-      if (error.status === 429 || (error.message && error.message.includes("429"))) {
+      if (
+        error.status === 429 ||
+        (error.message && error.message.includes("429"))
+      ) {
         const retryAfter = error.result?.retryAfter || 60;
         console.warn(`Rate limit exceeded. Please wait ${retryAfter} seconds.`);
         // Don't show alert for vendor loading as it's not critical
@@ -982,19 +1021,30 @@ const ReceivingManagementLayer = () => {
     if (activeTab === "receipt-details" && !receiptDetailsLoaded) {
       loadReceiptDetailsRequests();
     }
-  }, [activeTab, toBeDeliveredLoaded, qualityCheckLoaded, receiptDetailsLoaded]);
+  }, [
+    activeTab,
+    toBeDeliveredLoaded,
+    qualityCheckLoaded,
+    receiptDetailsLoaded,
+  ]);
 
   // Reset displayed items when search term or active tab changes
   useEffect(() => {
     if (activeTab === "purchase-request") {
       // Show initial batch, infinite scroll will handle progressive loading
-      setPurchaseRequestDisplayedItems(requests.slice(0, INITIAL_ITEMS_TO_SHOW));
+      setPurchaseRequestDisplayedItems(
+        requests.slice(0, INITIAL_ITEMS_TO_SHOW)
+      );
     } else if (activeTab === "to-be-delivered") {
       // Show initial batch, infinite scroll will handle progressive loading
-      setToBeDeliveredDisplayedItems(toBeDeliveredRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
+      setToBeDeliveredDisplayedItems(
+        toBeDeliveredRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
+      );
     } else if (activeTab === "quality-check") {
       // Show initial batch, infinite scroll will handle progressive loading
-      setQualityCheckDisplayedItems(qualityCheckRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
+      setQualityCheckDisplayedItems(
+        qualityCheckRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
+      );
     } else if (activeTab === "receipt-details") {
       // Show initial batch, infinite scroll will handle progressive loading
       setReceiptDisplayedItems(receiptRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
@@ -1683,78 +1733,46 @@ const ReceivingManagementLayer = () => {
     router,
   ]);
 
-
   // Helper function to add SKU text to QR code image
   const addSkuToQrImage = async (imageBlob, sku) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(imageBlob);
-      
+
       img.onload = () => {
         URL.revokeObjectURL(url);
-        
+
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        
-        // Paper size: 1 x 1.5 inches at 300 DPI = 300 x 450 pixels
-        const DPI = 300;
-        const PAPER_WIDTH_INCHES = 1;
-        const PAPER_HEIGHT_INCHES = 1.5;
-        const canvasWidth = PAPER_WIDTH_INCHES * DPI; // 300 pixels
-        const canvasHeight = PAPER_HEIGHT_INCHES * DPI; // 450 pixels
-        
+
+        const qrWidth = img.width;
+        const qrHeight = img.height;
+        const padding = 20;
+        const textHeight = sku ? 40 : 0;
+        const canvasWidth = qrWidth + padding * 2;
+        const canvasHeight = qrHeight + padding * 2 + textHeight;
+
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
-        
+
         // Fill white background
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-        
-        // Spacing configuration for proper printing gaps
-        const topPadding = 20;
-        const bottomPadding = 20;
-        const sidePadding = 20;
-        const gapBetweenQrAndText = 15; // Gap between QR code and SKU text
-        
-        // Calculate space for SKU text if provided
-        const textHeight = sku ? 30 : 0;
-        const textBottomMargin = sku ? 15 : 0;
-        const totalTextSpace = textHeight + textBottomMargin + gapBetweenQrAndText;
-        
-        // Available space for QR code
-        const availableHeight = canvasHeight - topPadding - totalTextSpace;
-        const maxQrWidth = canvasWidth - (sidePadding * 2);
-        const maxQrHeight = availableHeight;
-        
-        // Scale QR code to fit while maintaining aspect ratio
-        const qrAspectRatio = img.width / img.height;
-        let qrDisplayWidth = Math.min(maxQrWidth, img.width);
-        let qrDisplayHeight = qrDisplayWidth / qrAspectRatio;
-        
-        if (qrDisplayHeight > maxQrHeight) {
-          qrDisplayHeight = maxQrHeight;
-          qrDisplayWidth = qrDisplayHeight * qrAspectRatio;
-        }
-        
-        // Center the QR code horizontally
-        const qrX = (canvasWidth - qrDisplayWidth) / 2;
-        const qrY = topPadding;
-        
+
         // Draw QR code image
-        ctx.drawImage(img, qrX, qrY, qrDisplayWidth, qrDisplayHeight);
-        
+        ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+
         // Add SKU text at the bottom if provided
         if (sku) {
           ctx.fillStyle = "#000000";
           ctx.font = "bold 16px Arial";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          
-          // Position text with proper gap from QR code and bottom margin
-          const textY = qrY + qrDisplayHeight + gapBetweenQrAndText + (textHeight / 2);
+
+          const textY = qrHeight + padding + textHeight / 2;
           ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
         }
-        
+
         canvas.toBlob((blob) => {
           if (blob) {
             resolve(blob);
@@ -1763,12 +1781,12 @@ const ReceivingManagementLayer = () => {
           }
         }, "image/png");
       };
-      
+
       img.onerror = () => {
         URL.revokeObjectURL(url);
         reject(new Error("Failed to load image"));
       };
-      
+
       img.src = url;
     });
   };
@@ -1778,9 +1796,10 @@ const ReceivingManagementLayer = () => {
     const requestId = request.request_id;
 
     // Check if QR codes already exist
-    const hasQrCodes = request.items?.some(
-      (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
-    ) || false;
+    const hasQrCodes =
+      request.items?.some(
+        (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+      ) || false;
 
     if (!hasQrCodes) {
       // Only show confirmation for generating new QR codes
@@ -1805,20 +1824,19 @@ const ReceivingManagementLayer = () => {
         // Reload the request to get updated QR codes with file names (or use existing if already generated)
         let updatedRequestResult;
         if (!hasQrCodes) {
-          updatedRequestResult = await purchaseRequestApi.getPurchaseRequestById(
-            requestId,
-            true
-          );
+          updatedRequestResult =
+            await purchaseRequestApi.getPurchaseRequestById(requestId, true);
         } else {
           // Use existing request data if QR codes already exist
           updatedRequestResult = { success: true, data: request };
         }
-        
+
         let itemsWithSku = [];
-        const vendorId = updatedRequestResult.data?.vendor_id || request.vendor_id || '';
+        const vendorId =
+          updatedRequestResult.data?.vendor_id || request.vendor_id || "";
         const requestData = updatedRequestResult.data || request;
         if (requestData?.items) {
-          itemsWithSku = requestData.items.map(item => ({
+          itemsWithSku = requestData.items.map((item) => ({
             qrFileName: item.qr_code?.file_name,
             sku: item.sku,
             itemId: item.item_id,
@@ -1827,14 +1845,14 @@ const ReceivingManagementLayer = () => {
 
         // Download the ZIP
         const zipBlob = await purchaseRequestApi.downloadQrCodesZip(requestId);
-        
+
         // Process ZIP to add SKU to each QR code
         try {
           // Dynamic import of JSZip
-          const JSZip = (await import('jszip')).default;
+          const JSZip = (await import("jszip")).default;
           const zip = await JSZip.loadAsync(zipBlob);
           const newZip = new JSZip();
-          
+
           // Collect all files first
           const fileEntries = [];
           zip.forEach((relativePath, file) => {
@@ -1842,76 +1860,91 @@ const ReceivingManagementLayer = () => {
               fileEntries.push({ relativePath, file });
             }
           });
-          
+
           // Track used filenames to prevent collisions
           const usedFilenames = new Map();
-          
+
           // Process each file sequentially to avoid race conditions with filename generation
           for (const { relativePath, file } of fileEntries) {
-            if (relativePath.endsWith('.png')) {
+            if (relativePath.endsWith(".png")) {
               // Find matching SKU for this file
               const item = itemsWithSku.find(
-                item => item.qrFileName === relativePath || 
-                relativePath.includes(item.qrFileName?.replace('.png', '') || '') ||
-                item.qrFileName?.includes(relativePath.replace('.png', '')) ||
-                relativePath.includes(String(item.itemId))
+                (item) =>
+                  item.qrFileName === relativePath ||
+                  relativePath.includes(
+                    item.qrFileName?.replace(".png", "") || ""
+                  ) ||
+                  item.qrFileName?.includes(relativePath.replace(".png", "")) ||
+                  relativePath.includes(String(item.itemId))
               );
               const sku = item?.sku ?? null;
               const itemId = item?.itemId ?? null;
-              
+
               // Get the image blob
-              const imageBlob = await file.async('blob');
-              
+              const imageBlob = await file.async("blob");
+
               // Add SKU to the image
               const modifiedBlob = await addSkuToQrImage(imageBlob, sku);
-              
+
               // Create new filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
               // Use itemId as fallback to ensure uniqueness when SKU is missing
               let newFileName = relativePath;
               if (sku && vendorId) {
-                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
-                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
+                const sanitizedVendorId = String(vendorId).replace(
+                  /[^a-zA-Z0-9_-]/g,
+                  "_"
+                );
                 newFileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
               } else if (sku) {
-                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
                 newFileName = `QR-${sanitizedSku}.png`;
               } else if (vendorId) {
-                const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedVendorId = String(vendorId).replace(
+                  /[^a-zA-Z0-9_-]/g,
+                  "_"
+                );
                 // Use itemId to ensure uniqueness when SKU is missing
                 if (itemId !== null) {
-                  const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                  const sanitizedItemId = String(itemId).replace(
+                    /[^a-zA-Z0-9_-]/g,
+                    "_"
+                  );
                   newFileName = `QR-${sanitizedVendorId}-${sanitizedItemId}.png`;
                 } else {
                   newFileName = `QR-${sanitizedVendorId}.png`;
                 }
               } else if (itemId !== null) {
                 // Fallback: use itemId if neither SKU nor vendorId exists
-                const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedItemId = String(itemId).replace(
+                  /[^a-zA-Z0-9_-]/g,
+                  "_"
+                );
                 newFileName = `QR-${sanitizedItemId}.png`;
               }
-              
+
               // Ensure filename is unique (handle collisions by appending counter)
               let finalFileName = newFileName;
               let counter = 1;
               while (usedFilenames.has(finalFileName)) {
-                const baseWithoutExt = newFileName.replace(/\.png$/, '');
+                const baseWithoutExt = newFileName.replace(/\.png$/, "");
                 finalFileName = `${baseWithoutExt}-${counter}.png`;
                 counter++;
               }
               usedFilenames.set(finalFileName, true);
-              
+
               // Add to new ZIP with final unique filename
               newZip.file(finalFileName, modifiedBlob);
             } else {
               // Keep non-image files as-is
-              const content = await file.async('blob');
+              const content = await file.async("blob");
               newZip.file(relativePath, content);
             }
           }
-          
+
           // Generate the new ZIP
-          const modifiedZipBlob = await newZip.generateAsync({ type: 'blob' });
-          
+          const modifiedZipBlob = await newZip.generateAsync({ type: "blob" });
+
           // Download the modified ZIP
           const url = URL.createObjectURL(modifiedZipBlob);
           const link = document.createElement("a");
@@ -1947,7 +1980,11 @@ const ReceivingManagementLayer = () => {
         await handleViewRequest(request, "quality-check");
       }
 
-      alert(hasQrCodes ? "QR codes downloaded successfully." : "QR codes generated successfully.");
+      alert(
+        hasQrCodes
+          ? "QR codes downloaded successfully."
+          : "QR codes generated successfully."
+      );
     } catch (error) {
       console.error("Error generating QR codes:", error);
       alert(error.message || "Failed to generate QR codes. Please try again.");
@@ -1965,7 +2002,7 @@ const ReceivingManagementLayer = () => {
       // Create an image element to load the QR code
       const img = new Image();
       img.crossOrigin = "anonymous";
-      
+
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
@@ -1975,66 +2012,37 @@ const ReceivingManagementLayer = () => {
       // Create a canvas
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      
-      // Paper size: 1 x 1.5 inches at 300 DPI = 300 x 450 pixels
-      const DPI = 300;
-      const PAPER_WIDTH_INCHES = 1;
-      const PAPER_HEIGHT_INCHES = 1.5;
-      const canvasWidth = PAPER_WIDTH_INCHES * DPI; // 300 pixels
-      const canvasHeight = PAPER_HEIGHT_INCHES * DPI; // 450 pixels
-      
+
+      // Set canvas dimensions: QR code width + padding + text area
+      const qrWidth = img.width;
+      const qrHeight = img.height;
+      const padding = 20;
+      const textHeight = sku ? 40 : 0; // Space for SKU text
+      const canvasWidth = qrWidth + padding * 2;
+      const canvasHeight = qrHeight + padding * 2 + textHeight;
+
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
-      
+
       // Fill white background
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      
-      // Spacing configuration for proper printing gaps
-      const topPadding = 20;
-      const bottomPadding = 20;
-      const sidePadding = 20;
-      const gapBetweenQrAndText = 15; // Gap between QR code and SKU text
-      
-      // Calculate space for SKU text if provided
-      const textHeight = sku ? 30 : 0;
-      const textBottomMargin = sku ? 15 : 0;
-      const totalTextSpace = textHeight + textBottomMargin + gapBetweenQrAndText;
-      
-      // Available space for QR code
-      const availableHeight = canvasHeight - topPadding - totalTextSpace;
-      const maxQrWidth = canvasWidth - (sidePadding * 2);
-      const maxQrHeight = availableHeight;
-      
-      // Scale QR code to fit while maintaining aspect ratio
-      const qrAspectRatio = img.width / img.height;
-      let qrDisplayWidth = Math.min(maxQrWidth, img.width);
-      let qrDisplayHeight = qrDisplayWidth / qrAspectRatio;
-      
-      if (qrDisplayHeight > maxQrHeight) {
-        qrDisplayHeight = maxQrHeight;
-        qrDisplayWidth = qrDisplayHeight * qrAspectRatio;
-      }
-      
-      // Center the QR code horizontally
-      const qrX = (canvasWidth - qrDisplayWidth) / 2;
-      const qrY = topPadding;
-      
+
       // Draw QR code image
-      ctx.drawImage(img, qrX, qrY, qrDisplayWidth, qrDisplayHeight);
-      
+      ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+
       // Add SKU text at the bottom if provided
       if (sku) {
         ctx.fillStyle = "#000000";
         ctx.font = "bold 16px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        
-        // Position text with proper gap from QR code and bottom margin
-        const textY = qrY + qrDisplayHeight + gapBetweenQrAndText + (textHeight / 2);
+
+        // Draw SKU text
+        const textY = qrHeight + padding + textHeight / 2;
         ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
       }
-      
+
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
         if (!blob) {
@@ -2048,31 +2056,37 @@ const ReceivingManagementLayer = () => {
           document.body.removeChild(link);
           return;
         }
-        
+
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        
+
         // Create filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
         let fileName = "qr-code.png";
         if (sku) {
-          const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
           // Try to get vendor_id from selectedRequest or item
-          const vendorId = selectedRequest?.vendor_id || '';
+          const vendorId = selectedRequest?.vendor_id || "";
           if (vendorId) {
-            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const sanitizedVendorId = String(vendorId).replace(
+              /[^a-zA-Z0-9_-]/g,
+              "_"
+            );
             fileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
           } else {
             fileName = `QR-${sanitizedSku}.png`;
           }
         } else {
-          const vendorId = selectedRequest?.vendor_id || '';
+          const vendorId = selectedRequest?.vendor_id || "";
           if (vendorId) {
-            const sanitizedVendorId = String(vendorId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const sanitizedVendorId = String(vendorId).replace(
+              /[^a-zA-Z0-9_-]/g,
+              "_"
+            );
             fileName = `QR-${sanitizedVendorId}.png`;
           }
         }
-        
+
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
@@ -2096,7 +2110,7 @@ const ReceivingManagementLayer = () => {
     request,
     targetStatus = "to_be_delivered"
   ) => {
-    // If attempting arrived -> fulfilled, enforce QC + Documents presence
+    // If attempting arrived -> fulfilled, enforce QC + Documents + GRN + QR Codes presence
     if (targetStatus === "fulfilled") {
       try {
         // 1) Quality checks present
@@ -2112,25 +2126,33 @@ const ReceivingManagementLayer = () => {
           docsRes?.success && Array.isArray(docsRes.data) ? docsRes.data : [];
         const hasAnyDoc = docs.length > 0;
 
-        if (!hasAnyQC || !hasAnyDoc) {
-          let msg = "";
-          if (!hasAnyQC && !hasAnyDoc) {
-            msg =
-              "Please complete Item Inspection Details and upload at least one document before marking as Fulfilled.";
-          } else if (!hasAnyQC) {
-            msg =
-              "Please complete Item Inspection Details before marking as Fulfilled.";
-          } else if (!hasAnyDoc) {
-            msg =
-              "Please upload at least one document (e.g., invoice or purchase order) before marking as Fulfilled.";
-          }
+        // 3) GRN PDF exists
+        const grnExists = await qualityCheckApi.checkGrnExists(request.request_id);
+
+        // 4) QR codes exist - need to fetch fresh request data to check
+        const requestData = await purchaseRequestApi.getPurchaseRequestById(
+          request.request_id
+        );
+        const hasQrCodes = requestData?.success && requestData?.data?.items?.some(
+          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
+        ) || false;
+
+        // Build validation message with all missing items
+        const missingItems = [];
+        if (!hasAnyQC) missingItems.push("Quality Check inspection");
+        if (!hasAnyDoc) missingItems.push("at least one document (invoice/PO)");
+        if (!grnExists) missingItems.push("GRN PDF");
+        if (!hasQrCodes) missingItems.push("QR codes");
+
+        if (missingItems.length > 0) {
+          const msg = `⚠️ Cannot mark as Fulfilled!\n\nPlease complete the following:\n\n${missingItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n\n📋 Required Workflow:\n  1. Complete Quality Check inspection (Inspect button)\n  2. Upload documents (invoice/PO) in View modal\n  3. Generate GRN PDF (button in Quality Check tab)\n  4. Generate QR codes (button in Quality Check tab)\n  5. Then mark as Fulfilled`;
           alert(msg);
           return; // Do not open confirmation modal
         }
       } catch (e) {
         console.error("Pre-check before fulfillment failed", e);
         alert(
-          "Unable to verify inspection or documents. Please try again in a moment."
+          "Unable to verify requirements. Please try again in a moment."
         );
         return;
       }
@@ -2158,7 +2180,7 @@ const ReceivingManagementLayer = () => {
 
     // Set loading state immediately - React will handle the re-render automatically
     setIsUpdatingStatus(true);
-    
+
     try {
       const result = await purchaseRequestApi.updateStatus(
         requestToUpdate.request_id,
@@ -2185,14 +2207,14 @@ const ReceivingManagementLayer = () => {
         // Add small delays between API calls to avoid hitting rate limits
         try {
           await loadPurchaseRequests(currentPage, false, true); // force = true
-          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-          
+          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
+
           await loadToBeDeliveredRequests(1, false, true); // force = true
-          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-          
+          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
+
           await loadQualityCheckRequests(1, false, true); // force = true
-          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-          
+          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
+
           await loadReceiptDetailsRequests(1, false, true); // force = true
 
           // If moving to to_be_delivered, wait a moment for PDF generation, then refresh
@@ -2201,13 +2223,19 @@ const ReceivingManagementLayer = () => {
               try {
                 await loadToBeDeliveredRequests(1, false, true); // force = true
               } catch (refreshError) {
-                console.error("Error refreshing to-be-delivered requests:", refreshError);
+                console.error(
+                  "Error refreshing to-be-delivered requests:",
+                  refreshError
+                );
                 // Don't show alert for background refresh errors
               }
             }, 2000); // Wait 2 seconds for PDF generation to complete
           }
         } catch (reloadError) {
-          console.error("Error reloading lists after status update:", reloadError);
+          console.error(
+            "Error reloading lists after status update:",
+            reloadError
+          );
           // Don't show alert here as the status update was successful
           // The lists will refresh when user switches tabs
         }
@@ -2221,7 +2249,9 @@ const ReceivingManagementLayer = () => {
       // Handle rate limiting errors specifically
       if (error.message && error.message.includes("429")) {
         const retryAfter = 60; // Default 60 seconds
-        alert(`Too many requests. Please wait ${retryAfter} seconds before trying again.`);
+        alert(
+          `Too many requests. Please wait ${retryAfter} seconds before trying again.`
+        );
       } else {
         alert("Failed to update purchase request status. Please try again.");
       }
@@ -2238,7 +2268,7 @@ const ReceivingManagementLayer = () => {
     setInspectionDate(new Date().toISOString().split("T")[0]);
     setIsEditingInspection(false);
     setIsLoadingInspection(true);
-    
+
     // Set request and open modal
     setRequestToInspect(request);
     setInspectionModalOpen(true);
@@ -2819,21 +2849,26 @@ const ReceivingManagementLayer = () => {
                               try {
                                 // Fetch the latest GRN info to ensure we have the correct grn_number
                                 let currentGrnInfo = grnInfo;
-                                if (!currentGrnInfo || !currentGrnInfo.grn_number) {
-                                  const exists = await qualityCheckApi.checkGrnExists(
-                                    selectedRequest.request_id
-                                  );
-                                  if (exists) {
-                                    const info = await qualityCheckApi.getGrnInfo(
+                                if (
+                                  !currentGrnInfo ||
+                                  !currentGrnInfo.grn_number
+                                ) {
+                                  const exists =
+                                    await qualityCheckApi.checkGrnExists(
                                       selectedRequest.request_id
                                     );
+                                  if (exists) {
+                                    const info =
+                                      await qualityCheckApi.getGrnInfo(
+                                        selectedRequest.request_id
+                                      );
                                     if (info.success && info.data) {
                                       currentGrnInfo = info.data;
                                       setGrnInfo(currentGrnInfo);
                                     }
                                   }
                                 }
-                                
+
                                 const blob =
                                   await qualityCheckApi.downloadGrnPdf(
                                     selectedRequest.request_id
@@ -2843,7 +2878,9 @@ const ReceivingManagementLayer = () => {
                                 a.href = url;
                                 a.download =
                                   currentGrnInfo?.file_name ||
-                                  (currentGrnInfo?.grn_number ? `${currentGrnInfo.grn_number}.pdf` : `GRN-${selectedRequest.request_id}.pdf`);
+                                  (currentGrnInfo?.grn_number
+                                    ? `${currentGrnInfo.grn_number}.pdf`
+                                    : `GRN-${selectedRequest.request_id}.pdf`);
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -2964,6 +3001,7 @@ const ReceivingManagementLayer = () => {
                             <thead className="table-light">
                               <tr>
                                 <th className="small">Product Name</th>
+                                <th className="small">Common Name</th>
                                 <th className="small">HSN Code</th>
                                 <th className="small">Variant</th>
                                 <th className="small">SKU</th>
@@ -2991,6 +3029,9 @@ const ReceivingManagementLayer = () => {
                                 >
                                   <td className="small">
                                     {item.product_name || "-"}
+                                  </td>
+                                  <td className="small">
+                                    {item.common_name || "-"}
                                   </td>
                                   <td className="small">
                                     {item.hsn_code || "-"}
@@ -3066,7 +3107,10 @@ const ReceivingManagementLayer = () => {
                                           type="button"
                                           className="btn btn-sm btn-outline-secondary"
                                           onClick={() =>
-                                            handleDownloadQrImage(item.qr_code, item.sku)
+                                            handleDownloadQrImage(
+                                              item.qr_code,
+                                              item.sku
+                                            )
                                           }
                                         >
                                           Download
@@ -3309,7 +3353,9 @@ const ReceivingManagementLayer = () => {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    onClick={() => handleDownloadQrImage(qrPreviewData, qrPreviewSku)}
+                    onClick={() =>
+                      handleDownloadQrImage(qrPreviewData, qrPreviewSku)
+                    }
                     disabled={!qrPreviewData.image_base64}
                   >
                     Download
@@ -3340,202 +3386,202 @@ const ReceivingManagementLayer = () => {
                 zIndex: 1050,
               }}
             >
-            <div
-              style={{
-                width: "100%",
-                maxWidth: "520px",
-                background: "white",
-                borderRadius: "12px",
-                boxShadow:
-                  "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
-                position: "relative",
-              }}
-            >
-              {/* Close button */}
-              <button
-                onClick={() => {
-                  if (!isUpdatingStatus) {
-                    setStatusConfirmModal(false);
-                    setRequestToUpdate(null);
-                    setIsUpdatingStatus(false); // Reset loading state when closing
-                  }
-                }}
-                disabled={isUpdatingStatus}
+              <div
                 style={{
-                  position: "absolute",
-                  top: "16px",
-                  right: "16px",
-                  width: "32px",
-                  height: "32px",
-                  border: "none",
-                  borderRadius: "8px",
-                  background: "transparent",
-                  color: isUpdatingStatus ? "#9ca3af" : "#6b7280",
-                  cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-                  opacity: isUpdatingStatus ? 0.5 : 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s",
-                  fontSize: "20px",
+                  width: "100%",
+                  maxWidth: "520px",
+                  background: "white",
+                  borderRadius: "12px",
+                  boxShadow:
+                    "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                  position: "relative",
                 }}
-                onMouseEnter={(e) => {
-                  if (!isUpdatingStatus) {
-                    e.currentTarget.style.background = "#f3f4f6";
-                    e.currentTarget.style.color = "#374151";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isUpdatingStatus) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#6b7280";
-                  }
-                }}
-                aria-label="Close"
               >
-                ×
-              </button>
-
-              {/* Content */}
-              <div style={{ padding: "28px" }}>
-                {/* Icon */}
-                <div
+                {/* Close button */}
+                <button
+                  onClick={() => {
+                    if (!isUpdatingStatus) {
+                      setStatusConfirmModal(false);
+                      setRequestToUpdate(null);
+                      setIsUpdatingStatus(false); // Reset loading state when closing
+                    }
+                  }}
+                  disabled={isUpdatingStatus}
                   style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "10px",
-                    background: "#eef2ff",
+                    position: "absolute",
+                    top: "16px",
+                    right: "16px",
+                    width: "32px",
+                    height: "32px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background: "transparent",
+                    color: isUpdatingStatus ? "#9ca3af" : "#6b7280",
+                    cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                    opacity: isUpdatingStatus ? 0.5 : 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#4f46e5",
-                    marginBottom: "16px",
+                    transition: "all 0.2s",
+                    fontSize: "20px",
                   }}
-                >
-                  <Icon icon="mdi:cog" width="22" height="22" />
-                </div>
-
-                {/* Title */}
-                <h5
-                  style={{
-                    margin: 0,
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "#111827",
+                  onMouseEnter={(e) => {
+                    if (!isUpdatingStatus) {
+                      e.currentTarget.style.background = "#f3f4f6";
+                      e.currentTarget.style.color = "#374151";
+                    }
                   }}
-                >
-                  Change Request Status
-                </h5>
-
-                {/* Description */}
-                <p
-                  style={{
-                    marginTop: "8px",
-                    marginBottom: "20px",
-                    color: "#4b5563",
+                  onMouseLeave={(e) => {
+                    if (!isUpdatingStatus) {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "#6b7280";
+                    }
                   }}
+                  aria-label="Close"
                 >
-                  Are you sure you want to move this purchase request to
-                  <span style={{ fontWeight: 600 }}>
-                    {" "}
-                    {getStatusLabel(statusUpdateTarget)}
-                  </span>
-                  ?
-                </p>
+                  ×
+                </button>
 
-                {/* Buttons */}
-                <div className="d-flex flex-column flex-sm-row gap-2">
-                  <button
-                    onClick={() => {
-                      if (!isUpdatingStatus) {
-                        setStatusConfirmModal(false);
-                        setRequestToUpdate(null);
-                        setIsUpdatingStatus(false); // Reset loading state when canceling
-                      }
-                    }}
-                    className="w-100 w-sm-auto"
-                    disabled={isUpdatingStatus}
+                {/* Content */}
+                <div style={{ padding: "28px" }}>
+                  {/* Icon */}
+                  <div
                     style={{
-                      padding: "12px 18px",
-                      fontSize: "15px",
-                      fontWeight: 600,
-                      border: "1px solid #e5e7eb",
+                      width: "44px",
+                      height: "44px",
                       borderRadius: "10px",
-                      background: "white",
-                      color: "#374151",
-                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-                      opacity: isUpdatingStatus ? 0.6 : 1,
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isUpdatingStatus) {
-                        e.currentTarget.style.background = "#f9fafb";
-                        e.currentTarget.style.borderColor = "#d1d5db";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isUpdatingStatus) {
-                        e.currentTarget.style.background = "white";
-                        e.currentTarget.style.borderColor = "#e5e7eb";
-                      }
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleStatusUpdateConfirm}
-                    className="w-100 w-sm-auto"
-                    disabled={isUpdatingStatus}
-                    style={{
-                      padding: "12px 18px",
-                      fontSize: "15px",
-                      fontWeight: 600,
-                      border: "none",
-                      borderRadius: "10px",
-                      background: isUpdatingStatus ? "#9ca3af" : "#4f46e5",
-                      color: "white",
-                      cursor: isUpdatingStatus ? "not-allowed" : "pointer",
-                      opacity: isUpdatingStatus ? 0.7 : 1,
-                      transition: "background 0.2s",
+                      background: "#eef2ff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "8px",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isUpdatingStatus) {
-                        e.currentTarget.style.background = "#4338ca";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isUpdatingStatus) {
-                        e.currentTarget.style.background = "#4f46e5";
-                      }
+                      color: "#4f46e5",
+                      marginBottom: "16px",
                     }}
                   >
-                    {isUpdatingStatus ? (
-                      <>
-                        <span
-                          className="spinner-border spinner-border-sm"
-                          role="status"
-                          aria-hidden="true"
-                          style={{ 
-                            width: "14px", 
-                            height: "14px",
-                            borderWidth: "2px",
-                            flexShrink: 0
-                          }}
-                        />
-                        <span>Sending...</span>
-                      </>
-                    ) : (
-                      "Yes, Change Status"
-                    )}
-                  </button>
+                    <Icon icon="mdi:cog" width="22" height="22" />
+                  </div>
+
+                  {/* Title */}
+                  <h5
+                    style={{
+                      margin: 0,
+                      fontSize: "18px",
+                      fontWeight: 700,
+                      color: "#111827",
+                    }}
+                  >
+                    Change Request Status
+                  </h5>
+
+                  {/* Description */}
+                  <p
+                    style={{
+                      marginTop: "8px",
+                      marginBottom: "20px",
+                      color: "#4b5563",
+                    }}
+                  >
+                    Are you sure you want to move this purchase request to
+                    <span style={{ fontWeight: 600 }}>
+                      {" "}
+                      {getStatusLabel(statusUpdateTarget)}
+                    </span>
+                    ?
+                  </p>
+
+                  {/* Buttons */}
+                  <div className="d-flex flex-column flex-sm-row gap-2">
+                    <button
+                      onClick={() => {
+                        if (!isUpdatingStatus) {
+                          setStatusConfirmModal(false);
+                          setRequestToUpdate(null);
+                          setIsUpdatingStatus(false); // Reset loading state when canceling
+                        }
+                      }}
+                      className="w-100 w-sm-auto"
+                      disabled={isUpdatingStatus}
+                      style={{
+                        padding: "12px 18px",
+                        fontSize: "15px",
+                        fontWeight: 600,
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "10px",
+                        background: "white",
+                        color: "#374151",
+                        cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                        opacity: isUpdatingStatus ? 0.6 : 1,
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isUpdatingStatus) {
+                          e.currentTarget.style.background = "#f9fafb";
+                          e.currentTarget.style.borderColor = "#d1d5db";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isUpdatingStatus) {
+                          e.currentTarget.style.background = "white";
+                          e.currentTarget.style.borderColor = "#e5e7eb";
+                        }
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleStatusUpdateConfirm}
+                      className="w-100 w-sm-auto"
+                      disabled={isUpdatingStatus}
+                      style={{
+                        padding: "12px 18px",
+                        fontSize: "15px",
+                        fontWeight: 600,
+                        border: "none",
+                        borderRadius: "10px",
+                        background: isUpdatingStatus ? "#9ca3af" : "#4f46e5",
+                        color: "white",
+                        cursor: isUpdatingStatus ? "not-allowed" : "pointer",
+                        opacity: isUpdatingStatus ? 0.7 : 1,
+                        transition: "background 0.2s",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isUpdatingStatus) {
+                          e.currentTarget.style.background = "#4338ca";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isUpdatingStatus) {
+                          e.currentTarget.style.background = "#4f46e5";
+                        }
+                      }}
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                            aria-hidden="true"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              borderWidth: "2px",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        "Yes, Change Status"
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </>
         )}
 
@@ -3585,207 +3631,220 @@ const ReceivingManagementLayer = () => {
                         >
                           <span className="visually-hidden">Loading...</span>
                         </div>
-                        <p className="text-muted">Loading inspection details...</p>
+                        <p className="text-muted">
+                          Loading inspection details...
+                        </p>
                       </div>
                     </div>
                   ) : (
                     <>
-                  {/* Request Info */}
-                  <div className="row mb-4">
-                    <div className="col-md-6">
-                      <h6 className="text-muted mb-3">Request Information</h6>
-                      <div className="d-flex flex-column gap-2">
-                        <div className="d-flex justify-content-between">
-                          <span className="text-muted">Company:</span>
-                          <span className="fw-medium">
-                            {requestToInspect.company_name ||
-                              requestToInspect.vendor_name}
-                          </span>
+                      {/* Request Info */}
+                      <div className="row mb-4">
+                        <div className="col-md-6">
+                          <h6 className="text-muted mb-3">
+                            Request Information
+                          </h6>
+                          <div className="d-flex flex-column gap-2">
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Company:</span>
+                              <span className="fw-medium">
+                                {requestToInspect.company_name ||
+                                  requestToInspect.vendor_name}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">
+                                Contact Person:
+                              </span>
+                              <span className="fw-medium">
+                                {requestToInspect.vendor_name || "-"}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Order Date:</span>
+                              <span className="fw-medium">
+                                {new Date(
+                                  requestToInspect.order_date
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span className="text-muted">Delivery Date:</span>
+                              <span className="fw-medium">
+                                {new Date(
+                                  requestToInspect.delivery_date
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="d-flex justify-content-between">
-                          <span className="text-muted">Contact Person:</span>
-                          <span className="fw-medium">
-                            {requestToInspect.vendor_name || "-"}
-                          </span>
-                        </div>
-                        <div className="d-flex justify-content-between">
-                          <span className="text-muted">Order Date:</span>
-                          <span className="fw-medium">
-                            {new Date(
-                              requestToInspect.order_date
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="d-flex justify-content-between">
-                          <span className="text-muted">Delivery Date:</span>
-                          <span className="fw-medium">
-                            {new Date(
-                              requestToInspect.delivery_date
-                            ).toLocaleDateString()}
-                          </span>
+                        <div className="col-md-6">
+                          <h6 className="text-muted mb-3">
+                            Inspection Details
+                          </h6>
+                          <div className="d-flex flex-column gap-2">
+                            <div>
+                              <label className="form-label small text-muted">
+                                Quality Checker Name *
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                value={qualityCheckerName}
+                                onChange={(e) =>
+                                  setQualityCheckerName(e.target.value)
+                                }
+                                placeholder="Enter checker name"
+                                required
+                                disabled
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label small text-muted">
+                                Inspection Date *
+                              </label>
+                              <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={inspectionDate}
+                                onChange={(e) =>
+                                  setInspectionDate(e.target.value)
+                                }
+                                required
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="col-md-6">
-                      <h6 className="text-muted mb-3">Inspection Details</h6>
-                      <div className="d-flex flex-column gap-2">
-                        <div>
-                          <label className="form-label small text-muted">
-                            Quality Checker Name *
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            value={qualityCheckerName}
-                            onChange={(e) =>
-                              setQualityCheckerName(e.target.value)
-                            }
-                            placeholder="Enter checker name"
-                            required
-                            disabled
-                          />
-                        </div>
-                        <div>
-                          <label className="form-label small text-muted">
-                            Inspection Date *
-                          </label>
-                          <input
-                            type="date"
-                            className="form-control form-control-sm"
-                            value={inspectionDate}
-                            onChange={(e) => setInspectionDate(e.target.value)}
-                            required
-                          />
-                        </div>
+
+                      {/* Documents Upload */}
+                      <div className="mb-4">
+                        <h6 className="text-muted mb-3">Documents</h6>
+                        <QualityCheckDocumentsSection
+                          requestId={requestToInspect.request_id}
+                        />
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Documents Upload */}
-                  <div className="mb-4">
-                    <h6 className="text-muted mb-3">Documents</h6>
-                    <QualityCheckDocumentsSection
-                      requestId={requestToInspect.request_id}
-                    />
-                  </div>
-
-                  {/* Items Inspection Table */}
-                  <div className="mb-3">
-                    <h6 className="text-muted mb-3">Item Inspection Details</h6>
-                    <div className="table-responsive">
-                      <table className="table table-sm table-bordered">
-                        <thead className="table-light">
-                          <tr>
-                            <th className="small">Product Name</th>
-                            <th className="small">Variant</th>
-                            <th className="small">SKU</th>
-                            <th className="small">Invoice Qty</th>
-                            <th className="small">Actual Qty *</th>
-                            <th className="small">Sorted Qty *</th>
-                            <th className="small">Damage Qty</th>
-                            <th className="small">Notes</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {inspectionData.map((item, index) => {
-                            const requestItem = requestToInspect.items?.find(
-                              (i) => i.item_id === item.item_id
-                            );
-                            return (
-                              <tr key={item.item_id}>
-                                <td className="small">
-                                  {requestItem?.product_name || "-"}
-                                </td>
-                                <td className="small">
-                                  {requestItem?.variant_display_name || "-"}
-                                </td>
-                                <td className="small">
-                                  {requestItem?.sku || "-"}
-                                </td>
-                                <td className="small text-center">
-                                  {item.invoice_quantity || 0}
-                                </td>
-                                <td className="small">
-                                  <input
-                                    type="number"
-                                    className="form-control form-control-sm"
-                                    min="0"
-                                    value={item.actual_quantity || ""}
-                                    onChange={(e) =>
-                                      handleInspectionDataChange(
-                                        item.item_id,
-                                        "actual_quantity",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                  />
-                                </td>
-                                <td className="small">
-                                  <input
-                                    type="number"
-                                    className="form-control form-control-sm"
-                                    min="0"
-                                    max={item.actual_quantity || 0}
-                                    value={item.sorted_quantity || ""}
-                                    onChange={(e) =>
-                                      handleInspectionDataChange(
-                                        item.item_id,
-                                        "sorted_quantity",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                  />
-                                </td>
-                                <td className="small">
-                                  <input
-                                    type="number"
-                                    className="form-control form-control-sm"
-                                    min="0"
-                                    max={item.actual_quantity || 0}
-                                    value={item.damage_quantity || ""}
-                                    onChange={(e) =>
-                                      handleInspectionDataChange(
-                                        item.item_id,
-                                        "damage_quantity",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                  />
-                                </td>
-                                <td className="small">
-                                  <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    value={item.notes || ""}
-                                    onChange={(e) =>
-                                      handleInspectionDataChange(
-                                        item.item_id,
-                                        "notes",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Add notes..."
-                                  />
-                                </td>
+                      {/* Items Inspection Table */}
+                      <div className="mb-3">
+                        <h6 className="text-muted mb-3">
+                          Item Inspection Details
+                        </h6>
+                        <div className="table-responsive">
+                          <table className="table table-sm table-bordered">
+                            <thead className="table-light">
+                              <tr>
+                                <th className="small">Product Name</th>
+                                <th className="small">Variant</th>
+                                <th className="small">SKU</th>
+                                <th className="small">Invoice Qty</th>
+                                <th className="small">Actual Qty *</th>
+                                <th className="small">Sorted Qty *</th>
+                                <th className="small">Damage Qty</th>
+                                <th className="small">Notes</th>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div
-                      className="alert alert-info mt-3"
-                      style={{ fontSize: "12px" }}
-                    >
-                      <strong>Note:</strong> Invoice Quantity is the ordered
-                      quantity. Actual Quantity is what was physically received.
-                      Sorted Quantity is what passed inspection. Damage Quantity
-                      includes all damaged items found.
-                    </div>
-                  </div>
+                            </thead>
+                            <tbody>
+                              {inspectionData.map((item, index) => {
+                                const requestItem =
+                                  requestToInspect.items?.find(
+                                    (i) => i.item_id === item.item_id
+                                  );
+                                return (
+                                  <tr key={item.item_id}>
+                                    <td className="small">
+                                      {requestItem?.product_name || "-"}
+                                    </td>
+                                    <td className="small">
+                                      {requestItem?.variant_display_name || "-"}
+                                    </td>
+                                    <td className="small">
+                                      {requestItem?.sku || "-"}
+                                    </td>
+                                    <td className="small text-center">
+                                      {item.invoice_quantity || 0}
+                                    </td>
+                                    <td className="small">
+                                      <input
+                                        type="number"
+                                        className="form-control form-control-sm"
+                                        min="0"
+                                        value={item.actual_quantity || ""}
+                                        onChange={(e) =>
+                                          handleInspectionDataChange(
+                                            item.item_id,
+                                            "actual_quantity",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="0"
+                                      />
+                                    </td>
+                                    <td className="small">
+                                      <input
+                                        type="number"
+                                        className="form-control form-control-sm"
+                                        min="0"
+                                        max={item.actual_quantity || 0}
+                                        value={item.sorted_quantity || ""}
+                                        onChange={(e) =>
+                                          handleInspectionDataChange(
+                                            item.item_id,
+                                            "sorted_quantity",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="0"
+                                      />
+                                    </td>
+                                    <td className="small">
+                                      <input
+                                        type="number"
+                                        className="form-control form-control-sm"
+                                        min="0"
+                                        max={item.actual_quantity || 0}
+                                        value={item.damage_quantity || ""}
+                                        onChange={(e) =>
+                                          handleInspectionDataChange(
+                                            item.item_id,
+                                            "damage_quantity",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="0"
+                                      />
+                                    </td>
+                                    <td className="small">
+                                      <input
+                                        type="text"
+                                        className="form-control form-control-sm"
+                                        value={item.notes || ""}
+                                        onChange={(e) =>
+                                          handleInspectionDataChange(
+                                            item.item_id,
+                                            "notes",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="Add notes..."
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div
+                          className="alert alert-info mt-3"
+                          style={{ fontSize: "12px" }}
+                        >
+                          <strong>Note:</strong> Invoice Quantity is the ordered
+                          quantity. Actual Quantity is what was physically
+                          received. Sorted Quantity is what passed inspection.
+                          Damage Quantity includes all damaged items found.
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -4799,9 +4858,13 @@ const PurchaseRequestModal = ({
                               <Combobox.Input
                                 className="form-control"
                                 placeholder="Select product..."
-                                displayValue={(product) =>
-                                  product?.product_name || ""
-                                }
+                                displayValue={(product) => {
+                                  if (!product) return "";
+                                  if (product.common_name) {
+                                    return `${product.product_name} (${product.common_name})`;
+                                  }
+                                  return product.product_name || "";
+                                }}
                                 onChange={(event) => {
                                   const term = event.target.value;
                                   setProductQueries((prev) => {
@@ -4862,7 +4925,9 @@ const PurchaseRequestModal = ({
                                         }`
                                       }
                                     >
-                                      {product.product_name}
+                                      {product.common_name
+                                        ? `${product.product_name} (${product.common_name})`
+                                        : product.product_name}
                                     </Combobox.Option>
                                   ))
                                 )}
@@ -5877,9 +5942,13 @@ const QualityCheckTab = ({
           }
         }
       }
-      
+
       const blob = await qualityCheckApi.downloadGrnPdf(requestId);
-      const fileName = grnInfo?.file_name || (grnInfo?.grn_number ? `${grnInfo.grn_number}.pdf` : `GRN-${requestId}.pdf`);
+      const fileName =
+        grnInfo?.file_name ||
+        (grnInfo?.grn_number
+          ? `${grnInfo.grn_number}.pdf`
+          : `GRN-${requestId}.pdf`);
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -6149,9 +6218,12 @@ const QualityCheckTab = ({
                         const grnInfo = grnInfoCache[request.request_id];
                         const hasGrn = !!grnInfo;
                         // Check if QR codes are already generated
-                        const hasQrCodes = request.items?.some(
-                          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
-                        ) || false;
+                        const hasQrCodes =
+                          request.items?.some(
+                            (item) =>
+                              item.qr_code?.image_base64 ||
+                              item.qr_code?.file_name
+                          ) || false;
                         // QR button is only disabled if conditions aren't met (not if QR codes already exist)
                         const qrDisabled =
                           isGeneratingQr || !qcCompleted || !hasGrn;
@@ -6264,9 +6336,13 @@ const QualityCheckTab = ({
                                       justifyContent: "center",
                                       border: "1px solid #e5e7eb",
                                       borderRadius: "6px",
-                                      backgroundColor: qrDisabled ? "#f3f4f6" : "white",
+                                      backgroundColor: qrDisabled
+                                        ? "#f3f4f6"
+                                        : "white",
                                       opacity: qrDisabled ? 0.6 : 1,
-                                      cursor: qrDisabled ? "not-allowed" : "pointer",
+                                      cursor: qrDisabled
+                                        ? "not-allowed"
+                                        : "pointer",
                                     }}
                                     onClick={() => {
                                       if (!qrDisabled) {
@@ -6286,8 +6362,10 @@ const QualityCheckTab = ({
                                         icon="mdi:qrcode"
                                         width="16"
                                         height="16"
-                                        style={{ 
-                                          color: qrDisabled ? "#9ca3af" : "#111827" 
+                                        style={{
+                                          color: qrDisabled
+                                            ? "#9ca3af"
+                                            : "#111827",
                                         }}
                                       />
                                     )}
