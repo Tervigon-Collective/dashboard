@@ -2009,58 +2009,101 @@ const ReceivingManagementLayer = () => {
         img.src = qrCode.image_base64;
       });
 
-      // Create a canvas
+      // ============================================
+      // PRINTER SPECIFICATIONS FOR 2-UP QR LABELS
+      // ============================================
+      const DPI = 300; // Dots per inch for print quality
+      const INCH_TO_PX = DPI;
+
+      // Page dimensions (in inches, converted to pixels)
+      const PAGE_WIDTH_IN = 3.15;  // Total page width
+      const PAGE_HEIGHT_IN = 1.00; // Total page height
+      const PAGE_WIDTH_PX = Math.round(PAGE_WIDTH_IN * INCH_TO_PX);  // 945px
+      const PAGE_HEIGHT_PX = Math.round(PAGE_HEIGHT_IN * INCH_TO_PX); // 300px
+
+      // Gap specifications (in inches, converted to pixels)
+      const LEFT_GAP_IN = 0.04;   // Left edge gap
+      const CENTER_GAP_IN = 0.08; // Center gap between labels
+      const RIGHT_GAP_IN = 0.04;  // Right edge gap
+      const LEFT_GAP_PX = Math.round(LEFT_GAP_IN * INCH_TO_PX);   // 12px
+      const CENTER_GAP_PX = Math.round(CENTER_GAP_IN * INCH_TO_PX); // 24px
+      const RIGHT_GAP_PX = Math.round(RIGHT_GAP_IN * INCH_TO_PX);  // 12px
+
+      // Label dimensions (in inches, converted to pixels)
+      const LABEL_WIDTH_IN = 1.50;  // Each label width
+      const LABEL_HEIGHT_IN = 1.00; // Each label height
+      const LABEL_WIDTH_PX = Math.round(LABEL_WIDTH_IN * INCH_TO_PX);  // 450px
+      const LABEL_HEIGHT_PX = Math.round(LABEL_HEIGHT_IN * INCH_TO_PX); // 300px
+
+      // QR code dimensions (scaled to fit with SKU text)
+      const QR_WIDTH_IN = 0.85; // QR code width (leaves room for SKU text)
+      const QR_WIDTH_PX = Math.round(QR_WIDTH_IN * INCH_TO_PX); // 255px
+      // QR codes are square, so height equals width
+      const QR_HEIGHT_PX = QR_WIDTH_PX; // 255px
+
+      // SKU text dimensions
+      const SKU_TEXT_HEIGHT_PX = 30; // Height allocated for SKU text
+      const SKU_FONT_SIZE_PX = 20;   // Font size for SKU text
+      const SKU_MARGIN_TOP_PX = 10;  // Margin above SKU text
+
+      // Calculate label positions
+      const LABEL1_START_X = LEFT_GAP_PX; // 12px
+      const LABEL2_START_X = LABEL1_START_X + LABEL_WIDTH_PX + CENTER_GAP_PX; // 486px
+
+      // Create canvas with exact printer specifications
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-
-      // Set dimensions for a single block
-      const qrWidth = img.width;
-      const qrHeight = img.height;
-      const padding = 20;
-      const textHeight = sku ? 40 : 0; // Space for SKU text
-      const blockSpacing = 40; // Space between the two blocks
       
-      // Single block dimensions
-      const singleBlockWidth = qrWidth + padding * 2;
-      const singleBlockHeight = qrHeight + padding * 2 + textHeight;
-      
-      // Canvas dimensions: two blocks side by side with spacing
-      const canvasWidth = (singleBlockWidth * 2) + blockSpacing;
-      const canvasHeight = singleBlockHeight;
+      canvas.width = PAGE_WIDTH_PX;  // 945px
+      canvas.height = PAGE_HEIGHT_PX; // 300px
 
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
+      // Enable high-quality rendering for printing
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
       // Fill white background
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      ctx.fillRect(0, 0, PAGE_WIDTH_PX, PAGE_HEIGHT_PX);
 
-      // Helper function to draw a single QR code block
-      const drawBlock = (xOffset) => {
-        // Draw QR code image
-        ctx.drawImage(img, xOffset + padding, padding, qrWidth, qrHeight);
+      // Helper function to draw a single QR code label
+      const drawLabel = (labelStartX) => {
+        // Calculate center position for QR code within label
+        const labelCenterX = labelStartX + LABEL_WIDTH_PX / 2;
+        const qrX = labelCenterX - QR_WIDTH_PX / 2;
+        
+        // Calculate vertical position: center QR code, leave space for SKU text below
+        const availableHeight = LABEL_HEIGHT_PX - SKU_TEXT_HEIGHT_PX - SKU_MARGIN_TOP_PX;
+        const qrY = (LABEL_HEIGHT_PX - availableHeight) / 2;
 
-        // Add SKU text at the bottom if provided
+        // Draw QR code image (scaled to exact size)
+        ctx.drawImage(
+          img,
+          qrX,                    // x position
+          qrY,                    // y position
+          QR_WIDTH_PX,            // width
+          QR_HEIGHT_PX            // height
+        );
+
+        // Add SKU text at the bottom of the label if provided
         if (sku) {
           ctx.fillStyle = "#000000";
-          ctx.font = "bold 16px Arial";
+          ctx.font = `bold ${SKU_FONT_SIZE_PX}px Arial`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
-          // Draw SKU text
-          const textY = qrHeight + padding + textHeight / 2;
-          const blockCenterX = xOffset + singleBlockWidth / 2;
-          ctx.fillText(`SKU: ${sku}`, blockCenterX, textY);
+          // Position SKU text at bottom of label
+          const skuTextY = LABEL_HEIGHT_PX - SKU_TEXT_HEIGHT_PX / 2;
+          ctx.fillText(`SKU: ${sku}`, labelCenterX, skuTextY);
         }
       };
 
-      // Draw first block at x = 0 (left side)
-      drawBlock(0);
+      // Draw first label (left side)
+      drawLabel(LABEL1_START_X);
       
-      // Draw second identical block at x = singleBlockWidth + blockSpacing (right side)
-      drawBlock(singleBlockWidth + blockSpacing);
+      // Draw second identical label (right side)
+      drawLabel(LABEL2_START_X);
 
-      // Convert canvas to blob and download
+      // Convert canvas to blob and download (maximum quality for printing)
       canvas.toBlob((blob) => {
         if (!blob) {
           console.error("Failed to create blob from canvas");
@@ -2109,7 +2152,7 @@ const ReceivingManagementLayer = () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-      }, "image/png");
+      }, "image/png", 1.0); // Maximum quality for printing
     } catch (error) {
       console.error("Error processing QR code with SKU:", error);
       // Fallback to original download method
