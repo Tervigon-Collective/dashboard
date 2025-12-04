@@ -480,15 +480,114 @@ const HourlyEfficiencyHeatmap = () => {
 
   if (loading) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="card border-0 shadow-sm position-relative" style={{ overflow: "hidden" }}>
+        <div className="card-body position-relative">
+          {/* Title & Meta Skeleton */}
+          <div
+            className="d-flex justify-content-between align-items-start mb-3"
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px", paddingRight: "140px" }}
+          >
+            <div>
+              <div
+                className="skeleton"
+                style={{
+                  height: "20px",
+                  width: "150px",
+                  backgroundColor: "#e5e7eb",
+                  borderRadius: "4px",
+                  animation: "skeletonPulse 1.5s ease-in-out infinite",
+                }}
+              />
+            </div>
           </div>
-          <p className="mt-3 text-muted">Loading heatmap data...</p>
+          {/* Action Buttons Skeleton */}
+          <div
+            className="position-absolute d-flex gap-2"
+            style={{ top: "10px", right: "10px", zIndex: 1 }}
+          >
+            <div
+              className="skeleton"
+              style={{
+                height: "28px",
+                width: "100px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+            <div
+              className="skeleton"
+              style={{
+                height: "28px",
+                width: "28px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+          </div>
+
+          {/* Time Period Selector Skeleton */}
+          <div
+            className="mb-3 d-flex align-items-center"
+            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
+          >
+            <div
+              className="skeleton"
+              style={{
+                height: "24px",
+                width: "60px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                marginRight: "16px",
+              }}
+            />
+            <div
+              className="skeleton"
+              style={{
+                height: "24px",
+                width: "70px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                marginRight: "16px",
+              }}
+            />
+            <div
+              className="skeleton"
+              style={{
+                height: "24px",
+                width: "80px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+                marginRight: "16px",
+              }}
+            />
+            <div
+              className="skeleton"
+              style={{
+                height: "24px",
+                width: "70px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+          </div>
+
+          {/* Chart Area Skeleton */}
+          <div
+            className="skeleton"
+            style={{
+              height: "400px",
+              width: "100%",
+              backgroundColor: "#e5e7eb",
+              borderRadius: "8px",
+              animation: "skeletonPulse 1.5s ease-in-out infinite",
+            }}
+          />
         </div>
       </div>
     );
@@ -549,7 +648,7 @@ const HourlyEfficiencyHeatmap = () => {
           {/* Action Buttons - Expand & AI Insights */}
           <div
             className="position-absolute d-flex gap-2"
-            style={{ top: "10px", right: "10px", zIndex: 10 }}
+            style={{ top: "10px", right: "10px", zIndex: 1 }}
           >
             <button
               className="btn btn-sm btn-light border"

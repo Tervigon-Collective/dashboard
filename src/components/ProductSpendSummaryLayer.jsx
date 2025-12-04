@@ -14,6 +14,8 @@ import "rsuite/dist/rsuite.min.css";
 
 const API_BASE =
   "https://skuspendsales-aghtewckaqbdfqep.centralindia-01.azurewebsites.net/api/product_spend";
+const SUGGESTIONS_API_BASE =
+  "https://skuspendsales-aghtewckaqbdfqep.centralindia-01.azurewebsites.net/api";
 
 // Channel endpoints mapping
 const CHANNEL_ENDPOINTS = {
@@ -170,6 +172,17 @@ const ProductSpendSummaryLayer = () => {
   const [isMobile, setIsMobile] = useState(getIsMobile());
   const [activeChannel, setActiveChannel] = useState("all"); // 'all', 'meta', 'google'
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [autocompleteError, setAutocompleteError] = useState("");
+  const searchInputRef = useRef(null);
+  const suggestionsRef = useRef(null);
+  const searchContainerRef = useRef(null);
+  const isSelectingRef = useRef(false); // Flag to prevent reopening after selection
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
     key: "revenue",
@@ -181,6 +194,78 @@ const ProductSpendSummaryLayer = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const tableContainerRef = useRef(null);
   const itemsPerPage = 20;
+
+  // Generate autocomplete suggestions from existing products data
+  const fetchSuggestions = useCallback((searchTerm) => {
+    // Don't show suggestions if search term is empty
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    setAutocompleteError("");
+
+    if (!products || products.length === 0) {
+      setSuggestions([]);
+      setShowSuggestions(true);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    // Filter products that match the search term (product title or SKU)
+    // Use the same filtering logic as the table
+    const matchingProducts = products
+      .filter((product) => {
+        const productTitle = (product.product_title || "").toLowerCase();
+        const productSku = (product.sku || "").toLowerCase();
+        return productTitle.includes(searchLower) || productSku.includes(searchLower);
+      })
+      .slice(0, 15); // Limit to 15 suggestions
+
+    // Format suggestions to match API response format
+    const formattedSuggestions = matchingProducts.map((product) => ({
+      product_title: product.product_title || "",
+      sku: product.sku || "",
+    }));
+
+    setSuggestions(formattedSuggestions);
+    setShowSuggestions(true);
+    setSuggestionsLoading(false);
+    setAutocompleteError("");
+  }, [products]);
+
+  // Debounce autocomplete suggestions
+  useEffect(() => {
+    // Don't fetch suggestions if we're in the middle of selecting
+    if (isSelectingRef.current) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      // Double-check flag before fetching
+      if (isSelectingRef.current) {
+        return;
+      }
+      
+      if (searchSku.trim().length >= 1) {
+        fetchSuggestions(searchSku);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setSuggestionsLoading(false);
+      }
+    }, 300); // 300ms debounce delay
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchSku, fetchSuggestions]);
+
 
   const fetchSummary = useCallback(async (range, channel) => {
     setLoading(true);
@@ -275,7 +360,113 @@ const ProductSpendSummaryLayer = () => {
 
   useEffect(() => {
     setDisplayedItemsCount(20); // Reset displayed items on search change
+    setSelectedSuggestionIndex(-1); // Reset selected index on search change
   }, [searchSku]);
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = useCallback((suggestion, event) => {
+    // Prevent event propagation to avoid double-triggering
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // Set flag to prevent reopening - set this FIRST
+    isSelectingRef.current = true;
+    
+    // Close dropdown IMMEDIATELY
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+    setSuggestions([]);
+    
+    // Use product_title if available, otherwise use SKU
+    const searchValue = suggestion.product_title || suggestion.sku || "";
+    
+    // Update search value immediately but flag prevents onChange from reopening
+    setSearchSku(searchValue);
+    
+    // Blur input immediately to prevent focus events
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+    
+    // Reset flag after a longer delay to ensure all events have processed
+    setTimeout(() => {
+      isSelectingRef.current = false;
+    }, 300);
+  }, []);
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (!showSuggestions || suggestions.length === 0) {
+        if (e.key === "Enter") {
+          // Allow Enter to submit/search even when suggestions are hidden
+          e.preventDefault();
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedSuggestionIndex((prev) =>
+            prev < suggestions.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+            handleSuggestionSelect(suggestions[selectedSuggestionIndex]);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+          break;
+        case "Tab":
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+          break;
+        default:
+          break;
+      }
+    },
+    [showSuggestions, suggestions, selectedSuggestionIndex, handleSuggestionSelect]
+  );
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Don't close if clicking inside the search container or if we're selecting
+      if (
+        isSelectingRef.current ||
+        (searchContainerRef.current &&
+        searchContainerRef.current.contains(event.target))
+      ) {
+        return;
+      }
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    };
+
+    if (showSuggestions) {
+      // Use a slight delay to allow suggestion clicks to process first
+      const timeoutId = setTimeout(() => {
+        document.addEventListener("click", handleClickOutside, true);
+      }, 0);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener("click", handleClickOutside, true);
+      };
+    }
+  }, [showSuggestions]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -304,11 +495,14 @@ const ProductSpendSummaryLayer = () => {
       return [];
     }
 
-    // Filter by SKU search term
+    // Filter by search term (product name or SKU)
     let filteredProducts = products;
     if (searchSku.trim()) {
-      filteredProducts = products.filter((product) =>
-        product.sku?.toLowerCase().includes(searchSku.toLowerCase().trim())
+      const searchTerm = searchSku.toLowerCase().trim();
+      filteredProducts = products.filter(
+        (product) =>
+          product.sku?.toLowerCase().includes(searchTerm) ||
+          product.product_title?.toLowerCase().includes(searchTerm)
       );
     }
 
@@ -1005,41 +1199,236 @@ const ProductSpendSummaryLayer = () => {
               style={{ gap: 12 }}
             >
               <label className="form-label fw-semibold mb-1 mb-lg-0 me-lg-2">
-                Search by SKU
+                Search by Product or SKU
               </label>
-              <div className="d-flex align-items-center" style={{ gap: 8 }}>
-                <Icon
-                  icon="material-symbols:search"
-                  width="20"
-                  height="20"
-                  style={{ color: "#6c757d" }}
-                />
-                <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  placeholder="Search by SKU..."
-                  value={searchSku}
-                  onChange={(e) => setSearchSku(e.target.value)}
-                  style={{
-                    borderRadius: 6,
-                    fontSize: 14,
-                    width: "100%",
-                    maxWidth: 220,
-                  }}
-                />
-                {searchSku && (
-                  <button
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => setSearchSku("")}
-                    title="Clear search"
+              <div
+                ref={searchContainerRef}
+                className="position-relative"
+                style={{ width: "100%", maxWidth: 300 }}
+              >
+                <div className="d-flex align-items-center position-relative" style={{ gap: 8 }}>
+                  <Icon
+                    icon="material-symbols:search"
+                    width="20"
+                    height="20"
                     style={{
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      fontSize: 12,
+                      color: "#6c757d",
+                      position: "absolute",
+                      left: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      zIndex: 1,
+                      pointerEvents: "none",
                     }}
+                  />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="form-control form-control-sm"
+                    placeholder="Search by product name or SKU..."
+                    value={searchSku}
+                    onChange={(e) => {
+                      // Don't process onChange if we're selecting a suggestion
+                      if (isSelectingRef.current) {
+                        return;
+                      }
+                      setSearchSku(e.target.value);
+                      // Only show suggestions if there's text
+                      if (e.target.value.trim().length >= 1) {
+                        setShowSuggestions(true);
+                      } else {
+                        setShowSuggestions(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      // Don't show suggestions on focus if we just selected one
+                      if (isSelectingRef.current) {
+                        return;
+                      }
+                      // Only show suggestions on focus if there's text
+                      if (searchSku.trim().length >= 1) {
+                        // Fetch suggestions first, then show
+                        if (suggestions.length === 0 && products.length > 0) {
+                          fetchSuggestions(searchSku);
+                        } else {
+                          setShowSuggestions(true);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Don't close on blur if clicking a suggestion (handled by click handler)
+                      // The click outside handler will close it if needed
+                      const relatedTarget = e.relatedTarget;
+                      if (relatedTarget && searchContainerRef.current?.contains(relatedTarget)) {
+                        // Clicking inside container, don't close
+                        return;
+                      }
+                    }}
+                    onKeyDown={handleKeyDown}
+                    style={{
+                      borderRadius: 6,
+                      fontSize: 14,
+                      width: "100%",
+                      paddingLeft: 40,
+                      paddingRight: searchSku ? 40 : 12,
+                    }}
+                    aria-autocomplete="list"
+                    aria-expanded={showSuggestions}
+                    aria-haspopup="listbox"
+                    role="combobox"
+                  />
+                  {suggestionsLoading && (
+                    <Icon
+                      icon="svg-spinners:ring-resize"
+                      width="16"
+                      height="16"
+                      style={{
+                        color: "#6c757d",
+                        position: "absolute",
+                        right: searchSku ? 40 : 12,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        zIndex: 1,
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
+                  {searchSku && !suggestionsLoading && (
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => {
+                        setSearchSku("");
+                        setShowSuggestions(false);
+                        setSuggestions([]);
+                        setSelectedSuggestionIndex(-1);
+                      }}
+                      title="Clear search"
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        zIndex: 1,
+                      }}
+                    >
+                      <Icon icon="mdi:close" width="16" height="16" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Suggestions Dropdown - Using list-group style like receiving management */}
+                {showSuggestions && (
+                  <div
+                    ref={suggestionsRef}
+                    className="list-group position-absolute w-100 shadow-sm"
+                    style={{
+                      top: "100%",
+                      left: 0,
+                      marginTop: 4,
+                      maxHeight: "240px",
+                      overflowY: "auto",
+                      zIndex: 1050,
+                      borderRadius: "0.375rem",
+                    }}
+                    role="listbox"
                   >
-                    <Icon icon="mdi:close" width="16" height="16" />
-                  </button>
+                    {suggestionsLoading ? (
+                      <div className="list-group-item text-center py-3">
+                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <span className="ms-2 text-muted">Loading suggestions...</span>
+                      </div>
+                    ) : autocompleteError ? (
+                      <div className="list-group-item text-danger py-2">
+                        {autocompleteError}
+                      </div>
+                    ) : suggestions.length > 0 ? (
+                      suggestions.map((suggestion, index) => {
+                        const isSelected = index === selectedSuggestionIndex;
+                        const displayText = suggestion.product_title || suggestion.sku || "";
+                        const searchTerm = searchSku.toLowerCase().trim();
+
+                        // Highlight matching text
+                        const highlightText = (text, term) => {
+                          if (!term || !text) return text;
+                          // Escape special regex characters
+                          const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                          const parts = text.split(new RegExp(`(${escapedTerm})`, "gi"));
+                          return parts.map((part, i) =>
+                            part.toLowerCase() === term.toLowerCase() ? (
+                              <mark key={i} style={{ backgroundColor: "#fff3cd", padding: 0 }}>
+                                {part}
+                              </mark>
+                            ) : (
+                              part
+                            )
+                          );
+                        };
+
+                        return (
+                          <div
+                            key={`${suggestion.sku || suggestion.product_title}-${index}`}
+                            className={`list-group-item list-group-item-action ${
+                              isSelected ? "active" : ""
+                            }`}
+                            style={{
+                              cursor: "pointer",
+                            }}
+                            onMouseDown={(e) => {
+                              // Handle selection on mousedown to prevent input focus
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Set flag FIRST to prevent any reopening
+                              isSelectingRef.current = true;
+                              // Close dropdown immediately
+                              setShowSuggestions(false);
+                              setSelectedSuggestionIndex(-1);
+                              // Then handle selection
+                              handleSuggestionSelect(suggestion, e);
+                            }}
+                            onClick={(e) => {
+                              // Prevent any click events from propagating
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Ensure dropdown stays closed
+                              setShowSuggestions(false);
+                            }}
+                            onMouseUp={(e) => {
+                              // Also prevent mouseup from causing issues
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                            role="option"
+                            aria-selected={isSelected}
+                          >
+                            <div style={{ fontSize: 14, fontWeight: 500 }}>
+                              {highlightText(displayText, searchTerm)}
+                            </div>
+                            {suggestion.sku && (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: isSelected ? 0.9 : 0.7,
+                                  marginTop: 2,
+                                }}
+                              >
+                                SKU: {highlightText(suggestion.sku, searchTerm)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : searchSku.trim().length >= 1 ? (
+                      <div className="list-group-item disabled text-muted py-2">
+                        No products found matching "{searchSku}"
+                      </div>
+                    ) : null}
+                  </div>
                 )}
               </div>
             </div>
@@ -1329,7 +1718,7 @@ const ProductSpendSummaryLayer = () => {
                     <tr>
                       <td colSpan={7} className="text-center py-4">
                         {searchSku
-                          ? `No products found matching SKU: "${searchSku}"`
+                          ? `No products found matching: "${searchSku}"`
                           : "No data found for this range."}
                       </td>
                     </tr>
@@ -1433,7 +1822,7 @@ const ProductSpendSummaryLayer = () => {
                       className="ms-2 text-primary"
                       style={{ fontSize: 13 }}
                     >
-                      (filtered by SKU: "{searchSku}")
+                      (filtered by: "{searchSku}")
                     </span>
                   )}
                 </div>

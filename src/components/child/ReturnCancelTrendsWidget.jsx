@@ -24,13 +24,15 @@ const ReactECharts = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading chart...</span>
-        </div>
-      </div>
+        className="skeleton"
+        style={{
+          height: "400px",
+          width: "100%",
+          backgroundColor: "#e5e7eb",
+          borderRadius: "8px",
+          animation: "skeletonPulse 1.5s ease-in-out infinite",
+        }}
+      />
     ),
   }
 );
@@ -1157,17 +1159,94 @@ const ReturnCancelTrendsWidget = () => {
 
         {/* Loading State */}
         {trendLoading && !trendData && (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ minHeight: "400px" }}
-          >
-            <div className="text-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+          <>
+            {/* Filters Skeleton */}
+            <div
+              className="mb-3 d-flex flex-wrap align-items-end gap-3"
+              style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
+            >
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "60px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "120px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
               </div>
-              <p className="mt-3 text-muted">Loading data...</p>
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "50px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "150px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "50px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "120px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
             </div>
-          </div>
+            {/* Chart Area Skeleton */}
+            <div
+              className="skeleton"
+              style={{
+                height: "400px",
+                width: "100%",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "8px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+          </>
         )}
 
         {/* Chart */}

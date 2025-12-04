@@ -28,13 +28,15 @@ const ReactECharts = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading chart...</span>
-        </div>
-      </div>
+        className="skeleton"
+        style={{
+          height: "400px",
+          width: "100%",
+          backgroundColor: "#e5e7eb",
+          borderRadius: "8px",
+          animation: "skeletonPulse 1.5s ease-in-out infinite",
+        }}
+      />
     ),
   }
 );
@@ -268,7 +270,7 @@ const CustomerDistributionWidget = () => {
           </div>
         </div>
         {/* Action Buttons */}
-        <div className="position-absolute d-flex gap-2" style={{ top: "10px", right: "10px", zIndex: 10 }}>
+        <div className="position-absolute d-flex gap-2" style={{ top: "10px", right: "10px", zIndex: 1 }}>
           <InsightButton
             onClick={handleGetInsights}
             loading={insightsLoading}
@@ -321,17 +323,58 @@ const CustomerDistributionWidget = () => {
 
         {/* Loading State */}
         {segmentationLoading && !segmentationData && (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ minHeight: "400px" }}
-          >
-            <div className="text-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+          <>
+            {/* Filters Skeleton */}
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex gap-3 align-items-center">
+                <div>
+                  <div
+                    className="skeleton"
+                    style={{
+                      height: "12px",
+                      width: "120px",
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "4px",
+                      animation: "skeletonPulse 1.5s ease-in-out infinite",
+                      marginBottom: "8px",
+                    }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{
+                      height: "32px",
+                      width: "140px",
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "6px",
+                      animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{
+                      height: "11px",
+                      width: "140px",
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "4px",
+                      animation: "skeletonPulse 1.5s ease-in-out infinite",
+                      marginTop: "4px",
+                    }}
+                  />
+                </div>
               </div>
-              <p className="mt-3 text-muted">Loading data...</p>
             </div>
-          </div>
+            {/* Chart Area Skeleton */}
+            <div
+              className="skeleton"
+              style={{
+                height: "400px",
+                width: "100%",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "8px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+          </>
         )}
 
         {/* Chart */}
