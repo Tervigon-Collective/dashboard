@@ -94,6 +94,9 @@ const ReturnCancelTrendsWidget = () => {
   // Chart ref for download
   const chartRef = useRef(null);
   const [showInsights, setShowInsights] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const prevDateRangeRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
   // AI Insights hook
   const {
@@ -119,11 +122,27 @@ const ReturnCancelTrendsWidget = () => {
     };
   }, [selectedPeriod, useCustomDateRange, customStartDate, customEndDate]);
 
+  // Create a stable key for the date range to use as dependency
+  const dateRangeKey = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return null;
+    return `${dateRange.startDate}-${dateRange.endDate}`;
+  }, [dateRange.startDate, dateRange.endDate]);
+
   // Note: total_orders is now included in the API response, so no separate fetch needed
 
   // Fetch returns-cancellations data from new API
   const fetchTrendData = async () => {
     if (!dateRange.startDate || !dateRange.endDate) return;
+    
+    // Prevent duplicate calls by checking if date range actually changed
+    const dateRangeKey = `${dateRange.startDate}-${dateRange.endDate}`;
+    if (prevDateRangeRef.current === dateRangeKey) return;
+    
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) return;
+    
+    prevDateRangeRef.current = dateRangeKey;
+    isFetchingRef.current = true;
 
     setTrendLoading(true);
     setTrendError(null);
@@ -160,13 +179,16 @@ const ReturnCancelTrendsWidget = () => {
       setTrendData(null);
     } finally {
       setTrendLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
   useEffect(() => {
-    fetchTrendData();
+    if (dateRangeKey) {
+      fetchTrendData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange]);
+  }, [dateRangeKey]);
 
   const handleTimeFrameChange = (period) => {
     setSelectedPeriod(period);
@@ -403,37 +425,13 @@ const ReturnCancelTrendsWidget = () => {
         textStyle: { fontSize: 11 },
       },
       grid: {
-        left: "3%",
-        right: "4%",
+        left: "12%",
+        right: "12%",
         bottom: "15%",
-        top: "20%",
+        top: "18%",
         containLabel: true,
       },
       dataZoom: [
-        {
-          type: "slider",
-          show: true,
-          xAxisIndex: [0],
-          start: 0,
-          end: 100,
-          bottom: "5%",
-          height: 20,
-          handleIcon:
-            "M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23.1h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z",
-          handleSize: "80%",
-          handleStyle: {
-            color: "#fff",
-            shadowBlur: 3,
-            shadowColor: "rgba(0, 0, 0, 0.6)",
-            shadowOffsetX: 2,
-            shadowOffsetY: 2,
-          },
-          textStyle: {
-            color: "#999",
-            fontSize: 11,
-          },
-          borderColor: "#ccc",
-        },
         {
           type: "inside",
           xAxisIndex: [0],
@@ -445,9 +443,20 @@ const ReturnCancelTrendsWidget = () => {
         type: "category",
         boundaryGap: false,
         data: dates,
+        name: "Date",
+        nameLocation: "middle",
+        nameGap: 40,
+        nameTextStyle: {
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#374151",
+          padding: [12, 0, 0, 0],
+        },
         axisLabel: {
           rotate: dates.length > 10 ? 45 : 0,
           fontSize: 11,
+          color: "#6b7280",
+          margin: 8,
         },
       },
       yAxis: [
@@ -456,10 +465,21 @@ const ReturnCancelTrendsWidget = () => {
           name: "Orders",
           position: "left",
           show: series.some((s) => s.yAxisIndex === 0), // Show if any series uses this axis
+          nameLocation: "middle",
+          nameGap: 65,
+          nameTextStyle: {
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#1f2937",
+            padding: [0, 0, 0, 0],
+          },
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(0);
             },
+            fontSize: 11,
+            color: "#6b7280",
+            margin: 8,
           },
         },
         {
@@ -467,10 +487,21 @@ const ReturnCancelTrendsWidget = () => {
           name: "Rate (%)",
           position: "right",
           show: series.some((s) => s.yAxisIndex === 1), // Show if any series uses this axis
+          nameLocation: "middle",
+          nameGap: 65,
+          nameTextStyle: {
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#1f2937",
+            padding: [0, 0, 0, 0],
+          },
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(0) + "%";
             },
+            fontSize: 11,
+            color: "#6b7280",
+            margin: 8,
           },
         },
       ],
@@ -651,17 +682,45 @@ const ReturnCancelTrendsWidget = () => {
               loading={insightsLoading}
               disabled={!processedTrendData || processedTrendData.length === 0}
             />
+            <button
+              className="btn btn-sm btn-light border"
+              onClick={() => setIsExpanded(true)}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "4px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+              title="Expand graph"
+            >
+              <Icon icon="mdi:fullscreen" style={{ fontSize: "16px" }} />
+            </button>
             {showAggregates && (
               <>
                 <span
-                  className="badge bg-warning text-dark"
-                  style={{ fontSize: "11px", padding: "4px 10px" }}
+                  className="badge"
+                  style={{
+                    fontSize: "11px",
+                    padding: "4px 10px",
+                    backgroundColor: WARNING_COLORS[0],
+                    color: "#1f2937",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    border: "none",
+                  }}
                 >
                   Returns: {aggregatedMetrics.totalReturnOrders} orders
                 </span>
                 <span
-                  className="badge bg-danger"
-                  style={{ fontSize: "11px", padding: "4px 10px" }}
+                  className="badge"
+                  style={{
+                    fontSize: "11px",
+                    padding: "4px 10px",
+                    backgroundColor: NEGATIVE_COLORS[0],
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    border: "none",
+                  }}
                 >
                   Cancels: {aggregatedMetrics.totalCancelOrders} orders
                 </span>
@@ -703,7 +762,9 @@ const ReturnCancelTrendsWidget = () => {
                   onChange={(e) => {
                     if (e.target.value) {
                       setCustomStartDate(new Date(e.target.value));
-                      setUseCustomDateRange(true);
+                      if (!useCustomDateRange) {
+                        setUseCustomDateRange(true);
+                      }
                     }
                   }}
                   placeholder="Start Date"
@@ -721,7 +782,9 @@ const ReturnCancelTrendsWidget = () => {
                   onChange={(e) => {
                     if (e.target.value) {
                       setCustomEndDate(new Date(e.target.value));
-                      setUseCustomDateRange(true);
+                      if (!useCustomDateRange) {
+                        setUseCustomDateRange(true);
+                      }
                     }
                   }}
                   placeholder="End Date"
@@ -1160,11 +1223,124 @@ const ReturnCancelTrendsWidget = () => {
         {/* Loading State */}
         {trendLoading && !trendData && (
           <>
+            {/* Title & Meta Skeleton */}
+            <div
+              className="d-flex justify-content-between align-items-start mb-3"
+              style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px", paddingRight: "200px" }}
+            >
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "20px",
+                    width: "180px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
+            </div>
+            {/* Action Buttons Skeleton */}
+            <div
+              className="position-absolute d-flex gap-2"
+              style={{ top: "10px", right: "10px", zIndex: 1 }}
+            >
+              <div
+                className="skeleton"
+                style={{
+                  height: "28px",
+                  width: "28px",
+                  backgroundColor: "#e5e7eb",
+                  borderRadius: "4px",
+                  animation: "skeletonPulse 1.5s ease-in-out infinite",
+                }}
+              />
+              <div
+                className="skeleton"
+                style={{
+                  height: "28px",
+                  width: "28px",
+                  backgroundColor: "#e5e7eb",
+                  borderRadius: "4px",
+                  animation: "skeletonPulse 1.5s ease-in-out infinite",
+                }}
+              />
+            </div>
             {/* Filters Skeleton */}
             <div
               className="mb-3 d-flex flex-wrap align-items-end gap-3"
               style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
             >
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "70px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "200px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "80px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "100px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
+              <div>
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "12px",
+                    width: "50px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "4px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div
+                  className="skeleton"
+                  style={{
+                    height: "32px",
+                    width: "120px",
+                    backgroundColor: "#e5e7eb",
+                    borderRadius: "6px",
+                    animation: "skeletonPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
               <div>
                 <div
                   className="skeleton"
@@ -1181,53 +1357,7 @@ const ReturnCancelTrendsWidget = () => {
                   className="skeleton"
                   style={{
                     height: "32px",
-                    width: "120px",
-                    backgroundColor: "#e5e7eb",
-                    borderRadius: "6px",
-                    animation: "skeletonPulse 1.5s ease-in-out infinite",
-                  }}
-                />
-              </div>
-              <div>
-                <div
-                  className="skeleton"
-                  style={{
-                    height: "12px",
-                    width: "50px",
-                    backgroundColor: "#e5e7eb",
-                    borderRadius: "4px",
-                    animation: "skeletonPulse 1.5s ease-in-out infinite",
-                    marginBottom: "8px",
-                  }}
-                />
-                <div
-                  className="skeleton"
-                  style={{
-                    height: "32px",
-                    width: "150px",
-                    backgroundColor: "#e5e7eb",
-                    borderRadius: "6px",
-                    animation: "skeletonPulse 1.5s ease-in-out infinite",
-                  }}
-                />
-              </div>
-              <div>
-                <div
-                  className="skeleton"
-                  style={{
-                    height: "12px",
-                    width: "50px",
-                    backgroundColor: "#e5e7eb",
-                    borderRadius: "4px",
-                    animation: "skeletonPulse 1.5s ease-in-out infinite",
-                    marginBottom: "8px",
-                  }}
-                />
-                <div
-                  className="skeleton"
-                  style={{
-                    height: "32px",
-                    width: "120px",
+                    width: "100px",
                     backgroundColor: "#e5e7eb",
                     borderRadius: "6px",
                     animation: "skeletonPulse 1.5s ease-in-out infinite",
@@ -1283,6 +1413,514 @@ const ReturnCancelTrendsWidget = () => {
           error={insightsError}
         />
       </div>
+
+      {/* Expanded Modal */}
+      {isExpanded && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setIsExpanded(false)}
+        >
+          <div
+            className="card border-0 shadow-lg"
+            style={{
+              width: "95%",
+              maxWidth: "1400px",
+              maxHeight: "95vh",
+              backgroundColor: "white",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="card-body position-relative"
+              style={{ maxHeight: "95vh", overflow: "auto" }}
+            >
+              {/* Title & Meta */}
+              <div
+                className="d-flex justify-content-between align-items-start mb-3 pe-4"
+                style={{
+                  borderBottom: "1px solid #f1f5f9",
+                  paddingBottom: "10px",
+                }}
+              >
+                <div>
+                  <h6
+                    className="mb-1"
+                    style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}
+                  >
+                    Return & Cancel Trends
+                  </h6>
+                  <p className="text-muted mb-0" style={{ fontSize: "11px" }}>
+                    Detailed return and cancellation analysis over time
+                  </p>
+                </div>
+              </div>
+              {/* Action Buttons - AI Insights & Close */}
+              <div
+                className="position-absolute d-flex gap-2"
+                style={{ top: "10px", right: "10px", zIndex: 10 }}
+              >
+                <InsightButton
+                  onClick={handleGetInsights}
+                  loading={insightsLoading}
+                  disabled={!processedTrendData || processedTrendData.length === 0}
+                />
+                <button
+                  className="btn btn-sm btn-light border"
+                  onClick={() => setIsExpanded(false)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                  title="Close expanded view"
+                >
+                  <Icon icon="mdi:close" style={{ fontSize: "18px" }} />
+                </button>
+              </div>
+
+              {/* Expanded Chart Content */}
+              <div style={{ marginTop: "40px" }}>
+                {/* Filters Section - Same as main view */}
+                <div className="mb-3">
+                  <div className="d-flex flex-wrap gap-3 align-items-end mb-3">
+                    {/* Type Selection */}
+                    <div>
+                      <label
+                        className="form-label small fw-semibold mb-2 d-block"
+                        style={{ color: "#374151", fontSize: "12px" }}
+                      >
+                        Type
+                      </label>
+                      <div
+                        className="d-flex align-items-center"
+                        style={{
+                          background: "#f9fafb",
+                          padding: "3px",
+                          borderRadius: "6px",
+                          border: "1px solid #e5e7eb",
+                          height: "32px",
+                        }}
+                      >
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedType("return")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedType === "return" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedType === "return" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedType === "return" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedType === "return" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Return
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedType("cancel")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedType === "cancel" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedType === "cancel" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedType === "cancel" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedType === "cancel" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedType("both")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedType === "both" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedType === "both" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedType === "both" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedType === "both" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Both
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Metric Selection */}
+                    <div>
+                      <label
+                        className="form-label small fw-semibold mb-2 d-block"
+                        style={{ color: "#374151", fontSize: "12px" }}
+                      >
+                        Metric
+                      </label>
+                      <div
+                        className="d-flex align-items-center"
+                        style={{
+                          background: "#f9fafb",
+                          padding: "3px",
+                          borderRadius: "6px",
+                          border: "1px solid #e5e7eb",
+                          height: "32px",
+                        }}
+                      >
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedMetric("count")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedMetric === "count" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedMetric === "count" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedMetric === "count" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedMetric === "count" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Count
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedMetric("rate")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedMetric === "rate" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedMetric === "rate" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedMetric === "rate" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedMetric === "rate" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Rate
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => setSelectedMetric("both")}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedMetric === "both" ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedMetric === "both" ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedMetric === "both" ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedMetric === "both" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Both
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Custom Date Range */}
+                    <div>
+                      <label
+                        className="form-label small fw-semibold mb-2 d-block"
+                        style={{ color: "#374151", fontSize: "12px" }}
+                      >
+                        Custom Range
+                      </label>
+                      <div className="d-flex gap-2">
+                        <input
+                          type="date"
+                          className="form-control form-control-sm"
+                          value={customStartDate ? formatDate(customStartDate) : ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setCustomStartDate(new Date(e.target.value));
+                              if (!useCustomDateRange) {
+                                setUseCustomDateRange(true);
+                              }
+                            }
+                          }}
+                          placeholder="Start Date"
+                          style={{
+                            fontSize: "12px",
+                            height: "32px",
+                            padding: "4px 8px",
+                            width: "130px",
+                          }}
+                        />
+                        <input
+                          type="date"
+                          className="form-control form-control-sm"
+                          value={customEndDate ? formatDate(customEndDate) : ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setCustomEndDate(new Date(e.target.value));
+                              if (!useCustomDateRange) {
+                                setUseCustomDateRange(true);
+                              }
+                            }
+                          }}
+                          placeholder="End Date"
+                          style={{
+                            fontSize: "12px",
+                            height: "32px",
+                            padding: "4px 8px",
+                            width: "130px",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Time Period Tabs */}
+                    <div>
+                      <label
+                        className="form-label small fw-semibold mb-2 d-block"
+                        style={{ color: "#374151", fontSize: "12px" }}
+                      >
+                        Time Period
+                      </label>
+                      <div
+                        className="d-flex align-items-center"
+                        style={{
+                          background: "#f9fafb",
+                          padding: "3px",
+                          borderRadius: "6px",
+                          border: "1px solid #e5e7eb",
+                          height: "32px",
+                        }}
+                      >
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => {
+                            handleTimeFrameChange("today");
+                            setUseCustomDateRange(false);
+                          }}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedPeriod === "today" && !useCustomDateRange ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedPeriod === "today" && !useCustomDateRange ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedPeriod === "today" && !useCustomDateRange ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedPeriod === "today" && !useCustomDateRange ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Today
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => {
+                            handleTimeFrameChange("weekly");
+                            setUseCustomDateRange(false);
+                          }}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedPeriod === "weekly" && !useCustomDateRange ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedPeriod === "weekly" && !useCustomDateRange ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedPeriod === "weekly" && !useCustomDateRange ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedPeriod === "weekly" && !useCustomDateRange ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Weekly
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => {
+                            handleTimeFrameChange("monthly");
+                            setUseCustomDateRange(false);
+                          }}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedPeriod === "monthly" && !useCustomDateRange ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedPeriod === "monthly" && !useCustomDateRange ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedPeriod === "monthly" && !useCustomDateRange ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedPeriod === "monthly" && !useCustomDateRange ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Monthly
+                        </button>
+                        <span style={{ color: "#e5e7eb", margin: "0 1px", fontSize: "12px" }}>|</span>
+                        <button
+                          className="btn btn-link p-0 text-decoration-none"
+                          onClick={() => {
+                            handleTimeFrameChange("yearly");
+                            setUseCustomDateRange(false);
+                          }}
+                          style={{
+                            fontSize: "12px",
+                            color: selectedPeriod === "yearly" && !useCustomDateRange ? "#1f2937" : "#6b7280",
+                            fontWeight: selectedPeriod === "yearly" && !useCustomDateRange ? "600" : "400",
+                            padding: "4px 10px",
+                            border: "none",
+                            background: selectedPeriod === "yearly" && !useCustomDateRange ? "#fff" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            borderRadius: "4px",
+                            boxShadow: selectedPeriod === "yearly" && !useCustomDateRange ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                            height: "26px",
+                            lineHeight: "18px",
+                          }}
+                        >
+                          Yearly
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Chart */}
+                {!trendLoading && processedTrendData && processedTrendData.length > 0 && (
+                  <div>
+                    <ReactECharts
+                      ref={chartRef}
+                      key={`${selectedType}-${selectedMetric}-expanded`}
+                      option={metricsChartOption}
+                      style={{
+                        height: "70vh",
+                        width: "100%",
+                        minHeight: "500px",
+                      }}
+                      opts={{ renderer: "svg" }}
+                    />
+                  </div>
+                )}
+
+                {/* Aggregated Metrics in Expanded View */}
+                {showAggregates && (
+                  <div className="mt-3 d-flex gap-2 flex-wrap">
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        backgroundColor: WARNING_COLORS[0],
+                        color: "#1f2937",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        border: "none",
+                      }}
+                    >
+                      Returns: {aggregatedMetrics.totalReturnOrders} orders
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        backgroundColor: NEGATIVE_COLORS[0],
+                        color: "#fff",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        border: "none",
+                      }}
+                    >
+                      Cancellations: {aggregatedMetrics.totalCancelOrders} orders
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        backgroundColor: "#f3f4f6",
+                        color: "#374151",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      Total Orders: {aggregatedMetrics.totalOrders} orders
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        backgroundColor: WARNING_COLORS[0],
+                        color: "#1f2937",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        border: "none",
+                      }}
+                    >
+                      Avg Return Rate: {aggregatedMetrics.avgReturnRate.toFixed(2)}%
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        backgroundColor: NEGATIVE_COLORS[0],
+                        color: "#fff",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        border: "none",
+                      }}
+                    >
+                      Avg Cancel Rate: {aggregatedMetrics.avgCancellationRate.toFixed(2)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
