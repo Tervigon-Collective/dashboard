@@ -703,7 +703,7 @@ export const extractWebsiteData = async (url) => {
  * @param {string} brandType - Brand type
  * @param {Object} context - Additional context
  * @param {Object} existingData - Existing form data
- * @param {Object} extraParams - Extra parameters (e.g., color_tone)
+ * @param {Object} extraParams - Extra parameters (e.g., color_tone, regenerate)
  * @returns {Promise<Object>} Generated field data
  */
 export const generateField = async (fieldName, brandType, context = {}, existingData = {}, extraParams = {}) => {
@@ -714,6 +714,7 @@ export const generateField = async (fieldName, brandType, context = {}, existing
       brand_type: brandType,
       context,
       existing_data: existingData,
+      regenerate: extraParams.regenerate || false,
       ...extraParams, // Include color_tone and other extra params
     }
   );
@@ -725,15 +726,17 @@ export const generateField = async (fieldName, brandType, context = {}, existing
  * @param {string} brandType - Brand type
  * @param {Object} context - Additional context (industry, target_market, etc.)
  * @param {Object} existingData - Existing form data
+ * @param {boolean} regenerate - Whether this is a regeneration (default: false)
  * @returns {Promise<Object>} Generated brandkit data
  */
-export const generateGlobalBrandkit = async (brandType, context = {}, existingData = {}) => {
+export const generateGlobalBrandkit = async (brandType, context = {}, existingData = {}, regenerate = false) => {
   const response = await axios.post(
     `${config.pythonApi.baseURL}/api/brandkits/generate-global`,
     {
       brand_type: brandType,
       context,
       existing_data: existingData,
+      regenerate,
     }
   );
   return response.data;
@@ -766,16 +769,55 @@ export const generateLogo = async (brandName, brandType, colorPalette = [], prom
  * Generate ICP from database
  * @param {Object} connectionConfig - Database connection configuration
  * @param {Object} timeRange - Time range filter
- * @param {string} brandType - Brand type
+ * @param {string|Object} brandTypeOrExistingData - Brand type string OR existing_data object with brand_type
  * @returns {Promise<Object>} Generated ICP persona
  */
-export const generateICPFromDatabase = async (connectionConfig, timeRange, brandType) => {
+export const generateICPFromDatabase = async (connectionConfig, timeRange, brandTypeOrExistingData) => {
+  // Build request payload with robust brand_type extraction
+  let brandType = null;
+  let existingData = null;
+  
+  // Handle both string (brand_type) and object (existing_data) inputs
+  if (typeof brandTypeOrExistingData === 'string') {
+    brandType = brandTypeOrExistingData || null;
+  } else if (typeof brandTypeOrExistingData === 'object' && brandTypeOrExistingData !== null) {
+    existingData = brandTypeOrExistingData;
+    // Extract brand_type from existing_data if present
+    brandType = existingData.brand_type || existingData.niche || null;
+  }
+  
+  // Build request payload
+  const requestPayload = {
+    connection_config: connectionConfig,
+    time_range: timeRange,
+  };
+  
+  // Include brand_type directly if available
+  if (brandType) {
+    requestPayload.brand_type = brandType;
+  }
+  
+  // Include existing_data if provided
+  if (existingData) {
+    requestPayload.existing_data = existingData;
+  }
+  
+  // Debug logging
+  console.log('[generateICPFromDatabase] Request payload:', {
+    has_connection_config: !!requestPayload.connection_config,
+    has_time_range: !!requestPayload.time_range,
+    brand_type: requestPayload.brand_type || null,
+    has_existing_data: !!requestPayload.existing_data,
+    existing_data_keys: requestPayload.existing_data ? Object.keys(requestPayload.existing_data) : [],
+  });
+  
   const response = await axios.post(
     `${config.pythonApi.baseURL}/api/brandkits/generate-icp-from-db`,
+    requestPayload,
     {
-      connection_config: connectionConfig,
-      time_range: timeRange,
-      brand_type: brandType,
+      headers: {
+        'Content-Type': 'application/json',
+      },
     }
   );
   return response.data;

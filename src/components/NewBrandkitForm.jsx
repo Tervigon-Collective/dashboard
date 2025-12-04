@@ -1,8 +1,149 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import * as brandkitApi from "@/services/contentGenerationApi";
 import ICPConfiguration from "./ICPConfiguration/ICPConfiguration";
+import { normalizeLogoUrlFromString } from "@/utils/logoUtils";
+
+// Font Combobox Component - Text field with dropdown
+const FontCombobox = ({ value, fonts, fontsError, typoMode, loading, onChange, onRemove }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [filteredFonts, setFilteredFonts] = useState(fonts);
+  const [inputValue, setInputValue] = useState(value || "");
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Filter fonts based on input
+  useEffect(() => {
+    if (inputValue.trim()) {
+      const filtered = fonts.filter((font) =>
+        font.family.toLowerCase().includes(inputValue.toLowerCase())
+      );
+      setFilteredFonts(filtered.slice(0, 10)); // Limit to 10 results
+    } else {
+      setFilteredFonts(fonts.slice(0, 20)); // Show first 20 when empty
+    }
+  }, [inputValue, fonts]);
+
+  // Update input when value prop changes
+  useEffect(() => {
+    setInputValue(value || "");
+  }, [value]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onChange(newValue);
+    setIsDropdownOpen(true);
+  };
+
+  const handleSelectFont = (fontFamily) => {
+    setInputValue(fontFamily);
+    onChange(fontFamily);
+    setIsDropdownOpen(false);
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  };
+
+  return (
+    <div className="mb-2 position-relative" ref={dropdownRef}>
+      <div className="input-group">
+        <input
+          ref={inputRef}
+          type="text"
+          className="form-control"
+          placeholder="Type font name or select from dropdown..."
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setIsDropdownOpen(true)}
+          disabled={loading}
+        />
+        {typoMode === "dropdown" && !fontsError && fonts.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            disabled={loading}
+            style={{ borderLeft: "none" }}
+          >
+            <Icon icon={isDropdownOpen ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"} width="16" height="16" />
+          </button>
+        )}
+        {onRemove && (
+          <button
+            type="button"
+            className="btn btn-outline-danger"
+            onClick={onRemove}
+            disabled={loading}
+            title="Remove font"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      {isDropdownOpen && typoMode === "dropdown" && !fontsError && fonts.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            maxHeight: "200px",
+            overflowY: "auto",
+            backgroundColor: "#fff",
+            border: "1px solid #dee2e6",
+            borderRadius: "0 0 6px 6px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            marginTop: "-1px",
+          }}
+        >
+          {filteredFonts.length > 0 ? (
+            filteredFonts.map((font) => (
+              <div
+                key={font.family}
+                onClick={() => handleSelectFont(font.family)}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  borderBottom: "1px solid #f0f0f0",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f8f9fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                }}
+              >
+                {font.family}
+                {font.is_material_symbols && (
+                  <span style={{ color: "#6c757d", fontSize: "0.75rem", marginLeft: "8px" }}>(Icons)</span>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: "8px 12px", fontSize: "0.875rem", color: "#6c757d" }}>
+              No fonts found. Type to search or enter custom font name.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1); // 1: Brand Type, 2: Fields, 3: ICP
@@ -13,11 +154,13 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     target_audience: "",
     color_palette: [],
     typography: {
+      fonts: [],
       primary: "",
       secondary: null,
       fallback_stack: "Arial, sans-serif",
     },
     logo_path: null,
+    logo_url: null,
     brand_description: "",
     niche: "",
   });
@@ -36,9 +179,51 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
   const [colorMode, setColorMode] = useState("ai"); // "manual" or "ai"
   const [colorTone, setColorTone] = useState("");
   const [manualColor, setManualColor] = useState("");
+  const [aiGeneratedColors, setAiGeneratedColors] = useState([]);
+  const [colorInputError, setColorInputError] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingField, setGeneratingField] = useState(null);
   const [errors, setErrors] = useState({});
+
+  // Ensure a clean slate whenever the modal is opened for a new brand
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Reset wizard to initial step and clear all user-entered data
+    setCurrentStep(1);
+    setBrandType("");
+    setFormData({
+      brand_name: "",
+      tagline: "",
+      target_audience: "",
+      color_palette: [],
+      typography: {
+        fonts: [],
+        primary: "",
+        secondary: null,
+        fallback_stack: "Arial, sans-serif",
+      },
+      logo_path: null,
+      logo_url: null,
+      brand_description: "",
+      niche: "",
+    });
+    setIcp(null);
+    setIcpType("generic");
+    setIcpFields({
+      name: "",
+      age_range: "",
+      region: "",
+      gender: "",
+      title: "",
+    });
+    setColorTone("");
+    setManualColor("");
+    setAiGeneratedColors([]);
+    setColorInputError("");
+    setGeneratingField(null);
+    setErrors({});
+  }, [isOpen]);
 
   // Fetch Google Fonts on mount
   useEffect(() => {
@@ -86,8 +271,10 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     if (!formData.color_palette || formData.color_palette.length === 0) {
       newErrors.color_palette = "At least one color is required";
     }
-    if (!formData.typography?.primary) {
-      newErrors.typography = "Primary typography is required";
+    // Validate typography - at least one font is required
+    const hasPrimaryFont = formData.typography?.fonts?.[0]?.family || formData.typography?.primary;
+    if (!hasPrimaryFont) {
+      newErrors.typography = "At least one font is required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -112,7 +299,7 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
   };
 
   // Generate single field
-  const handleGenerateField = async (fieldName, extraParams = {}) => {
+  const handleGenerateField = async (fieldName, extraParams = {}, isRegenerate = false) => {
     if (!brandType.trim()) {
       alert("Please enter a brand type first");
       return;
@@ -120,25 +307,79 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
 
     setGeneratingField(fieldName);
     try {
+      // Build existing data - for regeneration, include existing values
+      let existingData = fieldName.startsWith("icp_") ? { icp: { persona: icpFields } } : formData;
+      
+      // For color regeneration, include existing color palette to avoid duplicates
+      if (fieldName === "color_palette" && isRegenerate) {
+        const allExistingColors = [
+          ...(formData.color_palette || []),
+          ...aiGeneratedColors,
+        ];
+        existingData = {
+          ...existingData,
+          color_palette: allExistingColors.length > 0 ? allExistingColors : undefined,
+        };
+      }
+      
+      // Add regenerate flag to extraParams
+      const paramsWithRegenerate = {
+        ...extraParams,
+        regenerate: isRegenerate,
+      };
+
       const response = await brandkitApi.generateField(
         fieldName,
         brandType.trim(),
         {
           industry: formData.niche || "",
         },
-        fieldName.startsWith("icp_") ? { icp: { persona: icpFields } } : formData,
-        extraParams
+        existingData,
+        paramsWithRegenerate
       );
 
       if (fieldName === "color_palette") {
-        setFormData((prev) => ({
-          ...prev,
-          color_palette: response.color_palette || [],
-        }));
+        // Handle response - it might be an array of colors or an object with colors
+        let generatedColors = [];
+        if (Array.isArray(response)) {
+          generatedColors = response;
+        } else if (response.color_palette && Array.isArray(response.color_palette)) {
+          generatedColors = response.color_palette;
+        } else if (response.colors && Array.isArray(response.colors)) {
+          generatedColors = response.colors;
+        } else if (typeof response === 'string') {
+          // If it's a JSON string, parse it
+          try {
+            const parsed = JSON.parse(response);
+            generatedColors = Array.isArray(parsed) ? parsed : (parsed.color_palette || []);
+          } catch {
+            // If parsing fails, try to extract hex colors from the string
+            const hexMatches = response.match(/#[0-9A-Fa-f]{6}/gi);
+            generatedColors = hexMatches || [];
+          }
+        }
+
+        // Normalize all colors to uppercase hex
+        generatedColors = generatedColors
+          .map(color => normalizeHexColor(color))
+          .filter(color => color !== null);
+
+        if (generatedColors.length > 0) {
+          setAiGeneratedColors(generatedColors);
+        } else {
+          alert("No colors were generated. Please try again.");
+        }
       } else if (fieldName === "typography") {
+        // Handle new typography structure with fonts array
+        const newTypography = response.typography || prev.typography;
         setFormData((prev) => ({
           ...prev,
-          typography: response.typography || prev.typography,
+          typography: {
+            fonts: newTypography.fonts || (newTypography.primary ? [{ family: newTypography.primary }] : []),
+            primary: newTypography.primary || newTypography.fonts?.[0]?.family || "",
+            secondary: newTypography.secondary || newTypography.fonts?.[1]?.family || null,
+            fallback_stack: newTypography.fallback_stack || "Arial, sans-serif",
+          },
         }));
       } else if (fieldName.startsWith("icp_")) {
         // Handle ICP field generation
@@ -200,6 +441,7 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
           fallback_stack: "Arial, sans-serif",
         },
         logo_path: response.logo_path || null,
+        logo_url: response.logo_url || null,
         brand_description: response.brand_description || "",
         niche: response.niche || "",
       });
@@ -234,12 +476,23 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         method
       );
 
-      if (response.success && response.logo_path) {
-        setFormData((prev) => ({
-          ...prev,
-          logo_path: response.logo_path,
-        }));
-        alert("Logo generation started! It will be available shortly.");
+      if (response.success) {
+        // Prefer logo_url if available (normalized by backend), otherwise use logo_path
+        const logoDisplayUrl = response.logo_url || response.logo_path;
+        
+        if (logoDisplayUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            logo_path: response.logo_path || logoDisplayUrl, // Keep logo_path for submission
+            logo_url: response.logo_url || null, // Store logo_url if available
+          }));
+          alert("Logo generated successfully!");
+        } else {
+          console.warn("Logo generation succeeded but no logo URL/path returned:", response);
+          alert("Logo generation completed, but the logo path is not available. Please try again.");
+        }
+      } else {
+        alert(`Logo generation failed: ${response.error || response.message || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error generating logo:", error);
@@ -274,16 +527,51 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
   };
 
   // Handle manual color addition
+  // Color validation and normalization helpers
+  const normalizeHexColor = (color) => {
+    if (!color || typeof color !== 'string') return null;
+    
+    // Remove whitespace
+    color = color.trim();
+    
+    // Handle RGB format: rgb(255, 0, 0) or rgba(255, 0, 0, 1)
+    const rgbMatch = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/i);
+    if (rgbMatch) {
+      const r = parseInt(rgbMatch[1], 10).toString(16).padStart(2, '0');
+      const g = parseInt(rgbMatch[2], 10).toString(16).padStart(2, '0');
+      const b = parseInt(rgbMatch[3], 10).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`.toUpperCase();
+    }
+    
+    // Handle hex with or without #
+    if (!color.startsWith('#')) {
+      color = '#' + color;
+    }
+    
+    // Handle 3-digit hex (#FFF -> #FFFFFF)
+    if (/^#[0-9A-Fa-f]{3}$/.test(color)) {
+      return color.toUpperCase().replace(/^#([0-9A-Fa-f])([0-9A-Fa-f])([0-9A-Fa-f])$/, '#$1$1$2$2$3$3');
+    }
+    
+    // Handle 6-digit hex
+    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return color.toUpperCase();
+    }
+    
+    return null;
+  };
+
   const handleAddManualColor = () => {
-    const hexPattern = /^#[0-9A-Fa-f]{6}$/;
-    if (hexPattern.test(manualColor)) {
+    const normalized = normalizeHexColor(manualColor);
+    if (normalized) {
       setFormData((prev) => ({
         ...prev,
-        color_palette: [...prev.color_palette, manualColor],
+        color_palette: [...prev.color_palette, normalized],
       }));
       setManualColor("");
+      setColorInputError("");
     } else {
-      alert("Please enter a valid hex color (e.g., #FF5733)");
+      setColorInputError("Use 3 or 6-digit hex, e.g. #FF5733");
     }
   };
 
@@ -292,7 +580,38 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     setFormData((prev) => ({
       ...prev,
       logo_path: null,
+      logo_url: null,
     }));
+  };
+
+  // Normalize typography for new backend structure (fonts array) while keeping legacy fields
+  const buildTypographyPayload = (typography) => {
+    if (!typography) return undefined;
+
+    // If fonts already exist, ensure legacy fields are populated and return as-is
+    if (Array.isArray(typography.fonts) && typography.fonts.length > 0) {
+      const primary = typography.primary || typography.fonts[0]?.family || "";
+      const secondary =
+        typography.secondary || typography.fonts[1]?.family || "";
+      return {
+        ...typography,
+        primary,
+        secondary,
+      };
+    }
+
+    const fonts = [];
+    if (typography.primary) {
+      fonts.push({ family: typography.primary });
+    }
+    if (typography.secondary) {
+      fonts.push({ family: typography.secondary });
+    }
+
+    return {
+      ...typography,
+      fonts,
+    };
   };
 
   // Submit form
@@ -338,7 +657,7 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         brand_description: formData.brand_description || formData.tagline,
         niche: formData.niche || finalBrandType,
         color_palette: formData.color_palette,
-        typography: formData.typography,
+        typography: buildTypographyPayload(formData.typography),
         logo_path: formData.logo_path,
         tagline: formData.tagline.trim(),
         target_audience: formData.target_audience || "",
@@ -614,85 +933,370 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
                   </label>
                   
                   {/* Mode Toggle */}
-                  <div className="d-flex gap-2 mb-2">
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${colorMode === "manual" ? "btn-primary" : "btn-outline-secondary"}`}
-                      onClick={() => setColorMode("manual")}
+                  <div className="mb-3">
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0",
+                        backgroundColor: "#f8f9fa",
+                        borderRadius: "8px",
+                        padding: "4px",
+                        border: "1px solid #e9ecef",
+                      }}
                     >
-                      Manual
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${colorMode === "ai" ? "btn-primary" : "btn-outline-secondary"}`}
-                      onClick={() => setColorMode("ai")}
-                    >
-                      AI Generate
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setColorMode("manual")}
+                        disabled={loading}
+                        style={{
+                          flex: 1,
+                          padding: "8px 16px",
+                          fontSize: "0.8125rem",
+                          fontWeight: "500",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          transition: "all 0.2s ease",
+                          backgroundColor: colorMode === "manual" ? "#0d6efd" : "transparent",
+                          color: colorMode === "manual" ? "#fff" : "#495057",
+                          border: colorMode === "manual" ? "1px solid #0b5ed7" : "1px solid #dee2e6",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <span>🎨</span>
+                        <span>Manual</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setColorMode("ai")}
+                        disabled={loading}
+                        style={{
+                          flex: 1,
+                          padding: "8px 16px",
+                          fontSize: "0.8125rem",
+                          fontWeight: "500",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          transition: "all 0.2s ease",
+                          backgroundColor: colorMode === "ai" ? "#0d6efd" : "transparent",
+                          color: colorMode === "ai" ? "#fff" : "#495057",
+                          border: colorMode === "ai" ? "1px solid #0b5ed7" : "1px solid #dee2e6",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <span>⚡</span>
+                        <span>AI Generate</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Manual Mode */}
                   {colorMode === "manual" && (
-                    <div className="d-flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="#FF5733"
-                        value={manualColor}
-                        onChange={(e) => setManualColor(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddManualColor();
-                          }
-                        }}
-                        style={{ maxWidth: "200px" }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-outline-primary"
-                        onClick={handleAddManualColor}
-                      >
-                        Add Color
-                      </button>
+                    <div className="mb-3">
+                      <div className="d-flex gap-2 align-items-center">
+                        {/* Live Color Preview Circle */}
+                        <div
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const input = document.createElement("input");
+                            input.type = "color";
+                            const normalized = normalizeHexColor(manualColor) || "#FF5733";
+                            input.value = normalized;
+                            input.style.position = "fixed";
+                            input.style.left = (rect.left + rect.width / 2) + "px";
+                            input.style.top = (rect.top + rect.height / 2) + "px";
+                            input.style.width = "1px";
+                            input.style.height = "1px";
+                            input.style.opacity = "0";
+                            input.style.pointerEvents = "none";
+                            input.style.zIndex = "10000";
+                            input.onchange = (ev) => {
+                              const newColor = normalizeHexColor(ev.target.value) || "#FF5733";
+                              setManualColor(newColor);
+                              setColorInputError("");
+                              if (document.body.contains(input)) {
+                                document.body.removeChild(input);
+                              }
+                            };
+                            input.onblur = () => {
+                              if (document.body.contains(input)) {
+                                document.body.removeChild(input);
+                              }
+                            };
+                            document.body.appendChild(input);
+                            setTimeout(() => {
+                              input.focus();
+                              input.click();
+                            }, 10);
+                          }}
+                          style={{
+                            width: "44px",
+                            height: "44px",
+                            backgroundColor: normalizeHexColor(manualColor) || "#FF5733",
+                            border: "2px solid #e9ecef",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "scale(1.1)";
+                            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+                          }}
+                          title="Click to open color picker"
+                        />
+                        <input
+                          type="text"
+                          className={`form-control ${colorInputError ? "is-invalid" : ""}`}
+                          placeholder="#FF5733"
+                          value={manualColor}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setManualColor(value);
+                            // Validate on change
+                            if (value.trim()) {
+                              const normalized = normalizeHexColor(value);
+                              if (!normalized) {
+                                setColorInputError("Use 3 or 6-digit hex, e.g. #FF5733");
+                              } else {
+                                setColorInputError("");
+                              }
+                            } else {
+                              setColorInputError("");
+                            }
+                          }}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddManualColor();
+                            }
+                          }}
+                          style={{
+                            maxWidth: "200px",
+                            border: colorInputError ? "1px solid #dc3545" : "1px solid #dee2e6",
+                            color: manualColor ? "#212529" : "#6c757d",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary"
+                          onClick={handleAddManualColor}
+                        >
+                          Add Color
+                        </button>
+                      </div>
+                      {colorInputError && (
+                        <div className="text-danger mt-1" style={{ fontSize: "0.6875rem" }}>
+                          {colorInputError}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* AI Mode */}
                   {colorMode === "ai" && (
-                    <div className="d-flex gap-2 mb-2">
-                      <select
-                        className="form-select"
-                        value={colorTone}
-                        onChange={(e) => setColorTone(e.target.value)}
-                        style={{ maxWidth: "200px" }}
+                    <div
+                      style={{
+                        backgroundColor: "#ffffff",
+                        border: "1px solid #e9ecef",
+                        borderRadius: "8px",
+                        padding: "20px",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "0.8125rem",
+                          color: "#6c757d",
+                          marginBottom: "16px",
+                        }}
                       >
-                        <option value="">Select tone/mood (optional)</option>
-                        <option value="warm">Warm</option>
-                        <option value="cool">Cool</option>
-                        <option value="vintage">Vintage</option>
-                        <option value="modern">Modern</option>
-                        <option value="minimal">Minimal</option>
-                        <option value="pastel">Pastel</option>
-                        <option value="luxurious">Luxurious</option>
-                        <option value="bold">Bold</option>
-                        <option value="earthy">Earthy</option>
-                        <option value="neon">Neon</option>
-                      </select>
+                        Let AI suggest a palette based on your brand.
+                      </p>
+
+                      {/* Style Options Chips */}
+                      <div className="mb-3">
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "500",
+                            color: "#495057",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Style (Optional):
+                        </div>
+                        <div className="d-flex flex-wrap gap-2">
+                          {["Vibrant", "Minimal", "Earthy", "Luxury", "Warm", "Cool", "Modern", "Vintage"].map((style) => {
+                            const styleValue = style.toLowerCase();
+                            return (
+                              <button
+                                key={style}
+                                type="button"
+                                onClick={() => setColorTone(colorTone === styleValue ? "" : styleValue)}
+                                disabled={loading || generatingField === "color_palette"}
+                                style={{
+                                  padding: "6px 12px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "500",
+                                  border: "1px solid #dee2e6",
+                                  borderRadius: "20px",
+                                  backgroundColor: colorTone === styleValue ? "#0d6efd" : "#ffffff",
+                                  color: colorTone === styleValue ? "#fff" : "#495057",
+                                  cursor: loading || generatingField === "color_palette" ? "not-allowed" : "pointer",
+                                  transition: "all 0.2s ease",
+                                  opacity: loading || generatingField === "color_palette" ? 0.6 : 1,
+                                }}
+                              >
+                                {style}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Generate Button */}
                       <button
                         type="button"
-                        className="btn btn-outline-primary"
                         onClick={() => handleGenerateField("color_palette", colorTone ? { color_tone: colorTone } : {})}
                         disabled={loading || generatingField === "color_palette"}
+                        style={{
+                          width: "100%",
+                          padding: "10px 20px",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          backgroundColor: "#0d6efd",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: loading || generatingField === "color_palette" ? "not-allowed" : "pointer",
+                          transition: "all 0.2s ease",
+                          opacity: loading || generatingField === "color_palette" ? 0.6 : 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                        }}
                       >
                         {generatingField === "color_palette" ? (
-                          <span className="spinner-border spinner-border-sm" />
+                          <>
+                            <span className="spinner-border spinner-border-sm" style={{ width: "14px", height: "14px" }} />
+                            <span>Generating...</span>
+                          </>
                         ) : (
                           <>
-                            <Icon icon="solar:magic-stick-3-bold" width="16" height="16" /> Generate
+                            <Icon icon="solar:magic-stick-3-bold" width="18" height="18" />
+                            <span>Generate Palette</span>
                           </>
                         )}
                       </button>
+
+                      {/* Generated Colors Display */}
+                      {aiGeneratedColors.length > 0 && (
+                        <div style={{ marginTop: "20px" }}>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#495057",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            Generated Colors:
+                          </div>
+                          <div className="d-flex flex-wrap gap-2 mb-3">
+                            {aiGeneratedColors.map((color, index) => (
+                              <div
+                                key={index}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "60px",
+                                    height: "60px",
+                                    backgroundColor: color,
+                                    border: "3px solid #fff",
+                                    borderRadius: "8px",
+                                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    fontSize: "0.6875rem",
+                                    fontFamily: "monospace",
+                                    color: "#6c757d",
+                                  }}
+                                >
+                                  {color.toUpperCase()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="d-flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateField("color_palette", colorTone ? { color_tone: colorTone } : {}, true)}
+                              disabled={loading || generatingField === "color_palette"}
+                              style={{
+                                flex: 1,
+                                padding: "8px 16px",
+                                fontSize: "0.8125rem",
+                                fontWeight: "500",
+                                backgroundColor: "#ffffff",
+                                color: "#0d6efd",
+                                border: "1px solid #0d6efd",
+                                borderRadius: "6px",
+                                cursor: loading || generatingField === "color_palette" ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                                opacity: loading || generatingField === "color_palette" ? 0.6 : 1,
+                              }}
+                            >
+                              Regenerate
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  color_palette: [...prev.color_palette, ...aiGeneratedColors],
+                                }));
+                                setAiGeneratedColors([]);
+                                setColorMode("manual");
+                              }}
+                              disabled={loading}
+                              style={{
+                                flex: 1,
+                                padding: "8px 16px",
+                                fontSize: "0.8125rem",
+                                fontWeight: "500",
+                                backgroundColor: "#28a745",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: loading ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              Accept Palette
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -757,58 +1361,109 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
 
                 {/* Typography */}
                 <div className="mb-3">
-                  <label className="form-label" style={{ fontSize: "0.875rem", fontWeight: "500" }}>
-                    Typography <span className="text-danger">*</span>
-                  </label>
-                  <div className="input-group">
-                    {typoMode === "dropdown" && !fontsError ? (
-                      <select
-                        className="form-select"
-                        value={formData.typography?.primary || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            typography: { ...prev.typography, primary: e.target.value, fallback_stack: "Arial, sans-serif" },
-                          }))
-                        }
-                        disabled={loading}
-                      >
-                        <option value="">Select font</option>
-                        {fonts.map((font) => (
-                          <option key={font.family} value={font.family}>
-                            {font.family}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Inter, Roboto, Arial, etc."
-                        value={formData.typography?.primary || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            typography: { ...prev.typography, primary: e.target.value, fallback_stack: "Arial, sans-serif" },
-                          }))
-                        }
-                        disabled={loading}
-                      />
-                    )}
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <label className="form-label" style={{ fontSize: "0.875rem", fontWeight: "500", margin: 0 }}>
+                      Typography <span className="text-danger">*</span>
+                    </label>
                     <button
                       type="button"
-                      className="btn btn-outline-primary"
+                      className="btn btn-outline-primary btn-sm"
                       onClick={() => handleGenerateField("typography")}
                       disabled={loading || generatingField === "typography"}
                       title="Generate with AI"
+                      style={{ fontSize: "0.75rem", padding: "4px 8px" }}
                     >
                       {generatingField === "typography" ? (
-                        <span className="spinner-border spinner-border-sm" />
+                        <>
+                          <span className="spinner-border spinner-border-sm me-1" style={{ width: "10px", height: "10px" }} />
+                          Generating...
+                        </>
                       ) : (
-                        <Icon icon="solar:magic-stick-3-bold" width="16" height="16" />
+                        <>
+                          <Icon icon="solar:magic-stick-3-bold" width="14" height="14" className="me-1" />
+                          AI Generate
+                        </>
                       )}
                     </button>
                   </div>
+
+                  {/* Font Entries */}
+                  {(formData.typography?.fonts || []).length > 0 ? (
+                    formData.typography.fonts.map((font, index) => (
+                      <FontCombobox
+                        key={index}
+                        value={font.family || ""}
+                        fonts={fonts}
+                        fontsError={fontsError}
+                        typoMode={typoMode}
+                        loading={loading}
+                        onChange={(newValue) => {
+                          const newFonts = [...formData.typography.fonts];
+                          newFonts[index] = { ...newFonts[index], family: newValue };
+                          setFormData((prev) => ({
+                            ...prev,
+                            typography: {
+                              ...prev.typography,
+                              fonts: newFonts,
+                              primary: newFonts[0]?.family || "",
+                              secondary: newFonts[1]?.family || null,
+                            },
+                          }));
+                        }}
+                        onRemove={() => {
+                          const newFonts = formData.typography.fonts.filter((_, i) => i !== index);
+                          setFormData((prev) => ({
+                            ...prev,
+                            typography: {
+                              ...prev.typography,
+                              fonts: newFonts,
+                              primary: newFonts[0]?.family || "",
+                              secondary: newFonts[1]?.family || null,
+                            },
+                          }));
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <FontCombobox
+                      value={formData.typography?.primary || ""}
+                      fonts={fonts}
+                      fontsError={fontsError}
+                      typoMode={typoMode}
+                      loading={loading}
+                      onChange={(newValue) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          typography: {
+                            fonts: newValue ? [{ family: newValue }] : [],
+                            primary: newValue,
+                            secondary: null,
+                            fallback_stack: prev.typography?.fallback_stack || "Arial, sans-serif",
+                          },
+                        }));
+                      }}
+                    />
+                  )}
+
+                  {/* Add Font Button */}
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm mt-2"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        typography: {
+                          ...prev.typography,
+                          fonts: [...(prev.typography?.fonts || []), { family: "" }],
+                        },
+                      }));
+                    }}
+                    disabled={loading}
+                    style={{ fontSize: "0.75rem", padding: "4px 12px" }}
+                  >
+                    + Add Another Font
+                  </button>
+
                   {fontsError && (
                     <small className="text-warning" style={{ fontSize: "0.75rem", display: "block", marginTop: "4px" }}>
                       Google Fonts failed to load. Using manual input.
@@ -847,9 +1502,15 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
                   {formData.logo_path && (
                     <div className="mt-2 d-flex align-items-center gap-2">
                       <img
-                        src={formData.logo_path}
+                        src={normalizeLogoUrlFromString(formData.logo_url || formData.logo_path)}
                         alt="Logo preview"
                         style={{ maxWidth: "200px", maxHeight: "100px", objectFit: "contain" }}
+                        onError={(e) => {
+                          // Fallback: try using logo_path directly if logo_url fails
+                          if (formData.logo_url && formData.logo_path !== formData.logo_url) {
+                            e.target.src = normalizeLogoUrlFromString(formData.logo_path);
+                          }
+                        }}
                       />
                       <button
                         type="button"
