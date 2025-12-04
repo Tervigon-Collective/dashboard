@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import * as brandkitApi from "@/services/contentGenerationApi";
-import config from "@/config";
+import { normalizeLogoUrl } from "@/utils/logoUtils";
 
 const BrandkitLogoUpload = ({ isOpen, onClose, brandkit, onSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -80,10 +80,8 @@ const BrandkitLogoUpload = ({ isOpen, onClose, brandkit, onSuccess }) => {
 
   if (!isOpen || !brandkit) return null;
 
-  // Get current logo path if exists
-  const currentLogoUrl = brandkit.logo_path
-    ? `${config.pythonApi.baseURL}/${brandkit.logo_path}`
-    : null;
+  // Get current logo URL using normalization helper (prefers logo_url, falls back to logo_path)
+  const currentLogoUrl = normalizeLogoUrl(brandkit);
 
   return (
     <div
