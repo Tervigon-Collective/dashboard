@@ -10,23 +10,23 @@ const AdvancedAnalyticsLayer = () => {
     <div className="container-fluid">
       <div className="row">
         <div className="col-12">
-          {/* Top Row - Spend/Sales Graph and Heatmap */}
+          {/* Row 1 - Hourly Spend & Sales and Return & Cancel Trends */}
           <div className="row g-4 mb-4">
             <div className="col-lg-6 col-md-12">
               <HourlySpendSalesGraph />
             </div>
             <div className="col-lg-6 col-md-12">
-              <HourlyEfficiencyHeatmap />
+              <ReturnCancelTrendsWidget />
             </div>
           </div>
 
-          {/* Bottom Row - Customer Distribution and Return & Cancel Trends */}
+          {/* Row 2 - ROAS Heatmap and Customer Distribution */}
           <div className="row g-4">
             <div className="col-lg-6 col-md-12">
-              <CustomerDistributionWidget />
+              <HourlyEfficiencyHeatmap />
             </div>
             <div className="col-lg-6 col-md-12">
-              <ReturnCancelTrendsWidget />
+              <CustomerDistributionWidget />
             </div>
           </div>
         </div>

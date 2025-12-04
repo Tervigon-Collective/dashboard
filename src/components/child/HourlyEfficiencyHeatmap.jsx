@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@iconify/react";
 import {
@@ -95,6 +95,8 @@ const HourlyEfficiencyHeatmap = () => {
   const [internalDateRange, setInternalDateRange] = useState(null); // Internal date range state
   const [showInsights, setShowInsights] = useState(false); // AI Insights modal state
   const chartRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
+  const lastHoveredHourRef = useRef(null);
   
   // AI Insights hook
   const {
@@ -380,7 +382,50 @@ const HourlyEfficiencyHeatmap = () => {
     };
 
     return option;
-  }, [hourlyData, selectedHour]);
+  }, [hourlyData]);
+
+  // Debounced hover handler to prevent flickering
+  const handleMouseOver = useCallback((params) => {
+    if (
+      params.componentType === "series" &&
+      params.seriesType === "treemap"
+    ) {
+      const hour = params.data?.hour;
+      if (hour !== undefined) {
+        // Clear any pending timeout to cancel mouseout
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+          hoverTimeoutRef.current = null;
+        }
+        
+        // Only update if hour changed to prevent unnecessary re-renders
+        if (hour !== lastHoveredHourRef.current) {
+          lastHoveredHourRef.current = hour;
+          setHoveredHour(hour);
+        }
+      }
+    }
+  }, []);
+
+  const handleMouseOut = useCallback(() => {
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Delay clearing hover to prevent flickering when moving between tiles
+    // This gives time for mouseover on next tile to fire first
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredHour((prev) => {
+        // Only clear if still the same (no new hover occurred)
+        if (prev === lastHoveredHourRef.current) {
+          lastHoveredHourRef.current = null;
+          return null;
+        }
+        return prev;
+      });
+    }, 150);
+  }, []);
 
   // Handle chart events for interactive buttons
   const onEvents = useMemo(() => {
@@ -393,19 +438,37 @@ const HourlyEfficiencyHeatmap = () => {
           setSelectedHour(params.data.hour);
         }
       },
-      mouseover: (params) => {
-        if (
-          params.componentType === "series" &&
-          params.seriesType === "treemap"
-        ) {
-          setHoveredHour(params.data.hour);
-        }
-      },
-      mouseout: () => {
-        setHoveredHour(null);
-      },
+      mouseover: handleMouseOver,
+      mouseout: handleMouseOut,
+    };
+  }, [handleMouseOver, handleMouseOut]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
     };
   }, []);
+
+  // Memoize current hour calculation to prevent unnecessary re-renders
+  // MUST be called before any early returns to follow Rules of Hooks
+  const currentHour = useMemo(() => {
+    return selectedHour !== null ? selectedHour : hoveredHour;
+  }, [selectedHour, hoveredHour]);
+
+  const currentHourData = useMemo(() => {
+    if (
+      currentHour !== null &&
+      hourlyData &&
+      hourlyData.data &&
+      hourlyData.data[currentHour]
+    ) {
+      return hourlyData.data[currentHour];
+    }
+    return null;
+  }, [currentHour, hourlyData]);
 
   // Get hour range string for action buttons
   const getHourRange = (startHour, endHour) => {
@@ -481,30 +544,26 @@ const HourlyEfficiencyHeatmap = () => {
   if (loading) {
     return (
       <div className="card border-0 shadow-sm position-relative" style={{ overflow: "hidden" }}>
-        <div className="card-body position-relative">
+        <div className="card-body position-relative" style={{ padding: "12px" }}>
           {/* Title & Meta Skeleton */}
           <div
-            className="d-flex justify-content-between align-items-start mb-3"
-            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px", paddingRight: "140px" }}
+            className="d-flex justify-content-between align-items-center"
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "6px", marginBottom: "6px" }}
           >
             <div>
               <div
                 className="skeleton"
                 style={{
                   height: "20px",
-                  width: "150px",
+                  width: "180px",
                   backgroundColor: "#e5e7eb",
                   borderRadius: "4px",
                   animation: "skeletonPulse 1.5s ease-in-out infinite",
                 }}
               />
             </div>
-          </div>
-          {/* Action Buttons Skeleton */}
-          <div
-            className="position-absolute d-flex gap-2"
-            style={{ top: "10px", right: "10px", zIndex: 1 }}
-          >
+            {/* Action Buttons Skeleton */}
+            <div className="d-flex gap-2">
             <div
               className="skeleton"
               style={{
@@ -525,53 +584,54 @@ const HourlyEfficiencyHeatmap = () => {
                 animation: "skeletonPulse 1.5s ease-in-out infinite",
               }}
             />
+            </div>
           </div>
 
           {/* Time Period Selector Skeleton */}
           <div
-            className="mb-3 d-flex align-items-center"
-            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
+            className="mb-2 d-flex align-items-center"
+            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "6px" }}
           >
             <div
               className="skeleton"
               style={{
-                height: "24px",
+                height: "32px",
                 width: "60px",
                 backgroundColor: "#e5e7eb",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 animation: "skeletonPulse 1.5s ease-in-out infinite",
-                marginRight: "16px",
+                marginRight: "8px",
               }}
             />
             <div
               className="skeleton"
               style={{
-                height: "24px",
+                height: "32px",
                 width: "70px",
                 backgroundColor: "#e5e7eb",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 animation: "skeletonPulse 1.5s ease-in-out infinite",
-                marginRight: "16px",
+                marginRight: "8px",
               }}
             />
             <div
               className="skeleton"
               style={{
-                height: "24px",
+                height: "32px",
                 width: "80px",
                 backgroundColor: "#e5e7eb",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 animation: "skeletonPulse 1.5s ease-in-out infinite",
-                marginRight: "16px",
+                marginRight: "8px",
               }}
             />
             <div
               className="skeleton"
               style={{
-                height: "24px",
+                height: "32px",
                 width: "70px",
                 backgroundColor: "#e5e7eb",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 animation: "skeletonPulse 1.5s ease-in-out infinite",
               }}
             />
@@ -618,23 +678,14 @@ const HourlyEfficiencyHeatmap = () => {
     );
   }
 
-  const currentHour = selectedHour !== null ? selectedHour : hoveredHour;
-  const currentHourData =
-    currentHour !== null &&
-    hourlyData &&
-    hourlyData.data &&
-    hourlyData.data[currentHour]
-      ? hourlyData.data[currentHour]
-      : null;
-
   return (
     <>
       <div className="card border-0 shadow-sm position-relative">
-        <div className="card-body">
+        <div className="card-body position-relative" style={{ padding: "12px" }}>
           {/* Title & Meta */}
           <div
-            className="d-flex justify-content-between align-items-start mb-3 pe-4"
-            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}
+            className="d-flex justify-content-between align-items-center"
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "6px", marginBottom: "6px" }}
           >
             <div>
               <h6
@@ -644,12 +695,8 @@ const HourlyEfficiencyHeatmap = () => {
                 ROAS Heatmap
               </h6>
             </div>
-          </div>
-          {/* Action Buttons - Expand & AI Insights */}
-          <div
-            className="position-absolute d-flex gap-2"
-            style={{ top: "10px", right: "10px", zIndex: 1 }}
-          >
+            {/* Action Buttons - Expand & AI Insights */}
+            <div className="d-flex gap-2">
             <button
               className="btn btn-sm btn-light border"
               onClick={handleGetInsights}
@@ -693,12 +740,13 @@ const HourlyEfficiencyHeatmap = () => {
             >
               <Icon icon="mdi:fullscreen" style={{ fontSize: "16px" }} />
             </button>
+            </div>
           </div>
 
           {/* Time Period Selector - Minimal format like reference */}
           <div
-            className="mb-3 d-flex align-items-center"
-            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
+            className="mb-2 d-flex align-items-center"
+            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "6px" }}
           >
             <button
               className="btn btn-link p-0 text-decoration-none"
@@ -817,9 +865,11 @@ const HourlyEfficiencyHeatmap = () => {
             <ReactECharts
               ref={chartRef}
               option={chartOption}
-              style={{ height: "400px", width: "100%" }}
+              style={{ height: "300px", width: "100%" }}
               opts={{ renderer: "svg" }}
               onEvents={onEvents}
+              notMerge={false}
+              lazyUpdate={true}
             />
 
             {/* Action buttons panel */}
@@ -889,7 +939,7 @@ const HourlyEfficiencyHeatmap = () => {
                       </span>
                     </div>
                     <div>
-                      <strong>Spend:</strong> ₹$
+                      <strong>Spend:</strong> ₹
                       {currentHourData.spend.toFixed(2)}
                     </div>
                     <div>
@@ -897,12 +947,12 @@ const HourlyEfficiencyHeatmap = () => {
                       {currentHourData.orders.toFixed(0)}
                     </div>
                     <div>
-                      <strong>Revenue:</strong> ₹$
+                      <strong>Revenue:</strong> ₹
                       {currentHourData.revenue.toFixed(2)}
                     </div>
                     <div className="mt-1 pt-1 border-top">
                       <strong>Organic:</strong>{" "}
-                      {currentHourData.organicOrders.toFixed(0)} orders, ₹$
+                      {currentHourData.organicOrders.toFixed(0)} orders, ₹
                       {currentHourData.organicRevenue.toFixed(2)}
                     </div>
                   </div>
@@ -913,7 +963,7 @@ const HourlyEfficiencyHeatmap = () => {
 
           {/* Color Legend - Gradient bar like stock market heatmap */}
           <div className="mt-2">
-            <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
               <div className="d-flex align-items-center gap-2">
                 <span className="small fw-semibold">ROAS Scale:</span>
                 <div
@@ -962,15 +1012,15 @@ const HourlyEfficiencyHeatmap = () => {
                   </span>
                 </div>
                 <div className="small text-muted">
-                  Spend: ₹${currentHourData.spend.toFixed(2)} | Orders:{" "}
-                  {currentHourData.orders.toFixed(0)} | Revenue: ₹$
+                  Spend: ₹{currentHourData.spend.toFixed(2)} | Orders:{" "}
+                  {currentHourData.orders.toFixed(0)} | Revenue: ₹
                   {currentHourData.revenue.toFixed(2)}
                 </div>
               </div>
             </div>
           )}
 
-          <div className="mt-1 small text-muted" style={{ fontSize: "10px" }}>
+          <div className="mt-2 small text-muted" style={{ fontSize: "10px" }}>
             <strong>Threshold:</strong> Red &lt;1× | Yellow 1-2× | Green
             &gt;2.5×
           </div>
@@ -1221,6 +1271,8 @@ const HourlyEfficiencyHeatmap = () => {
                     }}
                     opts={{ renderer: "svg" }}
                     onEvents={onEvents}
+                    notMerge={false}
+                    lazyUpdate={true}
                   />
 
                   {/* Action buttons panel */}

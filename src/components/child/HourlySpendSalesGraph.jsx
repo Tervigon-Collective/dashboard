@@ -577,8 +577,14 @@ const HourlySpendSalesGraph = () => {
         type: "value",
         name: axisName,
         nameLocation: "middle",
-        nameGap: 45,
+        nameGap: 60,
         position: "left",
+        nameTextStyle: {
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#1f2937",
+          padding: [0, 0, 0, 0],
+        },
         axisLabel: {
           formatter: function (value) {
             if (hasROASMetrics && !hasCurrencyMetrics) {
@@ -593,7 +599,8 @@ const HourlySpendSalesGraph = () => {
             }
             return value.toFixed(0);
           },
-          fontSize: 10,
+          fontSize: 11,
+          color: "#6b7280",
         },
         splitLine: {
           show: true,
@@ -611,13 +618,20 @@ const HourlySpendSalesGraph = () => {
         type: "value",
         name: "Orders",
         nameLocation: "middle",
-        nameGap: 45,
+        nameGap: 60,
         position: "right",
+        nameTextStyle: {
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#1f2937",
+          padding: [0, 0, 0, 0],
+        },
         axisLabel: {
           formatter: function (value) {
             return value.toFixed(0);
           },
-          fontSize: 10,
+          fontSize: 11,
+          color: "#6b7280",
         },
         splitLine: {
           show: false, // Don't show split lines for secondary axis
@@ -629,13 +643,20 @@ const HourlySpendSalesGraph = () => {
         type: "value",
         name: "Orders",
         nameLocation: "middle",
-        nameGap: 45,
+        nameGap: 60,
         position: "left",
+        nameTextStyle: {
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#1f2937",
+          padding: [0, 0, 0, 0],
+        },
         axisLabel: {
           formatter: function (value) {
             return value.toFixed(0);
           },
-          fontSize: 10,
+          fontSize: 11,
+          color: "#6b7280",
         },
         splitLine: {
           show: true,
@@ -697,12 +718,12 @@ const HourlySpendSalesGraph = () => {
       grid: {
         left:
           (hasCurrencyMetrics || hasROASMetrics) && hasOrderMetrics
-            ? "8%"
-            : "3%",
+            ? "10%"
+            : "5%",
         right:
           (hasCurrencyMetrics || hasROASMetrics) && hasOrderMetrics
-            ? "8%"
-            : "4%",
+            ? "10%"
+            : "5%",
         bottom: "10%",
         top: "15%",
         containLabel: true,
@@ -718,8 +739,16 @@ const HourlySpendSalesGraph = () => {
           : "Date",
         nameLocation: "middle",
         nameGap: 30,
+        nameTextStyle: {
+          fontSize: 12,
+          fontWeight: 600,
+          color: "#374151",
+          padding: [8, 0, 0, 0],
+        },
         axisLabel: {
           rotate: xAxisType === "date" ? 45 : 0,
+          fontSize: 11,
+          color: "#6b7280",
         },
       },
       yAxis: yAxisConfig,
@@ -1169,6 +1198,33 @@ const HourlySpendSalesGraph = () => {
                 }}
               />
             </div>
+          </div>
+
+          {/* Metrics Selection Skeleton */}
+          <div
+            className="mb-3 d-flex align-items-center gap-2 flex-wrap"
+            style={{ borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}
+          >
+            <div
+              className="skeleton"
+              style={{
+                height: "12px",
+                width: "60px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
+            <div
+              className="skeleton"
+              style={{
+                height: "20px",
+                width: "300px",
+                backgroundColor: "#e5e7eb",
+                borderRadius: "4px",
+                animation: "skeletonPulse 1.5s ease-in-out infinite",
+              }}
+            />
           </div>
 
           {/* Chart Area Skeleton */}
