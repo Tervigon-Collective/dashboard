@@ -908,7 +908,7 @@ export const activateBrandkit = async (brandId) => {
  * Upload a logo for a brandkit
  * @param {string} brandId - Brand ID
  * @param {File} logoFile - Logo file
- * @returns {Promise<Object>} Upload response
+ * @returns {Promise<Object>} Upload response with updated brandkit (now includes logo_paths array)
  */
 export const uploadBrandkitLogo = async (brandId, logoFile) => {
   const formData = new FormData();
@@ -926,6 +926,59 @@ export const uploadBrandkitLogo = async (brandId, logoFile) => {
     return response.data;
   } catch (error) {
     console.error("Upload brandkit logo error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Remove a logo from a brandkit
+ * @param {string} brandId - Brand ID
+ * @param {string} logoPath - Logo path to remove
+ * @returns {Promise<Object>} Updated brandkit response
+ */
+export const removeBrandkitLogo = async (brandId, logoPath) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+    const response = await axios.delete(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logos`,
+      {
+        headers,
+        data: { logo_path: logoPath },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Remove brandkit logo error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+      logoPath,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get all logos for a brandkit
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Response with logo_paths array
+ */
+export const getBrandkitLogos = async (brandId) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logos`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get brandkit logos error details:", {
       message: error.message,
       status: error.response?.status,
       brandId,
@@ -1122,17 +1175,6 @@ export const createExistingBrandkit = async (brandkitData) => {
   return response.data;
 };
 
-/**
- * Remove logo from a brandkit
- * @param {string} brandId - Brand ID
- * @returns {Promise<Object>} Updated brandkit
- */
-export const removeBrandkitLogo = async (brandId) => {
-  const response = await axios.delete(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`
-  );
-  return response.data;
-};
 
 /**
  * Generate brandkit from description

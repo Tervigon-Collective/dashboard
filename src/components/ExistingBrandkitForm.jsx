@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import * as brandkitApi from "@/services/contentGenerationApi";
 import ICPConfiguration from "./ICPConfiguration/ICPConfiguration";
-import { normalizeLogoUrlFromString } from "@/utils/logoUtils";
+import { normalizeLogoUrlFromString, normalizeLogoUrlsFromArray } from "@/utils/logoUtils";
 
 // Font Combobox Component - Text field with dropdown
 const FontCombobox = ({ value, fonts, fontsError, typoMode, loading, onChange, onRemove }) => {
@@ -165,6 +165,8 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     },
     logo_path: null,
     logo_url: null,
+    logo_paths: [],
+    logo_urls: [],
     brand_description: "",
     niche: "",
   });
@@ -311,6 +313,15 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
       setExtractedData(data);
 
       // Auto-fill form with extracted data
+      // Handle both new (logo_urls array) and old (logo_url/logo_path) formats
+      const logoUrls = data.logo_urls && Array.isArray(data.logo_urls) && data.logo_urls.length > 0
+        ? data.logo_urls
+        : data.logo_paths && Array.isArray(data.logo_paths) && data.logo_paths.length > 0
+        ? data.logo_paths
+        : data.logo_url || data.logo_path
+        ? [data.logo_url || data.logo_path]
+        : [];
+
       setFormData({
         brand_name: data.brand_name || "",
         tagline: data.tagline || "",
@@ -321,8 +332,10 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
           secondary: null,
           fallback_stack: "Arial, sans-serif",
         },
-        logo_path: data.logo_path || data.logo_url || null,
-        logo_url: data.logo_url || null,
+        logo_path: data.logo_path || data.logo_url || null, // Keep for backward compatibility
+        logo_url: data.logo_url || null, // Keep for backward compatibility
+        logo_paths: data.logo_paths || (data.logo_path ? [data.logo_path] : []),
+        logo_urls: logoUrls,
         brand_description: "",
         niche: "",
       });
@@ -397,8 +410,10 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
           secondary: null,
           fallback_stack: "Arial, sans-serif",
         },
-        logo_path: data.logo_path || data.logo_url || null,
-        logo_url: data.logo_url || null,
+        logo_path: data.logo_path || data.logo_url || null, // Keep for backward compatibility
+        logo_url: data.logo_url || null, // Keep for backward compatibility
+        logo_paths: data.logo_paths || (data.logo_path ? [data.logo_path] : []),
+        logo_urls: data.logo_urls || (data.logo_url ? [data.logo_url] : []),
         brand_description: brandDescription.trim(),
         niche: data.brand_type || brandDescription.trim(),
       });
@@ -688,6 +703,8 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
           },
           logo_path: null,
           logo_url: null,
+          logo_paths: [],
+          logo_urls: [],
           brand_description: "",
           niche: "",
         });
@@ -774,12 +791,14 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  // Remove logo
+  // Remove logo (handles both single and array formats)
   const handleRemoveLogo = () => {
     setFormData((prev) => ({
       ...prev,
       logo_path: null,
       logo_url: null,
+      logo_paths: [],
+      logo_urls: [],
     }));
   };
 
@@ -856,6 +875,19 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         }
       }
 
+      // Prepare logo data - prefer arrays, fallback to single values
+      const logoPaths = formData.logo_paths && formData.logo_paths.length > 0
+        ? formData.logo_paths
+        : formData.logo_path
+        ? [formData.logo_path]
+        : [];
+      
+      const logoUrls = formData.logo_urls && formData.logo_urls.length > 0
+        ? formData.logo_urls
+        : formData.logo_url
+        ? [formData.logo_url]
+        : [];
+
       const payload = {
         brand_id: brandId,
         brand_name: formData.brand_name.trim(),
@@ -863,7 +895,9 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         niche: formData.niche || "",
         color_palette: formData.color_palette,
         typography: buildTypographyPayload(formData.typography),
-        logo_path: formData.logo_path,
+        logo_path: formData.logo_path, // Keep for backward compatibility
+        logo_paths: logoPaths, // New array format
+        logo_urls: logoUrls, // New array format
         brand_essence: {
           core_message: formData.brand_description || "",
           tagline: formData.tagline.trim(),
@@ -1800,27 +1834,94 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
                       <Icon icon="solar:magic-stick-3-bold" width="16" height="16" /> Generate
                     </button>
                   </div>
-                  {formData.logo_path && (
-                    <div className="mt-2 d-flex align-items-center gap-2">
-                      <img
-                        src={normalizeLogoUrlFromString(formData.logo_url || formData.logo_path)}
-                        alt="Logo preview"
-                        style={{ maxWidth: "200px", maxHeight: "100px", objectFit: "contain" }}
-                        onError={(e) => {
-                          // Fallback: try using logo_path directly if logo_url fails
-                          if (formData.logo_url && formData.logo_path !== formData.logo_url) {
-                            e.target.src = normalizeLogoUrlFromString(formData.logo_path);
-                          }
+                  {/* Display multiple logos if available */}
+                  {(formData.logo_urls?.length > 0 || formData.logo_paths?.length > 0 || formData.logo_path || formData.logo_url) && (
+                    <div className="mt-2">
+                      <div
+                        className="logo-preview-grid"
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                          gap: "1rem",
                         }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={handleRemoveLogo}
-                        disabled={loading}
                       >
-                        Remove Logo
-                      </button>
+                        {(formData.logo_urls || formData.logo_paths || (formData.logo_url || formData.logo_path ? [formData.logo_url || formData.logo_path] : [])).map((logoUrl, index) => {
+                          const normalizedUrl = normalizeLogoUrlFromString(logoUrl);
+                          return (
+                            <div
+                              key={index}
+                              className="logo-preview"
+                              style={{
+                                position: "relative",
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                padding: "0.5rem",
+                                backgroundColor: "#f8f9fa",
+                              }}
+                            >
+                              <img
+                                src={normalizedUrl}
+                                alt={`Logo ${index + 1}`}
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  maxHeight: "100px",
+                                  objectFit: "contain",
+                                  borderRadius: "4px",
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.parentElement.innerHTML = `
+                                    <div class="text-muted text-center" style="padding: 1rem;">
+                                      <i>Logo not found</i>
+                                    </div>
+                                  `;
+                                }}
+                              />
+                              <div
+                                style={{
+                                  marginTop: "0.5rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#6c757d",
+                                  }}
+                                >
+                                  {index === 0 ? "Primary" : `Logo ${index + 1}`}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => {
+                                    const newUrls = formData.logo_urls || formData.logo_paths || [];
+                                    const filtered = newUrls.filter((_, i) => i !== index);
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      logo_urls: filtered,
+                                      logo_paths: filtered,
+                                      logo_path: filtered.length > 0 ? filtered[0] : null,
+                                      logo_url: filtered.length > 0 ? filtered[0] : null,
+                                    }));
+                                  }}
+                                  disabled={loading}
+                                >
+                                  <Icon icon="solar:trash-bin-2-bold" width="14" height="14" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {formData.logo_urls?.length > 0 || formData.logo_paths?.length > 0 ? (
+                        <p className="text-muted mt-2" style={{ fontSize: "0.75rem" }}>
+                          Found {formData.logo_urls?.length || formData.logo_paths?.length} logo(s) from website extraction
+                        </p>
+                      ) : null}
                     </div>
                   )}
                 </div>
