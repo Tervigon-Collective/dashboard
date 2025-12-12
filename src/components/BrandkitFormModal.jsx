@@ -559,9 +559,15 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
       // This will be handled after brandkit creation
       const reader = new FileReader();
       reader.onloadend = () => {
+        const dataUrl = reader.result;
+        const currentPaths = Array.isArray(formData.logo_paths) ? formData.logo_paths : [];
+        const updatedPaths = dataUrl ? [...currentPaths, dataUrl] : currentPaths;
         setFormData((prev) => ({
           ...prev,
-          logo_path: reader.result, // Temporary, will be uploaded after creation
+          logo_paths: updatedPaths,
+          logo_urls: updatedPaths,
+          logo_path: updatedPaths[0] || null,
+          logo_url: updatedPaths[0] || null,
         }));
         setIsSubmitting(false);
       };

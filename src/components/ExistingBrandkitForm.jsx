@@ -336,8 +336,8 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         logo_url: data.logo_url || null, // Keep for backward compatibility
         logo_paths: data.logo_paths || (data.logo_path ? [data.logo_path] : []),
         logo_urls: logoUrls,
-        brand_description: "",
-        niche: "",
+        brand_description: data.brand_description || "",
+        niche: data.brand_type || data.niche || "",
       });
 
       alert(`Website data extracted successfully using ${data.extraction_method || "beautifulsoup"}!`);
@@ -776,10 +776,15 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     try {
       const reader = new FileReader();
       reader.onloadend = () => {
+        const dataUrl = reader.result;
+        const currentPaths = Array.isArray(formData.logo_paths) ? formData.logo_paths : [];
+        const updatedPaths = dataUrl ? [...currentPaths, dataUrl] : currentPaths;
         setFormData((prev) => ({
           ...prev,
-          logo_path: reader.result, // Temporary, will be stored as part of payload
-          logo_url: null,
+          logo_paths: updatedPaths,
+          logo_urls: updatedPaths,
+          logo_path: updatedPaths[0] || null,
+          logo_url: updatedPaths[0] || null,
         }));
         setLoading(false);
       };
@@ -842,6 +847,12 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
+      const derivedBrandType =
+        formData.niche ||
+        extractedData?.brand_type ||
+        brandDescription.trim() ||
+        "";
+
       const brandId = formData.brand_name
         .toLowerCase()
         .trim()
@@ -892,6 +903,7 @@ const ExistingBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         brand_id: brandId,
         brand_name: formData.brand_name.trim(),
         brand_description: formData.brand_description || formData.tagline,
+        brand_type: derivedBrandType,
         niche: formData.niche || "",
         color_palette: formData.color_palette,
         typography: buildTypographyPayload(formData.typography),
