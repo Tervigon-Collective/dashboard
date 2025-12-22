@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import SidebarPermissionGuard from "@/components/SidebarPermissionGuard";
 import GenerationResultsModal from "@/components/GenerationResultsModal";
 import ReviewPromptsModal from "@/components/ReviewPromptsModal";
+import ChatContentGenerator from "@/components/ChatContentGenerator";
 import BrandkitSelector from "@/components/BrandkitSelector";
 import BrandkitFormModal from "@/components/BrandkitFormModal";
 import BrandkitManagementModal from "@/components/BrandkitManagementModal";
@@ -1015,6 +1016,43 @@ export default function CreateContentPage() {
                   className="me-2"
                 />
                 Generated Content
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link ${activeTab === "chat" ? "active" : ""}`}
+                onClick={() => setActiveTab("chat")}
+                type="button"
+                style={{
+                  backgroundColor: activeTab === "chat" ? "#f8fafc" : "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "chat" ? "2px solid #6b7280" : "2px solid transparent",
+                  color: activeTab === "chat" ? "#374151" : "#6b7280",
+                  fontWeight: activeTab === "chat" ? "500" : "400",
+                  borderRadius: "0",
+                  padding: "12px 20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== "chat") {
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.color = "#4b5563";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== "chat") {
+                    e.target.style.backgroundColor = "transparent";
+                    e.target.style.color = "#6b7280";
+                  }
+                }}
+              >
+                <Icon
+                  icon="solar:chat-round-bold"
+                  width="16"
+                  height="16"
+                  className="me-2"
+                />
+                Chat
               </button>
             </li>
           </ul>
@@ -2745,6 +2783,13 @@ export default function CreateContentPage() {
                   }
                 `}} />
               </div>
+            </div>
+          )}
+
+          {/* Chat Tab */}
+          {activeTab === "chat" && (
+            <div className="tab-pane fade show active">
+              <ChatContentGenerator />
             </div>
           )}
         </div>
