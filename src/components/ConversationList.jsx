@@ -152,9 +152,15 @@ export default function ConversationList({
       <div className="sp-chat-sidebar__top">
         <button
           type="button"
-          className="btn btn-primary w-100 btn-sm d-flex align-items-center justify-content-center gap-2 sp-pill"
+          className="btn btn-outline-secondary w-100 btn-sm d-flex align-items-center justify-content-center gap-2"
           onClick={onCreateNew}
           disabled={loading}
+          style={{
+            borderRadius: "0.5rem",
+            fontWeight: 400,
+            borderColor: "#e5e7eb",
+            color: "#374151",
+          }}
         >
           <i className="ri-edit-2-line" style={{ fontSize: "1rem" }}></i>
           New chat

@@ -361,6 +361,9 @@ export const getGenerationStatus = async (jobId) => {
     console.error("Get generation status error details:", {
       message: error.message,
       status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `${config.pythonApi.baseURL}/api/generate/status/${jobId}`,
       jobId,
     });
     throw error;
@@ -525,6 +528,84 @@ export const approveReview = async (jobId) => {
   }
 };
 
+/**
+ * Regenerate individual prompt using AI
+ * @param {string} jobId - Job ID
+ * @param {number} promptIndex - Index of prompt to regenerate
+ * @returns {Promise<Object>} Response with new prompt
+ */
+export const regenerateIndividualPrompt = async (jobId, promptIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts/${promptIndex}/regenerate`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate prompt error:", error);
+    throw error;
+  }
+};
+
+export const regenerateIndividualStoryboardShot = async (jobId, shotIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/regenerate`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate storyboard shot error:", error);
+    throw error;
+  }
+};
+
+export const regenerateFirstFrameImage = async (jobId, shotIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/regenerate-image`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate first frame image error:", error);
+    throw error;
+  }
+};
+
+export const editFirstFrameImage = async (jobId, shotIndex, customPrompt) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/edit-image`,
+      { prompt: customPrompt },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Edit first frame image error:", error);
+    throw error;
+  }
+};
+
 // ========== File Upload ==========
 
 /**
@@ -595,6 +676,38 @@ export const uploadLogo = async (file) => {
     }
   );
   return response.data;
+};
+
+/**
+ * Upload a product image (direct to Python backend)
+ * @param {File} file - Product image file
+ * @returns {Promise<Object>} Upload response with product_image_id and url
+ */
+export const uploadProductImage = async (file) => {
+  try {
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append("product_image", file);
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/upload/product-image`,
+      formData,
+      {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Upload product image error details:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
 };
 
 // ========== Generated Content ==========

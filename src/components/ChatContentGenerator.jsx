@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import ModeSelector from "./ModeSelector";
-import PromptInput from "./PromptInput";
 import CanvasItem from "./CanvasItem";
 import ConversationList from "./ConversationList";
+import PlaygroundComposer from "./content-generator/PlaygroundComposer";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import {
   chatGenerateImage,
@@ -115,7 +114,7 @@ export default function ChatContentGenerator() {
       isLoadingConversationRef.current = true;
       // Restore canvas items from conversation
       setCanvasItems(currentConversation.canvas_items || []);
-      
+
       // Restore settings
       const settings = currentConversation.settings || {};
       if (settings.numImages !== undefined) {
@@ -224,11 +223,11 @@ export default function ChatContentGenerator() {
     // Append so newest stays at bottom (chat timeline)
     setCanvasItems((prev) => {
       const newItems = [...prev, item];
-      
+
       // Auto-generate title from first prompt if this is the first item
       // Title auto-generation is handled by the backend, so we don't need to do anything here
       // The auto-save will trigger and backend will generate title from first prompt
-      
+
       return newItems;
     });
   };
@@ -286,16 +285,16 @@ export default function ChatContentGenerator() {
               const variants = Array.isArray(shot.variants)
                 ? shot.variants
                 : [
-                    {
-                      id: shot.task_id || `v0-${shot.shot_number || 0}`,
-                      url: shot.url,
-                      rawPrompt: shot.shot_description,
-                      optimizedPrompt: shot.optimized_prompt,
-                      status: "completed",
-                      task_id: shot.task_id,
-                      all_urls: shot.all_urls,
-                    },
-                  ];
+                  {
+                    id: shot.task_id || `v0-${shot.shot_number || 0}`,
+                    url: shot.url,
+                    rawPrompt: shot.shot_description,
+                    optimizedPrompt: shot.optimized_prompt,
+                    status: "completed",
+                    task_id: shot.task_id,
+                    all_urls: shot.all_urls,
+                  },
+                ];
               const nextVariants = variants.map((v) => {
                 if (v.id !== ctx.variantId) return v;
                 const firstImage = job?.results?.images?.[0];
@@ -319,8 +318,8 @@ export default function ChatContentGenerator() {
                   variantIndex >= 0
                     ? variantIndex
                     : Number.isInteger(shot.selectedVariantIndex)
-                    ? shot.selectedVariantIndex
-                    : 0,
+                      ? shot.selectedVariantIndex
+                      : 0,
               };
             });
             return {
@@ -397,16 +396,16 @@ export default function ChatContentGenerator() {
           const variants = Array.isArray(s.variants)
             ? s.variants
             : [
-                {
-                  id: s.task_id || `v0-${s.shot_number || 0}`,
-                  url: s.url,
-                  rawPrompt: s.shot_description,
-                  optimizedPrompt: s.optimized_prompt,
-                  status: "completed",
-                  task_id: s.task_id,
-                  all_urls: s.all_urls,
-                },
-              ];
+              {
+                id: s.task_id || `v0-${s.shot_number || 0}`,
+                url: s.url,
+                rawPrompt: s.shot_description,
+                optimizedPrompt: s.optimized_prompt,
+                status: "completed",
+                task_id: s.task_id,
+                all_urls: s.all_urls,
+              },
+            ];
 
           const nextVariants = [
             ...variants,
@@ -532,16 +531,16 @@ export default function ChatContentGenerator() {
           const variants = Array.isArray(shot.variants)
             ? shot.variants
             : [
-                {
-                  id: shot.task_id || `v0-${shot.shot_number || 0}`,
-                  url: shot.url,
-                  rawPrompt: shot.shot_description,
-                  optimizedPrompt: shot.optimized_prompt,
-                  status: "completed",
-                  task_id: shot.task_id,
-                  all_urls: shot.all_urls,
-                },
-              ];
+              {
+                id: shot.task_id || `v0-${shot.shot_number || 0}`,
+                url: shot.url,
+                rawPrompt: shot.shot_description,
+                optimizedPrompt: shot.optimized_prompt,
+                status: "completed",
+                task_id: shot.task_id,
+                all_urls: shot.all_urls,
+              },
+            ];
 
           const nextVariants = [
             ...variants,
@@ -675,8 +674,8 @@ export default function ChatContentGenerator() {
         mode === "shots"
           ? "parsing_storyboard"
           : mode === "video"
-          ? "generating_video"
-          : "optimizing",
+            ? "generating_video"
+            : "optimizing",
       results: null,
     };
 
@@ -690,7 +689,7 @@ export default function ChatContentGenerator() {
         const reference_images_base64 = referenceImages
           .filter((r) => r.base64 && r.base64.startsWith("data:image"))
           .map((r) => r.base64);
-        
+
         const resp = await chatGenerateImage({
           prompt,
           reference_image_ids,
@@ -720,7 +719,7 @@ export default function ChatContentGenerator() {
         const shotImagesBase64 = ensuredRefs
           .filter((r) => r.base64 && r.base64.startsWith("data:image"))
           .map((r) => r.base64);
-        
+
         if (!shotIds.length && !shotImagesBase64.length) {
           updateCanvasItem(baseItem.id, () => ({
             status: "failed",
@@ -809,18 +808,20 @@ export default function ChatContentGenerator() {
         <div className="sp-chatgen__scroll" ref={scrollRef}>
           {canvasItems.length === 0 ? (
             <div className="sp-empty">
-              <div className="sp-empty__card">
-                <div className="sp-empty__icon" aria-hidden="true" />
-                <p className="sp-empty__title">No results yet</p>
-                <div className="sp-empty__subtitle">
-                  Start with a prompt or add reference images to generate.
+              <div className="sp-empty__content">
+                <h2 className="sp-empty__title">Start a new generation</h2>
+                <p className="sp-empty__subtitle">Type a prompt or attach references</p>
+                <div className="sp-empty__suggestions">
+                  <button className="suggestion-card">Product hero image, studio lighting</button>
+                  <button className="suggestion-card">Storyboard for 9:16 ad</button>
+                  <button className="suggestion-card">Turn this image into a video</button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="row g-3">
+            <div className="chat-messages-list">
               {canvasItems.map((item) => (
-                <div className="col-12" key={item.id}>
+                <div className="chat-message-item" key={item.id}>
                   <CanvasItem
                     item={item}
                     onEditShot={async (shot, parentItem) => {
@@ -844,10 +845,8 @@ export default function ChatContentGenerator() {
                       setShotEditContext(null);
                       setMode("video");
                       setPrompt(
-                        `Use this shot as part of a video sequence.\n\nShot ${
-                          shot.shot_number || ""
-                        }: ${
-                          shot.shot_description || ""
+                        `Use this shot as part of a video sequence.\n\nShot ${shot.shot_number || ""
+                        }: ${shot.shot_description || ""
                         }\n\nDescribe transitions, pacing, and motion for the full video…`
                       );
                       if (shot.url) {
@@ -892,11 +891,11 @@ export default function ChatContentGenerator() {
                             Array.isArray(s.variants) && s.variants.length > 0
                               ? s.variants
                               : [
-                                  {
-                                    url: s.url,
-                                    rawPrompt: s.shot_description,
-                                  },
-                                ];
+                                {
+                                  url: s.url,
+                                  rawPrompt: s.shot_description,
+                                },
+                              ];
                           const selectedIdx = Number.isInteger(s.selectedVariantIndex) ? s.selectedVariantIndex : 0;
                           const current = variants[Math.min(Math.max(selectedIdx, 0), variants.length - 1)] || variants[0];
                           const url = current?.url || s.url;
@@ -914,38 +913,19 @@ export default function ChatContentGenerator() {
         </div>
 
         <div className="sp-chatgen__composer">
-          <div className="sp-chatgen__composerInner">
-            {shotEditContext?.parentItemId && (
-              <div className="alert alert-info py-2 mb-2 d-flex justify-content-between align-items-center">
-                <div className="small mb-0">
-                  Editing <strong>Shot {shotEditContext.shotNumber ?? ""}</strong> — Generate will update the shot card (use{" "}
-                  {"<"} {">"} to browse versions).
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary"
-                  onClick={() => setShotEditContext(null)}
-                >
-                  Done
-                </button>
-              </div>
-            )}
-            <div className="mb-3">
-              <ModeSelector value={mode} onChange={setMode} />
-            </div>
-
-            <PromptInput
-              mode={mode}
-              prompt={prompt}
-              onChangePrompt={setPrompt}
-              onUploadImages={handleUploadImages}
-              onGenerate={handleGenerate}
-              numImages={numImages}
-              onChangeNumImages={setNumImages}
-              referenceImages={referenceImages}
-              onRemoveReference={handleRemoveReference}
-            />
-          </div>
+          <PlaygroundComposer
+            mode={mode}
+            onModeChange={setMode}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            onUploadImages={handleUploadImages}
+            onGenerate={handleGenerate}
+            numImages={numImages}
+            onNumImagesChange={setNumImages}
+            referenceImages={referenceImages}
+            onRemoveReference={handleRemoveReference}
+            hasMessages={canvasItems.length > 0}
+          />
         </div>
       </div>
     </div>

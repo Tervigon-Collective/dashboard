@@ -73,9 +73,9 @@ export default function CanvasItem({
                 const key = img.task_id || img.url || `img-${idx}`;
                 return (
                   <div className="col-6 col-md-4" key={key}>
-                  <div className="ratio ratio-1x1 border rounded" style={{ overflow: "hidden" }}>
-                    <img src={img.url} alt="Generated" className="w-100 h-100" style={{ objectFit: "cover" }} />
-                  </div>
+                    <div className="ratio ratio-1x1 border rounded" style={{ overflow: "hidden" }}>
+                      <img src={img.url} alt="Generated" className="w-100 h-100" style={{ objectFit: "cover" }} />
+                    </div>
                   </div>
                 );
               })}
@@ -127,16 +127,16 @@ export default function CanvasItem({
                     Array.isArray(shot.variants) && shot.variants.length > 0
                       ? shot.variants
                       : [
-                          {
-                            id: shot.task_id || `v0-${shot.shot_number || idx}`,
-                            url: shot.url,
-                            rawPrompt: shot.shot_description,
-                            optimizedPrompt: shot.optimized_prompt,
-                            status: "completed",
-                            task_id: shot.task_id,
-                            all_urls: shot.all_urls,
-                          },
-                        ];
+                        {
+                          id: shot.task_id || `v0-${shot.shot_number || idx}`,
+                          url: shot.url,
+                          rawPrompt: shot.shot_description,
+                          optimizedPrompt: shot.optimized_prompt,
+                          status: "completed",
+                          task_id: shot.task_id,
+                          all_urls: shot.all_urls,
+                        },
+                      ];
 
                   const selectedIdxRaw = Number.isInteger(shot.selectedVariantIndex)
                     ? shot.selectedVariantIndex
@@ -348,8 +348,8 @@ export default function CanvasItem({
               {item.mode === "image"
                 ? "Image from Prompt"
                 : item.mode === "shots"
-                ? "Storyboard → Shots"
-                : "Shots → Video"}
+                  ? "Storyboard → Shots"
+                  : "Shots → Video"}
             </div>
             <span className={`badge ${statusClass} mt-1`}>
               {statusLabel}

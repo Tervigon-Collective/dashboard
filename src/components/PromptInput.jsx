@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { Icon } from "@iconify/react";
 
 /**
  * PromptInput
@@ -41,24 +42,23 @@ export default function PromptInput({
   return (
     <div className="sp-composerCard">
       <div className="p-3">
-        <div className="mb-3">
-          <textarea
-            className="form-control sp-composerTextarea"
-            placeholder={placeholderMap[mode]}
-            value={prompt}
-            onChange={(e) => onChangePrompt(e.target.value)}
-            rows={3}
-          />
-        </div>
+        <textarea
+          className="form-control sp-composerTextarea"
+          placeholder={placeholderMap[mode]}
+          value={prompt}
+          onChange={(e) => onChangePrompt(e.target.value)}
+          rows={4}
+        />
 
-        <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          <div className="d-flex align-items-center gap-2">
+        <div className="prompt-input-actions">
+          <div className="prompt-input-left">
             <button
               type="button"
               onClick={handleFileClick}
-              className="btn btn-outline-secondary btn-sm sp-btnGhost"
+              className="btn-reference-images"
             >
-              + Reference images
+              <Icon icon="solar:gallery-add-bold" className="upload-icon-small" />
+              <span>Upload</span>
             </button>
             <input
               ref={fileInputRef}
@@ -69,31 +69,27 @@ export default function PromptInput({
               onChange={(e) => onUploadImages(e.target.files)}
             />
             {referenceImages.length > 0 && (
-              <span className="text-muted small">{referenceImages.length} image{referenceImages.length > 1 ? "s" : ""} added</span>
+              <span className="reference-count">{referenceImages.length} image{referenceImages.length > 1 ? "s" : ""} added</span>
             )}
           </div>
 
-          <div className="d-flex align-items-center gap-3 ms-auto">
+          <div className="prompt-input-right">
             {isImageMode && (
-              <div className="d-flex align-items-center gap-2 small text-muted">
-                <span className="text-muted">Images</span>
-                <div className="d-flex align-items-center gap-2 border rounded-pill px-2 py-1 bg-light">
+              <div className="image-count-control">
+                <span className="image-count-label">Images</span>
+                <div className="image-count-selector">
                   <button
                     type="button"
-                    className="btn btn-sm btn-link text-secondary p-0"
-                    style={{ textDecoration: "none" }}
+                    className="count-btn"
                     onClick={() => onChangeNumImages(Math.max(1, numImages - 1))}
                     disabled={numImages <= 1}
                   >
                     −
                   </button>
-                  <span className="fw-semibold text-dark" style={{ minWidth: 12, textAlign: "center" }}>
-                    {numImages}
-                  </span>
+                  <span className="count-value">{numImages}</span>
                   <button
                     type="button"
-                    className="btn btn-sm btn-link text-secondary p-0"
-                    style={{ textDecoration: "none" }}
+                    className="count-btn"
                     onClick={() => onChangeNumImages(Math.min(4, numImages + 1))}
                     disabled={numImages >= 4}
                   >
@@ -103,12 +99,12 @@ export default function PromptInput({
               </div>
             )}
             {isShotsMode && (
-              <div className="text-muted small">Images are generated per shot</div>
+              <div className="shots-info">Images are generated per shot</div>
             )}
             <button
               type="button"
               onClick={onGenerate}
-              className="btn btn-dark px-4 sp-btnPrimary"
+              className="btn-generate"
               disabled={!canGenerate}
             >
               Generate
