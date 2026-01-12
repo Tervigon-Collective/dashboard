@@ -453,7 +453,7 @@ export const retryImageGeneration = async (jobId, artifactId) => {
 export const getReviewPrompts = async (jobId) => {
   try {
     const headers = await getAuthHeaders();
-    // Call Python backend directly
+    // Call Python backend directly - use v1 endpoint
     const response = await axios.get(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}`,
       { headers }

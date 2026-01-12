@@ -1066,6 +1066,11 @@ export default function VideoGenerator({ initialData }) {
                             alt={`Shot ${index + 1} first frame`}
                             className="first-frame-image"
                             key={getDisplayImageUrl(shot, index)} // Force reload on URL change
+                            onError={(e) => {
+                              console.error("Failed to load first frame image:", getDisplayImageUrl(shot, index));
+                              console.error("Shot data:", shot);
+                              e.target.style.display = "none";
+                            }}
                           />
                           {/* Version Navigation */}
                           {imageVersionHistory[index]?.length > 0 && (

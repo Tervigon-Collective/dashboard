@@ -253,7 +253,7 @@ export default function ChatContentGenerator() {
           error: job.error,
         }));
 
-        if (["completed", "failed"].includes(job.status)) {
+        if (["completed", "failed", "pending_review"].includes(job.status)) {
           clearInterval(intervalId);
           pollingRef.current.delete(jobId);
         }
@@ -332,7 +332,7 @@ export default function ChatContentGenerator() {
           })
         );
 
-        if (["completed", "failed"].includes(job.status)) {
+        if (["completed", "failed", "pending_review"].includes(job.status)) {
           clearInterval(intervalId);
           pollingRef.current.delete(jobId);
           shotPollingContextRef.current.delete(jobId);
