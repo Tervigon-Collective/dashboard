@@ -1657,5 +1657,133 @@ export const deleteProject = async (projectId, { delete_conversations = false } 
   return response.data;
 };
 
+// ========== Segment-First Video API ==========
+
+/**
+ * Get segment specifications and metadata for a video generation job
+ * @param {string} jobId - The job ID
+ * @returns {Promise<Object>} Segment specs with S1-S4 data, tags, timing
+ */
+export const getSegmentSpecs = async (jobId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Get multi-candidate variants for a specific segment
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @returns {Promise<Object>} Array of 2-4 script + asset variants
+ */
+export const getSegmentVariants = async (jobId, segmentId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/variants`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Select a specific variant for a segment
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @param {Object} variantData - The selected variant data
+ * @returns {Promise<Object>} Confirmation response
+ */
+export const selectSegmentVariant = async (jobId, segmentId, variantData) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/select-variant`,
+    variantData,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Regenerate a specific segment (without regenerating the whole video)
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @param {Object} options - Optional regeneration parameters
+ * @returns {Promise<Object>} New segment data
+ */
+export const regenerateSegment = async (jobId, segmentId, options = {}) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/regenerate`,
+    options,
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Carousel API ==========
+
+/**
+ * Generate a carousel ad with multiple cards
+ * @param {Object} carouselSpec - Carousel specification
+ * @returns {Promise<Object>} Generated carousel with card content
+ */
+export const generateCarousel = async (carouselSpec) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/carousel/generate`,
+    carouselSpec,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Generate images for carousel cards
+ * @param {string} carouselId - The carousel ID
+ * @param {Array} cards - Array of card data with scripts
+ * @returns {Promise<Object>} Cards with generated images
+ */
+export const generateCarouselImages = async (carouselId, cards) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/carousel/${carouselId}/generate-images`,
+    { cards },
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Metrics API ==========
+
+/**
+ * Get segment-level performance metrics for an ad
+ * @param {string} adId - The ad ID
+ * @returns {Promise<Object>} Segment metrics with S1-S4 performance data
+ */
+export const getAdMetrics = async (adId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/metrics/ad/${adId}`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Get segment-level metrics for a generation job
+ * @param {string} jobId - The job ID
+ * @returns {Promise<Object>} Segment metrics
+ */
+export const getJobMetrics = async (jobId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/metrics/job/${jobId}`,
+    { headers }
+  );
+  return response.data;
+};
+
 // Export client for custom requests if needed
 export { apiClient };

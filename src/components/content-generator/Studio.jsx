@@ -6,6 +6,7 @@ import StudioSidebar from "./StudioSidebar";
 import IdeaGenerator from "./studio/IdeaGenerator";
 import ImageGenerator from "./studio/ImageGenerator";
 import VideoGenerator from "./studio/VideoGenerator";
+import CarouselGenerator from "./studio/CarouselGenerator";
 import History from "./studio/History";
 import Library from "./studio/Library";
 import "./Studio.css";
@@ -14,6 +15,7 @@ const STUDIO_SECTIONS = {
   idea: "idea",
   image: "image",
   video: "video",
+  carousel: "carousel",
   history: "history",
   library: "library",
 };
@@ -37,6 +39,8 @@ export default function Studio() {
         return <ImageGenerator initialData={generatorInput} />;
       case STUDIO_SECTIONS.video:
         return <VideoGenerator initialData={generatorInput} />;
+      case STUDIO_SECTIONS.carousel:
+        return <CarouselGenerator />;
       case STUDIO_SECTIONS.history:
         return <History />;
       case STUDIO_SECTIONS.library:

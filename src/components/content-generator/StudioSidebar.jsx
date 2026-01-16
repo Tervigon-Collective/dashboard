@@ -7,6 +7,7 @@ const STUDIO_SECTIONS = {
   idea: "idea",
   image: "image",
   video: "video",
+  carousel: "carousel",
   history: "history",
   library: "library",
 };
@@ -28,6 +29,12 @@ const SIDEBAR_ITEMS = [
     id: STUDIO_SECTIONS.video,
     label: "Video Generator",
     icon: "solar:video-library-bold",
+    group: "create",
+  },
+  {
+    id: STUDIO_SECTIONS.carousel,
+    label: "Carousel Generator",
+    icon: "solar:layers-bold",
     group: "create",
   },
   {
@@ -63,6 +70,7 @@ export default function StudioSidebar({ activeSection, onSectionChange }) {
             >
               <Icon icon={item.icon} className="studio-sidebar__icon" />
               <span className="studio-sidebar__label">{item.label}</span>
+              {item.badge && <span className="studio-sidebar__badge">{item.badge}</span>}
             </button>
           ))}
         </div>

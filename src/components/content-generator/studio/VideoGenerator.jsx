@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { quickGenerate, getGenerationStatus, getReviewPrompts, updateReviewPrompts, approveReview, getGenerationResults, uploadProductImage, regenerateIndividualPrompt, regenerateIndividualStoryboardShot, regenerateFirstFrameImage, editFirstFrameImage } from "../../../services/contentGenerationApi";
+import { quickGenerate, getGenerationStatus, getReviewPrompts, updateReviewPrompts, approveReview, getGenerationResults, uploadProductImage, regenerateIndividualPrompt, regenerateIndividualStoryboardShot, regenerateFirstFrameImage, editFirstFrameImage, getSegmentSpecs, getSegmentVariants, selectSegmentVariant, regenerateSegment } from "../../../services/contentGenerationApi";
 import config from "../../../config";
+import SegmentCard from "../SegmentCard";
+import VariantSelector from "../VariantSelector";
 import "./VideoGenerator.css";
 
 const STEP_STATES = {
@@ -49,6 +51,12 @@ export default function VideoGenerator({ initialData }) {
   const [currentImageVersion, setCurrentImageVersion] = useState({}); // Track current version index per shot: {shotIndex: versionIndex}
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [isGeneratingFirstFrames, setIsGeneratingFirstFrames] = useState(false);
+  
+  // Segment-first architecture state
+  const [segmentData, setSegmentData] = useState(null); // Segment specs from backend
+  const [selectedSegment, setSelectedSegment] = useState(null); // For variant selector
+  const [showVariantSelector, setShowVariantSelector] = useState(false);
+  const [loadingSegments, setLoadingSegments] = useState(false);
 
   // Auto-advance to storyboard step if initialData provided a storyboard
   useEffect(() => {
@@ -56,8 +64,91 @@ export default function VideoGenerator({ initialData }) {
       setCurrentStep(STEP_STATES.STORYBOARD);
       // Trigger first frame generation for each shot
       generateFirstFramesForStoryboard();
+      // Try to load segment specs
+      fetchSegmentSpecs();
     }
   }, [initialData]);
+
+  // Fetch segment specs when video generation completes
+  const fetchSegmentSpecs = async () => {
+    if (!jobId) return;
+    
+    setLoadingSegments(true);
+    try {
+      const specs = await getSegmentSpecs(jobId);
+      setSegmentData(specs);
+      console.log("Loaded segment specs:", specs);
+    } catch (err) {
+      console.log("Segment specs not available yet (API may not be implemented):", err.message);
+      // This is OK - backend might not have segment endpoint yet
+    } finally {
+      setLoadingSegments(false);
+    }
+  };
+
+  // Handle segment edit action
+  const handleEditSegment = (segment) => {
+    console.log("Edit segment:", segment);
+    // TODO: Implement segment editing UI
+  };
+
+  // Handle segment regeneration
+  const handleRegenerateSegment = async (segment) => {
+    if (!jobId) {
+      setError("No job ID found");
+      return;
+    }
+
+    setError(null);
+    try {
+      const result = await regenerateSegment(jobId, segment.segment_id);
+      
+      // Update segment data
+      setSegmentData(prev => ({
+        ...prev,
+        [segment.segment_id]: result
+      }));
+      
+      console.log("Regenerated segment:", result);
+    } catch (err) {
+      console.error("Failed to regenerate segment:", err);
+      setError(err.message || "Failed to regenerate segment");
+    }
+  };
+
+  // Handle variant selection
+  const handleSelectVariant = async (segment) => {
+    setSelectedSegment(segment);
+    setShowVariantSelector(true);
+  };
+
+  // Handle variant confirmation
+  const handleConfirmVariant = async (variant) => {
+    if (!jobId || !selectedSegment) {
+      setError("Missing job or segment data");
+      return;
+    }
+
+    setError(null);
+    try {
+      await selectSegmentVariant(jobId, selectedSegment.segment_id, variant);
+      
+      // Update segment data with selected variant
+      setSegmentData(prev => ({
+        ...prev,
+        [selectedSegment.segment_id]: {
+          ...prev[selectedSegment.segment_id],
+          selected_variant: variant
+        }
+      }));
+      
+      setShowVariantSelector(false);
+      setSelectedSegment(null);
+    } catch (err) {
+      console.error("Failed to select variant:", err);
+      setError(err.message || "Failed to select variant");
+    }
+  };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files || []);
@@ -975,11 +1066,30 @@ export default function VideoGenerator({ initialData }) {
             </div>
           ) : generatedStoryboard.length > 0 ? (
             <div className="stepper-content">
-              <div className="storyboard-visual-list">
-                {generatedStoryboard.map((shot, index) => (
-                  <div key={index} className="storyboard-visual-item">
+              {/* Segment View (Default) */}
+              <div className="segment-view-container">
+                <div className="storyboard-visual-list">
+                {generatedStoryboard.map((shot, index) => {
+                  const segmentId = `S${index + 1}`;
+                  const segmentRole = ["Hook", "Message", "Proof", "CTA"][index];
+                  const timeWindow = ["0-3s", "3-7s", "7-12s", "12-15s"][index];
+                  
+                  // Relevant tags per segment
+                  const segmentTags = [
+                    { intent: "Hook", neuro: "Speed", narrative: "Visual Demo", density: "High", audio: "Music-led" },
+                    { intent: "Curiosity", neuro: "Contrast", narrative: "Talking Head", density: "Medium", audio: "Voice-led" },
+                    { intent: "Relief", neuro: "Novelty", narrative: "Visual Demo", density: "High", audio: "Voice-led" },
+                    { intent: "Agency", neuro: "Loss Avoidance", narrative: "Text-on-Screen", density: "Low", audio: "Voice-led" }
+                  ][index];
+                  
+                  return (
+                  <div key={index} className="storyboard-visual-item segment-item">
                     <div className="storyboard-header">
-                      <span className="shot-number">Shot {index + 1}</span>
+                      <div className="segment-title-group">
+                        <span className="segment-id">{segmentId}</span>
+                        <span className="segment-role">{segmentRole}</span>
+                        <span className="segment-time">{timeWindow}</span>
+                      </div>
                       <div className="storyboard-actions-inline">
                         {editingStoryboardIndex === index ? (
                           <>
@@ -1183,9 +1293,40 @@ export default function VideoGenerator({ initialData }) {
                         </div>
                       )}
                     </div>
+
+                    {/* Segment Tags */}
+                    <div className="segment-tags">
+                      <div className="tag-item">
+                        <span className="tag-icon">🎯</span>
+                        <span className="tag-label">Intent</span>
+                        <span className="tag-value intent">{segmentTags.intent}</span>
+                      </div>
+                      <div className="tag-item">
+                        <span className="tag-icon">⚡</span>
+                        <span className="tag-label">Neuro</span>
+                        <span className="tag-value neuro">{segmentTags.neuro}</span>
+                      </div>
+                      <div className="tag-item">
+                        <span className="tag-icon">🎬</span>
+                        <span className="tag-label">Mode</span>
+                        <span className="tag-value narrative">{segmentTags.narrative}</span>
+                      </div>
+                      <div className="tag-item">
+                        <span className="tag-icon">📊</span>
+                        <span className="tag-label">Density</span>
+                        <span className="tag-value density">{segmentTags.density}</span>
+                      </div>
+                      <div className="tag-item">
+                        <span className="tag-icon">🔊</span>
+                        <span className="tag-label">Audio</span>
+                        <span className="tag-value audio">{segmentTags.audio}</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
+            </div>
 
               {error && (
                 <div className="error-message">
@@ -1217,6 +1358,19 @@ export default function VideoGenerator({ initialData }) {
               <Icon icon="solar:lock-password-bold" className="locked-icon" />
               <p>Generate storyboard to unlock</p>
             </div>
+          )}
+
+          {/* Variant Selector Modal */}
+          {showVariantSelector && selectedSegment && (
+            <VariantSelector
+              segment={selectedSegment}
+              variants={selectedSegment.candidates || []}
+              onSelect={handleConfirmVariant}
+              onClose={() => {
+                setShowVariantSelector(false);
+                setSelectedSegment(null);
+              }}
+            />
           )}
         </div>
 
