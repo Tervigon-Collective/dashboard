@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import * as brandkitApi from "@/services/contentGenerationApi";
-import { normalizeLogoUrlFromString } from "@/utils/logoUtils";
+import { normalizeLogoUrlFromString, normalizeLogoUrlsFromArray } from "@/utils/logoUtils";
 
 // Font Combobox Component - Text field with dropdown
 const FontCombobox = ({ value, fonts, fontsError, typoMode, loading, onChange, onRemove }) => {
@@ -162,6 +162,8 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     },
     logo_path: null,
     logo_url: null,
+    logo_paths: [],
+    logo_urls: [],
     brand_description: "",
     niche: "",
   });
@@ -299,8 +301,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
           secondary: editBrandkit.typography?.secondary || typographyFonts[1]?.family || null,
           fallback_stack: editBrandkit.typography?.fallback_stack || "Arial, sans-serif",
         },
-        logo_path: editBrandkit.logo_path || null,
-        logo_url: editBrandkit.logo_url || null,
+        logo_path: editBrandkit.logo_path || null, // Keep for backward compatibility
+        logo_url: editBrandkit.logo_url || null, // Keep for backward compatibility
+        logo_paths: editBrandkit.logo_paths || (editBrandkit.logo_path ? [editBrandkit.logo_path] : []),
+        logo_urls: editBrandkit.logo_urls || (editBrandkit.logo_url ? [editBrandkit.logo_url] : []),
         brand_description: editBrandkit.brand_description || editBrandkit.brand_essence?.core_message || "",
         niche: editBrandkit.niche || "",
       });
@@ -524,8 +528,10 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         if (logoDisplayUrl) {
           setFormData((prev) => ({
             ...prev,
-            logo_path: response.logo_path || logoDisplayUrl, // Keep logo_path for submission
-            logo_url: response.logo_url || null, // Store logo_url if available
+        logo_path: response.logo_path || logoDisplayUrl, // Keep logo_path for submission
+        logo_url: response.logo_url || null, // Store logo_url if available
+        logo_paths: response.logo_paths || (response.logo_path ? [response.logo_path] : []),
+        logo_urls: response.logo_urls || (response.logo_url ? [response.logo_url] : []),
           }));
           alert("Logo generated successfully!");
         } else {
@@ -553,9 +559,15 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
       // This will be handled after brandkit creation
       const reader = new FileReader();
       reader.onloadend = () => {
+        const dataUrl = reader.result;
+        const currentPaths = Array.isArray(formData.logo_paths) ? formData.logo_paths : [];
+        const updatedPaths = dataUrl ? [...currentPaths, dataUrl] : currentPaths;
         setFormData((prev) => ({
           ...prev,
-          logo_path: reader.result, // Temporary, will be uploaded after creation
+          logo_paths: updatedPaths,
+          logo_urls: updatedPaths,
+          logo_path: updatedPaths[0] || null,
+          logo_url: updatedPaths[0] || null,
         }));
         setIsSubmitting(false);
       };
@@ -567,12 +579,14 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
     }
   };
 
-  // Remove logo
+  // Remove logo (handles both single and array formats)
   const handleRemoveLogo = () => {
     setFormData((prev) => ({
       ...prev,
       logo_path: null,
       logo_url: null,
+      logo_paths: [],
+      logo_urls: [],
     }));
   };
 
@@ -678,7 +692,17 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
         niche: formData.niche || brandType.trim(),
         color_palette: formData.color_palette,
         typography: buildTypographyPayload(formData.typography),
-        logo_path: formData.logo_path,
+        logo_path: formData.logo_path, // Keep for backward compatibility
+        logo_paths: formData.logo_paths && formData.logo_paths.length > 0
+          ? formData.logo_paths
+          : formData.logo_path
+          ? [formData.logo_path]
+          : [],
+        logo_urls: formData.logo_urls && formData.logo_urls.length > 0
+          ? formData.logo_urls
+          : formData.logo_url
+          ? [formData.logo_url]
+          : [],
         tagline: formData.tagline.trim(),
         target_audience: formData.target_audience || "",
         icp: finalIcp || undefined,
@@ -1462,27 +1486,89 @@ const BrandkitFormModal = ({ isOpen, onClose, onSuccess, editBrandkit = null }) 
                     <Icon icon="solar:magic-stick-3-bold" width="16" height="16" /> Generate
                   </button>
                 </div>
-                {formData.logo_path && (
-                  <div className="mt-2 d-flex align-items-center gap-2">
-                    <img
-                      src={normalizeLogoUrlFromString(formData.logo_url || formData.logo_path)}
-                      alt="Logo preview"
-                      style={{ maxWidth: "200px", maxHeight: "100px", objectFit: "contain" }}
-                      onError={(e) => {
-                        // Fallback: try using logo_path directly if logo_url fails
-                        if (formData.logo_url && formData.logo_path !== formData.logo_url) {
-                          e.target.src = normalizeLogoUrlFromString(formData.logo_path);
-                        }
+                {/* Display multiple logos if available */}
+                {(formData.logo_urls?.length > 0 || formData.logo_paths?.length > 0 || formData.logo_path || formData.logo_url) && (
+                  <div className="mt-2">
+                    <div
+                      className="logo-preview-grid"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                        gap: "1rem",
                       }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={handleRemoveLogo}
-                      disabled={isSubmitting}
                     >
-                      Remove Logo
-                    </button>
+                      {(formData.logo_urls || formData.logo_paths || (formData.logo_url || formData.logo_path ? [formData.logo_url || formData.logo_path] : [])).map((logoUrl, index) => {
+                        const normalizedUrl = normalizeLogoUrlFromString(logoUrl);
+                        return (
+                          <div
+                            key={index}
+                            className="logo-preview"
+                            style={{
+                              position: "relative",
+                              border: "1px solid #ddd",
+                              borderRadius: "8px",
+                              padding: "0.5rem",
+                              backgroundColor: "#f8f9fa",
+                            }}
+                          >
+                            <img
+                              src={normalizedUrl}
+                              alt={`Logo ${index + 1}`}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                maxHeight: "100px",
+                                objectFit: "contain",
+                                borderRadius: "4px",
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                                e.target.parentElement.innerHTML = `
+                                  <div class="text-muted text-center" style="padding: 1rem;">
+                                    <i>Logo not found</i>
+                                  </div>
+                                `;
+                              }}
+                            />
+                            <div
+                              style={{
+                                marginTop: "0.5rem",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#6c757d",
+                                }}
+                              >
+                                {index === 0 ? "Primary" : `Logo ${index + 1}`}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => {
+                                  const newUrls = formData.logo_urls || formData.logo_paths || [];
+                                  const filtered = newUrls.filter((_, i) => i !== index);
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    logo_urls: filtered,
+                                    logo_paths: filtered,
+                                    logo_path: filtered.length > 0 ? filtered[0] : null,
+                                    logo_url: filtered.length > 0 ? filtered[0] : null,
+                                  }));
+                                }}
+                                disabled={isSubmitting}
+                              >
+                                <Icon icon="solar:trash-bin-2-bold" width="14" height="14" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

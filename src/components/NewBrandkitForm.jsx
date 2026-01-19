@@ -205,6 +205,8 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
       },
       logo_path: null,
       logo_url: null,
+      logo_paths: [],
+      logo_urls: [],
       brand_description: "",
       niche: "",
     });
@@ -440,8 +442,10 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
           secondary: null,
           fallback_stack: "Arial, sans-serif",
         },
-        logo_path: response.logo_path || null,
-        logo_url: response.logo_url || null,
+        logo_path: response.logo_path || null, // Keep for backward compatibility
+        logo_url: response.logo_url || null, // Keep for backward compatibility
+        logo_paths: response.logo_paths || (response.logo_path ? [response.logo_path] : []),
+        logo_urls: response.logo_urls || (response.logo_url ? [response.logo_url] : []),
         brand_description: response.brand_description || "",
         niche: response.niche || "",
       });
@@ -512,9 +516,15 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
       // This will be handled after brandkit creation
       const reader = new FileReader();
       reader.onloadend = () => {
+        const dataUrl = reader.result;
+        const currentPaths = Array.isArray(formData.logo_paths) ? formData.logo_paths : [];
+        const updatedPaths = dataUrl ? [...currentPaths, dataUrl] : currentPaths;
         setFormData((prev) => ({
           ...prev,
-          logo_path: reader.result, // Temporary, will be uploaded after creation
+          logo_paths: updatedPaths,
+          logo_urls: updatedPaths,
+          logo_path: updatedPaths[0] || null,
+          logo_url: updatedPaths[0] || null,
         }));
         setLoading(false);
       };
@@ -581,6 +591,8 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
       ...prev,
       logo_path: null,
       logo_url: null,
+      logo_paths: [],
+      logo_urls: [],
     }));
   };
 
@@ -650,6 +662,19 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "");
 
+      // Prepare logo data - prefer arrays, fallback to single values
+      const logoPaths = formData.logo_paths && formData.logo_paths.length > 0
+        ? formData.logo_paths
+        : formData.logo_path
+        ? [formData.logo_path]
+        : [];
+      
+      const logoUrls = formData.logo_urls && formData.logo_urls.length > 0
+        ? formData.logo_urls
+        : formData.logo_url
+        ? [formData.logo_url]
+        : [];
+
       const payload = {
         brand_type: brandType.trim(),
         brand_id: brandId,
@@ -658,7 +683,9 @@ const NewBrandkitForm = ({ isOpen, onClose, onSuccess }) => {
         niche: formData.niche || finalBrandType,
         color_palette: formData.color_palette,
         typography: buildTypographyPayload(formData.typography),
-        logo_path: formData.logo_path,
+        logo_path: formData.logo_path, // Keep for backward compatibility
+        logo_paths: logoPaths, // New array format
+        logo_urls: logoUrls, // New array format
         tagline: formData.tagline.trim(),
         target_audience: formData.target_audience || "",
         icp: finalIcp || undefined,

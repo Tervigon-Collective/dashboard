@@ -187,6 +187,22 @@ const getAuthToken = async () => {
 };
 
 /**
+ * Get or create a session ID for unauthenticated users
+ * @returns {string} Session ID
+ */
+const getSessionId = () => {
+  if (typeof window === "undefined") return null;
+  
+  let sessionId = localStorage.getItem("chat_session_id");
+  if (!sessionId) {
+    // Generate a new session ID
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem("chat_session_id", sessionId);
+  }
+  return sessionId;
+};
+
+/**
  * Get headers with authentication for Python API calls
  * @param {Object} additionalHeaders - Additional headers to include
  * @returns {Promise<Object>} Headers object with auth token
@@ -197,6 +213,12 @@ const getAuthHeaders = async (additionalHeaders = {}) => {
   
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+  } else {
+    // For unauthenticated users, include session ID
+    const sessionId = getSessionId();
+    if (sessionId) {
+      headers["X-Session-ID"] = sessionId;
+    }
   }
   
   return headers;
@@ -339,6 +361,9 @@ export const getGenerationStatus = async (jobId) => {
     console.error("Get generation status error details:", {
       message: error.message,
       status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: `${config.pythonApi.baseURL}/api/generate/status/${jobId}`,
       jobId,
     });
     throw error;
@@ -428,7 +453,7 @@ export const retryImageGeneration = async (jobId, artifactId) => {
 export const getReviewPrompts = async (jobId) => {
   try {
     const headers = await getAuthHeaders();
-    // Call Python backend directly
+    // Call Python backend directly - use v1 endpoint
     const response = await axios.get(
       `${config.pythonApi.baseURL}/api/generate/review/${jobId}`,
       { headers }
@@ -503,6 +528,84 @@ export const approveReview = async (jobId) => {
   }
 };
 
+/**
+ * Regenerate individual prompt using AI
+ * @param {string} jobId - Job ID
+ * @param {number} promptIndex - Index of prompt to regenerate
+ * @returns {Promise<Object>} Response with new prompt
+ */
+export const regenerateIndividualPrompt = async (jobId, promptIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/prompts/${promptIndex}/regenerate`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate prompt error:", error);
+    throw error;
+  }
+};
+
+export const regenerateIndividualStoryboardShot = async (jobId, shotIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/regenerate`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate storyboard shot error:", error);
+    throw error;
+  }
+};
+
+export const regenerateFirstFrameImage = async (jobId, shotIndex) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/regenerate-image`,
+      {},
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Regenerate first frame image error:", error);
+    throw error;
+  }
+};
+
+export const editFirstFrameImage = async (jobId, shotIndex, customPrompt) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/review/${jobId}/storyboard/${shotIndex}/edit-image`,
+      { prompt: customPrompt },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Edit first frame image error:", error);
+    throw error;
+  }
+};
+
 // ========== File Upload ==========
 
 /**
@@ -573,6 +676,38 @@ export const uploadLogo = async (file) => {
     }
   );
   return response.data;
+};
+
+/**
+ * Upload a product image (direct to Python backend)
+ * @param {File} file - Product image file
+ * @returns {Promise<Object>} Upload response with product_image_id and url
+ */
+export const uploadProductImage = async (file) => {
+  try {
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append("product_image", file);
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/upload/product-image`,
+      formData,
+      {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Upload product image error details:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
 };
 
 // ========== Generated Content ==========
@@ -908,7 +1043,7 @@ export const activateBrandkit = async (brandId) => {
  * Upload a logo for a brandkit
  * @param {string} brandId - Brand ID
  * @param {File} logoFile - Logo file
- * @returns {Promise<Object>} Upload response
+ * @returns {Promise<Object>} Upload response with updated brandkit (now includes logo_paths array)
  */
 export const uploadBrandkitLogo = async (brandId, logoFile) => {
   const formData = new FormData();
@@ -926,6 +1061,59 @@ export const uploadBrandkitLogo = async (brandId, logoFile) => {
     return response.data;
   } catch (error) {
     console.error("Upload brandkit logo error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Remove a logo from a brandkit
+ * @param {string} brandId - Brand ID
+ * @param {string} logoPath - Logo path to remove
+ * @returns {Promise<Object>} Updated brandkit response
+ */
+export const removeBrandkitLogo = async (brandId, logoPath) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+    const response = await axios.delete(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logos`,
+      {
+        headers,
+        data: { logo_path: logoPath },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Remove brandkit logo error details:", {
+      message: error.message,
+      status: error.response?.status,
+      brandId,
+      logoPath,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get all logos for a brandkit
+ * @param {string} brandId - Brand ID
+ * @returns {Promise<Object>} Response with logo_paths array
+ */
+export const getBrandkitLogos = async (brandId) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(
+      `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logos`,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get brandkit logos error details:", {
       message: error.message,
       status: error.response?.status,
       brandId,
@@ -1122,17 +1310,6 @@ export const createExistingBrandkit = async (brandkitData) => {
   return response.data;
 };
 
-/**
- * Remove logo from a brandkit
- * @param {string} brandId - Brand ID
- * @returns {Promise<Object>} Updated brandkit
- */
-export const removeBrandkitLogo = async (brandId) => {
-  const response = await axios.delete(
-    `${config.pythonApi.baseURL}/api/brandkits/${brandId}/logo`
-  );
-  return response.data;
-};
 
 /**
  * Generate brandkit from description
@@ -1160,6 +1337,450 @@ export const fetchDatabaseSchema = async (connectionConfig) => {
   const response = await axios.post(
     `${config.pythonApi.baseURL}/api/brandkits/fetch-db-schema`,
     connectionConfig
+  );
+  return response.data;
+};
+
+// ========== Chat Content Generation ==========
+
+/**
+ * Generate images from prompt (Mode 1: Image from Prompt)
+ * @param {string} prompt - Text prompt
+ * @param {Array<string>} referenceImageIds - Optional reference image IDs
+ * @param {number} numImages - Number of images to generate (1-10)
+ * @param {Object} options - Additional options (aspect_ratio, quality, etc.)
+ * @returns {Promise<Object>} Generation job response {job_id, status}
+ */
+export const generateChatImage = async (prompt, referenceImageIds = [], numImages = 1, options = {}) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    // If we have reference images, use with-reference endpoint
+    if (referenceImageIds && referenceImageIds.length > 0) {
+      const requestData = {
+        creative_prompt: prompt,
+        product_image_ids: referenceImageIds,
+        number_of_variants: numImages,
+        aspect_ratio: options.aspect_ratio || "square_1_1",
+        campaign_objective: options.campaign_objective || "creative generation",
+        content_channel: options.content_channel || "General",
+        tone: options.tone || "professional",
+        background_style: options.background_style || "clean minimal",
+        lighting_style: options.lighting_style || "studio softbox",
+        webhook_url: options.webhook_url || null,
+      };
+
+      const response = await axios.post(
+        `${config.pythonApi.baseURL}/api/generate/with-reference`,
+        requestData,
+        { headers }
+      );
+      return response.data;
+    } else {
+      // Use quick generate endpoint for text-only generation
+      const requestData = {
+        product_name: options.product_name || "Generated Content",
+        long_description: prompt,
+        content_channel: options.content_channel || "General",
+        number_of_variants: numImages,
+        uploaded_images: [],
+        aspect_ratio: options.aspect_ratio || "square_1_1",
+      };
+
+      const response = await axios.post(
+        `${config.pythonApi.baseURL}/api/generate/quick`,
+        requestData,
+        { headers }
+      );
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Generate chat image error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate shots from storyboard (Mode 2: Storyboard → Shots)
+ * @param {string} storyboard - Storyboard text (multi-line shot list)
+ * @param {Array<string>} referenceImageIds - Optional reference image IDs
+ * @param {Object} options - Additional options (aspect_ratio, etc.)
+ * @returns {Promise<Object>} Generation job response {job_id, status}
+ */
+export const generateShotsFromStoryboard = async (storyboard, referenceImageIds = [], options = {}) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const requestData = {
+      storyboard: storyboard,
+      reference_image_ids: referenceImageIds,
+      aspect_ratio: options.aspect_ratio || "widescreen_16_9",
+      webhook_url: options.webhook_url || null,
+    };
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/shots-from-storyboard`,
+      requestData,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Generate shots from storyboard error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate video from shot images (Mode 3: Shots → Video)
+ * @param {Array<string>} shotImageIds - Array of shot image IDs from previous generation
+ * @param {string} storyboard - Optional storyboard/pacing text
+ * @param {Object} options - Additional options (aspect_ratio, durations, etc.)
+ * @returns {Promise<Object>} Generation job response {job_id, status}
+ */
+export const generateVideoFromShots = async (shotImageIds, storyboard = null, options = {}) => {
+  try {
+    const headers = await getAuthHeaders({
+      "Content-Type": "application/json",
+    });
+
+    const requestData = {
+      shot_image_ids: shotImageIds,
+      storyboard: storyboard,
+      aspect_ratio: options.aspect_ratio || "widescreen_16_9",
+      durations: options.durations || null,
+      webhook_url: options.webhook_url || null,
+    };
+
+    const response = await axios.post(
+      `${config.pythonApi.baseURL}/api/generate/video-from-shots`,
+      requestData,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Generate video from shots error:", error);
+    throw error;
+  }
+};
+
+// ========== Chat-based Generation (Unified Canvas) ==========
+
+export const chatGenerateImage = async ({
+  prompt,
+  reference_image_ids = [],
+  reference_images_base64 = [],
+  num_images = 1,
+  aspect_ratio = "1:1",
+  quality = "high",
+}) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const payload = {
+    prompt,
+    reference_image_ids,
+    num_images,
+    aspect_ratio,
+    quality,
+  };
+  // Only include base64 images if provided
+  if (reference_images_base64 && reference_images_base64.length > 0) {
+    payload.reference_images_base64 = reference_images_base64;
+  }
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/generate/image`,
+    payload,
+    { headers }
+  );
+  return response.data;
+};
+
+export const chatGenerateShots = async ({
+  storyboard_text,
+  reference_image_ids = [],
+}) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/generate/shots`,
+    { storyboard_text, reference_image_ids },
+    { headers }
+  );
+  return response.data;
+};
+
+export const chatGenerateVideo = async ({
+  shot_image_ids,
+  shot_images_base64,
+  storyboard_text = null,
+  transitions = null,
+  pacing = null,
+}) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const payload = {
+    storyboard_text,
+    transitions,
+    pacing,
+  };
+  if (shot_image_ids && shot_image_ids.length > 0) {
+    payload.shot_image_ids = shot_image_ids;
+  }
+  if (shot_images_base64 && shot_images_base64.length > 0) {
+    payload.shot_images_base64 = shot_images_base64;
+  }
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/generate/video`,
+    payload,
+    { headers }
+  );
+  return response.data;
+};
+
+export const chatGetStatus = async (jobId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/chat/status/${jobId}`,
+    { headers }
+  );
+  return response.data;
+};
+
+export const chatOptimizePrompt = async ({ raw_prompt, mode = "image" }) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/optimize-prompt`,
+    { raw_prompt, mode },
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Chat History ==========
+
+export const getConversations = async (projectId = null) => {
+  const headers = await getAuthHeaders();
+  const params = projectId ? { project_id: projectId } : {};
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/chat/conversations`,
+    { headers, params }
+  );
+  return response.data;
+};
+
+export const getConversation = async (conversationId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/chat/conversations/${conversationId}`,
+    { headers }
+  );
+  return response.data;
+};
+
+export const createConversation = async (data) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/conversations`,
+    data,
+    { headers }
+  );
+  return response.data;
+};
+
+export const updateConversation = async (conversationId, data) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.put(
+    `${config.pythonApi.baseURL}/api/chat/conversations/${conversationId}`,
+    data,
+    { headers }
+  );
+  return response.data;
+};
+
+export const deleteConversation = async (conversationId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/chat/conversations/${conversationId}`,
+    { headers }
+  );
+  return response.data;
+};
+
+export const saveConversationAuto = async (conversationId, data) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/conversations/${conversationId}/save`,
+    data,
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Projects ==========
+
+export const getProjects = async () => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/api/chat/projects`,
+    { headers }
+  );
+  return response.data;
+};
+
+export const createProject = async (name) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/api/chat/projects`,
+    { name },
+    { headers }
+  );
+  return response.data;
+};
+
+export const updateProject = async (projectId, data) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.put(
+    `${config.pythonApi.baseURL}/api/chat/projects/${projectId}`,
+    data,
+    { headers }
+  );
+  return response.data;
+};
+
+export const deleteProject = async (projectId, { delete_conversations = false } = {}) => {
+  const headers = await getAuthHeaders();
+  const params = delete_conversations ? { delete_conversations: true } : {};
+  const response = await axios.delete(
+    `${config.pythonApi.baseURL}/api/chat/projects/${projectId}`,
+    { headers, params }
+  );
+  return response.data;
+};
+
+// ========== Segment-First Video API ==========
+
+/**
+ * Get segment specifications and metadata for a video generation job
+ * @param {string} jobId - The job ID
+ * @returns {Promise<Object>} Segment specs with S1-S4 data, tags, timing
+ */
+export const getSegmentSpecs = async (jobId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Get multi-candidate variants for a specific segment
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @returns {Promise<Object>} Array of 2-4 script + asset variants
+ */
+export const getSegmentVariants = async (jobId, segmentId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/variants`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Select a specific variant for a segment
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @param {Object} variantData - The selected variant data
+ * @returns {Promise<Object>} Confirmation response
+ */
+export const selectSegmentVariant = async (jobId, segmentId, variantData) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/select-variant`,
+    variantData,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Regenerate a specific segment (without regenerating the whole video)
+ * @param {string} jobId - The job ID
+ * @param {string} segmentId - The segment ID (S1, S2, S3, S4)
+ * @param {Object} options - Optional regeneration parameters
+ * @returns {Promise<Object>} New segment data
+ */
+export const regenerateSegment = async (jobId, segmentId, options = {}) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/generation/${jobId}/segments/${segmentId}/regenerate`,
+    options,
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Carousel API ==========
+
+/**
+ * Generate a carousel ad with multiple cards
+ * @param {Object} carouselSpec - Carousel specification
+ * @returns {Promise<Object>} Generated carousel with card content
+ */
+export const generateCarousel = async (carouselSpec) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/carousel/generate`,
+    carouselSpec,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Generate images for carousel cards
+ * @param {string} carouselId - The carousel ID
+ * @param {Array} cards - Array of card data with scripts
+ * @returns {Promise<Object>} Cards with generated images
+ */
+export const generateCarouselImages = async (carouselId, cards) => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await axios.post(
+    `${config.pythonApi.baseURL}/carousel/${carouselId}/generate-images`,
+    { cards },
+    { headers }
+  );
+  return response.data;
+};
+
+// ========== Metrics API ==========
+
+/**
+ * Get segment-level performance metrics for an ad
+ * @param {string} adId - The ad ID
+ * @returns {Promise<Object>} Segment metrics with S1-S4 performance data
+ */
+export const getAdMetrics = async (adId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/metrics/ad/${adId}`,
+    { headers }
+  );
+  return response.data;
+};
+
+/**
+ * Get segment-level metrics for a generation job
+ * @param {string} jobId - The job ID
+ * @returns {Promise<Object>} Segment metrics
+ */
+export const getJobMetrics = async (jobId) => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(
+    `${config.pythonApi.baseURL}/metrics/job/${jobId}`,
+    { headers }
   );
   return response.data;
 };

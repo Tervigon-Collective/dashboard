@@ -1,0 +1,12 @@
+.studio-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.studio-main-workspace {
+  flex: 1;
+  overflow-y: auto;
+  background: #fff;
+  padding: 2rem;
+}
