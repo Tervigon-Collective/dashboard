@@ -1,8 +1,8 @@
 // config.js
 
 const DEFAULT_API_BASE_URL =
-  "http://localhost:8081";
-  // "https://node.seleric.cloud";
+  // "http://localhost:8081";
+  "https://node.seleric.cloud";
 const DEFAULT_PYTHON_API_BASE_URL =
   // "https://python.seleric.cloud/content-generation";
   "http://localhost:8000";
