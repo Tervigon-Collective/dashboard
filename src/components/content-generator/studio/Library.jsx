@@ -7,6 +7,7 @@ import {
   deleteGeneratedContent,
   editImage
 } from "../../../services/contentGenerationApi";
+import config from "../../../config";
 import "./Library.css";
 
 const LIBRARY_TABS = {
@@ -22,7 +23,9 @@ const normalizeUrl = (url) => {
     return url;
   }
   if (url.startsWith("/")) {
-    return `http://localhost:8000${url}`;
+    // Use config.pythonApi.baseURL instead of hardcoded localhost
+    const baseURL = config.pythonApi.baseURL.replace(/\/$/, ""); // Remove trailing slash if present
+    return `${baseURL}${url}`;
   }
   return url;
 };

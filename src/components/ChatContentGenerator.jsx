@@ -37,6 +37,7 @@ export default function ChatContentGenerator() {
   const [numImages, setNumImages] = useState(1);
   const [canvasItems, setCanvasItems] = useState([]);
   const pollingRef = useRef(new Map());
+  const pollingFailureCountRef = useRef(new Map()); // Track consecutive failures per jobId
   const scrollRef = useRef(null);
   const skipNextAutosaveRef = useRef(false);
   const prevProjectIdRef = useRef(null);
@@ -151,6 +152,7 @@ export default function ChatContentGenerator() {
       // Stop any ongoing polling from the previous project/conversation.
       pollingRef.current.forEach((intervalId) => clearInterval(intervalId));
       pollingRef.current.clear();
+      pollingFailureCountRef.current.clear();
 
       // Reset local UI state.
       setCanvasItems([]);
@@ -193,6 +195,7 @@ export default function ChatContentGenerator() {
       pollingRef.current.forEach((intervalId) => clearInterval(intervalId));
       pollingRef.current.clear();
       shotPollingContextRef.current.clear();
+      pollingFailureCountRef.current.clear();
     };
   }, []);
 
@@ -242,10 +245,12 @@ export default function ChatContentGenerator() {
 
   const startPolling = (jobId) => {
     if (pollingRef.current.has(jobId)) return;
+    pollingFailureCountRef.current.set(jobId, 0); // Reset failure count
     const intervalId = setInterval(async () => {
       try {
         const res = await chatGetStatus(jobId);
         const job = res.job;
+        pollingFailureCountRef.current.set(jobId, 0); // Reset on success
         updateCanvasItem(jobId, () => ({
           status: job.status,
           results: job.results,
@@ -256,10 +261,19 @@ export default function ChatContentGenerator() {
         if (["completed", "failed", "pending_review"].includes(job.status)) {
           clearInterval(intervalId);
           pollingRef.current.delete(jobId);
+          pollingFailureCountRef.current.delete(jobId);
         }
       } catch (e) {
-        clearInterval(intervalId);
-        pollingRef.current.delete(jobId);
+        const failureCount = (pollingFailureCountRef.current.get(jobId) || 0) + 1;
+        pollingFailureCountRef.current.set(jobId, failureCount);
+        
+        // Stop polling after 3 consecutive failures
+        if (failureCount >= 3) {
+          console.warn(`Stopping polling for job ${jobId} after ${failureCount} consecutive failures`);
+          clearInterval(intervalId);
+          pollingRef.current.delete(jobId);
+          pollingFailureCountRef.current.delete(jobId);
+        }
       }
     }, 2000);
     pollingRef.current.set(jobId, intervalId);
@@ -268,10 +282,12 @@ export default function ChatContentGenerator() {
   const startShotVariantPolling = (jobId, ctx) => {
     if (pollingRef.current.has(jobId)) return;
     shotPollingContextRef.current.set(jobId, ctx);
+    pollingFailureCountRef.current.set(jobId, 0); // Reset failure count
     const intervalId = setInterval(async () => {
       try {
         const res = await chatGetStatus(jobId);
         const job = res.job;
+        pollingFailureCountRef.current.set(jobId, 0); // Reset on success
 
         setCanvasItems((prev) =>
           prev.map((item) => {
@@ -336,11 +352,20 @@ export default function ChatContentGenerator() {
           clearInterval(intervalId);
           pollingRef.current.delete(jobId);
           shotPollingContextRef.current.delete(jobId);
+          pollingFailureCountRef.current.delete(jobId);
         }
       } catch (e) {
-        clearInterval(intervalId);
-        pollingRef.current.delete(jobId);
-        shotPollingContextRef.current.delete(jobId);
+        const failureCount = (pollingFailureCountRef.current.get(jobId) || 0) + 1;
+        pollingFailureCountRef.current.set(jobId, failureCount);
+        
+        // Stop polling after 3 consecutive failures
+        if (failureCount >= 3) {
+          console.warn(`Stopping shot variant polling for job ${jobId} after ${failureCount} consecutive failures`);
+          clearInterval(intervalId);
+          pollingRef.current.delete(jobId);
+          shotPollingContextRef.current.delete(jobId);
+          pollingFailureCountRef.current.delete(jobId);
+        }
       }
     }, 2000);
     pollingRef.current.set(jobId, intervalId);

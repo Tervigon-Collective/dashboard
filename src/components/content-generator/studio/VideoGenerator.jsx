@@ -615,7 +615,7 @@ export default function VideoGenerator({ initialData }) {
         }));
         
         console.log("Updating job with existing storyboard from IdeaGenerator:", existingStoryboard);
-        await updateReviewPrompts(newJobId, existingStoryboard);
+        await updateReviewPrompts(newJobId, { prompts: existingStoryboard });
         console.log("Successfully updated storyboard");
       } catch (updateErr) {
         console.error("Failed to update storyboard:", updateErr);
