@@ -2,9 +2,9 @@
 
 const DEFAULT_API_BASE_URL =
   // "http://localhost:8081";
-  "https://node.seleric.cloud";
+  "https://node.seleric.com";
 const DEFAULT_PYTHON_API_BASE_URL =
-  "https://python.seleric.cloud/content-generation";
+  "https://python.seleric.com/content-generation";
   // "http://localhost:8000";
 const DEFAULT_FALLBACK_ENABLED = true;
 const DEFAULT_FALLBACK_ROLE = "";
