@@ -22,18 +22,6 @@ const BrandMasterLayer = () => {
     return status && message ? { status, message } : null;
   }, []);
 
-  useEffect(() => {
-    if (parsedOAuthMessage) {
-      setOauthStatus(parsedOAuthMessage);
-      const params = new URLSearchParams(window.location.search);
-      params.delete("oauth_status");
-      params.delete("oauth_message");
-      const queryString = params.toString();
-      const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}`;
-      window.history.replaceState({}, "", nextUrl);
-    }
-  }, [parsedOAuthMessage]);
-
   const loadBrands = async () => {
     try {
       setIsLoading(true);
@@ -50,9 +38,28 @@ const BrandMasterLayer = () => {
   };
 
   useEffect(() => {
+    if (parsedOAuthMessage) {
+      setOauthStatus(parsedOAuthMessage);
+      const params = new URLSearchParams(window.location.search);
+      params.delete("oauth_status");
+      params.delete("oauth_message");
+      const queryString = params.toString();
+      const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [parsedOAuthMessage]);
+
+  useEffect(() => {
     loadBrands();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (oauthStatus?.status === "success") {
+      loadBrands();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oauthStatus]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -108,7 +115,12 @@ const BrandMasterLayer = () => {
 
       <div className="card border mb-4">
         <div className="card-body">
-          <h6 className="fw-semibold mb-3">Connect Shopify Brand</h6>
+          <h6 className="fw-semibold mb-1">Connect Shopify brand</h6>
+          <p className="text-muted small mb-3">
+            Uses your app credentials from the server (<code>SHOPIFY_API_KEY</code> /{" "}
+            <code>SHOPIFY_API_SECRET</code>). After you authorize, we store the shop access token
+            and ID in <code>brand_master</code>.
+          </p>
           <div className="row g-2">
             <div className="col-md-4">
               <input
@@ -159,38 +171,66 @@ const BrandMasterLayer = () => {
       </div>
 
       <div className="table-responsive border rounded">
-        <table className="table mb-0">
-          <thead>
+        <table className="table mb-0 table-hover align-middle">
+          <thead className="table-light">
             <tr>
               <th>Brand</th>
-              <th>Shop Domain</th>
-              <th>Shop Name</th>
-              <th>Mode</th>
+              <th>Shop domain</th>
+              <th>Shopify shop ID</th>
+              <th>Shop name</th>
+              <th>Auth</th>
+              <th>Scopes</th>
+              <th>Connected</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-muted">
+                <td colSpan="8" className="text-center py-4 text-muted">
                   Loading brands...
                 </td>
               </tr>
             ) : brands.length === 0 ? (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-muted">
-                  No brands found.
+                <td colSpan="8" className="text-center py-4 text-muted">
+                  No brands yet. Connect a store above.
                 </td>
               </tr>
             ) : (
               brands.map((brand) => (
                 <tr key={brand.brand_id}>
-                  <td>{brand.brand_name}</td>
-                  <td>{brand.shop_domain}</td>
-                  <td>{brand.shop_name || "-"}</td>
-                  <td>{brand.auth_mode || "-"}</td>
+                  <td className="fw-medium">{brand.brand_name}</td>
                   <td>
-                    <span className={`badge ${brand.is_active ? "bg-success" : "bg-secondary"}`}>
+                    <code className="small">{brand.shop_domain}</code>
+                  </td>
+                  <td className="text-muted small">
+                    {brand.shopify_shop_id || "—"}
+                  </td>
+                  <td>{brand.shop_name || "—"}</td>
+                  <td>
+                    <span className="badge bg-light text-dark border">
+                      {brand.auth_mode || "—"}
+                    </span>
+                  </td>
+                  <td
+                    className="small text-muted"
+                    style={{ maxWidth: 180 }}
+                    title={brand.scope || ""}
+                  >
+                    {brand.scope
+                      ? `${brand.scope.slice(0, 48)}${brand.scope.length > 48 ? "…" : ""}`
+                      : "—"}
+                  </td>
+                  <td className="small text-muted">
+                    {brand.installed_at
+                      ? new Date(brand.installed_at).toLocaleString()
+                      : "—"}
+                  </td>
+                  <td>
+                    <span
+                      className={`badge ${brand.is_active ? "bg-success" : "bg-secondary"}`}
+                    >
                       {brand.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
