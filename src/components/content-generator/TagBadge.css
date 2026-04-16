@@ -1,0 +1,37 @@
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--tag-color, #95a5a6);
+  color: white;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tag-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tag-badge .tag-label {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.tag-badge .tag-value {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.tag-badge-compact {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.tag-badge-default {
+  /* Default styling */
+}

@@ -237,6 +237,15 @@ export async function explainDataStream(data, context = {}, options = {}) {
   let abortController = null;
   let timeoutId = null;
 
+  // Construct streaming URL - using Node.js backend which proxies to Python backend
+  // Streaming endpoints require HTTPS, so ensure the URL uses HTTPS
+  let baseURL = config.api.baseURL;
+  // Force HTTPS for streaming endpoints (required by backend)
+  if (baseURL.toLowerCase().startsWith('http://') && !baseURL.includes('localhost')) {
+    baseURL = baseURL.replace(/^http:\/\//i, 'https://');
+  }
+  const streamURL = `${baseURL}/api/v1/insights/explain/stream`;
+
   try {
     // Get authentication token
     const token = await getAuthToken();
@@ -260,25 +269,74 @@ export async function explainDataStream(data, context = {}, options = {}) {
       }
       throw error;
     }, timeout);
-
-    // Make streaming request - using main API for advanced analytics, not content backend
-    const response = await fetch(
-      `${config.api.baseURL}/api/v1/insights/explain/stream`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestPayload),
-        signal: abortController.signal,
+    
+    // Make the fetch request with proper error handling
+    let response;
+    try {
+      response = await fetch(
+        streamURL,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(requestPayload),
+          signal: abortController.signal,
+        }
+      );
+    } catch (fetchError) {
+      // Handle fetch errors (network errors, CORS, etc.)
+      console.error("[InsightsAPI] Fetch error details:", {
+        name: fetchError.name,
+        message: fetchError.message,
+        stack: fetchError.stack,
+        url: streamURL,
+        aborted: abortController?.signal.aborted,
+      });
+      
+      // Check if it's an abort error
+      if (fetchError.name === "AbortError" || abortController?.signal.aborted) {
+        const abortError = new Error("Request was cancelled or timed out.");
+        if (onError) {
+          onError(abortError);
+        }
+        throw abortError;
       }
-    );
+      
+      // Provide more helpful error message
+      const isLocalhost = streamURL.includes('localhost') || streamURL.includes('127.0.0.1');
+      let errorMessage = `Network error: ${fetchError.message}`;
+      if (isLocalhost) {
+        errorMessage += `. Please ensure the backend server is running at ${streamURL}`;
+      } else {
+        errorMessage += `. Please check your connection and try again.`;
+      }
+      
+      const networkError = new Error(errorMessage);
+      if (onError) {
+        onError(networkError);
+      }
+      throw networkError;
+    }
 
     // Check if response is ok
     if (!response.ok) {
       const errorText = await response.text();
       let errorMessage = `HTTP ${response.status}: ${errorText}`;
+      let parsedError = null;
+
+      // Try to parse error JSON for more details
+      try {
+        parsedError = JSON.parse(errorText);
+        if (parsedError.message) {
+          errorMessage = parsedError.message;
+        } else if (parsedError.error) {
+          errorMessage = parsedError.error;
+        }
+      } catch (e) {
+        // Not JSON, use the text as-is
+      }
 
       if (response.status === 401) {
         errorMessage = "Your session expired. Please sign in again to get insights.";
@@ -286,9 +344,16 @@ export async function explainDataStream(data, context = {}, options = {}) {
         errorMessage = "Insights streaming service is not available. Please contact support.";
       } else if (response.status === 500) {
         errorMessage = "An error occurred while generating insights. Please try again later.";
+      } else if (response.status === 503) {
+        errorMessage = parsedError?.message || "The analytics service is temporarily unavailable. Please try again later.";
+      } else if (response.status === 400) {
+        // Use the parsed error message if available
+        errorMessage = parsedError?.message || errorMessage;
       }
 
       const error = new Error(errorMessage);
+      error.status = response.status;
+      error.response = parsedError || { error: errorText };
       if (onError) {
         onError(error);
       }
@@ -569,13 +634,39 @@ export async function explainDataStream(data, context = {}, options = {}) {
       throw abortError;
     }
 
-    // Handle network errors
-    if (!error.response && error.message) {
-      const networkError = new Error(
-        error.message.includes("Failed to fetch")
-          ? "Network error. Please check your connection and try again."
-          : error.message
-      );
+    // Handle network errors (fetch API doesn't have error.response like axios)
+    // Check if it's a network error (no response received) vs an HTTP error (response received but not ok)
+    if (error.message) {
+      let errorMessage = error.message;
+      
+      // Provide more specific error messages for network-level failures
+      if (error.message.includes("Failed to fetch") || 
+          (error.name === "TypeError" && error.message.includes("fetch"))) {
+        // More detailed error message for debugging
+        const isLocalhost = streamURL.includes('localhost') || streamURL.includes('127.0.0.1');
+        if (isLocalhost) {
+          errorMessage = `Network error: Cannot connect to backend server at ${streamURL}. Please ensure the backend server is running on port 8081.`;
+        } else {
+          errorMessage = `Network error. Please check your connection and try again. (URL: ${streamURL})`;
+        }
+      } else if (error.message.includes("aborted") || error.name === "AbortError") {
+        errorMessage = "Request was cancelled or timed out.";
+      }
+      
+      // Log the full error for debugging
+      console.error("[InsightsAPI] Network error details:", {
+        error: error,
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        url: streamURL,
+      });
+      
+      const networkError = new Error(errorMessage);
+      // Add response property for compatibility if available
+      if (error.response) {
+        networkError.response = error.response;
+      }
       if (onError) {
         onError(networkError);
       }

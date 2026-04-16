@@ -1,0 +1,61 @@
+.studio-sidebar {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.studio-sidebar__nav {
+  padding: 1rem 0;
+}
+
+.studio-sidebar__group {
+  margin-bottom: 1.5rem;
+}
+
+.studio-sidebar__group-title {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6c757d;
+}
+
+.studio-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #495057;
+  font-size: 0.875rem;
+}
+
+.studio-sidebar__item:hover {
+  background: #f8f9fa;
+  color: #212529;
+}
+
+.studio-sidebar__item.active {
+  background: #eef2ff;
+  color: #6366f1;
+  font-weight: 500;
+  border-right: 2px solid #6366f1;
+}
+
+.studio-sidebar__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.studio-sidebar__label {
+  white-space: nowrap;
+}

@@ -1,12 +1,11 @@
 // config.js
 
 const DEFAULT_API_BASE_URL =
-  // "https://dashbackend-a3cbagbzg0hydhen.centralindia-01.azurewebsites.net";
   // "http://localhost:8081";
-  "http://72.61.228.168:8081";
+  "https://node.seleric.com";
 const DEFAULT_PYTHON_API_BASE_URL =
-  "https://contentgeneratorbackend-gvcpgcd6enavdag9.centralindia-01.azurewebsites.net";
-// "http://localhost:8000";
+  "https://python.seleric.com/content-generation";
+  // "http://localhost:8000";
 const DEFAULT_FALLBACK_ENABLED = true;
 const DEFAULT_FALLBACK_ROLE = "";
 const DEFAULT_OFFLINE_MODE = true;

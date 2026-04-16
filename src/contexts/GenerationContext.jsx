@@ -119,6 +119,21 @@ export const GenerationProvider = ({ children }) => {
           setCompletedGenerations((prev) => [completedJob, ...prev]);
           return prev.filter((j) => j.id !== jobId);
         });
+      } else if (status.status === "pending_review") {
+        // Update to pending_review status - this stops polling but keeps job active for review modal
+        setActiveGenerations((prev) =>
+          prev.map((job) =>
+            job.id === jobId
+              ? {
+                  ...job,
+                  status: "pending_review",
+                  progress: status.progress || 50,
+                  result: status.result, // Include video prompts for review
+                  updatedAt: new Date(),
+                }
+              : job
+          )
+        );
       } else if (status.status === "failed") {
         // Mark as failed
         setActiveGenerations((prev) =>
@@ -134,7 +149,7 @@ export const GenerationProvider = ({ children }) => {
           )
         );
       } else {
-        // Update progress
+        // Update progress for other statuses (pending, in_progress, etc.)
         setActiveGenerations((prev) =>
           prev.map((job) =>
             job.id === jobId

@@ -1,0 +1,106 @@
+.generation-queue {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+.generation-queue__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: #212529;
+  transition: background 0.2s;
+}
+
+.generation-queue__toggle:hover {
+  background: #f8f9fa;
+}
+
+.queue-icon {
+  font-size: 1.25rem;
+  color: #6366f1;
+}
+
+.queue-count {
+  flex: 1;
+  text-align: left;
+}
+
+.toggle-icon {
+  font-size: 1rem;
+  color: #6c757d;
+}
+
+.generation-queue__content {
+  border-top: 1px solid #e9ecef;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.generation-queue__empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.generation-queue__list {
+  padding: 0.5rem;
+}
+
+.generation-queue__item {
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+  background: #f8f9fa;
+}
+
+.queue-item__info {
+  margin-bottom: 0.5rem;
+}
+
+.queue-item__type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.queue-item__name {
+  font-size: 0.875rem;
+  color: #212529;
+  margin-top: 0.25rem;
+}
+
+.queue-item__progress {
+  height: 4px;
+  background: #e9ecef;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #6366f1;
+  transition: width 0.3s ease;
+}
+
+.queue-item__status {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+

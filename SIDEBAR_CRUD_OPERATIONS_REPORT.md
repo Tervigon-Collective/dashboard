@@ -10,7 +10,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ### 1. **Dashboard** (`dashboard`)
 
-**Route:** `/` (Home) and `/historical-data`
+**Route:** `/` (Home), `/historical-data`, and `/advanced-analytics`
 
 **Component:** `DashBoardLayerOne.jsx`
 
@@ -26,6 +26,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 - View sales analytics
 - View profit metrics
 - View historical data
+- Advanced analytics
 - Chart visualizations
 - Date range filters
 
@@ -33,34 +34,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 2. **SKU List** (`skuList`)
-
-**Route:** `/Sku-List`
-
-**Component:** `SkuTableDataLayer.jsx`
-
-**CRUD Operations:**
-
-- ✅ **READ** - View all SKU data
-- ❌ **CREATE** - No create functionality (read-only)
-- ❌ **UPDATE** - No update functionality (read-only)
-- ❌ **DELETE** - No delete functionality (read-only)
-
-**Features:**
-
-- Search SKU data
-- Filter by various criteria
-- Pagination
-- Export/View SKU details
-- Display product information
-
-**Access Level:** Manager, Admin, Super Admin
-
-**Note:** This is a **READ-ONLY** sidebar - displays data but doesn't allow modifications
-
----
-
-### 3. **Product Spend Summary** (`productSpendSummary`)
+### 2. **Product Spend Summary** (`productSpendSummary`)
 
 **Route:** `/product-spend-summary`
 
@@ -87,7 +61,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 4. **Entity Report** (`entityReport`)
+### 3. **Entity Report** (`entityReport`)
 
 **Route:** `/entity-report`
 
@@ -114,7 +88,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 5. **Procurement** (`procurement`)
+### 4. **Procurement** (`procurement`)
 
 **Route:** `/procurement`
 
@@ -164,7 +138,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 6. **Customer Data** (`customerData`)
+### 5. **Customer Data** (`customerData`)
 
 **Route:** `/customer-data`
 
@@ -173,27 +147,36 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 **CRUD Operations:**
 
 - ✅ **READ** - View all customer orders and information
-- ❌ **CREATE** - No create functionality (data comes from Shopify)
+- ✅ **CREATE** - Bulk upload customer orders via CSV/Excel files
 - ❌ **UPDATE** - No update functionality (synced from Shopify)
 - ❌ **DELETE** - No delete functionality (synced from Shopify)
 
 **Features:**
 
-- View customer orders
-- Search by email, phone, name, order number
-- Filter by date range
-- View order details
-- View customer information
-- Pagination
-- Universal search across all fields
+- **READ:**
+
+  - View customer orders
+  - Search by email, phone, name, order number
+  - Filter by date range
+  - View order details
+  - View customer information
+  - Pagination
+  - Universal search across all fields
+
+- **CREATE:**
+  - Bulk upload customer orders via CSV or Excel files
+  - Upload Shopify orders export files
+  - Map Excel/CSV columns to backend format
+  - Validate and process uploaded data
+  - Support for multiple order formats
 
 **Access Level:** User, Manager, Admin, Super Admin
 
-**Note:** This is a **READ-ONLY** sidebar - data is synced from Shopify API, modifications are not allowed
+**Note:** This is a **READ + CREATE** sidebar - can view orders and bulk upload new orders via file upload, but cannot update or delete existing orders (synced from Shopify)
 
 ---
 
-### 7. **Shipping** (`shipping`)
+### 6. **Shipping** (`shipping`)
 
 **Route:** `/shipping`
 
@@ -234,7 +217,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 8. **Content Craft** (`createContent`)
+### 7. **Content Craft** (`createContent`)
 
 **Route:** `/create-content`
 
@@ -244,24 +227,44 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 - ✅ **READ** - View previously generated briefs, results, and generation history
 - ✅ **CREATE** - Launch new AI generation jobs (text, image, video variants)
-- ❌ **UPDATE** - Cannot directly edit existing jobs (regenerate instead)
-- ❌ **DELETE** - No delete endpoint exposed (jobs auto-expire via backend retention)
+- ✅ **UPDATE** - Edit existing generated images (modify prompts, aspect ratios, guidance scale, seed)
+- ✅ **DELETE** - Delete generated content items (images and videos)
 
 **Features:**
 
-- Compose briefs (product name, tone, channels)
-- Submit quick-generate or advanced jobs
-- Upload reference imagery and retrieve generated assets
-- Review prior jobs with filters and status indicators
-- Export generated copy/imagery
+- **READ:**
+
+  - View previously generated briefs, results, and generation history
+  - Review prior jobs with filters and status indicators
+  - View generated content with metadata
+
+- **CREATE:**
+
+  - Compose briefs (product name, tone, channels)
+  - Submit quick-generate or advanced jobs
+  - Launch new AI generation jobs (text, image, video variants)
+  - Upload reference imagery and retrieve generated assets
+
+- **UPDATE:**
+
+  - Edit existing generated images
+  - Modify image prompts and descriptions
+  - Change aspect ratios (film horizontal, widescreen, classic, square, portrait, etc.)
+  - Adjust guidance scale and seed values
+  - Regenerate images with modifications
+
+- **DELETE:**
+  - Delete generated content items (images and videos)
+  - Confirmation dialog before deletion
+  - Remove items from generation history
 
 **Access Level:** Manager, Admin, Super Admin
 
-**Note:** This is a **CREATE-FOCUSED** sidebar – users generate new assets but can't mutate old jobs
+**Note:** This is a **FULL CRUD** sidebar – users can create, read, update (edit), and delete generated content
 
 ---
 
-### 9. **Receiving Management** (`receivingManagement`)
+### 8. **Receiving Management** (`receivingManagement`)
 
 **Route:** `/receiving-management`
 
@@ -288,7 +291,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 10. **Order Management** (`orderManagement`)
+### 9. **Order Management** (`orderManagement`)
 
 **Route:** `/order-management`
 
@@ -315,7 +318,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 11. **Stock Management** (`stockManagement`)
+### 10. **Stock Management** (`stockManagement`)
 
 **Route:** `/stock-management`
 
@@ -342,7 +345,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 12. **Manage Masters** (`masters`)
+### 11. **Manage Masters** (`masters`)
 
 **Route:** `/masters`
 
@@ -369,7 +372,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 13. **User Management** (`userManagement`)
+### 12. **User Management** (`userManagement`)
 
 **Route:** `/user-management`, `/create-user`
 
@@ -421,7 +424,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ---
 
-### 14. **System Settings** (`systemSettings`)
+### 13. **System Settings** (`systemSettings`)
 
 **Route:** Not implemented yet
 
@@ -442,24 +445,23 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 ### **Full CRUD (Create + Read + Update + Delete):**
 
 1. ✅ **Procurement** - Complete product management
-2. ✅ **Receiving Management** - Inbound logistics
-3. ✅ **Order Management** - Fulfillment execution
-4. ✅ **Stock Management** - Inventory control
-5. ✅ **Manage Masters** - Reference data catalogues
-6. ✅ **User Management** - Complete user administration
+2. ✅ **Content Craft** - AI content generation with edit and delete capabilities
+3. ✅ **Receiving Management** - Inbound logistics
+4. ✅ **Order Management** - Fulfillment execution
+5. ✅ **Stock Management** - Inventory control
+6. ✅ **Manage Masters** - Reference data catalogues
+7. ✅ **User Management** - Complete user administration
 
 ### **Limited CRUD (Read + Create/Update):**
 
 1. ⚠️ **Shipping** - Read orders + Generate waybills + Track shipments
-2. ⚠️ **Content Craft** - Generate new assets, review history
+2. ⚠️ **Customer Data** - Read orders + Bulk upload (Create) via CSV/Excel
 
 ### **Read-Only:**
 
 1. 📖 **Dashboard** - Analytics and reports
-2. 📖 **SKU List** - Product SKU viewer
-3. 📖 **Product Spend Summary** - Spending analytics
-4. 📖 **Entity Report** - Attribution reports
-5. 📖 **Customer Data** - Shopify order viewer
+2. 📖 **Product Spend Summary** - Spending analytics
+3. 📖 **Entity Report** - Attribution reports
 
 ### **Not Implemented:**
 
@@ -472,13 +474,12 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 | Sidebar                  | Create   | Read   | Update   | Delete | Export | Search | Filter | Pagination |
 | ------------------------ | -------- | ------ | -------- | ------ | ------ | ------ | ------ | ---------- |
 | Dashboard                | ❌       | ✅     | ❌       | ❌     | ❌     | ❌     | ✅     | ❌         |
-| SKU List                 | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
 | Product Spend Summary    | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
 | Entity Report            | ❌       | ✅     | ❌       | ❌     | ✅     | ✅     | ✅     | ✅         |
 | **Procurement**          | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
-| Customer Data            | ❌       | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
+| Customer Data            | **✅\*** | ✅     | ❌       | ❌     | ❌     | ✅     | ✅     | ✅         |
 | **Shipping**             | **✅\*** | **✅** | **✅\*** | ❌     | ✅     | ✅     | ✅     | ✅         |
-| Content Craft            | ✅       | ✅     | ❌       | ❌     | ✅     | ✅     | ✅     | ✅         |
+| **Content Craft**        | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
 | **Receiving Management** | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
 | **Order Management**     | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
 | **Stock Management**     | **✅**   | **✅** | **✅**   | **✅** | ✅     | ✅     | ✅     | ✅         |
@@ -492,7 +493,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 - ❌ = Not Available
 - ⏳ = Planned/Future
 - **Bold** = Full or significant CRUD operations
-- - = Limited (Waybill generation only)
+- \* = Limited (Waybill generation for Shipping, Bulk upload for Customer Data)
 
 ---
 
@@ -507,13 +508,12 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 ### **Manager Role:**
 
 - ✅ Dashboard (Read)
-- ✅ SKU List (Read)
 - ✅ Product Spend Summary (Read)
 - ✅ Entity Report (Read)
 - ✅ Procurement (Full CRUD)
-- ✅ Customer Data (Read)
+- ✅ Customer Data (Read + Bulk Upload)
 - ✅ Shipping (Read + Waybill Generation)
-- ✅ Content Craft (Create + Read)
+- ✅ Content Craft (Full CRUD)
 - ✅ Receiving Management (Full CRUD)
 - ✅ Order Management (Full CRUD)
 - ✅ Stock Management (Full CRUD)
@@ -521,7 +521,18 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 
 ### **Admin Role:**
 
-- ✅ All Manager permissions, plus
+- ✅ All Manager permissions, including:
+  - ✅ Dashboard (Read)
+  - ✅ Product Spend Summary (Read)
+  - ✅ Entity Report (Read)
+  - ✅ Procurement (Full CRUD)
+  - ✅ Customer Data (Read + Bulk Upload)
+  - ✅ Shipping (Read + Waybill Generation)
+  - ✅ Content Craft (Full CRUD)
+  - ✅ Receiving Management (Full CRUD)
+  - ✅ Order Management (Full CRUD)
+  - ✅ Stock Management (Full CRUD)
+  - ✅ Manage Masters (Full CRUD)
 - ✅ User Management (Full CRUD)
 
 ### **Super Admin Role:**
@@ -541,13 +552,7 @@ This document provides a comprehensive analysis of all sidebar items in the dash
    - Add ability to mark orders as priority
    - Add manual order entry (if needed)
 
-2. **SKU List**
-
-   - Add ability to edit SKU information
-   - Add ability to update inventory levels
-   - Add ability to sync with procurement
-
-3. **Dashboard**
+2. **Dashboard**
    - Add ability to save custom views
    - Add ability to create custom reports
    - Add ability to set alerts/notifications
@@ -559,23 +564,25 @@ This document provides a comprehensive analysis of all sidebar items in the dash
 ### **Data Sources:**
 
 1. **Procurement** → Internal Database (MySQL/PostgreSQL)
-2. **Customer Data** → Shopify API (Read-only sync)
+2. **Customer Data** → Shopify API (Read sync) + Bulk Upload (CSV/Excel)
 3. **Shipping** → Shopify + BlueDart API
-4. **SKU List** → Shopify Products API
-5. **Product Spend Summary** → Aggregated from Ads + Sales data
-6. **Entity Report** → Google Ads + Meta Ads + Organic data
+4. **Product Spend Summary** → Aggregated from Ads + Sales data
+5. **Entity Report** → Google Ads + Meta Ads + Organic data
+6. **Content Craft** → Python AI Backend (Content Generation API)
 7. **User Management** → Firebase Firestore
 
 ---
 
 ## ✅ **Conclusion**
 
-**Total Sidebars:** 14
+**Total Sidebars:** 13
 
-- **Full CRUD:** 6 (Procurement, Receiving Management, Order Management, Stock Management, Manage Masters, User Management)
-- **Limited CRUD:** 2 (Shipping, Content Craft)
-- **Read-Only:** 5 (Dashboard, SKU List, Product Spend Summary, Entity Report, Customer Data)
+- **Full CRUD:** 7 (Procurement, Content Craft, Receiving Management, Order Management, Stock Management, Manage Masters, User Management)
+- **Limited CRUD:** 2 (Shipping, Customer Data)
+- **Read-Only:** 3 (Dashboard, Product Spend Summary, Entity Report)
 - **Planned:** 1 (System Settings)
 
-**Primary Management Sidebars:** Procurement, Receiving, Order, Stock, Masters, User Management
+**Note:** SKU List is not included in this report as it is commented out from the sidebar menu and not accessible through the navigation.
+
+**Primary Management Sidebars:** Procurement, Content Craft, Receiving, Order, Stock, Masters, User Management
 **Primary Viewing Sidebars:** Analytics, reporting, and Shopify data surfaces

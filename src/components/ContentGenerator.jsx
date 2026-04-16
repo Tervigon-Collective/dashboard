@@ -50,6 +50,8 @@ export default function ContentGenerator({ briefId }) {
         if (job.status === "pending" || job.status === "generating") {
           checkGenerationStatus(job.id);
         }
+        // Note: "pending_review" status jobs are kept in activeGenerations but polling stops
+        // as they are waiting for user review action, not backend processing
       });
     }, 2000); // Check every 2 seconds
 
@@ -83,11 +85,13 @@ export default function ContentGenerator({ briefId }) {
           const job = getGenerationsByType(selectedType).find(
             (j) => j.id === jobId
           );
-          if (job && (job.status === "completed" || job.status === "failed")) {
+          if (job && (job.status === "completed" || job.status === "failed" || job.status === "pending_review")) {
             clearInterval(pollInterval);
             setIsGenerating(false);
             if (job.status === "completed") {
               toast.success("Generation completed!");
+            } else if (job.status === "pending_review") {
+              toast.success("Generation ready for review!");
             } else {
               toast.error("Generation failed");
             }
