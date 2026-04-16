@@ -5,7 +5,6 @@ import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import VendorMasterLayer from "../../components/VendorMasterLayer";
 import ProductMasterLayer from "../../components/ProductMasterLayer";
-import BrandMasterLayer from "../../components/BrandMasterLayer";
 
 const MastersLayer = () => {
   const [activeTab, setActiveTab] = useState("vendor");
@@ -20,11 +19,6 @@ const MastersLayer = () => {
       id: "product",
       label: "PRODUCT",
       icon: "mdi:package-variant",
-    },
-    {
-      id: "brand",
-      label: "BRAND",
-      icon: "mdi:tag-multiple",
     },
   ];
 
@@ -92,7 +86,6 @@ const MastersLayer = () => {
         <div className="tab-content">
           {activeTab === "vendor" && <VendorMasterLayer />}
           {activeTab === "product" && <ProductMasterLayer />}
-          {activeTab === "brand" && <BrandMasterLayer />}
         </div>
       </div>
     </div>

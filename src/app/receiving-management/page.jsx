@@ -5,7 +5,6 @@ import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import purchaseRequestApi from "../../services/purchaseRequestApi";
 import vendorMasterApi from "../../services/vendorMasterApi";
-import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 import { useUser } from "@/helper/UserContext";
 import { Combobox } from "@headlessui/react";
@@ -206,7 +205,7 @@ const ReceivingManagementLayer = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [requests, setRequests] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [products] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -223,9 +222,31 @@ const ReceivingManagementLayer = () => {
   const ITEMS_PER_LOAD = 50; // Items to load per scroll
   const INITIAL_ITEMS_TO_SHOW = 50; // Initial items to display
 
+  const createEmptyVariant = () => ({
+    variant_id: null,
+    variant_display_name: "",
+    variant_type: {},
+    quantity: 1,
+    rate: 0,
+    taxable_amt: 0,
+    igst_percent: 0,
+    sgst_percent: 0,
+    cgst_percent: 0,
+    gst_amt: 0,
+    net_amount: 0,
+  });
+
+  const createEmptyProduct = () => ({
+    product_id: null,
+    product_name: "",
+    product_category: "",
+    hsn_code: "",
+    selectedVariants: [createEmptyVariant()],
+  });
+
   const [formData, setFormData] = useState({
     selectedVendor: null,
-    products: [{ product_id: null, selectedVariants: [] }], // Start with one empty product
+    products: [createEmptyProduct()], // Start with one empty product
     orderDate: "",
     deliveryDate: "",
   });
@@ -985,29 +1006,9 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  // Load products for dropdown - initial load without search
-  const loadProducts = async (searchTerm = "", limit = 100) => {
-    try {
-      const result = await productMasterApi.getAllProducts(1, limit, {
-        search: searchTerm,
-      });
-      if (result.success) {
-        return result.data;
-      }
-      return [];
-    } catch (error) {
-      console.error("Error loading products:", error);
-      return [];
-    }
-  };
-
   useEffect(() => {
     loadPurchaseRequests();
     loadVendors();
-    // Load initial products without search (first 100)
-    loadProducts("", 100).then((productsList) => {
-      setProducts(productsList);
-    });
   }, []);
 
   // Load to-be-delivered requests when switching to that tab (only if not already loaded)
@@ -1203,57 +1204,29 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  // Handle product selection - add product to the array
-  const handleProductSelect = (productId, index, productObject = null) => {
-    if (!productId) {
-      setFormData((prev) => {
-        const newProducts = [...prev.products];
-        if (index >= 0 && index < newProducts.length) {
-          newProducts[index] = { product_id: null, selectedVariants: [] };
-        }
-        return { ...prev, products: newProducts };
-      });
-      return;
-    }
-
-    // If product object is provided (from search results), use it; otherwise try to find in products array
-    // This maintains backward compatibility - existing calls without productObject work the same way
-    const product =
-      productObject || products.find((p) => p.product_id === productId);
-
-    // Original logic: only proceed if product is found (maintains exact same behavior)
-    if (product) {
-      setFormData((prev) => {
-        const newProducts = [...prev.products];
-        if (index >= 0 && index < newProducts.length) {
-          // Update existing product
-          newProducts[index] = {
-            product_id: productId,
-            selectedVariants: [],
-          };
-        } else {
-          // Add new product
-          newProducts.push({
-            product_id: productId,
-            selectedVariants: [],
-          });
-        }
-        return { ...prev, products: newProducts };
-      });
-
-      // If product was from search results and not in initial products, add it to products array
-      // so it can be found later when displaying selected product
-      if (productObject && !products.find((p) => p.product_id === productId)) {
-        setProducts((prev) => [...prev, productObject]);
-      }
-    }
+  const handleProductFieldChange = (productIndex, field, value) => {
+    setFormData((prev) => {
+      const newProducts = [...prev.products];
+      const target = { ...newProducts[productIndex] };
+      target[field] = value;
+      newProducts[productIndex] = target;
+      return { ...prev, products: newProducts };
+    });
   };
+
+  // Backward-compatible no-op handler kept for child component props
+  // that still receive handleProductSelect.
+  const handleProductSelect = () => {};
+
+  // Backward-compatible no-op handler kept for child component props
+  // that still receive handleVariantSelect (legacy master-variant selection).
+  const handleVariantSelect = () => {};
 
   // Add new product entry
   const handleAddProduct = () => {
     setFormData((prev) => ({
       ...prev,
-      products: [...prev.products, { product_id: null, selectedVariants: [] }],
+      products: [...prev.products, createEmptyProduct()],
     }));
   };
 
@@ -1265,42 +1238,57 @@ const ReceivingManagementLayer = () => {
     }));
   };
 
-  // Handle variant selection (can select multiple) - now works with product index
-  const handleVariantSelect = (variantId, productIndex, allVariants) => {
+  const updateVariantField = (productIndex, variantIndex, fieldName, value) => {
     setFormData((prev) => {
       const newProducts = [...prev.products];
-      const product = newProducts[productIndex];
-
+      const product = { ...newProducts[productIndex] };
       if (!product) return prev;
 
-      const variantIndex = product.selectedVariants.findIndex(
-        (v) => v.variant_id === variantId
-      );
-
-      if (variantIndex >= 0) {
-        // Remove if already selected
-        product.selectedVariants = product.selectedVariants.filter(
-          (v) => v.variant_id !== variantId
-        );
-      } else {
-        // Add to selection
-        const variant = allVariants.find((v) => v.variant_id === variantId);
-        product.selectedVariants = [
-          ...product.selectedVariants,
-          {
-            ...variant,
-            quantity: 1,
-            rate: 0,
-            taxable_amt: 0,
-            igst_percent: 0,
-            sgst_percent: 0,
-            cgst_percent: 0,
-            gst_amt: 0,
-            net_amount: 0,
-          },
-        ];
+      const variants = [...(product.selectedVariants || [])];
+      const target = { ...variants[variantIndex], [fieldName]: value };
+      if (
+        ["quantity", "rate", "igst_percent", "sgst_percent", "cgst_percent"].includes(
+          fieldName
+        )
+      ) {
+        const quantity = parseFloat(target.quantity) || 0;
+        const rate = parseFloat(target.rate) || 0;
+        const igstPercent = parseFloat(target.igst_percent) || 0;
+        const sgstPercent = parseFloat(target.sgst_percent) || 0;
+        const cgstPercent = parseFloat(target.cgst_percent) || 0;
+        const taxableAmt = rate * quantity;
+        const totalGstPercent = igstPercent + sgstPercent + cgstPercent;
+        const gstAmt = (taxableAmt * totalGstPercent) / 100;
+        target.taxable_amt = taxableAmt;
+        target.gst_amt = gstAmt;
+        target.net_amount = taxableAmt + gstAmt;
       }
 
+      variants[variantIndex] = target;
+      product.selectedVariants = variants;
+      newProducts[productIndex] = product;
+      return { ...prev, products: newProducts };
+    });
+  };
+
+  const handleAddVariant = (productIndex) => {
+    setFormData((prev) => {
+      const newProducts = [...prev.products];
+      const product = { ...newProducts[productIndex] };
+      product.selectedVariants = [...(product.selectedVariants || []), createEmptyVariant()];
+      newProducts[productIndex] = product;
+      return { ...prev, products: newProducts };
+    });
+  };
+
+  const handleRemoveVariant = (productIndex, variantIndex) => {
+    setFormData((prev) => {
+      const newProducts = [...prev.products];
+      const product = { ...newProducts[productIndex] };
+      const remaining = (product.selectedVariants || []).filter(
+        (_, idx) => idx !== variantIndex
+      );
+      product.selectedVariants = remaining.length ? remaining : [createEmptyVariant()];
       newProducts[productIndex] = product;
       return { ...prev, products: newProducts };
     });
@@ -1319,11 +1307,11 @@ const ReceivingManagementLayer = () => {
       }
 
       const missingProductIndex = formData.products.findIndex(
-        (product) => !product.product_id
+        (product) => !String(product.product_name || "").trim()
       );
       if (missingProductIndex !== -1) {
         alert(
-          `Please select a product for Product #${missingProductIndex + 1}.`
+          `Please enter Product Name for Product #${missingProductIndex + 1}.`
         );
         setIsSubmitting(false);
         return;
@@ -1332,12 +1320,49 @@ const ReceivingManagementLayer = () => {
       // Prepare items from all products
       const items = [];
       formData.products.forEach((product) => {
+        const inlineProductName =
+          String(product?.product_name || "").trim() ||
+          product?.selectedVariants?.[0]?.product_name ||
+          null;
+        const inlineProductCategory =
+          String(product?.product_category || "").trim() ||
+          product?.selectedVariants?.[0]?.product_category ||
+          null;
+        const inlineHsnCode =
+          String(product?.hsn_code || "").trim() ||
+          product?.selectedVariants?.[0]?.hsn_code ||
+          null;
+
+        if (!inlineProductName) {
+          throw new Error(
+            "Product name is missing for one of the product entries."
+          );
+        }
+
         product.selectedVariants
           .filter((variant) => variant.quantity > 0)
           .forEach((variant) => {
+            const safeVariantType =
+              variant.variant_type &&
+              typeof variant.variant_type === "string"
+                ? (() => {
+                    try {
+                      return JSON.parse(variant.variant_type);
+                    } catch {
+                      return {};
+                    }
+                  })()
+                : variant.variant_type || {};
+
             items.push({
-              product_id: product.product_id,
+              product_id: product.product_id || null,
               variant_id: variant.variant_id,
+              // Inline identity fields (used to create/resolve inventory_catalog_items)
+              product_name: inlineProductName,
+              product_category: inlineProductCategory,
+              hsn_code: inlineHsnCode,
+              variant_type: safeVariantType,
+              variant_display_name: variant.variant_display_name || null,
               quantity: variant.quantity || 1,
               rate: variant.rate || 0,
               taxable_amt: variant.taxable_amt || 0,
@@ -1375,7 +1400,7 @@ const ReceivingManagementLayer = () => {
         // Reset form
         setFormData({
           selectedVendor: null,
-          products: [{ product_id: null, selectedVariants: [] }],
+          products: [createEmptyProduct()],
           orderDate: "",
           deliveryDate: "",
         });
@@ -1426,7 +1451,7 @@ const ReceivingManagementLayer = () => {
     setEditingRequest(null);
     setFormData({
       selectedVendor: null,
-      products: [{ product_id: null, selectedVariants: [] }],
+      products: [createEmptyProduct()],
       orderDate: "",
       deliveryDate: "",
     });
@@ -1449,13 +1474,18 @@ const ReceivingManagementLayer = () => {
     setEditingRequest(request);
     setIsEditMode(true);
 
-    // Group items by product_id and build products array
+    // Group items by inline identity fields (not product master IDs)
     const productsMap = {};
     request.items.forEach((item) => {
-      if (!productsMap[item.product_id]) {
-        productsMap[item.product_id] = [];
+      const productKey = [
+        item.product_name || "",
+        item.product_category || "",
+        item.hsn_code || "",
+      ].join("|");
+      if (!productsMap[productKey]) {
+        productsMap[productKey] = [];
       }
-      productsMap[item.product_id].push({
+      productsMap[productKey].push({
         variant_id: item.variant_id,
         quantity: item.quantity || 1,
         ...item, // Spread item to get all variant details
@@ -1463,10 +1493,17 @@ const ReceivingManagementLayer = () => {
     });
 
     // Convert map to array
-    const productsArray = Object.keys(productsMap).map((productId) => ({
-      product_id: parseInt(productId),
-      selectedVariants: productsMap[productId],
-    }));
+    const productsArray = Object.keys(productsMap).map((productKey) => {
+      const productVariants = productsMap[productKey];
+      const firstItem = productVariants[0] || {};
+      return {
+        product_id: firstItem.product_id || null,
+        product_name: firstItem.product_name || "",
+        product_category: firstItem.product_category || "",
+        hsn_code: firstItem.hsn_code || "",
+        selectedVariants: productVariants,
+      };
+    });
 
     // Set form data from the request
     setFormData({
@@ -2575,6 +2612,8 @@ const ReceivingManagementLayer = () => {
               handleVariantSelect={handleVariantSelect}
               handleAddProduct={handleAddProduct}
               handleRemoveProduct={handleRemoveProduct}
+              handleAddVariant={handleAddVariant}
+              handleRemoveVariant={handleRemoveVariant}
               handleSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               handleModalClose={handleModalClose}
@@ -3963,6 +4002,8 @@ const PurchaseRequestTab = ({
   handleVariantSelect,
   handleAddProduct,
   handleRemoveProduct,
+  handleAddVariant,
+  handleRemoveVariant,
   handleSubmit,
   isSubmitting,
   handleModalClose,
@@ -4542,6 +4583,8 @@ const PurchaseRequestTab = ({
           handleVariantSelect={handleVariantSelect}
           handleAddProduct={handleAddProduct}
           handleRemoveProduct={handleRemoveProduct}
+          handleAddVariant={handleAddVariant}
+          handleRemoveVariant={handleRemoveVariant}
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           handleModalClose={handleModalClose}
@@ -4563,103 +4606,17 @@ const PurchaseRequestModal = ({
   handleVariantSelect,
   handleAddProduct,
   handleRemoveProduct,
+  handleAddVariant,
+  handleRemoveVariant,
   handleSubmit,
   isSubmitting,
   handleModalClose,
   isEditMode,
 }) => {
   const [vendorQuery, setVendorQuery] = useState("");
-  const [productQueries, setProductQueries] = useState(() =>
-    formData.products.map(() => "")
-  );
-  // Store search results for each product input (index -> products array)
-  const [productSearchResults, setProductSearchResults] = useState({});
-  // Track loading state for each product search
-  const [productSearchLoading, setProductSearchLoading] = useState({});
-  // Debounce timers for each product search
-  const searchTimersRef = useRef({});
-
-  useEffect(() => {
-    setProductQueries((prev) =>
-      formData.products.map((_, idx) => prev[idx] || "")
-    );
-    // Initialize search results for new products
-    setProductSearchResults((prev) => {
-      const newResults = { ...prev };
-      formData.products.forEach((_, idx) => {
-        if (!newResults[idx]) {
-          newResults[idx] = [];
-        }
-      });
-      return newResults;
-    });
-  }, [formData.products]);
-
   useEffect(() => {
     setVendorQuery("");
   }, [formData.selectedVendor]);
-
-  // Debounced product search function
-  const searchProducts = useCallback(async (searchTerm, productIndex) => {
-    // Clear existing timer for this product index
-    if (searchTimersRef.current[productIndex]) {
-      clearTimeout(searchTimersRef.current[productIndex]);
-    }
-
-    // Set loading state
-    setProductSearchLoading((prev) => ({
-      ...prev,
-      [productIndex]: true,
-    }));
-
-    // Debounce the API call
-    searchTimersRef.current[productIndex] = setTimeout(async () => {
-      try {
-        // Use productMasterApi directly for server-side search
-        const result = await productMasterApi.getAllProducts(1, 100, {
-          search: searchTerm.trim(),
-        });
-
-        if (result.success) {
-          setProductSearchResults((prev) => ({
-            ...prev,
-            [productIndex]: result.data || [],
-          }));
-        } else {
-          setProductSearchResults((prev) => ({
-            ...prev,
-            [productIndex]: [],
-          }));
-        }
-      } catch (error) {
-        console.error("Error searching products:", error);
-        setProductSearchResults((prev) => ({
-          ...prev,
-          [productIndex]: [],
-        }));
-      } finally {
-        setProductSearchLoading((prev) => ({
-          ...prev,
-          [productIndex]: false,
-        }));
-      }
-    }, 300); // 300ms debounce
-  }, []);
-
-  // Effect to trigger search when product query changes
-  useEffect(() => {
-    formData.products.forEach((_, productIndex) => {
-      const query = productQueries[productIndex] || "";
-      searchProducts(query, productIndex);
-    });
-
-    // Cleanup timers on unmount
-    return () => {
-      Object.values(searchTimersRef.current).forEach((timer) => {
-        if (timer) clearTimeout(timer);
-      });
-    };
-  }, [productQueries, formData.products, searchProducts]);
 
   const selectedVendor =
     vendors.find((vendor) => vendor.vendor_id === formData.selectedVendor) ||
@@ -4844,22 +4801,6 @@ const PurchaseRequestModal = ({
                 </div>
 
                 {formData.products.map((productEntry, productIndex) => {
-                  // Use search results if available, otherwise fall back to initial products
-                  const searchResults = productSearchResults[productIndex];
-                  const productsToShow =
-                    searchResults !== undefined ? searchResults : products;
-                  const selectedProduct =
-                    productsToShow.find(
-                      (p) => p.product_id === productEntry.product_id
-                    ) ||
-                    products.find(
-                      (p) => p.product_id === productEntry.product_id
-                    );
-                  const productVariants = selectedProduct?.variants || [];
-                  const productQuery = productQueries[productIndex] || "";
-                  const isLoadingSearch = productSearchLoading[productIndex];
-                  const filteredProducts = productsToShow;
-
                   return (
                     <div
                       key={productIndex}
@@ -4882,453 +4823,233 @@ const PurchaseRequestModal = ({
                         )}
                       </div>
 
-                      {/* Product Name Dropdown */}
                       <div className="row mb-3">
-                        <div className="col-md-12">
+                        <div className="col-md-6">
                           <label className="form-label">
                             Product Name <span className="text-danger">*</span>
                           </label>
-                          <Combobox
-                            value={selectedProduct || null}
-                            onChange={(product) => {
-                              if (product) {
-                                handleProductSelect(
-                                  product.product_id,
-                                  productIndex,
-                                  product
-                                );
-                                // Clear search query and reset search results for this product
-                                setProductQueries((prev) => {
-                                  const copy = [...prev];
-                                  copy[productIndex] = "";
-                                  return copy;
-                                });
-                                // Clear search results so it falls back to showing all products
-                                setProductSearchResults((prev) => {
-                                  const newResults = { ...prev };
-                                  delete newResults[productIndex];
-                                  return newResults;
-                                });
-                              } else {
-                                handleProductSelect(null, productIndex);
-                              }
-                            }}
-                          >
-                            <div className="position-relative">
-                              <Combobox.Input
-                                className="form-control"
-                                placeholder="Select product..."
-                                displayValue={(product) => {
-                                  if (!product) return "";
-                                  if (product.common_name) {
-                                    return `${product.product_name} (${product.common_name})`;
-                                  }
-                                  return product.product_name || "";
-                                }}
-                                onChange={(event) => {
-                                  const term = event.target.value;
-                                  setProductQueries((prev) => {
-                                    const copy = [...prev];
-                                    copy[productIndex] = term;
-                                    return copy;
-                                  });
-                                }}
-                              />
-                              <Combobox.Options
-                                className="list-group position-absolute w-100 shadow-sm mt-1"
-                                style={{
-                                  maxHeight: "240px",
-                                  overflowY: "auto",
-                                  zIndex: 1050,
-                                }}
-                              >
-                                {isLoadingSearch ? (
-                                  <Combobox.Option
-                                    value={null}
-                                    disabled
-                                    className="list-group-item disabled"
-                                  >
-                                    <div className="d-flex align-items-center gap-2">
-                                      <div
-                                        className="spinner-border spinner-border-sm"
-                                        role="status"
-                                        style={{
-                                          width: "1rem",
-                                          height: "1rem",
-                                        }}
-                                      >
-                                        <span className="visually-hidden">
-                                          Loading...
-                                        </span>
-                                      </div>
-                                      Searching products...
-                                    </div>
-                                  </Combobox.Option>
-                                ) : filteredProducts.length === 0 ? (
-                                  <Combobox.Option
-                                    value={null}
-                                    disabled
-                                    className="list-group-item disabled"
-                                  >
-                                    {productQuery.trim()
-                                      ? `No products found matching "${productQuery}"`
-                                      : "No products found"}
-                                  </Combobox.Option>
-                                ) : (
-                                  filteredProducts.map((product) => (
-                                    <Combobox.Option
-                                      key={product.product_id}
-                                      value={product}
-                                      className={({ active }) =>
-                                        `list-group-item list-group-item-action ${
-                                          active ? "active" : ""
-                                        }`
-                                      }
-                                    >
-                                      {product.common_name
-                                        ? `${product.product_name} (${product.common_name})`
-                                        : product.product_name}
-                                    </Combobox.Option>
-                                  ))
-                                )}
-                              </Combobox.Options>
-                            </div>
-                          </Combobox>
                           <input
-                            type="hidden"
-                            value={productEntry.product_id || ""}
+                            type="text"
+                            className="form-control"
+                            placeholder="Enter product name"
+                            value={productEntry.product_name || ""}
+                            onChange={(e) =>
+                              handleProductFieldChange(
+                                productIndex,
+                                "product_name",
+                                e.target.value
+                              )
+                            }
                             required
-                            readOnly
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label">Product Category</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Category"
+                            value={productEntry.product_category || ""}
+                            onChange={(e) =>
+                              handleProductFieldChange(
+                                productIndex,
+                                "product_category",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label">HSN Code</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="HSN"
+                            value={productEntry.hsn_code || ""}
+                            onChange={(e) =>
+                              handleProductFieldChange(
+                                productIndex,
+                                "hsn_code",
+                                e.target.value
+                              )
+                            }
                           />
                         </div>
                       </div>
 
-                      {/* HSN Code */}
-                      {selectedProduct && (
-                        <div className="row mb-3">
-                          <div className="col-md-12">
-                            <label className="form-label">HSN Code</label>
-                            <input
-                              type="text"
-                              className="form-control"
-                              value={selectedProduct.hsn_code || ""}
-                              disabled
-                            />
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <label className="form-label mb-0">Product Variants</label>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => handleAddVariant(productIndex)}
+                        >
+                          + Add Variant
+                        </button>
+                      </div>
+                      <div className="border rounded p-3" style={{ backgroundColor: "white" }}>
+                        {productEntry.selectedVariants.map((variant, variantIndex) => (
+                          <div key={variantIndex} className="border rounded p-2 mb-3">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <strong className="small">Variant #{variantIndex + 1}</strong>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() =>
+                                  handleRemoveVariant(productIndex, variantIndex)
+                                }
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <div className="row g-2 align-items-end">
+                              <div className="col-12 col-md-3">
+                                <label className="form-label small mb-1">
+                                  Variant Name <span className="text-danger">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  value={variant.variant_display_name || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "variant_display_name",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  Quantity
+                                </label>
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm text-end"
+                                  min="0"
+                                  value={variant.quantity || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "quantity",
+                                      parseInt(e.target.value, 10) || 0
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  Rate
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  min="0"
+                                  value={variant.rate || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "rate",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  IGST %
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  min="0"
+                                  value={variant.igst_percent || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "igst_percent",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  SGST %
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  min="0"
+                                  value={variant.sgst_percent || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "sgst_percent",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  CGST %
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  min="0"
+                                  value={variant.cgst_percent || ""}
+                                  onChange={(e) =>
+                                    updateVariantField(
+                                      productIndex,
+                                      variantIndex,
+                                      "cgst_percent",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  GST
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  value={variant.gst_amt || ""}
+                                  readOnly
+                                />
+                              </div>
+                              <div className="col-6 col-md-2">
+                                <label className="form-label small mb-1 text-end">
+                                  Net
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  value={variant.net_amount || ""}
+                                  readOnly
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Variants Selection */}
-                      {selectedProduct && productVariants.length > 0 && (
-                        <div>
-                          <label className="form-label">Product Variants</label>
-                          <div
-                            className="border rounded p-3"
-                            style={{ backgroundColor: "white" }}
-                          >
-                            {productVariants.map((variant) => {
-                              const isSelected =
-                                productEntry.selectedVariants.some(
-                                  (v) => v.variant_id === variant.variant_id
-                                );
-                              const selectedVariant =
-                                productEntry.selectedVariants.find(
-                                  (v) => v.variant_id === variant.variant_id
-                                );
-
-                              // Helper function to calculate financial fields
-                              const calculateFinancialFields = (
-                                variantData
-                              ) => {
-                                const quantity =
-                                  parseFloat(variantData.quantity) || 0;
-                                const rate = parseFloat(variantData.rate) || 0;
-                                const igstPercent =
-                                  parseFloat(variantData.igst_percent) || 0;
-                                const sgstPercent =
-                                  parseFloat(variantData.sgst_percent) || 0;
-                                const cgstPercent =
-                                  parseFloat(variantData.cgst_percent) || 0;
-
-                                // Calculate taxable amount (Rate × Quantity)
-                                const taxableAmt = rate * quantity;
-
-                                // Calculate GST amount (Taxable Amount × Total GST %)
-                                const totalGstPercent =
-                                  igstPercent + sgstPercent + cgstPercent;
-                                const gstAmt =
-                                  (taxableAmt * totalGstPercent) / 100;
-
-                                // Calculate net amount (Taxable Amount + GST Amount)
-                                const netAmount = taxableAmt + gstAmt;
-
-                                return {
-                                  taxable_amt: taxableAmt,
-                                  gst_amt: gstAmt,
-                                  net_amount: netAmount,
-                                };
-                              };
-
-                              // Helper function to update variant field
-                              const updateVariantField = (fieldName, value) => {
-                                setFormData((prev) => {
-                                  const newProducts = [...prev.products];
-                                  const product = {
-                                    ...newProducts[productIndex],
-                                  };
-                                  product.selectedVariants =
-                                    product.selectedVariants.map((v) => {
-                                      if (v.variant_id === variant.variant_id) {
-                                        const updatedVariant = {
-                                          ...v,
-                                          [fieldName]: value,
-                                        };
-
-                                        // Auto-calculate financial fields if relevant fields change
-                                        if (
-                                          [
-                                            "quantity",
-                                            "rate",
-                                            "igst_percent",
-                                            "sgst_percent",
-                                            "cgst_percent",
-                                          ].includes(fieldName)
-                                        ) {
-                                          const calculated =
-                                            calculateFinancialFields(
-                                              updatedVariant
-                                            );
-                                          return {
-                                            ...updatedVariant,
-                                            ...calculated,
-                                          };
-                                        }
-
-                                        return updatedVariant;
-                                      }
-                                      return v;
-                                    });
-                                  newProducts[productIndex] = product;
-                                  return { ...prev, products: newProducts };
-                                });
-                              };
-
-                              return (
-                                <div key={variant.variant_id} className="mb-4">
-                                  <div className="row align-items-center mb-3">
-                                    <div className="col-md-12">
-                                      <div className="form-check">
-                                        <input
-                                          className="form-check-input"
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() =>
-                                            handleVariantSelect(
-                                              variant.variant_id,
-                                              productIndex,
-                                              productVariants
-                                            )
-                                          }
-                                        />
-                                        <label className="form-check-label fw-semibold">
-                                          {variant.variant_display_name ||
-                                            "N/A"}
-                                          {variant.sku &&
-                                            ` (SKU: ${variant.sku})`}
-                                        </label>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {isSelected && (
-                                    <div className="row g-2">
-                                      {/* Quantity */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          Quantity
-                                        </label>
-                                        <input
-                                          type="number"
-                                          className="form-control form-control-sm"
-                                          placeholder="Qty"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.quantity || ""
-                                          }
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "quantity",
-                                              parseInt(e.target.value) || ""
-                                            )
-                                          }
-                                          onWheel={(e) => e.target.blur()}
-                                          style={{
-                                            MozAppearance: "textfield",
-                                          }}
-                                          required
-                                        />
-                                      </div>
-                                      {/* Rate */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          Rate
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="Rate"
-                                          min="0"
-                                          value={selectedVariant?.rate || ""}
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "rate",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          onWheel={(e) => e.target.blur()}
-                                          style={{
-                                            MozAppearance: "textfield",
-                                          }}
-                                        />
-                                      </div>
-                                      {/* Taxable Amt */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          Taxable Amt
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="Taxable Amt"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.taxable_amt || ""
-                                          }
-                                          readOnly
-                                          style={{ backgroundColor: "#f8f9fa" }}
-                                        />
-                                      </div>
-                                      {/* IGST % */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          IGST %
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="IGST %"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.igst_percent || ""
-                                          }
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "igst_percent",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          onWheel={(e) => e.target.blur()}
-                                          style={{
-                                            MozAppearance: "textfield",
-                                          }}
-                                        />
-                                      </div>
-                                      {/* SGST % */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          SGST %
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="SGST %"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.sgst_percent || ""
-                                          }
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "sgst_percent",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          onWheel={(e) => e.target.blur()}
-                                          style={{
-                                            MozAppearance: "textfield",
-                                          }}
-                                        />
-                                      </div>
-                                      {/* CGST % */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          CGST %
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="CGST %"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.cgst_percent || ""
-                                          }
-                                          onChange={(e) =>
-                                            updateVariantField(
-                                              "cgst_percent",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          onWheel={(e) => e.target.blur()}
-                                          style={{
-                                            MozAppearance: "textfield",
-                                          }}
-                                        />
-                                      </div>
-                                      {/* GST Amt */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          GST Amt
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="GST Amt"
-                                          min="0"
-                                          value={selectedVariant?.gst_amt || ""}
-                                          readOnly
-                                          style={{ backgroundColor: "#f8f9fa" }}
-                                        />
-                                      </div>
-                                      {/* Net Amount */}
-                                      <div className="col-6 col-md-3">
-                                        <label className="form-label small mb-1">
-                                          Net Amount
-                                        </label>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          className="form-control form-control-sm"
-                                          placeholder="Net Amount"
-                                          min="0"
-                                          value={
-                                            selectedVariant?.net_amount || ""
-                                          }
-                                          readOnly
-                                          style={{ backgroundColor: "#f8f9fa" }}
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
@@ -5388,10 +5109,13 @@ const PurchaseRequestModal = ({
                     formData.products.length === 0 ||
                     formData.products.every(
                       (product) =>
-                        !product.product_id ||
+                        !String(product.product_name || "").trim() ||
                         product.selectedVariants.length === 0 ||
                         product.selectedVariants.every(
-                          (v) => !v.quantity || v.quantity === 0
+                          (v) =>
+                            !String(v.variant_display_name || "").trim() ||
+                            !v.quantity ||
+                            v.quantity === 0
                         )
                     )
                   }
