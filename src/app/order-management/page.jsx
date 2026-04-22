@@ -241,6 +241,9 @@ const DispatchScannerModal = ({
           <div className="text-muted small">
             {lineItem.order_name || lineItem.order_id}
           </div>
+          <div className="text-muted small">
+            Brand: {lineItem.brand_name || `#${lineItem.brand_id || "-"}`}
+          </div>
         </div>
         <div className="row g-3 mb-3">
           <div className="col-6 col-md-3">
@@ -708,6 +711,8 @@ const OrderManagementPage = () => {
           order_name: line.order_name,
           created_at: line.created_at,
           display_fulfillment_status: line.display_fulfillment_status,
+          brand_id: line.brand_id,
+          brand_name: line.brand_name || null,
           lineItems: [],
           totalItems: 0,
           totalRemaining: 0,
@@ -840,6 +845,9 @@ const OrderManagementPage = () => {
             </div>
             <div className="small text-muted">
               {formatDateTime(orderGroup.created_at)}
+            </div>
+            <div className="small text-muted">
+              Brand: {orderGroup.brand_name || `#${orderGroup.brand_id || "-"}`}
             </div>
           </td>
           <td className="text-center">

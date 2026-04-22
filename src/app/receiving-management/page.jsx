@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import * as XLSX from "xlsx";
 import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import purchaseRequestApi from "../../services/purchaseRequestApi";
@@ -4024,6 +4025,317 @@ const PurchaseRequestTab = ({
   hasMoreData,
   loadMoreData,
 }) => {
+  const [excelUploadModalOpen, setExcelUploadModalOpen] = useState(false);
+  const [excelVendorQuery, setExcelVendorQuery] = useState("");
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelRows, setExcelRows] = useState([]);
+  const [excelSkippedRows, setExcelSkippedRows] = useState([]);
+  const [excelIsParsing, setExcelIsParsing] = useState(false);
+  const [excelIsSubmitting, setExcelIsSubmitting] = useState(false);
+  const [excelForm, setExcelForm] = useState({
+    selectedVendor: null,
+    orderDate: "",
+    deliveryDate: "",
+  });
+
+  const resetExcelUploadState = () => {
+    setExcelVendorQuery("");
+    setExcelFile(null);
+    setExcelRows([]);
+    setExcelSkippedRows([]);
+    setExcelIsParsing(false);
+    setExcelIsSubmitting(false);
+    setExcelForm({
+      selectedVendor: null,
+      orderDate: "",
+      deliveryDate: "",
+    });
+  };
+
+  const closeExcelUploadModal = () => {
+    setExcelUploadModalOpen(false);
+    resetExcelUploadState();
+  };
+
+  const normalizeHeader = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/\*/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const readNumeric = (value) => {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const parseExcelFile = async (file) => {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet =
+      workbook.Sheets["Purchase Request"] ||
+      workbook.Sheets[workbook.SheetNames[0]];
+
+    if (!sheet) {
+      throw new Error("No worksheet found in uploaded file.");
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    if (!rows.length) {
+      throw new Error("Uploaded sheet is empty.");
+    }
+
+    const headerRow = rows.find(
+      (row) =>
+        Array.isArray(row) &&
+        row.some((cell) => normalizeHeader(cell).includes("product name"))
+    );
+    if (!headerRow) {
+      throw new Error(
+        "Invalid template. Could not find header row with Product Name."
+      );
+    }
+
+    const headerIndex = rows.indexOf(headerRow);
+    const headerMap = {};
+    headerRow.forEach((header, idx) => {
+      headerMap[normalizeHeader(header)] = idx;
+    });
+
+    const getIndex = (...names) => {
+      for (const name of names) {
+        if (Object.prototype.hasOwnProperty.call(headerMap, name)) {
+          return headerMap[name];
+        }
+      }
+      return -1;
+    };
+
+    const idxProductName = getIndex("product name");
+    const idxProductCategory = getIndex("product category");
+    const idxHsnCode = getIndex("hsn code");
+    const idxVariantName = getIndex("variant name");
+    const idxQuantity = getIndex("quantity");
+    const idxRate = getIndex("rate");
+    const idxIgst = getIndex("igst");
+    const idxSgst = getIndex("sgst");
+    const idxCgst = getIndex("cgst");
+
+    if (
+      idxProductName === -1 ||
+      idxVariantName === -1 ||
+      idxQuantity === -1 ||
+      idxRate === -1
+    ) {
+      throw new Error(
+        "Invalid template headers. Required: Product Name, Variant Name, Quantity, Rate."
+      );
+    }
+
+    const parsedRows = [];
+    const skippedRows = [];
+
+    rows.slice(headerIndex + 1).forEach((row, rowOffset) => {
+      const excelRowNo = headerIndex + 2 + rowOffset;
+      const productName = String(row[idxProductName] || "").trim();
+      const productCategory =
+        idxProductCategory >= 0
+          ? String(row[idxProductCategory] || "").trim()
+          : "";
+      const hsnCode = idxHsnCode >= 0 ? String(row[idxHsnCode] || "").trim() : "";
+      const variantName = String(row[idxVariantName] || "").trim();
+      const quantity = readNumeric(row[idxQuantity]);
+      const rate = readNumeric(row[idxRate]);
+      const igst = idxIgst >= 0 ? readNumeric(row[idxIgst]) : 0;
+      const sgst = idxSgst >= 0 ? readNumeric(row[idxSgst]) : 0;
+      const cgst = idxCgst >= 0 ? readNumeric(row[idxCgst]) : 0;
+
+      const isEmptyRow = !productName && !variantName && quantity === 0 && rate === 0;
+      if (isEmptyRow) return;
+
+      const errors = [];
+      if (!productName) errors.push("Missing Product Name");
+      if (!variantName) errors.push("Missing Variant Name");
+      if (quantity <= 0) errors.push("Quantity must be > 0");
+      if (rate < 0) errors.push("Rate cannot be negative");
+
+      if (errors.length) {
+        skippedRows.push({ rowNo: excelRowNo, reason: errors.join(", ") });
+        return;
+      }
+
+      const taxableAmt = quantity * rate;
+      const gstAmt = (taxableAmt * (igst + sgst + cgst)) / 100;
+
+      parsedRows.push({
+        rowNo: excelRowNo,
+        product_name: productName,
+        product_category: productCategory || null,
+        hsn_code: hsnCode || null,
+        variant_display_name: variantName,
+        quantity,
+        rate,
+        igst_percent: igst,
+        sgst_percent: sgst,
+        cgst_percent: cgst,
+        taxable_amt: taxableAmt,
+        gst_amt: gstAmt,
+        net_amount: taxableAmt + gstAmt,
+      });
+    });
+
+    return { parsedRows, skippedRows };
+  };
+
+  const handleDownloadExcelTemplate = () => {
+    const headers = [
+      "Product Name *",
+      "Product Category",
+      "HSN Code",
+      "Variant Name *",
+      "Quantity *",
+      "Rate *",
+      "IGST %",
+      "SGST %",
+      "CGST %",
+      "Taxable Amt",
+      "GST Amt",
+      "Net Amount",
+    ];
+
+    const sampleRows = [
+      [
+        "Therapeutic Shampoo",
+        "Pet Care",
+        "3305",
+        "500ml",
+        100,
+        199,
+        0,
+        9,
+        9,
+        "",
+        "",
+        "",
+      ],
+      [
+        "Therapeutic Shampoo",
+        "Pet Care",
+        "3305",
+        "1000ml",
+        50,
+        349,
+        0,
+        9,
+        9,
+        "",
+        "",
+        "",
+      ],
+    ];
+
+    const wsData = [headers, ...sampleRows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const instructions = XLSX.utils.aoa_to_sheet([
+      ["Instructions"],
+      ["Use one row per variant."],
+      ["Required columns: Product Name, Variant Name, Quantity, Rate."],
+      ["Taxable/GST/Net are auto-calculated during upload."],
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Purchase Request");
+    XLSX.utils.book_append_sheet(wb, instructions, "Instructions");
+    XLSX.writeFile(wb, "PR_Upload_Template.xlsx");
+  };
+
+  const handleExcelFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setExcelFile(file);
+    setExcelRows([]);
+    setExcelSkippedRows([]);
+    setExcelIsParsing(true);
+
+    try {
+      const { parsedRows, skippedRows } = await parseExcelFile(file);
+      setExcelRows(parsedRows);
+      setExcelSkippedRows(skippedRows);
+    } catch (error) {
+      console.error("Failed to parse PR excel:", error);
+      alert(error.message || "Failed to parse Excel file.");
+      setExcelFile(null);
+    } finally {
+      setExcelIsParsing(false);
+    }
+  };
+
+  const handleExcelSubmit = async () => {
+    if (!excelForm.selectedVendor) {
+      alert("Please select a company before uploading.");
+      return;
+    }
+    if (!excelRows.length) {
+      alert("No valid rows found in uploaded Excel.");
+      return;
+    }
+
+    setExcelIsSubmitting(true);
+    try {
+      const payload = {
+        vendor_id: excelForm.selectedVendor,
+        order_date: excelForm.orderDate,
+        delivery_date: excelForm.deliveryDate,
+        items: excelRows.map((row) => ({
+          product_id: null,
+          variant_id: null,
+          product_name: row.product_name,
+          product_category: row.product_category,
+          hsn_code: row.hsn_code,
+          variant_type: {},
+          variant_display_name: row.variant_display_name,
+          quantity: row.quantity,
+          rate: row.rate,
+          taxable_amt: row.taxable_amt,
+          igst_percent: row.igst_percent,
+          sgst_percent: row.sgst_percent,
+          cgst_percent: row.cgst_percent,
+          gst_amt: row.gst_amt,
+          net_amount: row.net_amount,
+        })),
+      };
+
+      const result = await purchaseRequestApi.createPurchaseRequest(payload);
+      if (!result.success) {
+        throw new Error(result.message || "Failed to create purchase request.");
+      }
+
+      await loadPurchaseRequests(currentPage, false, true);
+      closeExcelUploadModal();
+    } catch (error) {
+      console.error("Failed to create PR from excel:", error);
+      alert(error.message || "Failed to create purchase request from Excel.");
+    } finally {
+      setExcelIsSubmitting(false);
+    }
+  };
+
+  const selectedExcelVendor =
+    vendors.find((vendor) => vendor.vendor_id === excelForm.selectedVendor) ||
+    null;
+  const filteredExcelVendors =
+    excelVendorQuery.trim() === ""
+      ? vendors
+      : vendors.filter((vendor) => {
+          const label = vendor.company_name
+            ? `${vendor.company_name} (${vendor.vendor_name})`
+            : vendor.vendor_name;
+          return label
+            ?.toLowerCase()
+            .includes(excelVendorQuery.trim().toLowerCase());
+        });
+
   // Filter data based on search term
   const filteredData = requests.filter((request) => {
     if (!searchTerm) return true;
@@ -4059,6 +4371,14 @@ const PurchaseRequestTab = ({
         <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
           <h5 className="card-title mb-0">Purchase Requests</h5>
           <div className="d-flex gap-2 align-items-center">
+            <button
+              onClick={() => setExcelUploadModalOpen(true)}
+              className="btn btn-outline-primary d-inline-flex align-items-center"
+              style={{ gap: "6px", padding: "8px 16px" }}
+            >
+              <Icon icon="mdi:microsoft-excel" width="18" height="18" />
+              Upload Excel
+            </button>
             <button
               onClick={() => setModalOpen(true)}
               className="btn btn-primary d-inline-flex align-items-center"
@@ -4590,6 +4910,262 @@ const PurchaseRequestTab = ({
           handleModalClose={handleModalClose}
           isEditMode={isEditMode}
         />
+      )}
+
+      {excelUploadModalOpen && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div
+            className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
+            style={{ maxWidth: "min(900px, 95vw)", margin: "1rem auto" }}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <Icon icon="mdi:microsoft-excel" className="me-2" />
+                  Upload Purchase Request Excel
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeExcelUploadModal}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="d-flex flex-wrap gap-2 justify-content-end mb-3">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={handleDownloadExcelTemplate}
+                  >
+                    <Icon icon="mdi:download" className="me-1" />
+                    Download Template
+                  </button>
+                </div>
+
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      Company Name <span className="text-danger">*</span>
+                    </label>
+                    <Combobox
+                      value={selectedExcelVendor}
+                      onChange={(vendor) => {
+                        setExcelVendorQuery("");
+                        setExcelForm((prev) => ({
+                          ...prev,
+                          selectedVendor: vendor ? vendor.vendor_id : null,
+                        }));
+                      }}
+                    >
+                      <div className="position-relative">
+                        <Combobox.Input
+                          className="form-control"
+                          placeholder="Select company..."
+                          displayValue={(vendor) =>
+                            vendor
+                              ? vendor.company_name
+                                ? `${vendor.company_name} (${vendor.vendor_name})`
+                                : vendor.vendor_name
+                              : ""
+                          }
+                          onChange={(event) =>
+                            setExcelVendorQuery(event.target.value)
+                          }
+                        />
+                        <Combobox.Options
+                          className="list-group position-absolute w-100 shadow-sm mt-1"
+                          style={{
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            zIndex: 2000,
+                          }}
+                        >
+                          {filteredExcelVendors.length === 0 ? (
+                            <Combobox.Option
+                              value={null}
+                              disabled
+                              className="list-group-item disabled"
+                            >
+                              No companies found
+                            </Combobox.Option>
+                          ) : (
+                            filteredExcelVendors.map((vendor) => (
+                              <Combobox.Option
+                                key={vendor.vendor_id}
+                                value={vendor}
+                                className={({ active }) =>
+                                  `list-group-item list-group-item-action ${
+                                    active ? "active" : ""
+                                  }`
+                                }
+                              >
+                                {vendor.company_name
+                                  ? `${vendor.company_name} (${vendor.vendor_name})`
+                                  : vendor.vendor_name}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      </div>
+                    </Combobox>
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Order Date</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={excelForm.orderDate}
+                      onChange={(e) =>
+                        setExcelForm((prev) => ({
+                          ...prev,
+                          orderDate: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Delivery Date</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={excelForm.deliveryDate}
+                      onChange={(e) =>
+                        setExcelForm((prev) => ({
+                          ...prev,
+                          deliveryDate: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">
+                      Excel File <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelFileChange}
+                    />
+                    {excelFile && (
+                      <small className="text-muted d-block mt-1">
+                        Selected: {excelFile.name}
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="d-flex flex-wrap gap-2">
+                    <span className="badge bg-success">
+                      Valid rows: {excelRows.length}
+                    </span>
+                    <span className="badge bg-warning text-dark">
+                      Skipped rows: {excelSkippedRows.length}
+                    </span>
+                  </div>
+                </div>
+
+                {excelSkippedRows.length > 0 && (
+                  <div className="alert alert-warning mt-3 py-2 mb-0">
+                    <div className="fw-semibold mb-1">Skipped rows</div>
+                    <ul className="mb-0 ps-3">
+                      {excelSkippedRows.map((row) => (
+                        <li key={`skip-${row.rowNo}`}>
+                          Row {row.rowNo}: {row.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="table-responsive mt-3">
+                  <table className="table table-sm table-bordered">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Row</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>HSN</th>
+                        <th>Variant</th>
+                        <th className="text-end">Qty</th>
+                        <th className="text-end">Rate</th>
+                        <th className="text-end">IGST %</th>
+                        <th className="text-end">SGST %</th>
+                        <th className="text-end">CGST %</th>
+                        <th className="text-end">GST</th>
+                        <th className="text-end">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {excelRows.length === 0 ? (
+                        <tr>
+                          <td colSpan="12" className="text-center text-muted">
+                            {excelIsParsing
+                              ? "Parsing Excel..."
+                              : "No valid rows parsed yet."}
+                          </td>
+                        </tr>
+                      ) : (
+                        excelRows.map((row) => (
+                          <tr key={`row-${row.rowNo}`}>
+                            <td>{row.rowNo}</td>
+                            <td>{row.product_name}</td>
+                            <td>{row.product_category || "-"}</td>
+                            <td>{row.hsn_code || "-"}</td>
+                            <td>{row.variant_display_name}</td>
+                            <td className="text-end">{row.quantity}</td>
+                            <td className="text-end">{row.rate.toFixed(2)}</td>
+                            <td className="text-end">
+                              {row.igst_percent.toFixed(2)}
+                            </td>
+                            <td className="text-end">
+                              {row.sgst_percent.toFixed(2)}
+                            </td>
+                            <td className="text-end">
+                              {row.cgst_percent.toFixed(2)}
+                            </td>
+                            <td className="text-end">{row.gst_amt.toFixed(2)}</td>
+                            <td className="text-end">{row.net_amount.toFixed(2)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeExcelUploadModal}
+                  disabled={excelIsSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleExcelSubmit}
+                  disabled={excelIsSubmitting || excelIsParsing || !excelRows.length}
+                >
+                  {excelIsSubmitting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" />
+                      Creating PR...
+                    </>
+                  ) : (
+                    "Create Purchase Request"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
