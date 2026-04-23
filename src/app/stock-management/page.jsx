@@ -1448,12 +1448,22 @@ const StockManagementPage = () => {
     const grouped = {};
 
     variantData.forEach((item) => {
-      const productId = item.product_id;
+      // V2 flow stores product_id as null, so grouping by product_id collapses
+      // unrelated products into one bucket. Use product identity fallback key.
+      const productIdentityKey = [
+        (item.product_name || "").trim().toLowerCase(),
+        (item.product_category || "").trim().toLowerCase(),
+        (item.hsn_code || "").toString().trim().toLowerCase(),
+      ].join("|");
 
-      if (!grouped[productId]) {
-        grouped[productId] = {
+      const productGroupKey =
+        item.product_id != null ? `pid:${item.product_id}` : `id:${productIdentityKey}`;
+
+      if (!grouped[productGroupKey]) {
+        grouped[productGroupKey] = {
           // Product-level info
-          product_id: productId,
+          product_group_key: productGroupKey,
+          product_id: item.product_id ?? null,
           product_name: item.product_name,
           hsn_code: item.hsn_code,
 
@@ -1488,23 +1498,23 @@ const StockManagementPage = () => {
       }
 
       // Add variant to group
-      grouped[productId].variants.push(item);
+      grouped[productGroupKey].variants.push(item);
 
       // Track reorder points for aggregation
       if (item.reorder_point !== null && item.reorder_point !== undefined) {
-        grouped[productId].reorder_points.push(item.reorder_point);
+        grouped[productGroupKey].reorder_points.push(item.reorder_point);
       }
 
       // Aggregate quantities
-      grouped[productId].total_available += item.available_quantity || 0;
-      grouped[productId].total_committed += item.committed_quantity || 0;
-      grouped[productId].total_net_available += item.net_available || 0;
-      grouped[productId].total_cancelled += item.cancelled_quantity || 0;
-      grouped[productId].total_approved_returns +=
+      grouped[productGroupKey].total_available += item.available_quantity || 0;
+      grouped[productGroupKey].total_committed += item.committed_quantity || 0;
+      grouped[productGroupKey].total_net_available += item.net_available || 0;
+      grouped[productGroupKey].total_cancelled += item.cancelled_quantity || 0;
+      grouped[productGroupKey].total_approved_returns +=
         item.approved_returns_quantity || 0;
-      grouped[productId].total_damaged += item.damaged_quantity || 0;
-      grouped[productId].total_received += item.total_received_quantity || 0;
-      grouped[productId].variant_count++;
+      grouped[productGroupKey].total_damaged += item.damaged_quantity || 0;
+      grouped[productGroupKey].total_received += item.total_received_quantity || 0;
+      grouped[productGroupKey].variant_count++;
 
       // Determine worst status (priority: out_of_stock > critical > low_stock > in_stock)
       const netAvailable =
@@ -1550,12 +1560,12 @@ const StockManagementPage = () => {
 
       if (
         statusPriority[itemStatus] >
-        statusPriority[grouped[productId].worst_status]
+        statusPriority[grouped[productGroupKey].worst_status]
       ) {
-        grouped[productId].worst_status = itemStatus;
-        grouped[productId].worst_status_label = itemStatusLabel;
-        grouped[productId].worst_status_color = itemStatusColor;
-        grouped[productId].worst_status_bgColor = itemStatusBgColor;
+        grouped[productGroupKey].worst_status = itemStatus;
+        grouped[productGroupKey].worst_status_label = itemStatusLabel;
+        grouped[productGroupKey].worst_status_color = itemStatusColor;
+        grouped[productGroupKey].worst_status_bgColor = itemStatusBgColor;
       }
     });
 
@@ -2575,14 +2585,17 @@ const StockManagementPage = () => {
                             {getDisplayedInventoryData().map((item, index) => {
                               // Product view mode
                               if (inventoryViewMode === "product") {
-                                const isExpanded = expandedProducts.has(
-                                  item.product_id
-                                );
+                                const groupKey =
+                                  item.product_group_key ||
+                                  (item.product_id != null
+                                    ? `pid:${item.product_id}`
+                                    : `name:${String(item.product_name || "")
+                                        .trim()
+                                        .toLowerCase()}`);
+                                const isExpanded = expandedProducts.has(groupKey);
 
                                 return (
-                                  <React.Fragment
-                                    key={`product-${item.product_id}`}
-                                  >
+                                  <React.Fragment key={`product-${groupKey}`}>
                                     {/* Product Row */}
                                     <tr
                                       style={{
@@ -2595,10 +2608,10 @@ const StockManagementPage = () => {
                                         const newExpanded = new Set(
                                           expandedProducts
                                         );
-                                        if (newExpanded.has(item.product_id)) {
-                                          newExpanded.delete(item.product_id);
+                                        if (newExpanded.has(groupKey)) {
+                                          newExpanded.delete(groupKey);
                                         } else {
-                                          newExpanded.add(item.product_id);
+                                          newExpanded.add(groupKey);
                                         }
                                         setExpandedProducts(newExpanded);
                                       }}

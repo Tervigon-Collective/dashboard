@@ -2613,8 +2613,10 @@ const ReceivingManagementLayer = () => {
               handleVariantSelect={handleVariantSelect}
               handleAddProduct={handleAddProduct}
               handleRemoveProduct={handleRemoveProduct}
+              handleProductFieldChange={handleProductFieldChange}
               handleAddVariant={handleAddVariant}
               handleRemoveVariant={handleRemoveVariant}
+              updateVariantField={updateVariantField}
               handleSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               handleModalClose={handleModalClose}
@@ -4003,8 +4005,10 @@ const PurchaseRequestTab = ({
   handleVariantSelect,
   handleAddProduct,
   handleRemoveProduct,
+  handleProductFieldChange,
   handleAddVariant,
   handleRemoveVariant,
+  updateVariantField,
   handleSubmit,
   isSubmitting,
   handleModalClose,
@@ -4903,8 +4907,10 @@ const PurchaseRequestTab = ({
           handleVariantSelect={handleVariantSelect}
           handleAddProduct={handleAddProduct}
           handleRemoveProduct={handleRemoveProduct}
+          handleProductFieldChange={handleProductFieldChange}
           handleAddVariant={handleAddVariant}
           handleRemoveVariant={handleRemoveVariant}
+          updateVariantField={updateVariantField}
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           handleModalClose={handleModalClose}
@@ -5182,8 +5188,10 @@ const PurchaseRequestModal = ({
   handleVariantSelect,
   handleAddProduct,
   handleRemoveProduct,
+  handleProductFieldChange,
   handleAddVariant,
   handleRemoveVariant,
+  updateVariantField,
   handleSubmit,
   isSubmitting,
   handleModalClose,
