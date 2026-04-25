@@ -1771,7 +1771,7 @@ const ReceivingManagementLayer = () => {
     router,
   ]);
 
-  // Helper function to add SKU text to QR code image
+  // Helper function to add SKU text to QR code image (legacy 2-up format)
   const addSkuToQrImage = async (imageBlob, sku) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -1783,12 +1783,18 @@ const ReceivingManagementLayer = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
 
+        // Legacy dimensions from helpQr.jsx
         const qrWidth = img.width;
         const qrHeight = img.height;
         const padding = 20;
-        const textHeight = sku ? 40 : 0;
-        const canvasWidth = qrWidth + padding * 2;
-        const canvasHeight = qrHeight + padding * 2 + textHeight;
+        const textHeight = sku ? 40 : 0; // space for SKU text
+        const blockSpacing = 40; // space between two blocks
+
+        const singleBlockWidth = qrWidth + padding * 2;
+        const singleBlockHeight = qrHeight + padding * 2 + textHeight;
+
+        const canvasWidth = singleBlockWidth * 2 + blockSpacing;
+        const canvasHeight = singleBlockHeight;
 
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
@@ -1797,19 +1803,26 @@ const ReceivingManagementLayer = () => {
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Draw QR code image
-        ctx.drawImage(img, padding, padding, qrWidth, qrHeight);
+        // Draw a single QR block (QR + optional SKU text)
+        const drawBlock = (xOffset) => {
+          ctx.drawImage(img, xOffset + padding, padding, qrWidth, qrHeight);
 
-        // Add SKU text at the bottom if provided
-        if (sku) {
-          ctx.fillStyle = "#000000";
-          ctx.font = "bold 16px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
+          if (sku) {
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
 
-          const textY = qrHeight + padding + textHeight / 2;
-          ctx.fillText(`SKU: ${sku}`, canvasWidth / 2, textY);
-        }
+            const textY = qrHeight + padding + textHeight / 2;
+            const blockCenterX = xOffset + singleBlockWidth / 2;
+            ctx.fillText(`SKU: ${sku}`, blockCenterX, textY);
+          }
+        };
+
+        // Left block
+        drawBlock(0);
+        // Right block (identical)
+        drawBlock(singleBlockWidth + blockSpacing);
 
         canvas.toBlob((blob) => {
           if (blob) {

@@ -244,6 +244,10 @@ const DispatchScannerModal = ({
           <div className="text-muted small">
             Brand: {lineItem.brand_name || `#${lineItem.brand_id || "-"}`}
           </div>
+          <div className="small text-info mt-1">
+            Scan-first dispatch: scanned QR decides which stock item is
+            decremented; order line is used for dispatch tracking.
+          </div>
         </div>
         <div className="row g-3 mb-3">
           <div className="col-6 col-md-3">
@@ -296,6 +300,10 @@ const DispatchScannerModal = ({
                   {lineItem.remaining_to_dispatch} item
                   {lineItem.remaining_to_dispatch !== 1 ? "s" : ""} remaining.
                 </span>
+              </p>
+              <p className="mb-2 small text-muted">
+                Product title in order and stock can differ. The scanned QR is
+                the source of truth for stock decrement.
               </p>
 
               {/* USB barcode scanner input field */}
@@ -947,8 +955,8 @@ const OrderManagementPage = () => {
               <div>
                 <h5 className="mb-0">Order Dispatch Queue</h5>
                 <div className="text-muted small">
-                  Process Shopify orders by scanning the QR codes printed during
-                  receiving.
+                  Process orders by scanning QR codes printed during receiving.
+                  Scanned QR identity controls stock decrement.
                 </div>
               </div>
               <div className="d-flex gap-2">
@@ -1060,8 +1068,8 @@ const OrderManagementPage = () => {
                       <th className="text-center">Ordered</th>
                       <th className="text-center">Dispatched</th>
                       <th className="text-center">Remaining</th>
-                      <th className="text-center">Available</th>
-                      <th className="text-center">Committed</th>
+                      <th className="text-center">Stock Available</th>
+                      <th className="text-center">System Committed</th>
                       <th className="text-end">Actions</th>
                     </tr>
                   </thead>
