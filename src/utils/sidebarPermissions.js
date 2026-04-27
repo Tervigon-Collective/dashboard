@@ -21,6 +21,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     receivingManagement: { enabled: false, operations: [] },
     orderManagement: { enabled: false, operations: [] },
     stockManagement: { enabled: false, operations: [] },
+    salesReport: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
   user: {
@@ -39,6 +40,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     receivingManagement: { enabled: false, operations: [] },
     orderManagement: { enabled: false, operations: [] },
     stockManagement: { enabled: false, operations: [] },
+    salesReport: { enabled: false, operations: [] },
     masters: { enabled: false, operations: [] },
   },
   manager: {
@@ -65,6 +67,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
+    },
+    salesReport: {
+      enabled: true,
+      operations: ["read"],
     },
     masters: {
       enabled: true,
@@ -98,6 +104,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
+    },
+    salesReport: {
+      enabled: true,
+      operations: ["read"],
     },
     masters: {
       enabled: true,
@@ -134,6 +144,10 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     stockManagement: {
       enabled: true,
       operations: ["read", "create", "update", "delete"],
+    },
+    salesReport: {
+      enabled: true,
+      operations: ["read"],
     },
     masters: {
       enabled: true,
@@ -413,6 +427,15 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
       OPERATION_TYPES.DELETE,
     ],
     supportsCRUD: true,
+  },
+  salesReport: {
+    key: "salesReport",
+    label: "Sales Report",
+    description: "View Shopify sales and debit/credit note reports",
+    icon: "mdi:chart-line-variant",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [OPERATION_TYPES.READ],
+    supportsCRUD: false,
   },
   masters: {
     key: "masters",

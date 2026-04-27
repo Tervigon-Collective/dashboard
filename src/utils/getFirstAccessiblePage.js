@@ -16,6 +16,7 @@ const SIDEBAR_TO_ROUTE_MAP = [
   { sidebar: "receivingManagement", route: "/receiving-management" },
   { sidebar: "orderManagement", route: "/order-management" },
   { sidebar: "stockManagement", route: "/stock-management" },
+  { sidebar: "salesReport", route: "/sales-report" },
   { sidebar: "masters", route: "/masters" },
   { sidebar: "userManagement", route: "/user-management" },
 ];

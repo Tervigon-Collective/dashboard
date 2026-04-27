@@ -537,6 +537,7 @@ const MasterLayout = ({ children }) => {
                 hasSidebarPermission("receivingManagement") ||
                 hasSidebarPermission("orderManagement") ||
                 hasSidebarPermission("stockManagement") ||
+                hasSidebarPermission("salesReport") ||
                 hasSidebarPermission("masters");
 
               if ((isSuperAdmin || isAdmin || isManager) && hasAnyInventoryPermission) {
@@ -596,6 +597,22 @@ const MasterLayout = ({ children }) => {
                             className="menu-icon"
                           />
                           <span>Stock Management</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("salesReport") && (
+                      <li>
+                        <Link
+                          href="/sales-report"
+                          className={
+                            pathname === "/sales-report" ? "active-page" : ""
+                          }
+                        >
+                          <Icon
+                            icon="mdi:chart-line-variant"
+                            className="menu-icon"
+                          />
+                          <span>Sales Report</span>
                         </Link>
                       </li>
                     )}
