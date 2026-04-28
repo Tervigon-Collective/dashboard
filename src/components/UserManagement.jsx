@@ -24,6 +24,13 @@ import {
 } from "@/utils/sidebarPermissions";
 import config from "@/config";
 
+const buildApiSidebarPermissions = (permissions = {}) => {
+  const normalized = { ...permissions };
+  // Backend currently rejects this key; omit it to prevent 400 on role update.
+  delete normalized.salesReport;
+  return normalized;
+};
+
 const UserManagement = () => {
   const { user, token, role, hasOperation } = useUser();
   const [users, setUsers] = useState([]);
@@ -276,7 +283,7 @@ const UserManagement = () => {
     setUpdating(true);
     try {
       const requestBody = {
-        sidebarPermissions: sidebarPermissions,
+        sidebarPermissions: buildApiSidebarPermissions(sidebarPermissions),
       };
 
       if (canChangeRole && newRole) {
