@@ -31,6 +31,50 @@ const beautifyHeader = (key) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 
+const NUMERIC_COLUMN_HINTS = [
+  "quantity",
+  "taxable_value",
+  "cgst_amount",
+  "sgst_amount",
+  "igst_amount",
+  "total_gst",
+  "gross_line",
+  "rate",
+  "discount",
+  "price",
+  "amount",
+  "total",
+  "subtotal",
+  "tax",
+];
+
+const isNumericColumn = (key) => {
+  const normalizedKey = String(key || "").toLowerCase();
+  return NUMERIC_COLUMN_HINTS.some((hint) => normalizedKey.includes(hint));
+};
+
+const coerceExportValue = (key, value) => {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  if (!isNumericColumn(key)) {
+    return value;
+  }
+
+  // Keep export numeric where possible so Excel formulas work immediately.
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const normalized = String(value).replace(/,/g, "").trim();
+  if (normalized === "") {
+    return "";
+  }
+
+  const numericValue = Number(normalized);
+  return Number.isFinite(numericValue) ? numericValue : value;
+};
+
 const SalesReportLayer = () => {
   const [activeTab, setActiveTab] = useState("sales");
   const [dateRange, setDateRange] = useState(() => {
@@ -164,7 +208,15 @@ const SalesReportLayer = () => {
       return;
     }
 
-    const sheet = XLSX.utils.json_to_sheet(activeRows);
+    const coercedRows = activeRows.map((row) => {
+      const nextRow = {};
+      for (const key of Object.keys(row)) {
+        nextRow[key] = coerceExportValue(key, row[key]);
+      }
+      return nextRow;
+    });
+
+    const sheet = XLSX.utils.json_to_sheet(coercedRows);
     const workbook = XLSX.utils.book_new();
     const sheetName = activeTab === "sales" ? "Sales Report" : "Debit Credit Note";
     XLSX.utils.book_append_sheet(workbook, sheet, sheetName);

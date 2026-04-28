@@ -1318,6 +1318,15 @@ const ReceivingManagementLayer = () => {
         return;
       }
 
+      const missingHsnIndex = formData.products.findIndex(
+        (product) => !String(product.hsn_code || "").trim()
+      );
+      if (missingHsnIndex !== -1) {
+        alert(`Please enter HSN Code for Product #${missingHsnIndex + 1}.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Prepare items from all products
       const items = [];
       formData.products.forEach((product) => {
@@ -4140,12 +4149,13 @@ const PurchaseRequestTab = ({
 
     if (
       idxProductName === -1 ||
+      idxHsnCode === -1 ||
       idxVariantName === -1 ||
       idxQuantity === -1 ||
       idxRate === -1
     ) {
       throw new Error(
-        "Invalid template headers. Required: Product Name, Variant Name, Quantity, Rate."
+        "Invalid template headers. Required: Product Name, HSN Code, Variant Name, Quantity, Rate."
       );
     }
 
@@ -4172,6 +4182,7 @@ const PurchaseRequestTab = ({
 
       const errors = [];
       if (!productName) errors.push("Missing Product Name");
+      if (!hsnCode) errors.push("Missing HSN Code");
       if (!variantName) errors.push("Missing Variant Name");
       if (quantity <= 0) errors.push("Quantity must be > 0");
       if (rate < 0) errors.push("Rate cannot be negative");
@@ -4208,7 +4219,7 @@ const PurchaseRequestTab = ({
     const headers = [
       "Product Name *",
       "Product Category",
-      "HSN Code",
+      "HSN Code *",
       "Variant Name *",
       "Quantity *",
       "Rate *",
@@ -4256,7 +4267,7 @@ const PurchaseRequestTab = ({
     const instructions = XLSX.utils.aoa_to_sheet([
       ["Instructions"],
       ["Use one row per variant."],
-      ["Required columns: Product Name, Variant Name, Quantity, Rate."],
+      ["Required columns: Product Name, HSN Code, Variant Name, Quantity, Rate."],
       ["Taxable/GST/Net are auto-calculated during upload."],
     ]);
 
@@ -4295,6 +4306,13 @@ const PurchaseRequestTab = ({
     }
     if (!excelRows.length) {
       alert("No valid rows found in uploaded Excel.");
+      return;
+    }
+    const hasMissingHsnCode = excelRows.some(
+      (row) => !String(row.hsn_code || "").trim()
+    );
+    if (hasMissingHsnCode) {
+      alert("HSN Code is required in Excel for all rows.");
       return;
     }
 
@@ -5457,7 +5475,9 @@ const PurchaseRequestModal = ({
                           />
                         </div>
                         <div className="col-md-3">
-                          <label className="form-label">HSN Code</label>
+                          <label className="form-label">
+                            HSN Code <span className="text-danger">*</span>
+                          </label>
                           <input
                             type="text"
                             className="form-control"
@@ -5470,6 +5490,7 @@ const PurchaseRequestModal = ({
                                 e.target.value
                               )
                             }
+                            required
                           />
                         </div>
                       </div>
