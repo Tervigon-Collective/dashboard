@@ -698,6 +698,90 @@ const downloadTableExcel = async (tableData, question = "Ask BOSS Query") => {
   }
 };
 
+const extractFinalResponse = (payload) => {
+  if (!payload || typeof payload !== "object") return null;
+  if (typeof payload.answer === "string") return payload;
+
+  for (const value of Object.values(payload)) {
+    if (!value || typeof value !== "object") continue;
+    if (typeof value.answer === "string") return value;
+    const nested = extractFinalResponse(value);
+    if (nested) return nested;
+  }
+  return null;
+};
+
+const streamAskBossResponse = async (requestPayload) => {
+  const response = await fetch("/api/ask-seleric/query/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestPayload),
+  });
+
+  if (!response.ok || !response.body) {
+    let errorText = "";
+    try {
+      errorText = await response.text();
+    } catch {
+      errorText = "";
+    }
+    throw new Error(errorText || `Stream request failed with status ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let lastFinalResponse = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      let parsed;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        continue;
+      }
+
+      if (parsed?.error) {
+        throw new Error(parsed.error);
+      }
+
+      const maybeFinal = extractFinalResponse(parsed);
+      if (maybeFinal) {
+        lastFinalResponse = maybeFinal;
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    try {
+      const parsed = JSON.parse(buffer.trim());
+      const maybeFinal = extractFinalResponse(parsed);
+      if (maybeFinal) {
+        lastFinalResponse = maybeFinal;
+      }
+    } catch {
+      // no-op
+    }
+  }
+
+  if (!lastFinalResponse) {
+    throw new Error("No final response found in stream");
+  }
+
+  return lastFinalResponse;
+};
+
 const AskSelericModal = ({ open, onClose }) => {
   const { role, user } = useUser();
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
@@ -802,11 +886,15 @@ const AskSelericModal = ({ open, onClose }) => {
     setInputValue("");
 
     try {
-      const response = await apiClient.post(
-        "/api/ask-seleric/query",
-        requestPayload
-      );
-      const data = response.data;
+      let data;
+      try {
+        data = await streamAskBossResponse(requestPayload);
+      } catch (streamErr) {
+        console.warn("Ask BOSS stream failed; falling back to /query", streamErr);
+        const response = await apiClient.post("/api/ask-seleric/query", requestPayload);
+        data = response.data;
+      }
+
       setMessages((prev) => {
         const updated = [...prev];
         const typingIndex = updated.findIndex(
