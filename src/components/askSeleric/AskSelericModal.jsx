@@ -7,8 +7,10 @@ import clsx from "clsx";
 import { Icon } from "@iconify/react";
 import ExcelJS from "exceljs";
 import dynamic from "next/dynamic";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useUser } from "@/helper/UserContext";
 import { apiClient } from "@/api/api";
+import config from "@/config";
 
 // Dynamically import ReactApexChart to avoid SSR issues
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -712,9 +714,41 @@ const extractFinalResponse = (payload) => {
 };
 
 const streamAskBossResponse = async (requestPayload) => {
-  const response = await fetch("/api/ask-seleric/query/stream", {
+  const baseURL = (apiClient?.defaults?.baseURL || config?.api?.baseURL || "").replace(
+    /\/$/,
+    ""
+  );
+  if (!baseURL) {
+    throw new Error("Ask BOSS backend baseURL is not configured");
+  }
+
+  // Match apiClient auth behavior (Firebase Bearer token).
+  const auth = getAuth();
+  let user = auth.currentUser;
+  if (!user && typeof window !== "undefined") {
+    user = await new Promise((resolve) => {
+      const unsub = onAuthStateChanged(auth, (u) => {
+        unsub();
+        resolve(u);
+      });
+      setTimeout(() => {
+        unsub();
+        resolve(null);
+      }, 2500);
+    });
+  }
+  const tokenToUse = user ? await user.getIdToken() : null;
+
+  const streamHeaders = {
+    "Content-Type": "application/json",
+  };
+  if (tokenToUse) {
+    streamHeaders.Authorization = `Bearer ${tokenToUse}`;
+  }
+
+  const response = await fetch(`${baseURL}/api/ask-seleric/query/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: streamHeaders,
     body: JSON.stringify(requestPayload),
   });
 
