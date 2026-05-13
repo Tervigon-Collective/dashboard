@@ -46,6 +46,7 @@ const UnitCountOne = ({ dateRange }) => {
   const [metaCogs, setMetaCogs] = useState(null);
   const [organicCogs, setOrganicCogs] = useState(null);
   const [totalSales, setTotalSales] = useState(null);
+  const [totalSalesAfterGst, setTotalSalesAfterGst] = useState(null);
   const [googleSales, setGoogleSales] = useState(null);
   const [metaSales, setMetaSales] = useState(null);
   const [organicSales, setOrganicSales] = useState(null);
@@ -152,6 +153,7 @@ const UnitCountOne = ({ dateRange }) => {
     setMetaCogs(null);
     setOrganicCogs(null);
     setTotalSales(null);
+    setTotalSalesAfterGst(null);
     setGoogleSales(null);
     setMetaSales(null);
     setOrganicSales(null);
@@ -211,10 +213,14 @@ const UnitCountOne = ({ dateRange }) => {
         }
         // sales
         if (results[2].status === "fulfilled") {
-          setTotalSales(results[2].value.data.totalSales ?? null);
-          setGoogleSales(results[2].value.data.googleSales ?? null);
-          setMetaSales(results[2].value.data.metaSales ?? null);
-          setOrganicSales(results[2].value.data.organicSales ?? null);
+          const salesPayload = results[2].value.data;
+          setTotalSales(salesPayload.totalSales ?? null);
+          setTotalSalesAfterGst(
+            salesPayload.total_sales_after_gst ?? null
+          );
+          setGoogleSales(salesPayload.googleSales ?? null);
+          setMetaSales(salesPayload.metaSales ?? null);
+          setOrganicSales(salesPayload.organicSales ?? null);
         } else {
           setError((e) => ({ ...e, sales: "Failed to load data" }));
         }
@@ -347,6 +353,7 @@ const UnitCountOne = ({ dateRange }) => {
           if (results[1].status === "fulfilled") {
             const salesData = results[1].value.data.sum;
             setTotalSales(salesData.total_sales ?? null);
+            setTotalSalesAfterGst(salesData.total_sales_after_gst ?? null);
             setGoogleSales(salesData.google_sales ?? null);
             setMetaSales(salesData.meta_sales ?? null);
             setOrganicSales(salesData.organic_sales ?? null);
@@ -618,7 +625,7 @@ const UnitCountOne = ({ dateRange }) => {
                   style={{ letterSpacing: "1px" }}
                 >
                   {getCardContent(
-                    totalSales,
+                    totalSalesAfterGst ?? totalSales,
                     loading,
                     error.sales,
                     (v) => `Rs.${Number(v).toFixed(2)}`
