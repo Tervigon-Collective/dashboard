@@ -1,13 +1,10 @@
 "use client";
-import useReactApexChart from "@/hook/useReactApexChart";
-import { Icon } from "@iconify/react/dist/iconify.js";
 import dynamic from "next/dynamic";
 import React, { useEffect, useState } from "react";
 import { apiClient } from "../../api/api";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
-import config from "../../config";
 const TotalSubscriberOne = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,8 +49,11 @@ const TotalSubscriberOne = () => {
         const dailyBreakdowns = res.data?.data?.dailyBreakdowns || [];
         setData(dailyBreakdowns);
 
-        // Extract total net profit from the response
-        const total = res.data?.data?.totals?.netProfit || 0;
+        // After-GST net profit (totals); fallback for older API
+        const total =
+          res.data?.data?.totals?.netProfit_after_gst ??
+          res.data?.data?.totals?.netProfit ??
+          0;
         setTotalNetProfit(total);
 
         setLoading(false);
@@ -83,12 +83,14 @@ const TotalSubscriberOne = () => {
   const chartSeries = [
     {
       name: "Net Profit",
-      data: data.map((d) => Number(d.netProfit)),
+      data: data.map((d) =>
+        Number(d.netProfit_after_gst ?? d.netProfit)
+      ),
     },
   ];
   // Bar colors: green for profit, red for loss
   const barColors = data.map((d) =>
-    Number(d.netProfit) >= 0 ? "#388e3c" : "#d32f2f"
+    Number(d.netProfit_after_gst ?? d.netProfit) >= 0 ? "#388e3c" : "#d32f2f"
   );
 
   // Use the total net profit for last 7 days

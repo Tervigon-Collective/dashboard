@@ -224,9 +224,8 @@ const UnitCountOne = ({ dateRange }) => {
         } else {
           setError((e) => ({ ...e, sales: "Failed to load data" }));
         }
-        // net_profit
+        // net_profit (channel breakdowns; headline total uses net_profit_after_gst below)
         if (results[3].status === "fulfilled") {
-          // No longer set totalNetProfit from API, use formula below
           setGoogleNetProfit(results[3].value.data.googleNetProfit ?? null);
           setMetaNetProfit(results[3].value.data.metaNetProfit ?? null);
           setOrganicNetProfit(results[3].value.data.organicNetProfit ?? null);
@@ -292,12 +291,7 @@ const UnitCountOne = ({ dateRange }) => {
           }));
         }
 
-        // Use correct net profit formula: total net profit = total sales - total cogs - total ad spend
-        const totalSales = Number(
-          results[2].status === "fulfilled"
-            ? results[2].value.data.totalSales ?? 0
-            : 0
-        );
+        // Total net profit (after GST on sales): total_sales_after_gst − COGS − ad spend
         const totalCogs = Number(
           results[1].status === "fulfilled"
             ? results[1].value.data.totalCogs ?? 0
@@ -308,7 +302,20 @@ const UnitCountOne = ({ dateRange }) => {
             ? results[0].value.data.totalSpend ?? 0
             : 0
         );
-        setTotalNetProfit(totalSales - totalCogs - totalAdSpend);
+        const totalSalesAfterGstNum = Number(
+          results[2].status === "fulfilled"
+            ? results[2].value.data.total_sales_after_gst ?? 0
+            : 0
+        );
+        const fromNetProfitApi =
+          results[3].status === "fulfilled"
+            ? results[3].value.data?.net_profit_after_gst
+            : undefined;
+        setTotalNetProfit(
+          fromNetProfitApi != null && fromNetProfitApi !== ""
+            ? Number(fromNetProfitApi)
+            : totalSalesAfterGstNum - totalCogs - totalAdSpend
+        );
         setLoading(false);
       });
     } else {
@@ -377,7 +384,7 @@ const UnitCountOne = ({ dateRange }) => {
             const totalAdSpend =
               adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
             const totalNetProfit =
-              (salesData.total_sales ?? 0) -
+              Number(salesData.total_sales_after_gst ?? 0) -
               (salesData.unit_cost ?? 0) -
               totalAdSpend;
             const googleNetProfit =
