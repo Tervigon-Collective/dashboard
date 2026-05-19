@@ -564,24 +564,7 @@ const MasterLayout = ({ children }) => {
                         </Link>
                       </li>
                     )}
-                    {hasSidebarPermission("orderManagement") && (
-                      <li>
-                        <Link
-                          href="/order-management"
-                          className={
-                            pathname === "/order-management"
-                              ? "active-page"
-                              : ""
-                          }
-                        >
-                          <Icon
-                            icon="mdi:clipboard-text"
-                            className="menu-icon"
-                          />
-                          <span>Order Management</span>
-                        </Link>
-                      </li>
-                    )}
+                    {/* V3: Order Management (scan dispatch) removed — stock via Shopify sync */}
                     {hasSidebarPermission("stockManagement") && (
                       <li>
                         <Link

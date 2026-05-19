@@ -7,7 +7,6 @@ import React, {
   useState,
   useRef,
 } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { Modal, Button } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -190,37 +189,6 @@ const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
         </Button>
       </Modal.Footer>
     </Modal>
-  );
-};
-
-const ReturnActionButtons = ({ row, onApprove, onReject, busy }) => {
-  if (row.status !== "pending") {
-    return (
-      <div className="d-flex justify-content-end">
-        <span className="badge bg-light text-secondary">{row.status}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="d-flex gap-2 justify-content-end">
-      <button
-        type="button"
-        className="btn btn-sm btn-success"
-        disabled={busy}
-        onClick={() => onApprove(row)}
-      >
-        Approve
-      </button>
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-danger"
-        disabled={busy}
-        onClick={() => onReject(row)}
-      >
-        Reject
-      </button>
-    </div>
   );
 };
 
@@ -417,75 +385,8 @@ const MoveToInventoryModal = ({
   );
 };
 
-const QrCodeModal = ({
-  qrCodeUrl,
-  isOpen,
-  onClose,
-  productName,
-  variantName,
-}) => {
-  const handleDownload = () => {
-    if (!qrCodeUrl) return;
-    const link = document.createElement("a");
-    link.href = qrCodeUrl;
-    link.download = `sample-qr-${productName}-${variantName}.png`.replace(
-      /[^a-z0-9.-]/gi,
-      "-"
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  return (
-    <Modal show={isOpen} onHide={onClose} size="sm" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>QR Code Generated</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="text-center">
-        <div className="mb-3">
-          <div className="text-muted small mb-2">Product: {productName}</div>
-          <div className="text-muted small mb-3">Variant: {variantName}</div>
-        </div>
-        {qrCodeUrl && (
-          <div className="mb-3">
-            <img
-              src={qrCodeUrl}
-              alt="Sample Inventory QR Code"
-              style={{
-                maxWidth: "100%",
-                height: "auto",
-                border: "1px solid #dee2e6",
-                borderRadius: "8px",
-              }}
-            />
-          </div>
-        )}
-        <div className="text-muted small">
-          This QR code can be scanned multiple times for dispatch (once per
-          unit).
-        </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>
-          Close
-        </Button>
-        {qrCodeUrl && (
-          <Button variant="primary" onClick={handleDownload}>
-            <Icon icon="mdi:download" width={18} height={18} className="me-1" />
-            Download QR Code
-          </Button>
-        )}
-      </Modal.Footer>
-    </Modal>
-  );
-};
-
 const StockManagementPage = () => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("inventory");
-  const qrHandledRef = useRef(false);
   const [highlightedVariantId, setHighlightedVariantId] = useState(null);
 
   // Infinite scroll state for inventory
@@ -523,24 +424,6 @@ const StockManagementPage = () => {
   const inventoryTableRef = useRef(null);
   const inventoryItemsPerPage = 20;
 
-  // Returns state
-  const [returnsState, setReturnsState] = useState({
-    data: [],
-    pagination: { page: 1, totalPages: 1, total: 0 },
-    loading: false,
-    status: "pending",
-    busyCaseId: null,
-    sortField: null,
-    sortDirection: "asc",
-  });
-
-  // Infinite scroll state for returns
-  const [returnsDisplayedCount, setReturnsDisplayedCount] = useState(20);
-  const [returnsLoadingMore, setReturnsLoadingMore] = useState(false);
-  const returnsLoadingMoreRef = useRef(false); // Ref for immediate synchronous access
-  const returnsTableRef = useRef(null);
-  const returnsItemsPerPage = 20;
-
   const [inventoryDetail, setInventoryDetail] = useState({
     item: null,
     ledger: null,
@@ -569,17 +452,6 @@ const StockManagementPage = () => {
     isOpen: false,
     variant: null,
     loading: false,
-    qrCodeUrl: null,
-    showQrCode: false,
-  });
-
-  const [qrPreviewState, setQrPreviewState] = useState({
-    isOpen: false,
-    qrCodeUrl: null,
-    productName: "",
-    variantName: "",
-    procurementVariantId: null,
-    masterVariantId: null,
   });
 
   // Debounced search for inventory (like VendorMasterLayer)
@@ -680,57 +552,6 @@ const StockManagementPage = () => {
       return sortedData;
     },
     [inventoryState.sortField, inventoryState.sortDirection, inventoryViewMode]
-  );
-
-  // Sort returns data
-  const sortReturnsData = useCallback(
-    (
-      dataArray,
-      field = returnsState.sortField,
-      direction = returnsState.sortDirection
-    ) => {
-      if (!field || !Array.isArray(dataArray)) {
-        return dataArray || [];
-      }
-
-      const sortedData = [...dataArray].sort((a, b) => {
-        const valueA = a?.[field];
-        const valueB = b?.[field];
-
-        if (valueA === valueB) return 0;
-        if (valueA == null) return -1;
-        if (valueB == null) return 1;
-
-        // Handle dates
-        if (/_at$/.test(field) || field === "reported_at") {
-          const dateA = new Date(valueA).getTime();
-          const dateB = new Date(valueB).getTime();
-          return dateA - dateB;
-        }
-
-        // Handle numbers
-        const numA = Number(valueA);
-        const numB = Number(valueB);
-        const bothNumbers = !Number.isNaN(numA) && !Number.isNaN(numB);
-
-        if (bothNumbers) {
-          return numA - numB;
-        }
-
-        return String(valueA)
-          .toLocaleLowerCase()
-          .localeCompare(String(valueB).toLocaleLowerCase(), undefined, {
-            sensitivity: "base",
-          });
-      });
-
-      if (direction === "desc") {
-        sortedData.reverse();
-      }
-
-      return sortedData;
-    },
-    [returnsState.sortField, returnsState.sortDirection]
   );
 
   // Load inventory
@@ -888,80 +709,6 @@ const StockManagementPage = () => {
     [adjustingItemId]
   );
 
-  // Load returns
-  const loadReturns = useCallback(
-    async ({ page, status, append = false } = {}) => {
-      if (!append) {
-        setReturnsState((prev) => ({ ...prev, loading: true }));
-      }
-
-      try {
-        const response = await inventoryManagementApi.listReturnCases({
-          status: status ?? returnsState.status,
-          page: page ?? returnsState.pagination.page,
-          limit: 20,
-        });
-
-        const data = Array.isArray(response?.data)
-          ? response.data
-          : response?.data?.data || [];
-        const pagination = response?.pagination ||
-          response?.data?.pagination || {
-            page: 1,
-            totalPages: 1,
-            total: data.length,
-          };
-
-        if (append) {
-          // When appending during infinite scroll:
-          // - If client-side sorting is active, don't append (sorting breaks pagination order)
-          // - If no sorting, append and maintain API pagination order
-          setReturnsState((prev) => {
-            if (prev.sortField) {
-              // Client-side sorting is active - don't append to preserve pagination order
-              // User should remove sort or load all data first
-              return {
-                ...prev,
-                loading: false,
-              };
-            }
-            // No sorting active - safe to append and maintain API pagination order
-            const combinedData = [...prev.data, ...data];
-            return {
-              ...prev,
-              data: combinedData,
-              pagination,
-              loading: false,
-            };
-          });
-        } else {
-          // When not appending, sort the new data normally
-          // Use state from setState callback to avoid stale closure issues
-          setReturnsState((prev) => {
-            const processedData = sortReturnsData(
-              data,
-              prev.sortField,
-              prev.sortDirection
-            );
-            return {
-              ...prev,
-              data: processedData,
-              pagination,
-              status: status ?? prev.status,
-              loading: false,
-            };
-          });
-          setReturnsDisplayedCount(20);
-        }
-      } catch (error) {
-        console.error("Failed to load return cases", error);
-        toast.error(error.message || "Failed to load return cases");
-        setReturnsState((prev) => ({ ...prev, loading: false }));
-      }
-    },
-    [returnsState.pagination.page, returnsState.status, sortReturnsData]
-  );
-
   const loadSampleProducts = useCallback(
     async ({ page, search } = {}) => {
       setSampleProductsState((prev) => ({ ...prev, loading: true }));
@@ -1003,20 +750,14 @@ const StockManagementPage = () => {
   };
 
   const handleCloseMoveModal = () => {
-    // Clean up QR code URL if it exists
-    if (moveModalState.qrCodeUrl) {
-      URL.revokeObjectURL(moveModalState.qrCodeUrl);
-    }
     setMoveModalState({
       isOpen: false,
       variant: null,
       loading: false,
-      qrCodeUrl: null,
-      showQrCode: false,
     });
   };
 
-  const handleConfirmMove = async (variant, sku, quantity, masterVariantId) => {
+  const handleConfirmMove = async (variant, sku, quantity) => {
     setMoveModalState((prev) => ({ ...prev, loading: true }));
     try {
       const response = await inventoryManagementApi.moveSampleToInventory(
@@ -1024,48 +765,11 @@ const StockManagementPage = () => {
         { sku, quantity }
       );
 
-      if (response.success && response.data?.qr_code) {
-        const qrCode = response.data.qr_code;
-        toast.success(
-          `Sample quantity moved to inventory successfully${
-            qrCode.is_new ? " (QR code generated)" : " (QR code reused)"
-          }`
-        );
-
-        // Close move modal first
-        setMoveModalState((prev) => ({
-          ...prev,
-          isOpen: false,
-          loading: false,
-        }));
-
-        // Show QR code modal
-        if (masterVariantId) {
-          try {
-            const qrImageUrl = await inventoryManagementApi.getSampleQrCode({
-              procurementVariantId: variant.procurement_variant_id,
-              masterVariantId: masterVariantId,
-            });
-            setMoveModalState((prev) => ({
-              ...prev,
-              qrCodeUrl: qrImageUrl,
-              showQrCode: true,
-              variant: variant, // Keep variant for QR modal display
-            }));
-          } catch (qrError) {
-            console.error("Failed to load QR code:", qrError);
-            // Don't block the success - QR code generation succeeded, just display failed
-            toast.warning(
-              "QR code generated but could not be displayed. You can access it later."
-            );
-          }
-        }
-      } else {
+      if (response.success) {
         toast.success("Sample quantity moved to inventory successfully");
         handleCloseMoveModal();
+        loadSampleProducts({ page: sampleProductsState.pagination.page });
       }
-
-      loadSampleProducts({ page: sampleProductsState.pagination.page });
     } catch (error) {
       console.error("Failed to move sample to inventory", error);
       toast.error(error.message || "Failed to move sample to inventory");
@@ -1083,12 +787,6 @@ const StockManagementPage = () => {
     sort: null,
     sortDir: "asc",
   });
-  const prevReturnsFiltersRef = useRef({
-    status: "pending",
-    sort: null,
-    sortDir: "asc",
-  });
-
   // Initial load on mount
   useEffect(() => {
     if (activeTab === "inventory") {
@@ -1098,13 +796,10 @@ const StockManagementPage = () => {
       inventoryPrevPageRef.current = 1;
       inventoryPrevSearchRef.current = "";
       inventoryPrevLimitRef.current = 25;
-    } else if (activeTab === "returns") {
-      setIsMounted(true);
-      loadReturns({ page: 1 });
     } else if (activeTab === "sample-products") {
       loadSampleProducts({ page: 1 });
     }
-  }, [activeTab, loadReturns, loadSampleProducts]);
+  }, [activeTab, loadSampleProducts]);
 
   // Handle inventory filter changes
   useEffect(() => {
@@ -1136,118 +831,6 @@ const StockManagementPage = () => {
     inventoryState.sortField,
     inventoryState.sortDirection,
   ]);
-
-  // Handle returns filter changes
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const currentFilters = {
-      status: returnsState.status,
-      sort: returnsState.sortField,
-      sortDir: returnsState.sortDirection,
-    };
-
-    const prevFilters = prevReturnsFiltersRef.current;
-    const filtersChanged =
-      prevFilters.status !== currentFilters.status ||
-      prevFilters.sort !== currentFilters.sort ||
-      prevFilters.sortDir !== currentFilters.sortDir;
-
-    if (filtersChanged) {
-      prevReturnsFiltersRef.current = currentFilters;
-      loadReturns({ page: 1 });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isMounted,
-    returnsState.status,
-    returnsState.sortField,
-    returnsState.sortDirection,
-  ]);
-
-  // Handle QR code deep link - similar to receiving management
-  useEffect(() => {
-    if (!searchParams) return;
-    if (qrHandledRef.current) return;
-
-    const fromQr = searchParams.get("fromQr");
-    const procurementVariantIdParam = searchParams.get("procurementVariantId");
-    const masterVariantIdParam = searchParams.get("masterVariantId");
-    const tokenParam = searchParams.get("token");
-
-    if (!fromQr || !procurementVariantIdParam) {
-      return;
-    }
-
-    const procurementVariantIdNum = Number(procurementVariantIdParam);
-
-    if (!Number.isFinite(procurementVariantIdNum)) {
-      qrHandledRef.current = true;
-      return;
-    }
-
-    const openFromQr = async () => {
-      try {
-        // Switch to sample products tab
-        setActiveTab("sample-products");
-
-        // Load sample products if not already loaded
-        if (sampleProductsState.data.length === 0) {
-          await loadSampleProducts({ page: 1 });
-        }
-
-        // Find the variant in the loaded data
-        let variantToHighlight = sampleProductsState.data.find(
-          (v) => Number(v.procurement_variant_id) === procurementVariantIdNum
-        );
-
-        // If not found in current data, try loading it
-        if (!variantToHighlight) {
-          try {
-            const response = await inventoryManagementApi.getSampleProducts({
-              page: 1,
-              limit: 1000, // Load more to find the variant
-              search: "",
-            });
-            const allVariants = response?.data?.data || [];
-            variantToHighlight = allVariants.find(
-              (v) =>
-                Number(v.procurement_variant_id) === procurementVariantIdNum
-            );
-            if (variantToHighlight) {
-              // Update state with found variant
-              setSampleProductsState((prev) => ({
-                ...prev,
-                data: allVariants,
-              }));
-            }
-          } catch (error) {
-            console.error("Failed to load variant for QR deep link:", error);
-          }
-        }
-
-        // Highlight the variant
-        if (variantToHighlight) {
-          setHighlightedVariantId(procurementVariantIdNum);
-          // Remove highlight after 3 seconds
-          setTimeout(() => {
-            setHighlightedVariantId(null);
-          }, 3000);
-        }
-
-        // Mark as handled and remove query params
-        setTimeout(() => {
-          qrHandledRef.current = true;
-          router.replace("/stock-management", { scroll: false });
-        }, 100);
-      } catch (error) {
-        console.error("Error opening QR deep link:", error);
-        // Don't mark as handled on error, so it can retry if needed
-      }
-    };
-
-    openFromQr();
-  }, [searchParams, sampleProductsState.data, loadSampleProducts, router]);
 
   // Handle inventory data loading with infinite scroll logic (similar to VendorMasterLayer)
   useEffect(() => {
@@ -1311,10 +894,6 @@ const StockManagementPage = () => {
     inventoryState.sortField,
     inventoryState.sortDirection,
   ]);
-
-  useEffect(() => {
-    setReturnsDisplayedCount(20);
-  }, [returnsState.status, returnsState.sortField, returnsState.sortDirection]);
 
   // Add custom scrollbar styles
   useEffect(() => {
@@ -1386,7 +965,7 @@ const StockManagementPage = () => {
 
   useEffect(() => {
     initializeTooltips();
-  }, [inventoryState.data, returnsState.data, initializeTooltips]);
+  }, [inventoryState.data, initializeTooltips]);
 
   // Initialize tooltips when modal opens
   useEffect(() => {
@@ -1601,21 +1180,13 @@ const StockManagementPage = () => {
     groupInventoryByProduct,
   ]);
 
-  // Get displayed returns data
-  const getDisplayedReturnsData = useCallback(() => {
-    return returnsState.data.slice(0, returnsDisplayedCount);
-  }, [returnsState.data, returnsDisplayedCount]);
-
-  // Check if there's more inventory data
   const hasMoreInventoryData = useCallback(() => {
-    // If client-side sorting is active, disable infinite scroll to preserve pagination order
     if (inventoryState.sortField) {
       return false;
     }
 
     const filteredData = getFilteredInventoryData();
 
-    // In product view, count products, not variants
     if (inventoryViewMode === "product") {
       const groupedData = groupInventoryByProduct(filteredData);
       return (
@@ -1624,7 +1195,6 @@ const StockManagementPage = () => {
       );
     }
 
-    // Variant view (existing logic)
     return (
       inventoryDisplayedCount < filteredData.length ||
       inventoryState.pagination.page < inventoryState.pagination.totalPages
@@ -1636,24 +1206,6 @@ const StockManagementPage = () => {
     inventoryState.sortField,
     inventoryViewMode,
     groupInventoryByProduct,
-  ]);
-
-  // Check if there's more returns data
-  const hasMoreReturnsData = useCallback(() => {
-    // If client-side sorting is active, disable infinite scroll to preserve pagination order
-    if (returnsState.sortField) {
-      return false;
-    }
-
-    return (
-      returnsDisplayedCount < returnsState.data.length ||
-      returnsState.pagination.page < returnsState.pagination.totalPages
-    );
-  }, [
-    returnsDisplayedCount,
-    returnsState.data.length,
-    returnsState.pagination,
-    returnsState.sortField,
   ]);
 
   // Load more inventory data
@@ -1693,39 +1245,6 @@ const StockManagementPage = () => {
     getFilteredInventoryData,
   ]);
 
-  // Load more returns data
-  const loadMoreReturnsData = useCallback(async () => {
-    // Use ref for immediate synchronous check to prevent race conditions
-    if (returnsLoadingMoreRef.current || returnsState.loading) return;
-
-    // Set both ref and state - ref for immediate access, state for UI updates
-    returnsLoadingMoreRef.current = true;
-    setReturnsLoadingMore(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Check if we need to fetch more from API
-    if (
-      returnsDisplayedCount >= returnsState.data.length &&
-      returnsState.pagination.page < returnsState.pagination.totalPages
-    ) {
-      await loadReturns({
-        page: returnsState.pagination.page + 1,
-        append: true,
-      });
-    }
-
-    setReturnsDisplayedCount((prev) => prev + returnsItemsPerPage);
-    returnsLoadingMoreRef.current = false;
-    setReturnsLoadingMore(false);
-  }, [
-    returnsState.loading,
-    returnsState.data.length,
-    returnsState.pagination,
-    returnsDisplayedCount,
-    returnsItemsPerPage,
-    loadReturns,
-  ]);
-
   // Handle inventory sort
   const handleInventorySort = (field) => {
     if (inventoryState.sortField === field) {
@@ -1735,22 +1254,6 @@ const StockManagementPage = () => {
       }));
     } else {
       setInventoryState((prev) => ({
-        ...prev,
-        sortField: field,
-        sortDirection: "asc",
-      }));
-    }
-  };
-
-  // Handle returns sort
-  const handleReturnsSort = (field) => {
-    if (returnsState.sortField === field) {
-      setReturnsState((prev) => ({
-        ...prev,
-        sortDirection: prev.sortDirection === "asc" ? "desc" : "asc",
-      }));
-    } else {
-      setReturnsState((prev) => ({
         ...prev,
         sortField: field,
         sortDirection: "asc",
@@ -1770,17 +1273,6 @@ const StockManagementPage = () => {
     }));
     setInventoryDisplayedCount(20);
     setExpandedProducts(new Set()); // Reset expanded products
-  };
-
-  // Reset returns filters
-  const handleResetReturnsFilters = () => {
-    setReturnsState((prev) => ({
-      ...prev,
-      status: "pending",
-      sortField: null,
-      sortDirection: "asc",
-    }));
-    setReturnsDisplayedCount(20);
   };
 
   const openInventoryDetail = useCallback(async (item) => {
@@ -1812,54 +1304,6 @@ const StockManagementPage = () => {
   const closeInventoryDetail = useCallback(() => {
     setInventoryDetail({ item: null, ledger: null, loadingLedger: false });
   }, []);
-
-  const handleApproveReturn = useCallback(
-    async (row) => {
-      setReturnsState((prev) => ({ ...prev, busyCaseId: row.return_case_id }));
-      try {
-        await inventoryManagementApi.approveReturnCase(row.return_case_id);
-        toast.success("Return approved");
-        await loadReturns({ page: returnsState.pagination.page });
-      } catch (error) {
-        console.error("Failed to approve return", error);
-        toast.error(error.message || "Failed to approve return");
-      } finally {
-        setReturnsState((prev) => ({ ...prev, busyCaseId: null }));
-      }
-    },
-    [loadReturns, returnsState.pagination.page]
-  );
-
-  const handleRejectReturn = useCallback(
-    async (row) => {
-      setReturnsState((prev) => ({ ...prev, busyCaseId: row.return_case_id }));
-      try {
-        await inventoryManagementApi.rejectReturnCase(row.return_case_id);
-        toast.success("Return rejected");
-        await loadReturns({ page: returnsState.pagination.page });
-      } catch (error) {
-        console.error("Failed to reject return", error);
-        toast.error(error.message || "Failed to reject return");
-      } finally {
-        setReturnsState((prev) => ({ ...prev, busyCaseId: null }));
-      }
-    },
-    [loadReturns, returnsState.pagination.page]
-  );
-
-  const handleSyncReturnCases = useCallback(async () => {
-    setReturnsState((prev) => ({ ...prev, loading: true }));
-    try {
-      await inventoryManagementApi.syncReturnCases(200);
-      toast.success("Return cases synced from Shopify data");
-      await loadReturns({ page: 1 });
-    } catch (error) {
-      console.error("Failed to sync return cases", error);
-      toast.error(error.message || "Failed to sync return cases");
-    } finally {
-      setReturnsState((prev) => ({ ...prev, loading: false }));
-    }
-  }, [loadReturns]);
 
   const inventoryTable = useMemo(() => {
     if (inventoryState.loading && inventoryState.data.length === 0) {
@@ -1990,52 +1434,6 @@ const StockManagementPage = () => {
     );
   }, [inventoryState, openInventoryDetail, getDisplayedInventoryData]);
 
-  const returnsTable = useMemo(() => {
-    if (returnsState.loading) {
-      return (
-        <tr>
-          <td colSpan={8} className="text-center py-5">
-            <div className="spinner-border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-          </td>
-        </tr>
-      );
-    }
-
-    if (!returnsState.data.length) {
-      return (
-        <tr>
-          <td colSpan={8} className="text-center text-muted py-4">
-            No return cases
-          </td>
-        </tr>
-      );
-    }
-
-    return returnsState.data.map((row) => (
-      <tr key={row.return_case_id}>
-        <td>{row.order_id}</td>
-        <td>{row.sku || row.shopify_variant_id || "-"}</td>
-        <td>{row.variant_display_name || "-"}</td>
-        <td className="text-center">{formatNumber(row.quantity)}</td>
-        <td className="text-center">{row.status}</td>
-        <td className="text-muted small">{row.reason || "-"}</td>
-        <td className="text-muted small">
-          {new Date(row.reported_at).toLocaleString()}
-        </td>
-        <td className="text-end">
-          <ReturnActionButtons
-            row={row}
-            busy={returnsState.busyCaseId === row.return_case_id}
-            onApprove={handleApproveReturn}
-            onReject={handleRejectReturn}
-          />
-        </td>
-      </tr>
-    ));
-  }, [returnsState, handleApproveReturn, handleRejectReturn]);
-
   return (
     <SidebarPermissionGuard requiredSidebar="stockManagement">
       <MasterLayout>
@@ -2062,7 +1460,6 @@ const StockManagementPage = () => {
                       label: "INVENTORY",
                       icon: "mdi:package-variant",
                     },
-                    { id: "returns", label: "RETURNS", icon: "mdi:arrow-left" },
                     {
                       id: "sample-products",
                       label: "SAMPLE PRODUCTS",
@@ -3272,14 +2669,13 @@ const StockManagementPage = () => {
                           <th className="text-center">Moved to Inventory</th>
                           <th className="text-center">Available to Move</th>
                           <th>Last Moved</th>
-                          <th>QR Code</th>
                           <th className="text-end">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sampleProductsState.loading ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4">
+                            <td colSpan="8" className="text-center py-4">
                               <div className="spinner-border" role="status">
                                 <span className="visually-hidden">
                                   Loading...
@@ -3290,7 +2686,7 @@ const StockManagementPage = () => {
                         ) : sampleProductsState.data.length === 0 ? (
                           <tr>
                             <td
-                              colSpan="9"
+                              colSpan="8"
                               className="text-center text-muted py-4"
                             >
                               No sample products found
@@ -3355,110 +2751,6 @@ const StockManagementPage = () => {
                                       ).toLocaleDateString()
                                     : "—"}
                                 </td>
-                                <td>
-                                  {variant.has_qr_code ? (
-                                    <div className="d-flex gap-1">
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-primary"
-                                        onClick={async () => {
-                                          try {
-                                            const qrImageUrl =
-                                              await inventoryManagementApi.getSampleQrCode(
-                                                {
-                                                  procurementVariantId:
-                                                    variant.procurement_variant_id,
-                                                  masterVariantId:
-                                                    variant.master_variant_id_for_qr,
-                                                }
-                                              );
-                                            setQrPreviewState({
-                                              isOpen: true,
-                                              qrCodeUrl: qrImageUrl,
-                                              productName: variant.product_name,
-                                              variantName: formatVariantType(
-                                                variant.variant_type
-                                              ),
-                                              procurementVariantId:
-                                                variant.procurement_variant_id,
-                                              masterVariantId:
-                                                variant.master_variant_id_for_qr,
-                                            });
-                                          } catch (error) {
-                                            console.error(
-                                              "Failed to load QR code:",
-                                              error
-                                            );
-                                            toast.error(
-                                              error.message ||
-                                                "Failed to load QR code"
-                                            );
-                                          }
-                                        }}
-                                        title="View QR Code"
-                                      >
-                                        <Icon
-                                          icon="mdi:eye"
-                                          width={16}
-                                          height={16}
-                                        />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={async () => {
-                                          try {
-                                            const qrImageUrl =
-                                              await inventoryManagementApi.getSampleQrCode(
-                                                {
-                                                  procurementVariantId:
-                                                    variant.procurement_variant_id,
-                                                  masterVariantId:
-                                                    variant.master_variant_id_for_qr,
-                                                }
-                                              );
-                                            const link =
-                                              document.createElement("a");
-                                            link.href = qrImageUrl;
-                                            link.download = `sample-qr-${
-                                              variant.product_name
-                                            }-${formatVariantType(
-                                              variant.variant_type
-                                            )}.png`.replace(
-                                              /[^a-z0-9.-]/gi,
-                                              "-"
-                                            );
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            document.body.removeChild(link);
-                                            URL.revokeObjectURL(qrImageUrl);
-                                            toast.success("QR code downloaded");
-                                          } catch (error) {
-                                            console.error(
-                                              "Failed to download QR code:",
-                                              error
-                                            );
-                                            toast.error(
-                                              error.message ||
-                                                "Failed to download QR code"
-                                            );
-                                          }
-                                        }}
-                                        title="Download QR Code"
-                                      >
-                                        <Icon
-                                          icon="mdi:download"
-                                          width={16}
-                                          height={16}
-                                        />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-muted small">
-                                      Not generated
-                                    </span>
-                                  )}
-                                </td>
                                 <td className="text-end">
                                   <button
                                     type="button"
@@ -3521,482 +2813,6 @@ const StockManagementPage = () => {
                 </div>
               )}
 
-              {activeTab === "returns" && (
-                <div>
-                  {/* Search, Filter, and Action Bar */}
-                  <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
-                    {/* Status Filter */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={returnsState.status}
-                      onChange={(e) =>
-                        setReturnsState((prev) => ({
-                          ...prev,
-                          status: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "150px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="">All</option>
-                    </select>
-
-                    {/* Sort Field */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={returnsState.sortField || ""}
-                      onChange={(e) =>
-                        setReturnsState((prev) => ({
-                          ...prev,
-                          sortField: e.target.value || null,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "170px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="">Sort By</option>
-                      <option value="order_id">Order ID</option>
-                      <option value="sku">SKU</option>
-                      <option value="variant_display_name">Variant</option>
-                      <option value="quantity">Quantity</option>
-                      <option value="status">Status</option>
-                      <option value="reported_at">Reported At</option>
-                    </select>
-
-                    {/* Sort Order */}
-                    <select
-                      className="form-select form-select-sm"
-                      value={returnsState.sortDirection}
-                      onChange={(e) =>
-                        setReturnsState((prev) => ({
-                          ...prev,
-                          sortDirection: e.target.value,
-                        }))
-                      }
-                      style={{
-                        height: "36px",
-                        width: "auto",
-                        minWidth: "130px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
-
-                    {/* Reset Button */}
-                    <button
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={handleResetReturnsFilters}
-                      title="Reset filters"
-                      style={{
-                        height: "36px",
-                        padding: "6px 12px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <Icon icon="lucide:x" width="14" height="14" />
-                    </button>
-
-                    {/* Sync Button */}
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={handleSyncReturnCases}
-                      disabled={returnsState.loading}
-                      style={{
-                        height: "36px",
-                        padding: "6px 12px",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      <Icon icon="mdi:refresh" width="16" height="16" />
-                      Sync
-                    </button>
-
-                    {/* Count */}
-                    <span
-                      className="text-muted ms-auto"
-                      style={{ fontSize: "0.8125rem", whiteSpace: "nowrap" }}
-                    >
-                      Showing {getDisplayedReturnsData().length} of{" "}
-                      {returnsState.pagination.total} returns
-                    </span>
-                  </div>
-
-                  {/* Returns Table */}
-                  <div
-                    ref={returnsTableRef}
-                    className="table-responsive scroll-sm table-scroll-container"
-                    style={{
-                      maxHeight: "600px",
-                      overflowY: "auto",
-                      overflowX: "auto",
-                      position: "relative",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      scrollBehavior: "smooth",
-                      overscrollBehavior: "auto",
-                      scrollbarWidth: "thin",
-                      scrollbarColor:
-                        "rgba(128, 128, 128, 0.5) rgba(0, 0, 0, 0.05)",
-                    }}
-                    onScroll={(e) => {
-                      const target = e.target;
-                      const scrollTop = target.scrollTop;
-                      const scrollHeight = target.scrollHeight;
-                      const clientHeight = target.clientHeight;
-
-                      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-                        if (
-                          hasMoreReturnsData() &&
-                          !returnsLoadingMoreRef.current &&
-                          !returnsState.loading
-                        ) {
-                          loadMoreReturnsData();
-                        }
-                      }
-                    }}
-                  >
-                    <table className="table bordered-table mb-0">
-                      <thead
-                        style={{
-                          position: "sticky",
-                          top: 0,
-                          zIndex: 10,
-                          backgroundColor: "#f8f9fa",
-                        }}
-                      >
-                        <tr>
-                          <th scope="col" style={{ width: "60px" }}>
-                            #
-                          </th>
-                          <th
-                            scope="col"
-                            onClick={() => handleReturnsSort("order_id")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2">
-                              Order
-                              {returnsState.sortField === "order_id" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            scope="col"
-                            onClick={() => handleReturnsSort("sku")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2">
-                              SKU
-                              {returnsState.sortField === "sku" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            scope="col"
-                            onClick={() =>
-                              handleReturnsSort("variant_display_name")
-                            }
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2">
-                              Variant
-                              {returnsState.sortField ===
-                                "variant_display_name" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            scope="col"
-                            className="text-center"
-                            onClick={() => handleReturnsSort("quantity")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2 justify-content-center">
-                              Qty
-                              {returnsState.sortField === "quantity" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            scope="col"
-                            className="text-center"
-                            onClick={() => handleReturnsSort("status")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2 justify-content-center">
-                              Status
-                              {returnsState.sortField === "status" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th scope="col">Reason</th>
-                          <th
-                            scope="col"
-                            onClick={() => handleReturnsSort("reported_at")}
-                            style={{ cursor: "pointer", userSelect: "none" }}
-                          >
-                            <div className="d-flex align-items-center gap-2">
-                              Reported At
-                              {returnsState.sortField === "reported_at" && (
-                                <Icon
-                                  icon={
-                                    returnsState.sortDirection === "asc"
-                                      ? "lucide:chevron-up"
-                                      : "lucide:chevron-down"
-                                  }
-                                  width="14"
-                                  height="14"
-                                />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            scope="col"
-                            className="text-end"
-                            style={{ width: "150px" }}
-                          >
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {returnsState.loading &&
-                        returnsState.data.length === 0 ? (
-                          <>
-                            {Array.from({ length: 5 }).map((_, rowIndex) => (
-                              <tr key={`skeleton-${rowIndex}`}>
-                                {Array.from({ length: 9 }).map(
-                                  (_, colIndex) => (
-                                    <td
-                                      key={`skeleton-${rowIndex}-${colIndex}`}
-                                    >
-                                      <div
-                                        className="skeleton"
-                                        style={{
-                                          height: "20px",
-                                          backgroundColor: "#e5e7eb",
-                                          borderRadius: "4px",
-                                          animation:
-                                            "skeletonPulse 1.5s ease-in-out infinite",
-                                        }}
-                                      />
-                                    </td>
-                                  )
-                                )}
-                              </tr>
-                            ))}
-                          </>
-                        ) : returnsState.data.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan="9"
-                              className="text-center py-4 text-muted"
-                            >
-                              <div className="d-flex flex-column align-items-center">
-                                <p className="text-muted mb-0">
-                                  {returnsState.status !== ""
-                                    ? "No return cases match your filter criteria."
-                                    : "No return cases found."}
-                                </p>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <>
-                            {getDisplayedReturnsData().map((row, index) => (
-                              <tr key={row.return_case_id}>
-                                <td>
-                                  <span className="text-secondary-light">
-                                    {index + 1}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="text-secondary-light fw-medium">
-                                    {row.order_id}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="text-secondary-light">
-                                    {row.sku || row.shopify_variant_id || "-"}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="text-secondary-light">
-                                    {row.variant_display_name || "-"}
-                                  </span>
-                                </td>
-                                <td className="text-center">
-                                  <span className="text-secondary-light">
-                                    {formatNumber(row.quantity)}
-                                  </span>
-                                </td>
-                                <td className="text-center">
-                                  <span
-                                    className={`badge ${
-                                      row.status === "approved"
-                                        ? "bg-success"
-                                        : row.status === "rejected"
-                                        ? "bg-danger"
-                                        : row.status === "pending"
-                                        ? "bg-warning"
-                                        : "bg-secondary"
-                                    }`}
-                                    style={{
-                                      fontSize: "0.75rem",
-                                      padding: "4px 8px",
-                                    }}
-                                  >
-                                    {row.status}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span
-                                    className="text-secondary-light text-truncate d-inline-block"
-                                    style={{ maxWidth: "200px" }}
-                                    title={row.reason || "-"}
-                                  >
-                                    {row.reason || "-"}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="text-secondary-light small">
-                                    {row.reported_at
-                                      ? new Date(
-                                          row.reported_at
-                                        ).toLocaleString()
-                                      : "-"}
-                                  </span>
-                                </td>
-                                <td className="text-end">
-                                  <ReturnActionButtons
-                                    row={row}
-                                    busy={
-                                      returnsState.busyCaseId ===
-                                      row.return_case_id
-                                    }
-                                    onApprove={handleApproveReturn}
-                                    onReject={handleRejectReturn}
-                                  />
-                                </td>
-                              </tr>
-                            ))}
-                            {returnsLoadingMore && (
-                              <>
-                                {Array.from({ length: 5 }).map(
-                                  (_, rowIndex) => (
-                                    <tr key={`skeleton-more-${rowIndex}`}>
-                                      {Array.from({ length: 9 }).map(
-                                        (_, colIndex) => (
-                                          <td
-                                            key={`skeleton-more-${rowIndex}-${colIndex}`}
-                                          >
-                                            <div
-                                              className="skeleton"
-                                              style={{
-                                                height: "20px",
-                                                backgroundColor: "#e5e7eb",
-                                                borderRadius: "4px",
-                                                animation:
-                                                  "skeletonPulse 1.5s ease-in-out infinite",
-                                              }}
-                                            />
-                                          </td>
-                                        )
-                                      )}
-                                    </tr>
-                                  )
-                                )}
-                              </>
-                            )}
-                          </>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Infinite Scroll Footer */}
-                  {returnsState.pagination.total > 0 && (
-                    <div
-                      className="d-flex justify-content-between align-items-center px-3 py-2"
-                      style={{
-                        backgroundColor: "#f8f9fa",
-                        borderRadius: "0 0 8px 8px",
-                        marginTop: "0",
-                      }}
-                    >
-                      <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                        Showing{" "}
-                        <strong>{getDisplayedReturnsData().length}</strong> of{" "}
-                        <strong>{returnsState.pagination.total}</strong> returns
-                      </div>
-                      {hasMoreReturnsData() && (
-                        <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                          Scroll down to load more
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -4015,47 +2831,6 @@ const StockManagementPage = () => {
           onClose={handleCloseMoveModal}
           onMove={handleConfirmMove}
           loading={moveModalState.loading}
-        />
-        <QrCodeModal
-          qrCodeUrl={moveModalState.qrCodeUrl}
-          isOpen={moveModalState.showQrCode}
-          onClose={() => {
-            if (moveModalState.qrCodeUrl) {
-              URL.revokeObjectURL(moveModalState.qrCodeUrl);
-            }
-            setMoveModalState((prev) => ({
-              ...prev,
-              showQrCode: false,
-              qrCodeUrl: null,
-            }));
-          }}
-          productName={moveModalState.variant?.product_name || ""}
-          variantName={
-            moveModalState.variant?.variant_type
-              ? Object.entries(moveModalState.variant.variant_type)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(", ")
-              : ""
-          }
-        />
-        <QrCodeModal
-          qrCodeUrl={qrPreviewState.qrCodeUrl}
-          isOpen={qrPreviewState.isOpen}
-          onClose={() => {
-            if (qrPreviewState.qrCodeUrl) {
-              URL.revokeObjectURL(qrPreviewState.qrCodeUrl);
-            }
-            setQrPreviewState({
-              isOpen: false,
-              qrCodeUrl: null,
-              productName: "",
-              variantName: "",
-              procurementVariantId: null,
-              masterVariantId: null,
-            });
-          }}
-          productName={qrPreviewState.productName}
-          variantName={qrPreviewState.variantName}
         />
       </MasterLayout>
     </SidebarPermissionGuard>

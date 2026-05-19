@@ -14,7 +14,7 @@ const SIDEBAR_TO_ROUTE_MAP = [
   { sidebar: "productSpendSummary", route: "/product-spend-summary" },
   { sidebar: "entityReport", route: "/entity-report" },
   { sidebar: "receivingManagement", route: "/receiving-management" },
-  { sidebar: "orderManagement", route: "/order-management" },
+  // V3: orderManagement removed — use stockManagement
   { sidebar: "stockManagement", route: "/stock-management" },
   { sidebar: "salesReport", route: "/sales-report" },
   { sidebar: "masters", route: "/masters" },

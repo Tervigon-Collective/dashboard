@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 import productMasterApi from "../services/productMasterApi";
 import VariantOptionsManager from "./VariantOptionsManager";
 import { generateVariantCombinations } from "../utils/variantCombinationGenerator";
+import { parseSkuSuffixes } from "../utils/skuSuffixParser";
 
 const DEFAULT_VARIANT_TITLE = "Default Title";
 
@@ -90,10 +91,13 @@ const isDefaultVariantRecord = (variant) => {
 const ProductMasterLayer = () => {
   const [products, setProducts] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [brands, setBrands] = useState([]);
+  const [brandFilter, setBrandFilter] = useState("");
   const [formData, setFormData] = useState({
     productName: "",
     hsnCode: "",
     commonName: "",
+    brandId: "",
   });
   // Variant management state
   const [variantOptions, setVariantOptions] = useState([]);
@@ -111,6 +115,24 @@ const ProductMasterLayer = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncBrandId, setSyncBrandId] = useState("");
+  const [syncModalError, setSyncModalError] = useState("");
+  const [syncResult, setSyncResult] = useState(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [backfillModalOpen, setBackfillModalOpen] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
+  const [backfillError, setBackfillError] = useState("");
+  const [backfillBrandIds, setBackfillBrandIds] = useState([]);
+
+  const [suffixExpansion, setSuffixExpansion] = useState(null);
+  const [suffixExpansionLoading, setSuffixExpansionLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -124,6 +146,7 @@ const ProductMasterLayer = () => {
   const itemsPerPage = 20;
   // Track if page change is from infinite scroll (should not trigger replacement)
   const isInfiniteScrollRef = useRef(false);
+  const loadProductsInFlightRef = useRef(false);
 
   // Form validation errors
   const [formErrors, setFormErrors] = useState({});
@@ -215,6 +238,11 @@ const ProductMasterLayer = () => {
 
   // Load products from API with server-side search, filters, and pagination
   const loadProducts = async (page = 1, resetPage = false, append = false) => {
+    if (loadProductsInFlightRef.current) {
+      return;
+    }
+    loadProductsInFlightRef.current = true;
+
     try {
       if (!append) {
         setIsLoading(true);
@@ -224,6 +252,7 @@ const ProductMasterLayer = () => {
 
       const options = {
         search: debouncedSearchTerm || undefined,
+        brand_id: brandFilter || undefined,
         sortField: sortField || undefined,
         sortDirection: sortDirection || undefined,
       };
@@ -260,6 +289,7 @@ const ProductMasterLayer = () => {
       }
     } finally {
       setIsLoading(false);
+      loadProductsInFlightRef.current = false;
     }
   };
 
@@ -268,13 +298,26 @@ const ProductMasterLayer = () => {
   const prevPageRef = useRef(1);
   const prevFiltersRef = useRef({
     search: "",
+    brand: "",
     sort: null,
     sortDir: "asc",
   });
 
+  const loadBrands = useCallback(async () => {
+    try {
+      const result = await productMasterApi.getBrands();
+      if (result.success && Array.isArray(result.data)) {
+        setBrands(result.data);
+      }
+    } catch (error) {
+      console.error("Error loading brands:", error);
+    }
+  }, []);
+
   // Initial load on mount
   useEffect(() => {
     setIsMounted(true);
+    loadBrands();
     loadProducts(1, false);
     prevPageRef.current = 1;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -286,6 +329,7 @@ const ProductMasterLayer = () => {
 
     const currentFilters = {
       search: debouncedSearchTerm,
+      brand: brandFilter,
       sort: sortField,
       sortDir: sortDirection,
     };
@@ -296,6 +340,7 @@ const ProductMasterLayer = () => {
     // Check if filters changed
     const filtersChanged =
       prevFilters.search !== currentFilters.search ||
+      prevFilters.brand !== currentFilters.brand ||
       prevFilters.sort !== currentFilters.sort ||
       prevFilters.sortDir !== currentFilters.sortDir;
 
@@ -329,12 +374,20 @@ const ProductMasterLayer = () => {
       isInfiniteScrollRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, debouncedSearchTerm, sortField, sortDirection, currentPage]);
+  }, [
+    isMounted,
+    debouncedSearchTerm,
+    brandFilter,
+    sortField,
+    sortDirection,
+    currentPage,
+  ]);
 
   // Reset all filters
   const handleResetFilters = () => {
     setSearchTerm("");
     setDebouncedSearchTerm("");
+    setBrandFilter("");
     setSortField(null);
     setSortDirection("asc");
     setCurrentPage(1);
@@ -584,6 +637,7 @@ const ProductMasterLayer = () => {
             product_name: "productName",
             hsn_code: "hsnCode",
             common_name: "commonName",
+            brand_id: "brandId",
           };
 
           const frontendField = fieldMap[fieldName] || fieldName;
@@ -730,10 +784,16 @@ const ProductMasterLayer = () => {
   // Handle variant change (for SKU input)
   const handleVariantChange = (index, field, value) => {
     const updatedVariants = [...variants];
-    updatedVariants[index] = {
+    const next = {
       ...updatedVariants[index],
       [field]: value,
     };
+    if (field === "sku") {
+      const suffixes = parseSkuSuffixes(value);
+      next.sku_product_suffix = suffixes.sku_product_suffix;
+      next.sku_variant_suffix = suffixes.sku_variant_suffix;
+    }
+    updatedVariants[index] = next;
     setVariants(updatedVariants);
   };
 
@@ -776,6 +836,16 @@ const ProductMasterLayer = () => {
         return;
       }
 
+      const brandId = formData.brandId ? Number(formData.brandId) : null;
+      if (!brandId) {
+        setFormErrors((prev) => ({
+          ...prev,
+          brandId: "Brand is required.",
+        }));
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!variants || variants.length === 0) {
         setFormErrors((prev) => ({
           ...prev,
@@ -787,6 +857,7 @@ const ProductMasterLayer = () => {
 
       const apiData = {
         product_name: trimmedName,
+        brand_id: brandId,
         hsn_code: formData.hsnCode?.trim() || null,
         common_name: formData.commonName?.trim() || null,
         item_description: null,
@@ -798,12 +869,17 @@ const ProductMasterLayer = () => {
             (Object.values(variantType).length > 0
               ? Object.values(variantType).join(" × ")
               : `${DEFAULT_VARIANT_TITLE} ${index + 1}`);
+          const sku =
+            typeof variant.sku === "string" ? variant.sku.trim() : "";
+          const suffixes = parseSkuSuffixes(sku);
 
           return {
             ...(variant.variant_id && { variant_id: variant.variant_id }),
             variant_type: variantType,
             variant_display_name: displayName,
-            sku: typeof variant.sku === "string" ? variant.sku.trim() : "",
+            sku,
+            sku_product_suffix: suffixes.sku_product_suffix,
+            sku_variant_suffix: suffixes.sku_variant_suffix,
           };
         }),
       };
@@ -827,6 +903,7 @@ const ProductMasterLayer = () => {
           productName: "",
           hsnCode: "",
           commonName: "",
+          brandId: "",
         });
         setFormErrors({});
 
@@ -858,6 +935,16 @@ const ProductMasterLayer = () => {
       }
     } catch (error) {
       console.error("Error adding/updating product:", error);
+
+      if (error.status === 409) {
+        setFormErrors({
+          productName:
+            error.result?.message ||
+            "A product with this name already exists for the selected brand.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
       // Handle formatted errors from API service
       if (error.result) {
@@ -898,7 +985,10 @@ const ProductMasterLayer = () => {
       productName: "",
       hsnCode: "",
       commonName: "",
+      brandId: "",
     });
+    setSuffixExpansion(null);
+    setSuffixExpansionLoading(false);
   };
 
   const handleAddProductClick = () => {
@@ -909,10 +999,13 @@ const ProductMasterLayer = () => {
       productName: "",
       hsnCode: "",
       commonName: "",
+      brandId: brandFilter || "",
     });
     setVariantOptions([]);
     setVariantMode("default");
     setVariants([createDefaultVariant({ id: "default_variant" })]);
+    setSuffixExpansion(null);
+    setSuffixExpansionLoading(false);
     setModalOpen(true);
   };
 
@@ -924,6 +1017,7 @@ const ProductMasterLayer = () => {
       productName: product.product_name || "",
       hsnCode: product.hsn_code || "",
       commonName: product.common_name || "",
+      brandId: product.brand_id != null ? String(product.brand_id) : "",
     });
 
     let productWithVariants = product;
@@ -968,6 +1062,7 @@ const ProductMasterLayer = () => {
             variant_display_name:
               apiVariants[0].variant_display_name || DEFAULT_VARIANT_TITLE,
             sku: apiVariants[0].sku || "",
+            ...parseSkuSuffixes(apiVariants[0].sku || ""),
           }),
         ]);
       } else {
@@ -981,12 +1076,19 @@ const ProductMasterLayer = () => {
               ? Object.values(variantType).join(" × ")
               : `Variant ${index + 1}`);
 
+          const sku = variant.sku || "";
           return {
             id: `edit_variant_${variant.variant_id || index}`,
             variant_id: variant.variant_id,
             variant_type: variantType,
             displayName,
-            sku: variant.sku || "",
+            sku,
+            sku_product_suffix:
+              variant.sku_product_suffix ||
+              parseSkuSuffixes(sku).sku_product_suffix,
+            sku_variant_suffix:
+              variant.sku_variant_suffix ||
+              parseSkuSuffixes(sku).sku_variant_suffix,
           };
         });
 
@@ -1018,77 +1120,184 @@ const ProductMasterLayer = () => {
       }
     }
 
+    setSuffixExpansion(null);
+    setSuffixExpansionLoading(true);
     setModalOpen(true);
-  };
 
-  const handleDeleteProduct = async (product) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${product.product_name}"?`
-      )
-    ) {
-      try {
-        const result = await productMasterApi.deleteProduct(product.product_id);
-
-        if (result.success) {
-          // Reload products list to show updated data
-          await loadProducts(currentPage);
-          console.log("Product deleted successfully:", result.data);
-        } else {
-          console.error("API Error:", result.message);
-          if (result.validationErrors && result.validationErrors.length > 0) {
-            alert(`Validation Error:\n${result.validationErrors.join("\n")}`);
-          } else {
-            alert(`Error: ${result.message}`);
-          }
-        }
-      } catch (error) {
-        console.error("Error deleting product:", error);
-        if (error.result) {
-          alert(`Error: ${error.result.message || error.message}`);
-        } else {
-          alert(
-            `Error: ${
-              error.message || "Failed to delete product. Please try again."
-            }`
-          );
-        }
+    try {
+      const expandRes = await productMasterApi.expandByProductSuffix(
+        productWithVariants.product_id
+      );
+      if (expandRes.success) {
+        setSuffixExpansion(expandRes.data);
       }
+    } catch (error) {
+      console.error("Error loading suffix expansion:", error);
+    } finally {
+      setSuffixExpansionLoading(false);
     }
   };
 
-  // Handle sync products from Shopify
-  const handleSyncProducts = async () => {
-    if (
-      window.confirm(
-        "This will sync all active products from Shopify to your database. Do you want to continue?"
-      )
-    ) {
-      try {
-        setIsSyncing(true);
-        const result = await productMasterApi.syncProducts();
+  const openDeleteModal = (product) => {
+    setProductToDelete(product);
+    setDeleteError("");
+    setDeleteModalOpen(true);
+  };
 
-        if (result.success) {
-          const { data } = result;
-          const message = `Sync completed successfully!\n\nProducts: ${data.products.inserted} inserted, ${data.products.updated} updated\nVariants: ${data.variants.inserted} inserted, ${data.variants.updated} updated`;
-          alert(message);
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setDeleteModalOpen(false);
+    setProductToDelete(null);
+    setDeleteError("");
+  };
 
-          // Reload products list to show synced data with current filters
-          await loadProducts(currentPage, false);
-        } else {
-          console.error("API Error:", result.message);
-          alert(
-            `Error: ${
-              result.message || result.error || "Failed to sync products"
-            }`
-          );
-        }
-      } catch (error) {
-        console.error("Error syncing products:", error);
-        alert("Failed to sync products. Please try again.");
-      } finally {
-        setIsSyncing(false);
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setDeleteError("");
+    setIsDeleting(true);
+
+    try {
+      const result = await productMasterApi.deleteProduct(
+        productToDelete.product_id
+      );
+
+      if (result.success) {
+        closeDeleteModal();
+        await loadProducts(currentPage, false);
+      } else {
+        setDeleteError(result.message || "Failed to delete product.");
       }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      setDeleteError(
+        error.result?.message ||
+          error.message ||
+          "Failed to delete product. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openBackfillModal = () => {
+    setBackfillError("");
+    setBackfillResult(null);
+    setBackfillBrandIds(brandFilter ? [String(brandFilter)] : []);
+    setBackfillModalOpen(true);
+  };
+
+  const closeBackfillModal = () => {
+    if (isBackfilling) return;
+    setBackfillModalOpen(false);
+    setBackfillError("");
+    setBackfillResult(null);
+    setBackfillBrandIds([]);
+  };
+
+  const toggleBackfillBrand = (brandId) => {
+    const id = String(brandId);
+    setBackfillBrandIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+    if (backfillError) setBackfillError("");
+  };
+
+  const selectAllBackfillBrands = () => {
+    setBackfillBrandIds(brands.map((brand) => String(brand.brand_id)));
+    if (backfillError) setBackfillError("");
+  };
+
+  const clearBackfillBrands = () => {
+    setBackfillBrandIds([]);
+    if (backfillError) setBackfillError("");
+  };
+
+  const confirmBackfillCatalog = async () => {
+    if (backfillBrandIds.length === 0) {
+      setBackfillError("Select at least one brand to backfill.");
+      return;
+    }
+
+    setBackfillError("");
+    setBackfillResult(null);
+    setIsBackfilling(true);
+
+    try {
+      const result = await productMasterApi.backfillCatalog(
+        backfillBrandIds.map((id) => Number(id))
+      );
+      if (result.success || result.data?.summary?.brands_succeeded > 0) {
+        setBackfillResult(result.data);
+        await loadProducts(currentPage, false);
+      } else {
+        setBackfillError(result.message || "Backfill failed for all brands.");
+        if (result.data) setBackfillResult(result.data);
+      }
+    } catch (error) {
+      console.error("Error backfilling catalog:", error);
+      setBackfillError(
+        error.result?.message ||
+          error.message ||
+          "Failed to backfill catalog. Please try again."
+      );
+      if (error.result?.data) setBackfillResult(error.result.data);
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
+  const openSyncModal = () => {
+    setSyncModalError("");
+    setSyncResult(null);
+    setSyncBrandId(brandFilter || "");
+    setSyncModalOpen(true);
+  };
+
+  const closeSyncModal = () => {
+    if (isSyncing) return;
+    setSyncModalOpen(false);
+    setSyncModalError("");
+    setSyncResult(null);
+    setSyncBrandId("");
+  };
+
+  const getSyncBrandLabel = (brandId) =>
+    brands.find((b) => String(b.brand_id) === String(brandId))?.brand_name ||
+    "Selected brand";
+
+  const handleConfirmSync = async () => {
+    if (!syncBrandId) {
+      setSyncModalError("Please select a brand to sync products from Shopify.");
+      return;
+    }
+
+    setSyncModalError("");
+    setSyncResult(null);
+
+    try {
+      setIsSyncing(true);
+      const result = await productMasterApi.syncProducts({
+        brand_id: syncBrandId,
+      });
+
+      if (result.success) {
+        setSyncResult(result.data || {});
+        await loadProducts(currentPage, false);
+      } else {
+        setSyncModalError(
+          result.message || result.error || "Failed to sync products."
+        );
+      }
+    } catch (error) {
+      console.error("Error syncing products:", error);
+      setSyncModalError(
+        error.result?.message ||
+          error.message ||
+          "Failed to sync products. Please try again."
+      );
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1121,6 +1330,32 @@ const ProductMasterLayer = () => {
             }}
           />
         </div>
+
+        <select
+          className="form-select form-select-sm"
+          value={brandFilter}
+          onChange={(e) => {
+            setBrandFilter(e.target.value);
+            setDisplayedItemsCount(20);
+            isInfiniteScrollRef.current = false;
+            if (currentPage !== 1) {
+              setCurrentPage(1);
+            }
+          }}
+          style={{
+            height: "34px",
+            width: "auto",
+            minWidth: "170px",
+            fontSize: "0.8125rem",
+          }}
+        >
+          <option value="">All brands</option>
+          {brands.map((brand) => (
+            <option key={brand.brand_id} value={String(brand.brand_id)}>
+              {brand.brand_name}
+            </option>
+          ))}
+        </select>
 
         {/* Sort Field */}
         <select
@@ -1178,9 +1413,26 @@ const ProductMasterLayer = () => {
           Showing {getDisplayedData(products).length} of {totalRecords} products
         </span>
 
+        <button
+          type="button"
+          onClick={openBackfillModal}
+          className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
+          style={{
+            gap: "4px",
+            padding: "6px 14px",
+            height: "36px",
+            fontSize: "0.875rem",
+          }}
+          title="Import product catalog from Shopify for selected brands"
+        >
+          <Icon icon="lucide:database" width="16" height="16" />
+          <span className="d-none d-md-inline">Backfill catalog</span>
+        </button>
+
         {/* Sync Button */}
         <button
-          onClick={handleSyncProducts}
+          type="button"
+          onClick={openSyncModal}
           className="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
           style={{
             gap: "4px",
@@ -1197,8 +1449,7 @@ const ProductMasterLayer = () => {
                 role="status"
                 aria-hidden="true"
               ></span>
-              <span className="d-none d-sm-inline">Syncing...</span>
-              <span className="d-sm-none">Syncing...</span>
+              <span>Syncing...</span>
             </>
           ) : (
             <>
@@ -1287,6 +1538,7 @@ const ProductMasterLayer = () => {
               <th scope="col" style={{ width: "60px" }}>
                 #
               </th>
+              <th scope="col">Brand</th>
               <th
                 scope="col"
                 onClick={() => handleSort("product_name")}
@@ -1362,7 +1614,7 @@ const ProductMasterLayer = () => {
               <>
                 {Array.from({ length: 5 }).map((_, rowIndex) => (
                   <tr key={`skeleton-${rowIndex}`}>
-                    {Array.from({ length: 6 }).map((_, colIndex) => (
+                    {Array.from({ length: 7 }).map((_, colIndex) => (
                       <td key={`skeleton-${rowIndex}-${colIndex}`}>
                         <div
                           className="skeleton"
@@ -1381,7 +1633,7 @@ const ProductMasterLayer = () => {
               </>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan="6" className="text-center py-4 text-muted">
+                <td colSpan="7" className="text-center py-4 text-muted">
                   <div className="d-flex flex-column align-items-center">
                     <p className="text-muted mb-0">
                       {searchTerm
@@ -1397,6 +1649,11 @@ const ProductMasterLayer = () => {
                   <tr key={product.product_id}>
                     <td>
                       <span className="text-secondary-light">{index + 1}</span>
+                    </td>
+                    <td>
+                      <span className="text-secondary-light">
+                        {product.brand_name || "-"}
+                      </span>
                     </td>
                     <td>
                       <span className="text-secondary-light fw-medium">
@@ -1487,7 +1744,7 @@ const ProductMasterLayer = () => {
                             borderRadius: "4px",
                           }}
                           title="Delete"
-                          onClick={() => handleDeleteProduct(product)}
+                          onClick={() => openDeleteModal(product)}
                         >
                           <Icon icon="lucide:trash-2" width="14" height="14" />
                         </button>
@@ -1499,7 +1756,7 @@ const ProductMasterLayer = () => {
                   <>
                     {Array.from({ length: 5 }).map((_, rowIndex) => (
                       <tr key={`skeleton-more-${rowIndex}`}>
-                        {Array.from({ length: 6 }).map((_, colIndex) => (
+                        {Array.from({ length: 7 }).map((_, colIndex) => (
                           <td key={`skeleton-more-${rowIndex}-${colIndex}`}>
                             <div
                               className="skeleton"
@@ -1548,6 +1805,451 @@ const ProductMasterLayer = () => {
         </div>
       )}
 
+      {/* Delete Product Modal */}
+      {deleteModalOpen && productToDelete && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={closeDeleteModal}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">Delete product</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleting}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-2">
+                  Are you sure you want to delete{" "}
+                  <strong>{productToDelete.product_name}</strong>?
+                </p>
+                {productToDelete.brand_name && (
+                  <p className="small text-muted mb-0">
+                    Brand: {productToDelete.brand_name}
+                  </p>
+                )}
+                <p className="small text-muted mt-2 mb-0">
+                  This removes all variants for this listing. This cannot be
+                  undone.
+                </p>
+                {deleteError && (
+                  <div className="alert alert-danger mt-3 mb-0" role="alert">
+                    {deleteError}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger d-inline-flex align-items-center gap-2"
+                  onClick={confirmDeleteProduct}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backfill Suffixes Modal */}
+      {backfillModalOpen && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={closeBackfillModal}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title d-flex align-items-center gap-2">
+                  <Icon icon="lucide:database" width="18" height="18" />
+                  Backfill product catalog
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeBackfillModal}
+                  disabled={isBackfilling}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                {backfillResult ? (
+                  <>
+                    <div className="alert alert-success mb-0" role="alert">
+                      Backfill finished for{" "}
+                      <strong>
+                        {backfillResult.summary?.brands_succeeded ?? 0}
+                      </strong>{" "}
+                      of{" "}
+                      <strong>
+                        {backfillResult.summary?.brands_requested ?? 0}
+                      </strong>{" "}
+                      brand(s).
+                    </div>
+                    {Array.isArray(backfillResult.brands) &&
+                      backfillResult.brands.length > 0 && (
+                        <div className="table-responsive mt-3">
+                          <table className="table table-sm table-bordered mb-0">
+                            <thead className="table-light">
+                              <tr>
+                                <th>Brand</th>
+                                <th>Status</th>
+                                <th>Products</th>
+                                <th>Variants</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {backfillResult.brands.map((row) => (
+                                <tr key={row.brand_id}>
+                                  <td>{row.brand_name}</td>
+                                  <td>
+                                    {row.success ? (
+                                      <span className="text-success">OK</span>
+                                    ) : (
+                                      <span
+                                        className="text-danger"
+                                        title={row.error}
+                                      >
+                                        Failed
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {row.success
+                                      ? `${row.products?.inserted ?? 0} new, ${
+                                          row.products?.updated ?? 0
+                                        } updated`
+                                      : row.error || "—"}
+                                  </td>
+                                  <td>
+                                    {row.success
+                                      ? `${row.variants?.inserted ?? 0} new, ${
+                                          row.variants?.updated ?? 0
+                                        } updated`
+                                      : "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted small mb-3">
+                      Select one or more brands. For each store, active Shopify
+                      products are imported into product master and product
+                      variants (brand_id and cross-brand SKU suffixes per V3).
+                    </p>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <label className="form-label mb-0">
+                        Brands <span className="text-danger">*</span>
+                      </label>
+                      <div className="btn-group btn-group-sm">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={selectAllBackfillBrands}
+                          disabled={isBackfilling || brands.length === 0}
+                        >
+                          Select all
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={clearBackfillBrands}
+                          disabled={isBackfilling}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      className="border rounded p-3"
+                      style={{ maxHeight: "240px", overflowY: "auto" }}
+                    >
+                      {brands.map((brand) => {
+                        const id = String(brand.brand_id);
+                        const checked = backfillBrandIds.includes(id);
+                        return (
+                          <label
+                            key={brand.brand_id}
+                            className={`d-flex align-items-center gap-2 py-2 px-2 rounded mb-1 ${
+                              checked ? "bg-primary-subtle" : ""
+                            }`}
+                            style={{ cursor: "pointer" }}
+                          >
+                            <input
+                              type="checkbox"
+                              className="form-check-input mt-0"
+                              checked={checked}
+                              disabled={isBackfilling}
+                              onChange={() => toggleBackfillBrand(id)}
+                            />
+                            <span>{brand.brand_name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {backfillBrandIds.length > 0 && (
+                      <p className="small text-muted mt-2 mb-0">
+                        {backfillBrandIds.length} brand(s) selected.
+                      </p>
+                    )}
+                  </>
+                )}
+                {backfillError && (
+                  <div className="alert alert-danger mt-3 mb-0" role="alert">
+                    {backfillError}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                {backfillResult ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={closeBackfillModal}
+                  >
+                    Done
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={closeBackfillModal}
+                      disabled={isBackfilling}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary d-inline-flex align-items-center gap-2"
+                      onClick={confirmBackfillCatalog}
+                      disabled={isBackfilling || brands.length === 0}
+                    >
+                      {isBackfilling ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Backfilling...
+                        </>
+                      ) : (
+                        <>
+                          <Icon icon="lucide:download" width="16" height="16" />
+                          Start backfill
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync from Shopify Modal */}
+      {syncModalOpen && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={closeSyncModal}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title d-flex align-items-center gap-2">
+                  <Icon icon="lucide:refresh-cw" width="18" height="18" />
+                  Sync products from Shopify
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeSyncModal}
+                  disabled={isSyncing}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                {syncResult ? (
+                  <div>
+                    <div className="alert alert-success mb-3" role="alert">
+                      <strong>Sync completed</strong> for{" "}
+                      {getSyncBrandLabel(syncBrandId)}.
+                    </div>
+                    <div className="row g-3">
+                      <div className="col-6">
+                        <div className="border rounded p-3 h-100 bg-body-tertiary">
+                          <div className="small text-muted mb-1">Products</div>
+                          <div className="fw-semibold">
+                            {syncResult.products?.inserted ?? 0} inserted
+                          </div>
+                          <div className="text-secondary small">
+                            {syncResult.products?.updated ?? 0} updated
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-6">
+                        <div className="border rounded p-3 h-100 bg-body-tertiary">
+                          <div className="small text-muted mb-1">Variants</div>
+                          <div className="fw-semibold">
+                            {syncResult.variants?.inserted ?? 0} inserted
+                          </div>
+                          <div className="text-secondary small">
+                            {syncResult.variants?.updated ?? 0} updated
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {(syncResult.products?.errors?.length > 0 ||
+                      syncResult.variants?.errors?.length > 0) && (
+                      <div className="alert alert-warning mt-3 mb-0 small">
+                        Some items had errors during sync. Check server logs for
+                        details.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-muted small mb-3">
+                      Choose which brand store to pull active products from.
+                      Products are saved under that brand with SKU suffixes
+                      computed automatically.
+                    </p>
+                    <label className="form-label">
+                      Brand <span className="text-danger">*</span>
+                    </label>
+                    <select
+                      className={`form-select ${
+                        syncModalError && !syncBrandId ? "is-invalid" : ""
+                      }`}
+                      value={syncBrandId}
+                      onChange={(e) => {
+                        setSyncBrandId(e.target.value);
+                        if (syncModalError) setSyncModalError("");
+                      }}
+                      disabled={isSyncing}
+                    >
+                      <option value="">Select brand</option>
+                      {brands.map((brand) => (
+                        <option
+                          key={brand.brand_id}
+                          value={String(brand.brand_id)}
+                        >
+                          {brand.brand_name}
+                        </option>
+                      ))}
+                    </select>
+                    {syncBrandId && (
+                      <p className="small text-muted mt-2 mb-0">
+                        Fetching from{" "}
+                        <strong>{getSyncBrandLabel(syncBrandId)}</strong>{" "}
+                        Shopify store.
+                      </p>
+                    )}
+                  </>
+                )}
+                {syncModalError && (
+                  <div className="alert alert-danger mt-3 mb-0" role="alert">
+                    {syncModalError}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                {syncResult ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={closeSyncModal}
+                  >
+                    Done
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={closeSyncModal}
+                      disabled={isSyncing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary d-inline-flex align-items-center gap-2"
+                      onClick={handleConfirmSync}
+                      disabled={isSyncing || brands.length === 0}
+                    >
+                      {isSyncing ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <Icon icon="lucide:download" width="16" height="16" />
+                          Start sync
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Product Modal */}
       {modalOpen && (
         <div
@@ -1577,6 +2279,36 @@ const ProductMasterLayer = () => {
                   )}
 
                   <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">
+                        Brand <span className="text-danger">*</span>
+                      </label>
+                      <select
+                        className={`form-select ${
+                          formErrors.brandId ? "is-invalid" : ""
+                        }`}
+                        name="brandId"
+                        value={formData.brandId}
+                        onChange={handleInputChange}
+                        required
+                        disabled={isEditMode}
+                      >
+                        <option value="">Select brand</option>
+                        {brands.map((brand) => (
+                          <option
+                            key={brand.brand_id}
+                            value={String(brand.brand_id)}
+                          >
+                            {brand.brand_name}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.brandId && (
+                        <div className="invalid-feedback d-block">
+                          {formErrors.brandId}
+                        </div>
+                      )}
+                    </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">
                         Product Name <span className="text-danger">*</span>
@@ -1635,6 +2367,57 @@ const ProductMasterLayer = () => {
                       )}
                     </div>
                   </div>
+
+                  {isEditMode && (
+                    <div className="mb-3">
+                      <label className="form-label">
+                        <strong>Cross-brand variants</strong>
+                      </label>
+                      {suffixExpansionLoading ? (
+                        <div className="small text-muted">
+                          Loading linked SKUs…
+                        </div>
+                      ) : suffixExpansion?.variant_groups?.length > 0 ? (
+                        <div className="border rounded bg-body-tertiary p-3 small">
+                          {suffixExpansion.variant_groups.map((group) => (
+                            <div
+                              key={
+                                group.sku_variant_suffix ||
+                                group.variant_display_name
+                              }
+                              className="mb-3"
+                            >
+                              <div className="fw-semibold mb-1">
+                                {group.variant_display_name ||
+                                  group.sku_variant_suffix}
+                                {group.sku_variant_suffix && (
+                                  <span className="text-muted fw-normal">
+                                    {" "}
+                                    ({group.sku_variant_suffix})
+                                  </span>
+                                )}
+                              </div>
+                              <ul className="mb-0 ps-3">
+                                {group.skus.map((row) => (
+                                  <li key={row.variant_id}>
+                                    <span className="text-muted">
+                                      {row.brand_name || "Brand"}:
+                                    </span>{" "}
+                                    <code>{row.sku}</code>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="small text-muted mb-0">
+                          No cross-brand suffix matches yet. Backfill catalog
+                          for more brands or align SKUs to the V3 convention.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Variant Mode & Options */}
                   <div className="mb-3">
@@ -1748,6 +2531,20 @@ const ProductMasterLayer = () => {
                               `${DEFAULT_VARIANT_TITLE} ${index + 1}`
                             }`}
                           />
+                          {(variant.sku_product_suffix ||
+                            variant.sku_variant_suffix) && (
+                            <div className="small text-muted mt-1">
+                              Product suffix:{" "}
+                              <strong>
+                                {variant.sku_product_suffix || "—"}
+                              </strong>
+                              {" · "}
+                              Variant suffix:{" "}
+                              <strong>
+                                {variant.sku_variant_suffix || "—"}
+                              </strong>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

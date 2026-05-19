@@ -122,6 +122,33 @@ class QualityCheckApiService {
     return this.makeRequest(`/receiving/quality-check/request/${requestId}`);
   }
 
+  async saveVendorFreightCost(requestId, vendorFreightCost) {
+    return this.makeRequest(
+      `/receiving/quality-check/${requestId}/vendor-freight`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          vendor_freight_cost: Number(vendorFreightCost) || 0,
+        }),
+      }
+    );
+  }
+
+  async extractInvoiceNumberFromFile(file) {
+    const content_base64 = await this.readFileAsBase64(file);
+    return this.makeRequest(
+      "/receiving/quality-check/documents/extract-invoice-number",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          file_name: file.name,
+          mime_type: file.type,
+          content_base64,
+        }),
+      }
+    );
+  }
+
   // Documents: upload (base64 JSON), list, delete
   async uploadDocument(
     requestId,
@@ -243,11 +270,12 @@ class QualityCheckApiService {
    * @param {number} requestId - Purchase request ID
    * @returns {Promise<Object>} GRN info
    */
-  async generateGrnPdf(requestId) {
+  async generateGrnPdf(requestId, payload = {}) {
     return this.makeRequest(
       `/receiving/quality-check/${requestId}/generate-grn`,
       {
         method: "POST",
+        body: JSON.stringify(payload),
       }
     );
   }

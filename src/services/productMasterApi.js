@@ -287,6 +287,10 @@ class ProductMasterApiService {
       params.append("sku", options.sku.trim());
     }
 
+    if (options.brand_id != null && options.brand_id !== "") {
+      params.append("brand_id", String(options.brand_id));
+    }
+
     // Add sorting parameters
     if (options.sortField) {
       params.append("sortBy", options.sortField);
@@ -313,9 +317,32 @@ class ProductMasterApiService {
     });
   }
 
-  async syncProducts() {
-    return this.makeRequest("/products/sync", {
+  async syncProducts(options = {}) {
+    const params = new URLSearchParams();
+    if (options.brand_id != null && options.brand_id !== "") {
+      params.append("brand_id", String(options.brand_id));
+    }
+    const query = params.toString();
+    return this.makeRequest(
+      `/products/sync${query ? `?${query}` : ""}`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  async getBrands() {
+    return this.makeRequest("/masters/product/brands/list");
+  }
+
+  async expandByProductSuffix(productId) {
+    return this.makeRequest(`/masters/product/${productId}/suffix-expand`);
+  }
+
+  async backfillCatalog(brandIds) {
+    return this.makeRequest("/masters/product/backfill-catalog", {
       method: "POST",
+      body: JSON.stringify({ brand_ids: brandIds }),
     });
   }
 }

@@ -6,10 +6,40 @@ import MasterLayout from "../../masterLayout/MasterLayout";
 import SidebarPermissionGuard from "../../components/SidebarPermissionGuard";
 import purchaseRequestApi from "../../services/purchaseRequestApi";
 import vendorMasterApi from "../../services/vendorMasterApi";
+import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
+import ReceivingPrProductFields from "../../components/receiving/ReceivingPrProductFields";
+import {
+  applyFreightToProducts,
+  distributeVendorFreightAmongItems,
+} from "../../utils/freightDistribution";
+
 import { useUser } from "@/helper/UserContext";
 import { Combobox } from "@headlessui/react";
-import { useRouter, useSearchParams } from "next/navigation";
+
+
+/** All brand SKUs for a suffix-group line (falls back to single variant sku). */
+const formatLinkedSkusForDisplay = (item) => {
+  let linked = item?.linked_skus;
+  if (typeof linked === "string") {
+    try {
+      linked = JSON.parse(linked);
+    } catch {
+      linked = [];
+    }
+  }
+  if (Array.isArray(linked) && linked.length > 0) {
+    const parts = linked
+      .map((row) => {
+        const brand = row?.brand_name ? `${row.brand_name}: ` : "";
+        const sku = row?.sku || "";
+        return `${brand}${sku}`.trim();
+      })
+      .filter(Boolean);
+    if (parts.length > 0) return parts.join(" · ");
+  }
+  return item?.sku || "-";
+};
 
 const QualityCheckDocumentsSection = ({ requestId }) => {
   const [docType] = useState("invoice");
@@ -18,6 +48,7 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
   const [documents, setDocuments] = useState([]);
   const [error, setError] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [isExtractingInvoice, setIsExtractingInvoice] = useState(false);
 
   const refresh = async () => {
     try {
@@ -32,9 +63,25 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
     if (requestId) refresh();
   }, [requestId]);
 
-  const onFileChange = (e) => {
+  const onFileChange = async (e) => {
     const selected = Array.from(e.target.files || []);
     setFiles(selected);
+
+    if (!selected.length || docType !== "invoice") return;
+
+    const file = selected[0];
+    setIsExtractingInvoice(true);
+    try {
+      const res = await qualityCheckApi.extractInvoiceNumberFromFile(file);
+      if (res.success && res.data?.invoice_number) {
+        setInvoiceNumber(res.data.invoice_number);
+        if (error) setError("");
+      }
+    } catch (err) {
+      console.error("Invoice number extraction failed:", err);
+    } finally {
+      setIsExtractingInvoice(false);
+    }
   };
 
   const onUpload = async () => {
@@ -106,14 +153,20 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
                 setError("");
               }
             }}
+            disabled={isExtractingInvoice}
           />
+          {isExtractingInvoice && (
+            <small className="text-muted d-block mt-1">Reading document…</small>
+          )}
         </div>
         <div className="col-md-2 d-flex gap-2 align-items-end">
           <button
             type="button"
             className="btn btn-sm btn-primary"
             onClick={onUpload}
-            disabled={isUploading || files.length === 0}
+            disabled={
+              isUploading || isExtractingInvoice || files.length === 0
+            }
           >
             {isUploading ? (
               <>
@@ -198,9 +251,6 @@ const QualityCheckDocumentsSection = ({ requestId }) => {
 
 const ReceivingManagementLayer = () => {
   const { user } = useUser();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const qrHandledRef = useRef(false);
   const [highlightedItemId, setHighlightedItemId] = useState(null);
   const [activeTab, setActiveTab] = useState("purchase-request");
   const [modalOpen, setModalOpen] = useState(false);
@@ -227,7 +277,10 @@ const ReceivingManagementLayer = () => {
     variant_id: null,
     variant_display_name: "",
     variant_type: {},
-    quantity: 1,
+    sku_product_suffix: "",
+    sku_variant_suffix: "",
+    linked_skus: [],
+    quantity: 0,
     rate: 0,
     taxable_amt: 0,
     igst_percent: 0,
@@ -235,6 +288,7 @@ const ReceivingManagementLayer = () => {
     cgst_percent: 0,
     gst_amt: 0,
     net_amount: 0,
+    freight_amount: 0,
   });
 
   const createEmptyProduct = () => ({
@@ -242,14 +296,50 @@ const ReceivingManagementLayer = () => {
     product_name: "",
     product_category: "",
     hsn_code: "",
-    selectedVariants: [createEmptyVariant()],
+    hsn_from_master: false,
+    brand_id: null,
+    brand_name: "",
+    masterQuery: "",
+    suffixLoading: false,
+    selectedVariants: [],
   });
+
+  const normalizeHsnCode = (raw) => {
+    if (raw == null) return "";
+    if (typeof raw === "string" || typeof raw === "number") {
+      return String(raw).trim();
+    }
+    if (typeof raw === "object") {
+      const nested = raw.code ?? raw.value ?? raw.hsn ?? raw.hsn_code;
+      if (nested != null && typeof nested !== "object") {
+        return String(nested).trim();
+      }
+    }
+    return "";
+  };
+
+  const resolveMasterHsnCode = (...sources) => {
+    for (const source of sources) {
+      if (source == null) continue;
+      const raw =
+        typeof source === "object" ? source.hsn_code : source;
+      const value = normalizeHsnCode(raw);
+      if (value) return value;
+    }
+    return "";
+  };
+
+  const [masterProductOptions, setMasterProductOptions] = useState([]);
+  const [masterProductLoading, setMasterProductLoading] = useState(false);
+  const [masterBrands, setMasterBrands] = useState([]);
+  const [masterBrandFilter, setMasterBrandFilter] = useState("");
 
   const [formData, setFormData] = useState({
     selectedVendor: null,
     products: [createEmptyProduct()], // Start with one empty product
     orderDate: "",
     deliveryDate: "",
+    freightCost: "",
   });
 
   // Receipt Details Tab Component (one row per request, aggregated totals)
@@ -643,6 +733,7 @@ const ReceivingManagementLayer = () => {
   const [inspectionDate, setInspectionDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [vendorFreightByRequestId, setVendorFreightByRequestId] = useState({});
 
   // To Be Delivered tab state
   const [toBeDeliveredRequests, setToBeDeliveredRequests] = useState([]);
@@ -686,6 +777,7 @@ const ReceivingManagementLayer = () => {
 
   // Track if data has been loaded for each tab (to prevent unnecessary refetching)
   const [purchaseRequestsLoaded, setPurchaseRequestsLoaded] = useState(false);
+  const loadPurchaseRequestsInFlightRef = useRef(false);
   const [toBeDeliveredLoaded, setToBeDeliveredLoaded] = useState(false);
   const [qualityCheckLoaded, setQualityCheckLoaded] = useState(false);
   const [receiptDetailsLoaded, setReceiptDetailsLoaded] = useState(false);
@@ -716,6 +808,11 @@ const ReceivingManagementLayer = () => {
     if (purchaseRequestsLoaded && !force && !append) {
       return;
     }
+
+    if (loadPurchaseRequestsInFlightRef.current) {
+      return;
+    }
+    loadPurchaseRequestsInFlightRef.current = true;
 
     try {
       setIsLoading(true);
@@ -758,6 +855,7 @@ const ReceivingManagementLayer = () => {
       }
     } finally {
       setIsLoading(false);
+      loadPurchaseRequestsInFlightRef.current = false;
     }
   };
 
@@ -1210,17 +1308,163 @@ const ReceivingManagementLayer = () => {
       const newProducts = [...prev.products];
       const target = { ...newProducts[productIndex] };
       target[field] = value;
+      if (field === "hsn_code") {
+        target.hsn_from_master = false;
+      }
       newProducts[productIndex] = target;
       return { ...prev, products: newProducts };
     });
   };
 
-  // Backward-compatible no-op handler kept for child component props
-  // that still receive handleProductSelect.
+  useEffect(() => {
+    if (!modalOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await productMasterApi.getBrands();
+        if (!cancelled && res?.success) {
+          setMasterBrands(res.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to load brands for product picker", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const timer = setTimeout(async () => {
+      const queries = formData.products
+        .map((product, index) => ({
+          index,
+          query: String(product.masterQuery || "").trim(),
+        }))
+        .filter((entry) => entry.query.length >= 2);
+
+      if (queries.length === 0) {
+        setMasterProductOptions([]);
+        return;
+      }
+
+      const active = queries[queries.length - 1];
+      setMasterProductLoading(true);
+      try {
+        const res = await productMasterApi.getAllProducts(1, 25, {
+          search: active.query,
+          brand_id: masterBrandFilter || undefined,
+        });
+        if (res?.success) {
+          setMasterProductOptions(res.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to search master products", error);
+      } finally {
+        setMasterProductLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [modalOpen, formData.products, masterBrandFilter]);
+
+  const handleMasterProductSelect = async (productIndex, masterProduct) => {
+    if (!masterProduct?.product_id) return;
+
+    const prefilledHsn = resolveMasterHsnCode(masterProduct);
+
+    setFormData((prev) => {
+      const newProducts = [...prev.products];
+      const target = { ...newProducts[productIndex] };
+      target.product_id = masterProduct.product_id;
+      target.product_name = masterProduct.product_name || "";
+      target.product_category = masterProduct.common_name || target.product_category || "";
+      target.brand_id = masterProduct.brand_id ?? target.brand_id ?? null;
+      target.brand_name = masterProduct.brand_name || target.brand_name || "";
+      target.masterQuery = masterProduct.product_name || "";
+      if (prefilledHsn) {
+        target.hsn_code = prefilledHsn;
+        target.hsn_from_master = true;
+      }
+      target.suffixLoading = true;
+      newProducts[productIndex] = target;
+      return { ...prev, products: newProducts };
+    });
+
+    try {
+      const expandRes = await productMasterApi.expandByProductSuffix(
+        masterProduct.product_id
+      );
+      if (!expandRes?.success) {
+        throw new Error(expandRes?.message || "Failed to expand product variants");
+      }
+
+      const payload = expandRes.data || {};
+      const product = payload.product || masterProduct;
+      const groups = payload.variant_groups || [];
+      const hsnCode = resolveMasterHsnCode(product, masterProduct);
+
+      const applyProductEntry = (selectedVariants) => {
+        setFormData((prev) => {
+          const newProducts = [...prev.products];
+          newProducts[productIndex] = {
+            product_id: product.product_id,
+            product_name: product.product_name || "",
+            product_category: product.common_name || "",
+            hsn_code: hsnCode,
+            hsn_from_master: Boolean(hsnCode),
+            brand_id: product.brand_id || masterProduct.brand_id || null,
+            brand_name: product.brand_name || masterProduct.brand_name || "",
+            masterQuery: product.product_name || "",
+            suffixLoading: false,
+            selectedVariants,
+          };
+          return { ...prev, products: newProducts };
+        });
+      };
+
+      if (groups.length === 0) {
+        applyProductEntry([]);
+        alert(
+          "No variant suffix groups found. Ensure SKUs have sku_product_suffix / sku_variant_suffix in product master. You can still enter HSN and other details if needed."
+        );
+        return;
+      }
+
+      const selectedVariants = groups.map((group) => {
+        const firstSku = group.skus?.[0] || {};
+        return {
+          ...createEmptyVariant(),
+          variant_id: firstSku.variant_id || null,
+          variant_display_name:
+            group.variant_display_name || firstSku.sku || "Variant",
+          sku_product_suffix:
+            firstSku.sku_product_suffix ||
+            group.sku_product_suffix ||
+            "",
+          sku_variant_suffix: group.sku_variant_suffix || "",
+          linked_skus: group.skus || [],
+          variant_type: {},
+        };
+      });
+
+      applyProductEntry(selectedVariants);
+    } catch (error) {
+      console.error("Master product expand failed", error);
+      alert(error.message || "Failed to load variant groups for this product.");
+      setFormData((prev) => {
+        const newProducts = [...prev.products];
+        const target = { ...newProducts[productIndex] };
+        target.suffixLoading = false;
+        newProducts[productIndex] = target;
+        return { ...prev, products: newProducts };
+      });
+    }
+  };
+
   const handleProductSelect = () => {};
 
-  // Backward-compatible no-op handler kept for child component props
-  // that still receive handleVariantSelect (legacy master-variant selection).
   const handleVariantSelect = () => {};
 
   // Add new product entry
@@ -1268,8 +1512,19 @@ const ReceivingManagementLayer = () => {
       variants[variantIndex] = target;
       product.selectedVariants = variants;
       newProducts[productIndex] = product;
-      return { ...prev, products: newProducts };
+      return {
+        ...prev,
+        products: applyFreightToProducts(newProducts, prev.freightCost),
+      };
     });
+  };
+
+  const handleFreightCostChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      freightCost: value,
+      products: applyFreightToProducts(prev.products, value),
+    }));
   };
 
   const handleAddVariant = (productIndex) => {
@@ -1291,7 +1546,10 @@ const ReceivingManagementLayer = () => {
       );
       product.selectedVariants = remaining.length ? remaining : [createEmptyVariant()];
       newProducts[productIndex] = product;
-      return { ...prev, products: newProducts };
+      return {
+        ...prev,
+        products: applyFreightToProducts(newProducts, prev.freightCost),
+      };
     });
   };
 
@@ -1308,11 +1566,25 @@ const ReceivingManagementLayer = () => {
       }
 
       const missingProductIndex = formData.products.findIndex(
-        (product) => !String(product.product_name || "").trim()
+        (product) => !product.product_id
       );
       if (missingProductIndex !== -1) {
         alert(
-          `Please enter Product Name for Product #${missingProductIndex + 1}.`
+          `Please select a product from Manage Master for Product #${missingProductIndex + 1}.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const missingSuffixIndex = formData.products.findIndex((product) =>
+        (product.selectedVariants || []).some(
+          (variant) =>
+            variant.quantity > 0 && !String(variant.sku_variant_suffix || "").trim()
+        )
+      );
+      if (missingSuffixIndex !== -1) {
+        alert(
+          `Variant suffix groups are missing for Product #${missingSuffixIndex + 1}. Re-select the product from master.`
         );
         setIsSubmitting(false);
         return;
@@ -1365,14 +1637,18 @@ const ReceivingManagementLayer = () => {
                 : variant.variant_type || {};
 
             items.push({
+              source_product_id: product.product_id || null,
+              source_brand_id: product.brand_id || null,
               product_id: product.product_id || null,
               variant_id: variant.variant_id,
-              // Inline identity fields (used to create/resolve inventory_catalog_items)
               product_name: inlineProductName,
               product_category: inlineProductCategory,
               hsn_code: inlineHsnCode,
               variant_type: safeVariantType,
               variant_display_name: variant.variant_display_name || null,
+              sku_product_suffix: variant.sku_product_suffix || null,
+              sku_variant_suffix: variant.sku_variant_suffix || null,
+              linked_skus: variant.linked_skus || [],
               quantity: variant.quantity || 1,
               rate: variant.rate || 0,
               taxable_amt: variant.taxable_amt || 0,
@@ -1381,6 +1657,7 @@ const ReceivingManagementLayer = () => {
               cgst_percent: variant.cgst_percent || 0,
               gst_amt: variant.gst_amt || 0,
               net_amount: variant.net_amount || 0,
+              freight_amount: variant.freight_amount || 0,
             });
           });
       });
@@ -1388,8 +1665,10 @@ const ReceivingManagementLayer = () => {
       // Prepare request data
       const requestData = {
         vendor_id: formData.selectedVendor,
+        source_brand_id: formData.products[0]?.brand_id || null,
         order_date: formData.orderDate,
         delivery_date: formData.deliveryDate,
+        freight_cost: parseFloat(formData.freightCost) || 0,
         items: items,
       };
 
@@ -1464,6 +1743,7 @@ const ReceivingManagementLayer = () => {
       products: [createEmptyProduct()],
       orderDate: "",
       deliveryDate: "",
+      freightCost: "",
     });
     setVendorData({
       companyName: "",
@@ -1484,33 +1764,49 @@ const ReceivingManagementLayer = () => {
     setEditingRequest(request);
     setIsEditMode(true);
 
-    // Group items by inline identity fields (not product master IDs)
     const productsMap = {};
     request.items.forEach((item) => {
-      const productKey = [
-        item.product_name || "",
-        item.product_category || "",
-        item.hsn_code || "",
-      ].join("|");
+      const productKey = item.source_product_id
+        ? `p:${item.source_product_id}`
+        : [
+            item.product_name || "",
+            item.product_category || "",
+            item.hsn_code || "",
+          ].join("|");
       if (!productsMap[productKey]) {
         productsMap[productKey] = [];
+      }
+      let linkedSkus = item.linked_skus;
+      if (typeof linkedSkus === "string") {
+        try {
+          linkedSkus = JSON.parse(linkedSkus);
+        } catch {
+          linkedSkus = [];
+        }
       }
       productsMap[productKey].push({
         variant_id: item.variant_id,
         quantity: item.quantity || 1,
-        ...item, // Spread item to get all variant details
+        sku_product_suffix: item.sku_product_suffix,
+        sku_variant_suffix: item.sku_variant_suffix,
+        linked_skus: Array.isArray(linkedSkus) ? linkedSkus : [],
+        ...item,
       });
     });
 
-    // Convert map to array
     const productsArray = Object.keys(productsMap).map((productKey) => {
       const productVariants = productsMap[productKey];
       const firstItem = productVariants[0] || {};
       return {
-        product_id: firstItem.product_id || null,
+        product_id: firstItem.source_product_id || firstItem.product_id || null,
         product_name: firstItem.product_name || "",
         product_category: firstItem.product_category || "",
         hsn_code: firstItem.hsn_code || "",
+        hsn_from_master: false,
+        brand_id: firstItem.source_brand_id || null,
+        brand_name: firstItem.source_brand_name || "",
+        masterQuery: firstItem.product_name || "",
+        suffixLoading: false,
         selectedVariants: productVariants,
       };
     });
@@ -1526,6 +1822,8 @@ const ReceivingManagementLayer = () => {
       deliveryDate: request.delivery_date
         ? request.delivery_date.split("T")[0]
         : "",
+      freightCost:
+        request.freight_cost != null ? String(request.freight_cost) : "",
     });
 
     // Set vendor data
@@ -1572,9 +1870,6 @@ const ReceivingManagementLayer = () => {
   const [isDownloadingPO, setIsDownloadingPO] = useState(false);
   const [grnInfo, setGrnInfo] = useState(null);
   const [isDownloadingGrn, setIsDownloadingGrn] = useState(false);
-  const [qrPreviewData, setQrPreviewData] = useState(null);
-  const [qrPreviewSku, setQrPreviewSku] = useState(null);
-  const [qrGenerationStatus, setQrGenerationStatus] = useState({});
 
   useEffect(() => {
     return () => {
@@ -1687,550 +1982,12 @@ const ReceivingManagementLayer = () => {
     }
   };
 
-  useEffect(() => {
-    if (!searchParams) return;
-    if (qrHandledRef.current) return;
-
-    const fromQr = searchParams.get("fromQr");
-    const requestIdParam = searchParams.get("requestId");
-    const itemIdParam = searchParams.get("itemId");
-
-    if (!fromQr || !requestIdParam || !itemIdParam) {
-      return;
-    }
-
-    const requestIdNum = Number(requestIdParam);
-    const itemIdNum = Number(itemIdParam);
-
-    if (!Number.isFinite(requestIdNum) || !Number.isFinite(itemIdNum)) {
-      qrHandledRef.current = true;
-      return;
-    }
-
-    // Don't set qrHandledRef here - set it only after modal is successfully opened
-
-    const openFromQr = async () => {
-      try {
-        setActiveTab("purchase-request");
-
-        let requestToOpen =
-          requests.find((req) => Number(req.request_id) === requestIdNum) ||
-          qualityCheckRequests.find(
-            (req) => Number(req.request_id) === requestIdNum
-          ) ||
-          receiptRequests.find(
-            (req) => Number(req.request_id) === requestIdNum
-          ) ||
-          toBeDeliveredRequests.find(
-            (req) => Number(req.request_id) === requestIdNum
-          );
-
-        let shouldSkipFetch = false;
-
-        if (!requestToOpen) {
-          try {
-            const result = await purchaseRequestApi.getPurchaseRequestById(
-              requestIdNum,
-              true
-            );
-            if (result.success) {
-              requestToOpen = result.data;
-              shouldSkipFetch = true;
-            }
-          } catch (error) {
-            console.error("Failed to load request for QR deep link:", error);
-          }
-        }
-
-        if (requestToOpen) {
-          await handleViewRequest(requestToOpen, null, {
-            highlightItemId: itemIdNum,
-            skipFetch: shouldSkipFetch,
-          });
-        } else {
-          await handleViewRequest(
-            { request_id: requestIdNum, items: [] },
-            null,
-            {
-              highlightItemId: itemIdNum,
-            }
-          );
-        }
-
-        // Only mark as handled and remove query params AFTER modal is opened
-        // Use setTimeout to ensure modal state has updated
-        setTimeout(() => {
-          qrHandledRef.current = true;
-          router.replace("/receiving-management", { scroll: false });
-        }, 100);
-      } catch (error) {
-        console.error("Error opening QR deep link:", error);
-        // Don't mark as handled on error, so it can retry if needed
-      }
-    };
-
-    openFromQr();
-  }, [
-    searchParams,
-    requests,
-    qualityCheckRequests,
-    receiptRequests,
-    toBeDeliveredRequests,
-    handleViewRequest,
-    router,
-  ]);
-
-  // Helper function to add SKU text to QR code image (legacy 2-up format)
-  const addSkuToQrImage = async (imageBlob, sku) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(imageBlob);
-
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        // Legacy dimensions from helpQr.jsx
-        const qrWidth = img.width;
-        const qrHeight = img.height;
-        const padding = 20;
-        const textHeight = sku ? 40 : 0; // space for SKU text
-        const blockSpacing = 40; // space between two blocks
-
-        const singleBlockWidth = qrWidth + padding * 2;
-        const singleBlockHeight = qrHeight + padding * 2 + textHeight;
-
-        const canvasWidth = singleBlockWidth * 2 + blockSpacing;
-        const canvasHeight = singleBlockHeight;
-
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-
-        // Fill white background
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-        // Draw a single QR block (QR + optional SKU text)
-        const drawBlock = (xOffset) => {
-          ctx.drawImage(img, xOffset + padding, padding, qrWidth, qrHeight);
-
-          if (sku) {
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 16px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            const textY = qrHeight + padding + textHeight / 2;
-            const blockCenterX = xOffset + singleBlockWidth / 2;
-            ctx.fillText(`SKU: ${sku}`, blockCenterX, textY);
-          }
-        };
-
-        // Left block
-        drawBlock(0);
-        // Right block (identical)
-        drawBlock(singleBlockWidth + blockSpacing);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Failed to create blob from canvas"));
-          }
-        }, "image/png");
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Failed to load image"));
-      };
-
-      img.src = url;
-    });
-  };
-
-  const handleGenerateQrCodes = async (request) => {
-    if (!request) return;
-    const requestId = request.request_id;
-
-    // Check if QR codes already exist
-    const hasQrCodes =
-      request.items?.some(
-        (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
-      ) || false;
-
-    if (!hasQrCodes) {
-      // Only show confirmation for generating new QR codes
-      if (
-        !window.confirm(
-          "Are you sure you want to generate QR codes for this request?"
-        )
-      ) {
-        return;
-      }
-    }
-
-    setQrGenerationStatus((prev) => ({ ...prev, [requestId]: true }));
-
-    try {
-      // Only generate if QR codes don't exist
-      if (!hasQrCodes) {
-        await purchaseRequestApi.generateQrCodes(requestId);
-      }
-
-      try {
-        // Reload the request to get updated QR codes with file names (or use existing if already generated)
-        let updatedRequestResult;
-        if (!hasQrCodes) {
-          updatedRequestResult =
-            await purchaseRequestApi.getPurchaseRequestById(requestId, true);
-        } else {
-          // Use existing request data if QR codes already exist
-          updatedRequestResult = { success: true, data: request };
-        }
-
-        let itemsWithSku = [];
-        const vendorId =
-          updatedRequestResult.data?.vendor_id || request.vendor_id || "";
-        const requestData = updatedRequestResult.data || request;
-        if (requestData?.items) {
-          itemsWithSku = requestData.items.map((item) => ({
-            qrFileName: item.qr_code?.file_name,
-            sku: item.sku,
-            itemId: item.item_id,
-          }));
-        }
-
-        // Download the ZIP
-        const zipBlob = await purchaseRequestApi.downloadQrCodesZip(requestId);
-
-        // Process ZIP to add SKU to each QR code
-        try {
-          // Dynamic import of JSZip
-          const JSZip = (await import("jszip")).default;
-          const zip = await JSZip.loadAsync(zipBlob);
-          const newZip = new JSZip();
-
-          // Collect all files first
-          const fileEntries = [];
-          zip.forEach((relativePath, file) => {
-            if (!file.dir) {
-              fileEntries.push({ relativePath, file });
-            }
-          });
-
-          // Track used filenames to prevent collisions
-          const usedFilenames = new Map();
-
-          // Process each file sequentially to avoid race conditions with filename generation
-          for (const { relativePath, file } of fileEntries) {
-            if (relativePath.endsWith(".png")) {
-              // Find matching SKU for this file
-              const item = itemsWithSku.find(
-                (item) =>
-                  item.qrFileName === relativePath ||
-                  relativePath.includes(
-                    item.qrFileName?.replace(".png", "") || ""
-                  ) ||
-                  item.qrFileName?.includes(relativePath.replace(".png", "")) ||
-                  relativePath.includes(String(item.itemId))
-              );
-              const sku = item?.sku ?? null;
-              const itemId = item?.itemId ?? null;
-
-              // Get the image blob
-              const imageBlob = await file.async("blob");
-
-              // Add SKU to the image
-              const modifiedBlob = await addSkuToQrImage(imageBlob, sku);
-
-              // Create new filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
-              // Use itemId as fallback to ensure uniqueness when SKU is missing
-              let newFileName = relativePath;
-              if (sku && vendorId) {
-                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
-                const sanitizedVendorId = String(vendorId).replace(
-                  /[^a-zA-Z0-9_-]/g,
-                  "_"
-                );
-                newFileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
-              } else if (sku) {
-                const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
-                newFileName = `QR-${sanitizedSku}.png`;
-              } else if (vendorId) {
-                const sanitizedVendorId = String(vendorId).replace(
-                  /[^a-zA-Z0-9_-]/g,
-                  "_"
-                );
-                // Use itemId to ensure uniqueness when SKU is missing
-                if (itemId !== null) {
-                  const sanitizedItemId = String(itemId).replace(
-                    /[^a-zA-Z0-9_-]/g,
-                    "_"
-                  );
-                  newFileName = `QR-${sanitizedVendorId}-${sanitizedItemId}.png`;
-                } else {
-                  newFileName = `QR-${sanitizedVendorId}.png`;
-                }
-              } else if (itemId !== null) {
-                // Fallback: use itemId if neither SKU nor vendorId exists
-                const sanitizedItemId = String(itemId).replace(
-                  /[^a-zA-Z0-9_-]/g,
-                  "_"
-                );
-                newFileName = `QR-${sanitizedItemId}.png`;
-              }
-
-              // Ensure filename is unique (handle collisions by appending counter)
-              let finalFileName = newFileName;
-              let counter = 1;
-              while (usedFilenames.has(finalFileName)) {
-                const baseWithoutExt = newFileName.replace(/\.png$/, "");
-                finalFileName = `${baseWithoutExt}-${counter}.png`;
-                counter++;
-              }
-              usedFilenames.set(finalFileName, true);
-
-              // Add to new ZIP with final unique filename
-              newZip.file(finalFileName, modifiedBlob);
-            } else {
-              // Keep non-image files as-is
-              const content = await file.async("blob");
-              newZip.file(relativePath, content);
-            }
-          }
-
-          // Generate the new ZIP
-          const modifiedZipBlob = await newZip.generateAsync({ type: "blob" });
-
-          // Download the modified ZIP
-          const url = URL.createObjectURL(modifiedZipBlob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `QR-${requestId}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        } catch (zipError) {
-          console.error("Error processing ZIP with SKU:", zipError);
-          // Fallback: download original ZIP if processing fails
-          const url = URL.createObjectURL(zipBlob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `QR-${requestId}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }
-      } catch (downloadError) {
-        console.error("Error downloading QR codes:", downloadError);
-        alert(
-          downloadError.message ||
-            "QR codes were generated but the download failed. Please try downloading again."
-        );
-      }
-
-      await loadQualityCheckRequests(1, false, true); // force = true after QR generation
-
-      if (selectedRequest && selectedRequest.request_id === requestId) {
-        await handleViewRequest(request, "quality-check");
-      }
-
-      alert(
-        hasQrCodes
-          ? "QR codes downloaded successfully."
-          : "QR codes generated successfully."
-      );
-    } catch (error) {
-      console.error("Error generating QR codes:", error);
-      alert(error.message || "Failed to generate QR codes. Please try again.");
-    } finally {
-      setQrGenerationStatus((prev) => ({ ...prev, [requestId]: false }));
-    }
-  };
-
-  const handleDownloadQrImage = async (qrCode, sku = null) => {
-    if (!qrCode?.image_base64) {
-      return;
-    }
-
-    try {
-      // Create an image element to load the QR code
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = qrCode.image_base64;
-      });
-
-      // ============================================
-      // PRINTER SPECIFICATIONS FOR 2-UP QR LABELS
-      // ============================================
-      const DPI = 300; // Dots per inch for print quality
-      const INCH_TO_PX = DPI;
-
-      // Page dimensions (in inches, converted to pixels)
-      const PAGE_WIDTH_IN = 3.15;  // Total page width
-      const PAGE_HEIGHT_IN = 1.00; // Total page height
-      const PAGE_WIDTH_PX = Math.round(PAGE_WIDTH_IN * INCH_TO_PX);  // 945px
-      const PAGE_HEIGHT_PX = Math.round(PAGE_HEIGHT_IN * INCH_TO_PX); // 300px
-
-      // Gap specifications (in inches, converted to pixels)
-      const LEFT_GAP_IN = 0.04;   // Left edge gap
-      const CENTER_GAP_IN = 0.08; // Center gap between labels
-      const RIGHT_GAP_IN = 0.04;  // Right edge gap
-      const LEFT_GAP_PX = Math.round(LEFT_GAP_IN * INCH_TO_PX);   // 12px
-      const CENTER_GAP_PX = Math.round(CENTER_GAP_IN * INCH_TO_PX); // 24px
-      const RIGHT_GAP_PX = Math.round(RIGHT_GAP_IN * INCH_TO_PX);  // 12px
-
-      // Label dimensions (in inches, converted to pixels)
-      const LABEL_WIDTH_IN = 1.50;  // Each label width
-      const LABEL_HEIGHT_IN = 1.00; // Each label height
-      const LABEL_WIDTH_PX = Math.round(LABEL_WIDTH_IN * INCH_TO_PX);  // 450px
-      const LABEL_HEIGHT_PX = Math.round(LABEL_HEIGHT_IN * INCH_TO_PX); // 300px
-
-      // QR code dimensions (scaled to fit with SKU text)
-      const QR_WIDTH_IN = 0.85; // QR code width (leaves room for SKU text)
-      const QR_WIDTH_PX = Math.round(QR_WIDTH_IN * INCH_TO_PX); // 255px
-      // QR codes are square, so height equals width
-      const QR_HEIGHT_PX = QR_WIDTH_PX; // 255px
-
-      // SKU text dimensions
-      const SKU_TEXT_HEIGHT_PX = 30; // Height allocated for SKU text
-      const SKU_FONT_SIZE_PX = 20;   // Font size for SKU text
-      const SKU_MARGIN_TOP_PX = 10;  // Margin above SKU text
-
-      // Calculate label positions
-      const LABEL1_START_X = LEFT_GAP_PX; // 12px
-      const LABEL2_START_X = LABEL1_START_X + LABEL_WIDTH_PX + CENTER_GAP_PX; // 486px
-
-      // Create canvas with exact printer specifications
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      canvas.width = PAGE_WIDTH_PX;  // 945px
-      canvas.height = PAGE_HEIGHT_PX; // 300px
-
-      // Enable high-quality rendering for printing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      // Fill white background
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, PAGE_WIDTH_PX, PAGE_HEIGHT_PX);
-
-      // Helper function to draw a single QR code label
-      const drawLabel = (labelStartX) => {
-        // Calculate center position for QR code within label
-        const labelCenterX = labelStartX + LABEL_WIDTH_PX / 2;
-        const qrX = labelCenterX - QR_WIDTH_PX / 2;
-        
-        // Calculate vertical position: center QR code, leave space for SKU text below
-        const availableHeight = LABEL_HEIGHT_PX - SKU_TEXT_HEIGHT_PX - SKU_MARGIN_TOP_PX;
-        const qrY = (LABEL_HEIGHT_PX - availableHeight) / 2;
-
-        // Draw QR code image (scaled to exact size)
-        ctx.drawImage(
-          img,
-          qrX,                    // x position
-          qrY,                    // y position
-          QR_WIDTH_PX,            // width
-          QR_HEIGHT_PX            // height
-        );
-
-        // Add SKU text at the bottom of the label if provided
-        if (sku) {
-          ctx.fillStyle = "#000000";
-          ctx.font = `bold ${SKU_FONT_SIZE_PX}px Arial`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-
-          // Position SKU text at bottom of label
-          const skuTextY = LABEL_HEIGHT_PX - SKU_TEXT_HEIGHT_PX / 2;
-          ctx.fillText(`SKU: ${sku}`, labelCenterX, skuTextY);
-        }
-      };
-
-      // Draw first label (left side)
-      drawLabel(LABEL1_START_X);
-      
-      // Draw second identical label (right side)
-      drawLabel(LABEL2_START_X);
-
-      // Convert canvas to blob and download (maximum quality for printing)
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          console.error("Failed to create blob from canvas");
-          // Fallback to original download
-          const link = document.createElement("a");
-          link.href = qrCode.image_base64;
-          link.download = qrCode.file_name || "qr-code.png";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          return;
-        }
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-
-        // Create filename with vendor_id and SKU: QR-{vendor_id}-{sku}.png
-        let fileName = "qr-code.png";
-        if (sku) {
-          const sanitizedSku = sku.replace(/[^a-zA-Z0-9_-]/g, "_");
-          // Try to get vendor_id from selectedRequest or item
-          const vendorId = selectedRequest?.vendor_id || "";
-          if (vendorId) {
-            const sanitizedVendorId = String(vendorId).replace(
-              /[^a-zA-Z0-9_-]/g,
-              "_"
-            );
-            fileName = `QR-${sanitizedVendorId}-${sanitizedSku}.png`;
-          } else {
-            fileName = `QR-${sanitizedSku}.png`;
-          }
-        } else {
-          const vendorId = selectedRequest?.vendor_id || "";
-          if (vendorId) {
-            const sanitizedVendorId = String(vendorId).replace(
-              /[^a-zA-Z0-9_-]/g,
-              "_"
-            );
-            fileName = `QR-${sanitizedVendorId}.png`;
-          }
-        }
-
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, "image/png", 1.0); // Maximum quality for printing
-    } catch (error) {
-      console.error("Error processing QR code with SKU:", error);
-      // Fallback to original download method
-      const link = document.createElement("a");
-      link.href = qrCode.image_base64;
-      link.download = qrCode.file_name || "qr-code.png";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
   // Handle settings icon click (open status confirmation modal)
   const handleSettingsClick = async (
     request,
     targetStatus = "to_be_delivered"
   ) => {
-    // If attempting arrived -> fulfilled, enforce QC + Documents + GRN + QR Codes presence
+    // If attempting arrived -> fulfilled, enforce QC + Documents + GRN
     if (targetStatus === "fulfilled") {
       try {
         // 1) Quality checks present
@@ -2249,23 +2006,13 @@ const ReceivingManagementLayer = () => {
         // 3) GRN PDF exists
         const grnExists = await qualityCheckApi.checkGrnExists(request.request_id);
 
-        // 4) QR codes exist - need to fetch fresh request data to check
-        const requestData = await purchaseRequestApi.getPurchaseRequestById(
-          request.request_id
-        );
-        const hasQrCodes = requestData?.success && requestData?.data?.items?.some(
-          (item) => item.qr_code?.image_base64 || item.qr_code?.file_name
-        ) || false;
-
-        // Build validation message with all missing items
         const missingItems = [];
         if (!hasAnyQC) missingItems.push("Quality Check inspection");
         if (!hasAnyDoc) missingItems.push("at least one document (invoice/PO)");
         if (!grnExists) missingItems.push("GRN PDF");
-        if (!hasQrCodes) missingItems.push("QR codes");
 
         if (missingItems.length > 0) {
-          const msg = `⚠️ Cannot mark as Fulfilled!\n\nPlease complete the following:\n\n${missingItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n\n📋 Required Workflow:\n  1. Complete Quality Check inspection (Inspect button)\n  2. Upload documents (invoice/PO) in View modal\n  3. Generate GRN PDF (button in Quality Check tab)\n  4. Generate QR codes (button in Quality Check tab)\n  5. Then mark as Fulfilled`;
+          const msg = `⚠️ Cannot mark as Fulfilled!\n\nPlease complete the following:\n\n${missingItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n\n📋 Required Workflow:\n  1. Complete Quality Check inspection (Inspect button)\n  2. Upload documents (invoice/PO) in View modal\n  3. Generate GRN PDF (button in Quality Check tab)\n  4. Then mark as Fulfilled`;
           alert(msg);
           return; // Do not open confirmation modal
         }
@@ -2392,6 +2139,13 @@ const ReceivingManagementLayer = () => {
     // Set request and open modal
     setRequestToInspect(request);
     setInspectionModalOpen(true);
+    setVendorFreightByRequestId((prev) => ({
+      ...prev,
+      [request.request_id]:
+        request.vendor_freight_cost != null
+          ? String(request.vendor_freight_cost)
+          : prev[request.request_id] ?? "",
+    }));
 
     try {
       // Load existing quality checks if any
@@ -2519,6 +2273,24 @@ const ReceivingManagementLayer = () => {
       );
 
       if (result.success) {
+        const requestId = requestToInspect.request_id;
+        const vendorRaw =
+          vendorFreightByRequestId[requestId] ??
+          vendorFreightByRequestId[String(requestId)];
+        if (vendorRaw !== undefined && vendorRaw !== "") {
+          try {
+            await qualityCheckApi.saveVendorFreightCost(
+              requestId,
+              Number(vendorRaw) || 0
+            );
+          } catch (freightErr) {
+            console.error("Failed to save vendor freight cost:", freightErr);
+            alert(
+              "Inspection saved, but vendor freight could not be saved. Please enter it again and save, or set it before generating GRN."
+            );
+          }
+        }
+
         setInspectionModalOpen(false);
         setRequestToInspect(null);
         await loadQualityCheckRequests(1, false, true); // force = true after saving inspection
@@ -2639,6 +2411,12 @@ const ReceivingManagementLayer = () => {
               handleAddVariant={handleAddVariant}
               handleRemoveVariant={handleRemoveVariant}
               updateVariantField={updateVariantField}
+              handleMasterProductSelect={handleMasterProductSelect}
+              masterBrandFilter={masterBrandFilter}
+              setMasterBrandFilter={setMasterBrandFilter}
+              masterBrands={masterBrands}
+              masterProductOptions={masterProductOptions}
+              masterProductLoading={masterProductLoading}
               handleSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               handleModalClose={handleModalClose}
@@ -2686,8 +2464,6 @@ const ReceivingManagementLayer = () => {
               }
               handleInspectClick={handleInspectClick}
               handleSettingsClick={handleSettingsClick}
-              handleGenerateQrCodes={handleGenerateQrCodes}
-              qrGenerationStatus={qrGenerationStatus}
               viewModalOpen={viewModalOpen}
               setViewModalOpen={setViewModalOpen}
               selectedRequest={selectedRequest}
@@ -2697,6 +2473,8 @@ const ReceivingManagementLayer = () => {
               getDisplayedData={getQualityCheckDisplayedData}
               hasMoreData={hasMoreQualityCheckData}
               loadMoreData={loadMoreQualityCheck}
+              vendorFreightByRequestId={vendorFreightByRequestId}
+              setVendorFreightByRequestId={setVendorFreightByRequestId}
             />
           )}
           {activeTab === "receipt-details" && (
@@ -2740,7 +2518,6 @@ const ReceivingManagementLayer = () => {
                       setViewModalOpen(false);
                       setPurchaseOrderInfo(null);
                       setGrnInfo(null);
-                      setQrPreviewData(null);
                       setHighlightedItemId(null);
                     }}
                   ></button>
@@ -2805,6 +2582,23 @@ const ReceivingManagementLayer = () => {
                             ).toLocaleDateString()}
                           </span>
                         </div>
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                          <span className="text-muted">Freight cost:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.freight_cost != null
+                              ? `₹${parseFloat(selectedRequest.freight_cost).toFixed(2)}`
+                              : "-"}
+                          </span>
+                        </div>
+                        {selectedRequest.vendor_freight_cost != null &&
+                          Number(selectedRequest.vendor_freight_cost) > 0 && (
+                            <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                              <span className="text-muted">Vendor freight cost:</span>
+                              <span className="fw-medium">
+                                {`₹${parseFloat(selectedRequest.vendor_freight_cost).toFixed(2)}`}
+                              </span>
+                            </div>
+                          )}
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Status:</span>
                           <span
@@ -3137,7 +2931,8 @@ const ReceivingManagementLayer = () => {
                                 <th className="small">CGST %</th>
                                 <th className="small">GST Amt</th>
                                 <th className="small">Net Amount</th>
-                                <th className="small">QR</th>
+                                <th className="small">Freight</th>
+                                <th className="small">Vendor Freight</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -3163,7 +2958,12 @@ const ReceivingManagementLayer = () => {
                                   <td className="small">
                                     {item.variant_display_name || "-"}
                                   </td>
-                                  <td className="small">{item.sku || "-"}</td>
+                                  <td
+                                    className="small text-break"
+                                    style={{ minWidth: "160px", maxWidth: "280px" }}
+                                  >
+                                    {formatLinkedSkusForDisplay(item)}
+                                  </td>
                                   <td className="small">
                                     {item.quantity || 0}
                                   </td>
@@ -3215,36 +3015,14 @@ const ReceivingManagementLayer = () => {
                                       : "-"}
                                   </td>
                                   <td className="small">
-                                    {item.qr_code ? (
-                                      <div className="d-flex flex-wrap gap-1">
-                                        <button
-                                          type="button"
-                                          className="btn btn-sm btn-outline-primary"
-                                          onClick={() => {
-                                            setQrPreviewData(item.qr_code);
-                                            setQrPreviewSku(item.sku);
-                                          }}
-                                        >
-                                          View
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="btn btn-sm btn-outline-secondary"
-                                          onClick={() =>
-                                            handleDownloadQrImage(
-                                              item.qr_code,
-                                              item.sku
-                                            )
-                                          }
-                                        >
-                                          Download
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted">
-                                        Not generated
-                                      </span>
-                                    )}
+                                    {item.freight_amount != null
+                                      ? `₹${parseFloat(item.freight_amount).toFixed(2)}`
+                                      : "-"}
+                                  </td>
+                                  <td className="small">
+                                    {item.vendor_freight_amount != null
+                                      ? `₹${parseFloat(item.vendor_freight_amount).toFixed(2)}`
+                                      : "-"}
                                   </td>
                                 </tr>
                               ))}
@@ -3420,70 +3198,6 @@ const ReceivingManagementLayer = () => {
                   >
                     Open in new tab
                   </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {qrPreviewData && (
-          <div
-            className="modal show d-block"
-            tabIndex="-1"
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-          >
-            <div className="modal-dialog modal-md modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    <Icon icon="mdi:qrcode" className="me-2" />
-                    QR Code Preview
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => {
-                      setQrPreviewData(null);
-                      setQrPreviewSku(null);
-                    }}
-                  ></button>
-                </div>
-                <div className="modal-body d-flex flex-column align-items-center">
-                  {qrPreviewData.image_base64 ? (
-                    <>
-                      <img
-                        src={qrPreviewData.image_base64}
-                        alt="QR Code"
-                        style={{ maxWidth: "100%", height: "auto" }}
-                      />
-                      {qrPreviewSku && (
-                        <div
-                          className="mt-3 text-center"
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: "600",
-                            color: "#1f2937",
-                          }}
-                        >
-                          SKU: {qrPreviewSku}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-muted">No preview available.</div>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() =>
-                      handleDownloadQrImage(qrPreviewData, qrPreviewSku)
-                    }
-                    disabled={!qrPreviewData.image_base64}
-                  >
-                    Download
-                  </button>
                 </div>
               </div>
             </div>
@@ -3837,6 +3551,64 @@ const ReceivingManagementLayer = () => {
                                 required
                               />
                             </div>
+                            <div>
+                              <label className="form-label small text-muted">
+                                PR freight cost
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm bg-light"
+                                value={
+                                  requestToInspect.freight_cost != null
+                                    ? parseFloat(requestToInspect.freight_cost).toFixed(2)
+                                    : "0.00"
+                                }
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label small text-muted">
+                                Vendor freight cost
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="form-control form-control-sm"
+                                value={
+                                  vendorFreightByRequestId[
+                                    requestToInspect.request_id
+                                  ] ?? ""
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setVendorFreightByRequestId((prev) => ({
+                                    ...prev,
+                                    [requestToInspect.request_id]: value,
+                                  }));
+                                  if (requestToInspect?.items?.length) {
+                                    const distributed =
+                                      distributeVendorFreightAmongItems(
+                                        requestToInspect.items,
+                                        value
+                                      );
+                                    setRequestToInspect((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            vendor_freight_cost:
+                                              value === ""
+                                                ? null
+                                                : Number(value) || 0,
+                                            items: distributed,
+                                          }
+                                        : prev
+                                    );
+                                  }
+                                }}
+                                placeholder="Vendor freight for GRN"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3866,6 +3638,7 @@ const ReceivingManagementLayer = () => {
                                 <th className="small">Sorted Qty *</th>
                                 <th className="small">Damage Qty</th>
                                 <th className="small">Notes</th>
+                                <th className="small">Vendor Freight</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -3953,6 +3726,14 @@ const ReceivingManagementLayer = () => {
                                         placeholder="Add notes..."
                                       />
                                     </td>
+                                    <td className="small text-center">
+                                      {requestItem?.vendor_freight_amount !=
+                                      null
+                                        ? `₹${parseFloat(
+                                            requestItem.vendor_freight_amount
+                                          ).toFixed(2)}`
+                                        : "-"}
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -4031,6 +3812,12 @@ const PurchaseRequestTab = ({
   handleAddVariant,
   handleRemoveVariant,
   updateVariantField,
+  handleMasterProductSelect,
+  masterBrandFilter,
+  setMasterBrandFilter,
+  masterBrands,
+  masterProductOptions,
+  masterProductLoading,
   handleSubmit,
   isSubmitting,
   handleModalClose,
@@ -4942,6 +4729,12 @@ const PurchaseRequestTab = ({
           handleAddVariant={handleAddVariant}
           handleRemoveVariant={handleRemoveVariant}
           updateVariantField={updateVariantField}
+          handleMasterProductSelect={handleMasterProductSelect}
+          masterBrandFilter={masterBrandFilter}
+          setMasterBrandFilter={setMasterBrandFilter}
+          masterBrands={masterBrands}
+          masterProductOptions={masterProductOptions}
+          masterProductLoading={masterProductLoading}
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           handleModalClose={handleModalClose}
@@ -5223,6 +5016,12 @@ const PurchaseRequestModal = ({
   handleAddVariant,
   handleRemoveVariant,
   updateVariantField,
+  handleMasterProductSelect,
+  masterBrandFilter,
+  setMasterBrandFilter,
+  masterBrands,
+  masterProductOptions,
+  masterProductLoading,
   handleSubmit,
   isSubmitting,
   handleModalClose,
@@ -5248,6 +5047,15 @@ const PurchaseRequestModal = ({
             ?.toLowerCase()
             .includes(vendorQuery.trim().toLowerCase());
         });
+
+  const handleFreightCostChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      freightCost: value,
+      products: applyFreightToProducts(prev.products, value),
+    }));
+  };
+
   return (
     <div
       className="modal show d-block"
@@ -5282,8 +5090,8 @@ const PurchaseRequestModal = ({
               onClick={handleModalClose}
             ></button>
           </div>
-          <div className="modal-body">
-            <form onSubmit={handleSubmit}>
+          <div className="modal-body overflow-x-hidden">
+            <form onSubmit={handleSubmit} className="overflow-hidden">
               {/* Company Section */}
               <div className="mb-4">
                 <h6 className="fw-semibold mb-3">Company Details</h6>
@@ -5419,7 +5227,7 @@ const PurchaseRequestModal = ({
                   return (
                     <div
                       key={productIndex}
-                      className="border rounded p-3 mb-3"
+                      className="border rounded p-3 mb-3 overflow-hidden"
                       style={{ backgroundColor: "#f8f9fa" }}
                     >
                       {/* Product Header */}
@@ -5438,236 +5246,18 @@ const PurchaseRequestModal = ({
                         )}
                       </div>
 
-                      <div className="row mb-3">
-                        <div className="col-md-6">
-                          <label className="form-label">
-                            Product Name <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Enter product name"
-                            value={productEntry.product_name || ""}
-                            onChange={(e) =>
-                              handleProductFieldChange(
-                                productIndex,
-                                "product_name",
-                                e.target.value
-                              )
-                            }
-                            required
-                          />
-                        </div>
-                        <div className="col-md-3">
-                          <label className="form-label">Product Category</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Category"
-                            value={productEntry.product_category || ""}
-                            onChange={(e) =>
-                              handleProductFieldChange(
-                                productIndex,
-                                "product_category",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="col-md-3">
-                          <label className="form-label">
-                            HSN Code <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="HSN"
-                            value={productEntry.hsn_code || ""}
-                            onChange={(e) =>
-                              handleProductFieldChange(
-                                productIndex,
-                                "hsn_code",
-                                e.target.value
-                              )
-                            }
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <label className="form-label mb-0">Product Variants</label>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => handleAddVariant(productIndex)}
-                        >
-                          + Add Variant
-                        </button>
-                      </div>
-                      <div className="border rounded p-3" style={{ backgroundColor: "white" }}>
-                        {productEntry.selectedVariants.map((variant, variantIndex) => (
-                          <div key={variantIndex} className="border rounded p-2 mb-3">
-                            <div className="d-flex justify-content-between align-items-center mb-2">
-                              <strong className="small">Variant #{variantIndex + 1}</strong>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() =>
-                                  handleRemoveVariant(productIndex, variantIndex)
-                                }
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="row g-2 align-items-end">
-                              <div className="col-12 col-md-3">
-                                <label className="form-label small mb-1">
-                                  Variant Name <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  className="form-control form-control-sm"
-                                  value={variant.variant_display_name || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "variant_display_name",
-                                      e.target.value
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  Quantity
-                                </label>
-                                <input
-                                  type="number"
-                                  className="form-control form-control-sm text-end"
-                                  min="0"
-                                  value={variant.quantity || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "quantity",
-                                      parseInt(e.target.value, 10) || 0
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  Rate
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  min="0"
-                                  value={variant.rate || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "rate",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  IGST %
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  min="0"
-                                  value={variant.igst_percent || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "igst_percent",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  SGST %
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  min="0"
-                                  value={variant.sgst_percent || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "sgst_percent",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  CGST %
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  min="0"
-                                  value={variant.cgst_percent || ""}
-                                  onChange={(e) =>
-                                    updateVariantField(
-                                      productIndex,
-                                      variantIndex,
-                                      "cgst_percent",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  GST
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  value={variant.gst_amt || ""}
-                                  readOnly
-                                />
-                              </div>
-                              <div className="col-6 col-md-2">
-                                <label className="form-label small mb-1 text-end">
-                                  Net
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm text-end"
-                                  value={variant.net_amount || ""}
-                                  readOnly
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <ReceivingPrProductFields
+                        productEntry={productEntry}
+                        productIndex={productIndex}
+                        masterBrandFilter={masterBrandFilter}
+                        setMasterBrandFilter={setMasterBrandFilter}
+                        masterBrands={masterBrands}
+                        masterProductOptions={masterProductOptions}
+                        masterProductLoading={masterProductLoading}
+                        handleProductFieldChange={handleProductFieldChange}
+                        handleMasterProductSelect={handleMasterProductSelect}
+                        updateVariantField={updateVariantField}
+                      />
                     </div>
                   );
                 })}
@@ -5708,6 +5298,18 @@ const PurchaseRequestModal = ({
                       required
                     />
                   </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Freight cost</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="form-control"
+                      value={formData.freightCost ?? ""}
+                      onChange={(e) => handleFreightCostChange(e.target.value)}
+                      placeholder="Total freight for this PR"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -5727,11 +5329,11 @@ const PurchaseRequestModal = ({
                     formData.products.length === 0 ||
                     formData.products.every(
                       (product) =>
-                        !String(product.product_name || "").trim() ||
+                        !product.product_id ||
                         product.selectedVariants.length === 0 ||
                         product.selectedVariants.every(
                           (v) =>
-                            !String(v.variant_display_name || "").trim() ||
+                            !String(v.sku_variant_suffix || "").trim() ||
                             !v.quantity ||
                             v.quantity === 0
                         )
@@ -6244,8 +5846,6 @@ const QualityCheckTab = ({
   handleViewRequest,
   handleInspectClick,
   handleSettingsClick,
-  handleGenerateQrCodes,
-  qrGenerationStatus,
   viewModalOpen,
   setViewModalOpen,
   selectedRequest,
@@ -6255,6 +5855,8 @@ const QualityCheckTab = ({
   getDisplayedData,
   hasMoreData,
   loadMoreData,
+  vendorFreightByRequestId,
+  setVendorFreightByRequestId,
 }) => {
   const [downloadingGrn, setDownloadingGrn] = useState({});
   const [grnInfoCache, setGrnInfoCache] = useState({});
@@ -6297,8 +5899,23 @@ const QualityCheckTab = ({
     setGeneratingGrn((prev) => ({ ...prev, [requestId]: true }));
 
     try {
-      // First, generate the GRN PDF
-      const generateResult = await qualityCheckApi.generateGrnPdf(requestId);
+      const vendorFreightRaw =
+        vendorFreightByRequestId?.[requestId] ??
+        vendorFreightByRequestId?.[String(requestId)];
+
+      if (vendorFreightRaw !== undefined && vendorFreightRaw !== "") {
+        await qualityCheckApi.saveVendorFreightCost(
+          requestId,
+          Number(vendorFreightRaw) || 0
+        );
+      }
+
+      const generateResult = await qualityCheckApi.generateGrnPdf(requestId, {
+        vendor_freight_cost:
+          vendorFreightRaw !== undefined && vendorFreightRaw !== ""
+            ? Number(vendorFreightRaw) || 0
+            : undefined,
+      });
 
       if (generateResult.success) {
         // Update cache
@@ -6612,30 +6229,10 @@ const QualityCheckTab = ({
                   ) : (
                     <>
                       {displayedData.map((request, index) => {
-                        const isGeneratingQr = Boolean(
-                          qrGenerationStatus?.[request.request_id]
-                        );
                         const qcCompleted =
                           hasQualityCheckCompletedSync(request);
                         const grnInfo = grnInfoCache[request.request_id];
                         const hasGrn = !!grnInfo;
-                        // Check if QR codes are already generated
-                        const hasQrCodes =
-                          request.items?.some(
-                            (item) =>
-                              item.qr_code?.image_base64 ||
-                              item.qr_code?.file_name
-                          ) || false;
-                        // QR button is only disabled if conditions aren't met (not if QR codes already exist)
-                        const qrDisabled =
-                          isGeneratingQr || !qcCompleted || !hasGrn;
-                        const qrTitle = !qcCompleted
-                          ? "Complete quality inspection to enable QR codes"
-                          : !hasGrn
-                          ? "First generate GRN, then generate QR codes"
-                          : hasQrCodes
-                          ? "Download QR codes"
-                          : "Generate QR codes";
 
                         return (
                           <tr key={request.request_id}>
@@ -6720,13 +6317,7 @@ const QualityCheckTab = ({
                                     style={{ color: "#16a34a" }}
                                   />
                                 </button>
-                                <div
-                                  title={qrTitle}
-                                  style={{
-                                    display: "inline-block",
-                                    position: "relative",
-                                  }}
-                                >
+                                {hasGrn ? (
                                   <button
                                     className="btn btn-sm"
                                     style={{
@@ -6738,22 +6329,13 @@ const QualityCheckTab = ({
                                       justifyContent: "center",
                                       border: "1px solid #e5e7eb",
                                       borderRadius: "6px",
-                                      backgroundColor: qrDisabled
-                                        ? "#f3f4f6"
-                                        : "white",
-                                      opacity: qrDisabled ? 0.6 : 1,
-                                      cursor: qrDisabled
-                                        ? "not-allowed"
-                                        : "pointer",
+                                      backgroundColor: "white",
                                     }}
-                                    onClick={() => {
-                                      if (!qrDisabled) {
-                                        handleGenerateQrCodes(request);
-                                      }
-                                    }}
-                                    disabled={qrDisabled}
+                                    title="Download GRN PDF"
+                                    onClick={() => handleDownloadGrn(request)}
+                                    disabled={downloadingGrn[request.request_id]}
                                   >
-                                    {isGeneratingQr ? (
+                                    {downloadingGrn[request.request_id] ? (
                                       <span
                                         className="spinner-border spinner-border-sm"
                                         role="status"
@@ -6761,18 +6343,68 @@ const QualityCheckTab = ({
                                       />
                                     ) : (
                                       <Icon
-                                        icon="mdi:qrcode"
+                                        icon="mdi:file-document-outline"
+                                        width="16"
+                                        height="16"
+                                        style={{ color: "#16a34a" }}
+                                      />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      padding: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "6px",
+                                      backgroundColor: !qcCompleted
+                                        ? "#f3f4f6"
+                                        : "white",
+                                      opacity: !qcCompleted ? 0.6 : 1,
+                                      cursor: !qcCompleted
+                                        ? "not-allowed"
+                                        : "pointer",
+                                    }}
+                                    title={
+                                      !qcCompleted
+                                        ? "Complete quality inspection to generate GRN"
+                                        : "Generate GRN PDF"
+                                    }
+                                    onClick={() => {
+                                      if (qcCompleted) {
+                                        handleGenerateAndDownloadGrn(request);
+                                      }
+                                    }}
+                                    disabled={
+                                      !qcCompleted ||
+                                      generatingGrn[request.request_id]
+                                    }
+                                  >
+                                    {generatingGrn[request.request_id] ? (
+                                      <span
+                                        className="spinner-border spinner-border-sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <Icon
+                                        icon="mdi:file-document-plus-outline"
                                         width="16"
                                         height="16"
                                         style={{
-                                          color: qrDisabled
+                                          color: !qcCompleted
                                             ? "#9ca3af"
-                                            : "#111827",
+                                            : "#16a34a",
                                         }}
                                       />
                                     )}
                                   </button>
-                                </div>
+                                )}
                                 <button
                                   className="btn btn-sm"
                                   style={{
@@ -6786,7 +6418,7 @@ const QualityCheckTab = ({
                                     borderRadius: "6px",
                                     backgroundColor: "white",
                                   }}
-                                  title="Settings"
+                                  title="Mark as Fulfilled"
                                   onClick={() =>
                                     handleSettingsClick(request, "fulfilled")
                                   }
@@ -6798,158 +6430,43 @@ const QualityCheckTab = ({
                                     style={{ color: "#f59e0b" }}
                                   />
                                 </button>
-                                {/* GRN PDF Download Icon - Only show if quality check is completed */}
-                                {hasQualityCheckCompletedSync(request) && (
-                                  <>
-                                    {grnInfoCache[request.request_id] ? (
-                                      <button
-                                        className="btn btn-sm"
-                                        style={{
-                                          width: "32px",
-                                          height: "32px",
-                                          padding: 0,
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          border: "1px solid #e5e7eb",
-                                          borderRadius: "6px",
-                                          backgroundColor: "white",
-                                        }}
-                                        title="Download GRN PDF"
-                                        onClick={() =>
-                                          handleDownloadGrn(request)
-                                        }
-                                        disabled={
-                                          downloadingGrn[request.request_id]
-                                        }
-                                      >
-                                        {downloadingGrn[request.request_id] ? (
-                                          <span
-                                            className="spinner-border spinner-border-sm"
-                                            role="status"
-                                            aria-hidden="true"
-                                            style={{
-                                              width: "12px",
-                                              height: "12px",
-                                            }}
-                                          />
-                                        ) : (
-                                          <Icon
-                                            icon="mdi:file-pdf-box"
-                                            width="16"
-                                            height="16"
-                                            style={{ color: "#dc3545" }}
-                                          />
-                                        )}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        className="btn btn-sm"
-                                        style={{
-                                          width: "32px",
-                                          height: "32px",
-                                          padding: 0,
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          border: "1px solid #e5e7eb",
-                                          borderRadius: "6px",
-                                          backgroundColor: "white",
-                                        }}
-                                        title="Generate and Download GRN PDF"
-                                        onClick={() =>
-                                          handleGenerateAndDownloadGrn(request)
-                                        }
-                                        disabled={
-                                          generatingGrn[request.request_id]
-                                        }
-                                      >
-                                        {generatingGrn[request.request_id] ? (
-                                          <span
-                                            className="spinner-border spinner-border-sm"
-                                            role="status"
-                                            aria-hidden="true"
-                                            style={{
-                                              width: "12px",
-                                              height: "12px",
-                                            }}
-                                          />
-                                        ) : (
-                                          <Icon
-                                            icon="mdi:file-document-outline"
-                                            width="16"
-                                            height="16"
-                                            style={{ color: "#6c757d" }}
-                                          />
-                                        )}
-                                      </button>
-                                    )}
-                                  </>
-                                )}
                               </div>
                             </td>
                           </tr>
                         );
                       })}
-                      {isLoadingMore && (
-                        <>
-                          {Array.from({ length: 5 }).map((_, rowIndex) => (
-                            <tr key={`skeleton-more-${rowIndex}`}>
-                              {Array.from({ length: 6 }).map((_, colIndex) => (
-                                <td
-                                  key={`skeleton-more-${rowIndex}-${colIndex}`}
-                                >
-                                  <div
-                                    className="skeleton"
-                                    style={{
-                                      height: "20px",
-                                      backgroundColor: "#e5e7eb",
-                                      borderRadius: "4px",
-                                      animation:
-                                        "skeletonPulse 1.5s ease-in-out infinite",
-                                    }}
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </>
-                      )}
                     </>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {/* Infinite Scroll Footer */}
-            {requests.length > 0 && (
-              <div
-                className="d-flex justify-content-between align-items-center px-3 py-2"
-                style={{
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "0 0 8px 8px",
-                  marginTop: "0",
-                  position: "sticky",
-                  bottom: 0,
-                  zIndex: 5,
-                }}
-              >
-                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                  Showing <strong>{displayedData.length}</strong> of{" "}
-                  <strong>{requests.length}</strong> entries
-                </div>
-                {hasMoreData() && (
-                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                    Scroll down to load more
-                  </div>
-                )}
+          {requests.length > 0 && (
+            <div
+              className="d-flex justify-content-between align-items-center px-3 py-2"
+              style={{
+                backgroundColor: "#f8f9fa",
+                borderRadius: "0 0 8px 8px",
+                marginTop: "0",
+                position: "sticky",
+                bottom: 0,
+                zIndex: 5,
+              }}
+            >
+              <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                Showing <strong>{requests.length}</strong> entries
               </div>
-            )}
-          </div>
+              {hasMoreData() && (
+                <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
+                  Scroll down to load more
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 };
-
 export default ReceivingManagementPage;
