@@ -340,6 +340,7 @@ const ReceivingManagementLayer = () => {
     orderDate: "",
     deliveryDate: "",
     freightCost: "",
+    creditDays: "",
   });
 
   // Receipt Details Tab Component (one row per request, aggregated totals)
@@ -1669,6 +1670,7 @@ const ReceivingManagementLayer = () => {
         order_date: formData.orderDate,
         delivery_date: formData.deliveryDate,
         freight_cost: parseFloat(formData.freightCost) || 0,
+        credit_days: parseInt(formData.creditDays, 10) || 0,
         items: items,
       };
 
@@ -1692,6 +1694,8 @@ const ReceivingManagementLayer = () => {
           products: [createEmptyProduct()],
           orderDate: "",
           deliveryDate: "",
+          freightCost: "",
+          creditDays: "",
         });
         setVendorData({
           vendorName: "",
@@ -1744,6 +1748,7 @@ const ReceivingManagementLayer = () => {
       orderDate: "",
       deliveryDate: "",
       freightCost: "",
+      creditDays: "",
     });
     setVendorData({
       companyName: "",
@@ -1824,6 +1829,8 @@ const ReceivingManagementLayer = () => {
         : "",
       freightCost:
         request.freight_cost != null ? String(request.freight_cost) : "",
+      creditDays:
+        request.credit_days != null ? String(request.credit_days) : "",
     });
 
     // Set vendor data
@@ -2588,6 +2595,14 @@ const ReceivingManagementLayer = () => {
                             {selectedRequest.freight_cost != null
                               ? `₹${parseFloat(selectedRequest.freight_cost).toFixed(2)}`
                               : "-"}
+                          </span>
+                        </div>
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                          <span className="text-muted">Credit days:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.credit_days != null
+                              ? selectedRequest.credit_days
+                              : "0"}
                           </span>
                         </div>
                         {selectedRequest.vendor_freight_cost != null &&
@@ -3839,30 +3854,30 @@ const PurchaseRequestTab = ({
   loadMoreData,
 }) => {
   const [excelUploadModalOpen, setExcelUploadModalOpen] = useState(false);
-  const [excelVendorQuery, setExcelVendorQuery] = useState("");
+  const excelFileInputRef = useRef(null);
   const [excelFile, setExcelFile] = useState(null);
+  const [excelParsedHeader, setExcelParsedHeader] = useState(null);
   const [excelRows, setExcelRows] = useState([]);
   const [excelSkippedRows, setExcelSkippedRows] = useState([]);
+  const [excelSkuWarnings, setExcelSkuWarnings] = useState([]);
+  const [excelValidationErrors, setExcelValidationErrors] = useState([]);
+  const [excelValidatedPayload, setExcelValidatedPayload] = useState(null);
   const [excelIsParsing, setExcelIsParsing] = useState(false);
   const [excelIsSubmitting, setExcelIsSubmitting] = useState(false);
-  const [excelForm, setExcelForm] = useState({
-    selectedVendor: null,
-    orderDate: "",
-    deliveryDate: "",
-  });
 
   const resetExcelUploadState = () => {
-    setExcelVendorQuery("");
     setExcelFile(null);
+    setExcelParsedHeader(null);
     setExcelRows([]);
     setExcelSkippedRows([]);
+    setExcelSkuWarnings([]);
+    setExcelValidationErrors([]);
+    setExcelValidatedPayload(null);
     setExcelIsParsing(false);
     setExcelIsSubmitting(false);
-    setExcelForm({
-      selectedVendor: null,
-      orderDate: "",
-      deliveryDate: "",
-    });
+    if (excelFileInputRef.current) {
+      excelFileInputRef.current.value = "";
+    }
   };
 
   const closeExcelUploadModal = () => {
@@ -3882,9 +3897,98 @@ const PurchaseRequestTab = ({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  const parseExcelDate = (value) => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString().split("T")[0];
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) {
+        const month = String(parsed.m).padStart(2, "0");
+        const day = String(parsed.d).padStart(2, "0");
+        return `${parsed.y}-${month}-${day}`;
+      }
+    }
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.split("T")[0];
+    const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmy) {
+      const day = dmy[1].padStart(2, "0");
+      const month = dmy[2].padStart(2, "0");
+      return `${dmy[3]}-${month}-${day}`;
+    }
+    const parsedDate = new Date(raw);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split("T")[0];
+    }
+    return raw;
+  };
+
+  const mapHeaderLabelToField = (label) => {
+    const key = normalizeHeader(label);
+    if (key.includes("company name")) return "company_name";
+    if (key.includes("contact person") || key === "vendor name") return "contact_person";
+    if (key.includes("phone")) return "phone_no";
+    if (key.includes("gst")) return "gst_number";
+    if (key.includes("address")) return "address";
+    if (key.includes("order date")) return "order_date";
+    if (key.includes("delivery date")) return "delivery_date";
+    if (key.includes("freight")) return "freight_cost";
+    if (key.includes("credit day")) return "credit_days";
+    if (key.includes("listing brand")) return "listing_brand";
+    if (
+      key.includes("variant key") ||
+      key.includes("warehouse variant") ||
+      key.includes("suffix group") ||
+      key === "variant"
+    ) {
+      return "variant_key";
+    }
+    if (
+      key === "sku" ||
+      key.includes("sku code") ||
+      key.includes("internal sku")
+    ) {
+      return "sku";
+    }
+    if (key.includes("product name")) return "product_name";
+    if (key === "qty" || key.includes("quantity")) return "quantity";
+    if (key === "rate" || key.includes("unit rate")) return "rate";
+    if (key.includes("hsn")) return "hsn_code";
+    if (key.includes("igst")) return "igst_percent";
+    if (key.includes("sgst")) return "sgst_percent";
+    if (key.includes("cgst")) return "cgst_percent";
+    return null;
+  };
+
+  const HEADER_FIELD_KEYS = new Set([
+    "company_name",
+    "contact_person",
+    "phone_no",
+    "gst_number",
+    "address",
+    "order_date",
+    "delivery_date",
+    "freight_cost",
+    "credit_days",
+  ]);
+
+  const readCellForField = (cell, field) => {
+    if (cell == null || String(cell).trim() === "") return undefined;
+    if (field === "order_date" || field === "delivery_date") {
+      return parseExcelDate(cell);
+    }
+    if (field === "freight_cost" || field === "credit_days") {
+      const n = readNumeric(cell);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return String(cell).trim();
+  };
+
   const parseExcelFile = async (file) => {
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
     const sheet =
       workbook.Sheets["Purchase Request"] ||
       workbook.Sheets[workbook.SheetNames[0]];
@@ -3898,79 +4002,275 @@ const PurchaseRequestTab = ({
       throw new Error("Uploaded sheet is empty.");
     }
 
-    const headerRow = rows.find(
-      (row) =>
-        Array.isArray(row) &&
-        row.some((cell) => normalizeHeader(cell).includes("product name"))
-    );
-    if (!headerRow) {
+    const firstRow = Array.isArray(rows[0]) ? rows[0] : [];
+    const columnFieldByIndex = {};
+    firstRow.forEach((header, idx) => {
+      const field = mapHeaderLabelToField(header);
+      if (field) columnFieldByIndex[idx] = field;
+    });
+
+    const mappedFields = new Set(Object.values(columnFieldByIndex));
+    const isHorizontalLayout =
+      mappedFields.has("company_name") &&
+      mappedFields.has("product_name") &&
+      (mappedFields.has("sku") || mappedFields.has("variant_key"));
+
+    if (isHorizontalLayout) {
+      if (!mappedFields.has("quantity") || !mappedFields.has("rate")) {
+        throw new Error(
+          "Invalid horizontal template: need Quantity * and Rate * columns (see Download Template)."
+        );
+      }
+
+      const parsedRows = [];
+      const skippedRows = [];
+      const carryHeader = {};
+
+      const mergeRowIntoHeader = (row) => {
+        Object.entries(columnFieldByIndex).forEach(([idxStr, field]) => {
+          if (!HEADER_FIELD_KEYS.has(field)) return;
+          const val = readCellForField(row[Number(idxStr)], field);
+          if (val !== undefined && val !== "") {
+            carryHeader[field] = val;
+          }
+        });
+        return { ...carryHeader };
+      };
+
+      for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        if (!Array.isArray(row)) continue;
+        const excelRowNo = rowIndex + 1;
+
+        const mergedHeader = mergeRowIntoHeader(row);
+
+        const line = {};
+        Object.entries(columnFieldByIndex).forEach(([idxStr, field]) => {
+          if (HEADER_FIELD_KEYS.has(field)) return;
+          const cell = row[Number(idxStr)];
+          if (field === "quantity" || field === "rate") {
+            line[field] = readNumeric(cell);
+          } else if (
+            field === "igst_percent" ||
+            field === "sgst_percent" ||
+            field === "cgst_percent"
+          ) {
+            line[field] = readNumeric(cell);
+          } else {
+            line[field] = cell != null ? String(cell).trim() : "";
+          }
+        });
+
+        const sku = String(line.sku || "").trim();
+        const variantKey = String(line.variant_key || "").trim();
+        const listingBrand = String(line.listing_brand || "").trim();
+        const productName = String(line.product_name || "").trim();
+        const quantity = readNumeric(line.quantity);
+        const rate = readNumeric(line.rate);
+        const isEmptyRow =
+          !sku &&
+          !variantKey &&
+          !productName &&
+          quantity === 0 &&
+          rate === 0;
+        if (isEmptyRow) continue;
+
+        const errors = [];
+        if (!mergedHeader.company_name) errors.push("Missing Company Name");
+        if (!mergedHeader.order_date) errors.push("Missing Order Date");
+        if (!mergedHeader.delivery_date) errors.push("Missing Delivery Date");
+        if (!productName) errors.push("Missing Product Name");
+        if (!sku && !variantKey) {
+          errors.push("Provide Internal SKU or Variant Key (warehouse suffix group)");
+        }
+        if (quantity <= 0) errors.push("Quantity must be > 0");
+        if (rate < 0) errors.push("Rate cannot be negative");
+
+        if (errors.length) {
+          skippedRows.push({ rowNo: excelRowNo, reason: errors.join(", ") });
+          continue;
+        }
+
+        parsedRows.push({
+          rowNo: excelRowNo,
+          product_name: productName,
+          listing_brand: listingBrand,
+          sku,
+          variant_key: variantKey,
+          quantity,
+          rate,
+          hsn_code: line.hsn_code || "",
+          igst_percent: line.igst_percent || 0,
+          sgst_percent: line.sgst_percent || 0,
+          cgst_percent: line.cgst_percent || 0,
+          _header: { ...mergedHeader },
+        });
+      }
+
+      if (!parsedRows.length) {
+        throw new Error(
+          "No valid data rows. Add at least one row with Company, dates, Product Name, Internal SKU or Variant Key, Qty, Rate."
+        );
+      }
+
+      const baseHeader = parsedRows[0]._header;
+      for (let i = 1; i < parsedRows.length; i += 1) {
+        const h = parsedRows[i]._header;
+        const mismatch = [];
+        if (
+          String(h.company_name || "") !== String(baseHeader.company_name || "")
+        ) {
+          mismatch.push("Company Name");
+        }
+        if (String(h.order_date || "") !== String(baseHeader.order_date || "")) {
+          mismatch.push("Order Date");
+        }
+        if (
+          String(h.delivery_date || "") !==
+          String(baseHeader.delivery_date || "")
+        ) {
+          mismatch.push("Delivery Date");
+        }
+        if (mismatch.length) {
+          throw new Error(
+            `All data rows must use the same ${mismatch.join(", ")} for one upload, or leave those cells blank on extra rows to repeat the first row.`
+          );
+        }
+      }
+
+      const headerFields = { ...baseHeader };
+      const rowsForApi = parsedRows.map(
+        ({ _header, ...rest }) => rest
+      );
+
+      return { header: headerFields, parsedRows: rowsForApi, skippedRows };
+    }
+
+    /* Legacy vertical layout: labels in column A, values in column B */
+    const headerFields = {};
+    let tableHeaderIndex = -1;
+    let tableHeaderRow = null;
+
+    rows.forEach((row, rowIndex) => {
+      if (!Array.isArray(row)) return;
+      const label = normalizeHeader(row[0]);
+      const field = mapHeaderLabelToField(label);
+      const tableLineFields = new Set([
+        "sku",
+        "variant_key",
+        "product_name",
+        "listing_brand",
+        "quantity",
+        "rate",
+        "hsn_code",
+        "igst_percent",
+        "sgst_percent",
+        "cgst_percent",
+      ]);
+      if (
+        field &&
+        !tableLineFields.has(field) &&
+        row[1] != null &&
+        String(row[1]).trim() !== ""
+      ) {
+        if (field === "order_date" || field === "delivery_date") {
+          headerFields[field] = parseExcelDate(row[1]);
+        } else if (field === "freight_cost" || field === "credit_days") {
+          headerFields[field] = readNumeric(row[1]);
+        } else {
+          headerFields[field] = String(row[1]).trim();
+        }
+      }
+
+      const hasLineIdentityColumn = row.some((cell) => {
+        const mapped = mapHeaderLabelToField(cell);
+        return mapped === "sku" || mapped === "variant_key";
+      });
+      if (hasLineIdentityColumn && tableHeaderIndex === -1) {
+        tableHeaderIndex = rowIndex;
+        tableHeaderRow = row;
+      }
+    });
+
+    if (tableHeaderIndex === -1 || !tableHeaderRow) {
       throw new Error(
-        "Invalid template. Could not find header row with Product Name."
+        "Invalid template. Use row 1 with all column headings (Download Template), or the legacy vertical layout."
       );
     }
 
-    const headerIndex = rows.indexOf(headerRow);
-    const headerMap = {};
-    headerRow.forEach((header, idx) => {
-      headerMap[normalizeHeader(header)] = idx;
+    const legacyColMap = {};
+    tableHeaderRow.forEach((header, idx) => {
+      const field = mapHeaderLabelToField(header);
+      if (field) legacyColMap[idx] = field;
     });
 
-    const getIndex = (...names) => {
-      for (const name of names) {
-        if (Object.prototype.hasOwnProperty.call(headerMap, name)) {
-          return headerMap[name];
-        }
-      }
-      return -1;
-    };
-
-    const idxProductName = getIndex("product name");
-    const idxProductCategory = getIndex("product category");
-    const idxHsnCode = getIndex("hsn code");
-    const idxVariantName = getIndex("variant name");
-    const idxQuantity = getIndex("quantity");
-    const idxRate = getIndex("rate");
-    const idxIgst = getIndex("igst");
-    const idxSgst = getIndex("sgst");
-    const idxCgst = getIndex("cgst");
-
-    if (
-      idxProductName === -1 ||
-      idxHsnCode === -1 ||
-      idxVariantName === -1 ||
-      idxQuantity === -1 ||
-      idxRate === -1
-    ) {
+    const legacyHasLineIdentity =
+      Object.values(legacyColMap).includes("sku") ||
+      Object.values(legacyColMap).includes("variant_key");
+    if (!legacyHasLineIdentity) {
       throw new Error(
-        "Invalid template headers. Required: Product Name, HSN Code, Variant Name, Quantity, Rate."
+        "Product table must include Internal SKU and/or Variant Key (see template)."
       );
     }
 
     const parsedRows = [];
     const skippedRows = [];
 
-    rows.slice(headerIndex + 1).forEach((row, rowOffset) => {
-      const excelRowNo = headerIndex + 2 + rowOffset;
-      const productName = String(row[idxProductName] || "").trim();
-      const productCategory =
-        idxProductCategory >= 0
-          ? String(row[idxProductCategory] || "").trim()
-          : "";
-      const hsnCode = idxHsnCode >= 0 ? String(row[idxHsnCode] || "").trim() : "";
-      const variantName = String(row[idxVariantName] || "").trim();
-      const quantity = readNumeric(row[idxQuantity]);
-      const rate = readNumeric(row[idxRate]);
-      const igst = idxIgst >= 0 ? readNumeric(row[idxIgst]) : 0;
-      const sgst = idxSgst >= 0 ? readNumeric(row[idxSgst]) : 0;
-      const cgst = idxCgst >= 0 ? readNumeric(row[idxCgst]) : 0;
+    rows.slice(tableHeaderIndex + 1).forEach((row, rowOffset) => {
+      const excelRowNo = tableHeaderIndex + 2 + rowOffset;
+      if (!Array.isArray(row)) return;
 
-      const isEmptyRow = !productName && !variantName && quantity === 0 && rate === 0;
+      const line = {};
+      Object.entries(legacyColMap).forEach(([idx, field]) => {
+        const cell = row[Number(idx)];
+        if (field === "order_date" || field === "delivery_date") {
+          if (cell != null && String(cell).trim() !== "") {
+            headerFields[field] = parseExcelDate(cell);
+          }
+          return;
+        }
+        if (HEADER_FIELD_KEYS.has(field)) {
+          if (cell != null && String(cell).trim() !== "") {
+            if (field === "freight_cost" || field === "credit_days") {
+              headerFields[field] = readNumeric(cell);
+            } else {
+              headerFields[field] = String(cell).trim();
+            }
+          }
+          return;
+        }
+        if (field === "quantity" || field === "rate") {
+          line[field] = readNumeric(cell);
+        } else if (
+          field === "igst_percent" ||
+          field === "sgst_percent" ||
+          field === "cgst_percent"
+        ) {
+          line[field] = readNumeric(cell);
+        } else {
+          line[field] = cell != null ? String(cell).trim() : "";
+        }
+      });
+
+      const sku = String(line.sku || "").trim();
+      const variantKey = String(line.variant_key || "").trim();
+      const listingBrand = String(line.listing_brand || "").trim();
+      const productName = String(line.product_name || "").trim();
+      const quantity = readNumeric(line.quantity);
+      const rate = readNumeric(line.rate);
+      const isEmptyRow =
+        !sku &&
+        !variantKey &&
+        !productName &&
+        quantity === 0 &&
+        rate === 0;
       if (isEmptyRow) return;
 
       const errors = [];
       if (!productName) errors.push("Missing Product Name");
-      if (!hsnCode) errors.push("Missing HSN Code");
-      if (!variantName) errors.push("Missing Variant Name");
+      if (!sku && !variantKey) {
+        errors.push("Provide Internal SKU or Variant Key");
+      }
       if (quantity <= 0) errors.push("Quantity must be > 0");
       if (rate < 0) errors.push("Rate cannot be negative");
 
@@ -3979,89 +4279,189 @@ const PurchaseRequestTab = ({
         return;
       }
 
-      const taxableAmt = quantity * rate;
-      const gstAmt = (taxableAmt * (igst + sgst + cgst)) / 100;
-
       parsedRows.push({
         rowNo: excelRowNo,
         product_name: productName,
-        product_category: productCategory || null,
-        hsn_code: hsnCode || null,
-        variant_display_name: variantName,
+        listing_brand: listingBrand,
+        sku,
+        variant_key: variantKey,
         quantity,
         rate,
-        igst_percent: igst,
-        sgst_percent: sgst,
-        cgst_percent: cgst,
-        taxable_amt: taxableAmt,
-        gst_amt: gstAmt,
-        net_amount: taxableAmt + gstAmt,
+        hsn_code: line.hsn_code || "",
+        igst_percent: line.igst_percent || 0,
+        sgst_percent: line.sgst_percent || 0,
+        cgst_percent: line.cgst_percent || 0,
       });
     });
 
-    return { parsedRows, skippedRows };
+    if (!headerFields.company_name) {
+      throw new Error("Company Name is required in the Excel header section.");
+    }
+    if (!headerFields.order_date || !headerFields.delivery_date) {
+      throw new Error("Order Date and Delivery Date are required in Excel.");
+    }
+    if (!parsedRows.length) {
+      throw new Error("No valid product rows found below the SKU header row.");
+    }
+
+    return { header: headerFields, parsedRows, skippedRows };
   };
 
   const handleDownloadExcelTemplate = () => {
-    const headers = [
-      "Product Name *",
-      "Product Category",
-      "HSN Code *",
-      "Variant Name *",
+    const sampleVendor =
+      vendors?.find((v) => String(v.company_name || "").trim()) || vendors?.[0];
+    const sampleCompany =
+      sampleVendor?.company_name ||
+      sampleVendor?.vendor_name ||
+      "YOUR COMPANY (must match vendor master)";
+    const sampleContact = sampleVendor?.vendor_name || "";
+    const samplePhone = sampleVendor?.vendor_phone_no || "";
+    const sampleGst = sampleVendor?.vendor_gst_number || "";
+    const sampleAddress = sampleVendor?.vendor_address || "";
+    const today = new Date();
+    const orderDate = today.toISOString().split("T")[0];
+    const delivery = new Date(today);
+    delivery.setDate(delivery.getDate() + 14);
+    const deliveryDate = delivery.toISOString().split("T")[0];
+
+    const headerRow = [
+      "Company Name *",
+      "Contact Person",
+      "Phone No.",
+      "GST Number",
+      "Address",
+      "Order Date *",
+      "Delivery Date *",
+      "Freight Cost",
+      "Credit Days",
+      "Listing Brand",
+      "Product Name (Manage Master) *",
+      "Internal SKU",
+      "Variant Key",
       "Quantity *",
       "Rate *",
+      "HSN Code",
       "IGST %",
       "SGST %",
       "CGST %",
-      "Taxable Amt",
-      "GST Amt",
-      "Net Amount",
     ];
 
-    const sampleRows = [
-      [
-        "Therapeutic Shampoo",
-        "Pet Care",
-        "3305",
-        "500ml",
-        100,
-        199,
-        0,
-        9,
-        9,
-        "",
-        "",
-        "",
-      ],
-      [
-        "Therapeutic Shampoo",
-        "Pet Care",
-        "3305",
-        "1000ml",
-        50,
-        349,
-        0,
-        9,
-        9,
-        "",
-        "",
-        "",
-      ],
+    const sampleRow = [
+      sampleCompany,
+      sampleContact,
+      samplePhone,
+      sampleGst,
+      sampleAddress,
+      orderDate,
+      deliveryDate,
+      "",
+      0,
+      "",
+      "PASTE EXACT LISTING NAME FROM MANAGE MASTER",
+      "TH-229-BLUEJAY SNEAKS - L",
+      "",
+      1,
+      0,
+      "",
+      0,
+      0,
+      0,
     ];
 
-    const wsData = [headers, ...sampleRows];
+    const wsData = [headerRow, sampleRow];
+
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const instructions = XLSX.utils.aoa_to_sheet([
-      ["Instructions"],
-      ["Use one row per variant."],
-      ["Required columns: Product Name, HSN Code, Variant Name, Quantity, Rate."],
-      ["Taxable/GST/Net are auto-calculated during upload."],
+      ["Purchase Request Excel upload (aligned with Add Purchase Request)"],
+      ["Row 1: headings. Row 2+: one row per warehouse variant line (suffix group)."],
+      [
+        "Repeat Company / dates on each row, or fill only on row 2 and leave blank below (carry forward).",
+      ],
+      ["All rows must share the same Company Name, Order Date, and Delivery Date."],
+      [
+        "Listing Brand: optional. Use when the same text could match multiple product_master listings (exact brand name from brand master).",
+      ],
+      [
+        "Internal SKU OR Variant Key: one is required per row. Internal SKU can be ANY brand SKU in the suffix group (e.g. TH-… or ST-…); system loads all linked SKUs like the UI.",
+      ],
+      ["Variant Key: e.g. size line from the PR form — variant display name or sku_variant_suffix (BLUEJAY SNEAKS-L)."],
+      ["HSN can be blank when set on product master."],
+      ["Freight Cost (header column) is split across lines proportionally like the manual form."],
     ]);
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Purchase Request");
     XLSX.utils.book_append_sheet(wb, instructions, "Instructions");
     XLSX.writeFile(wb, "PR_Upload_Template.xlsx");
+  };
+
+  const runExcelValidation = async (header, parsedRows) => {
+    try {
+      const validation = await purchaseRequestApi.validateExcelPurchaseRequest({
+        header: {
+          company_name: header.company_name,
+          contact_person: header.contact_person,
+          phone_no: header.phone_no,
+          gst_number: header.gst_number,
+          address: header.address,
+          order_date: header.order_date,
+          delivery_date: header.delivery_date,
+          freight_cost: header.freight_cost,
+          credit_days: header.credit_days,
+        },
+        line_items: parsedRows.map((row) => ({
+          row_no: row.rowNo,
+          product_name: row.product_name,
+          listing_brand: row.listing_brand,
+          sku: row.sku,
+          variant_key: row.variant_key,
+          quantity: row.quantity,
+          rate: row.rate,
+          hsn_code: row.hsn_code,
+          igst_percent: row.igst_percent,
+          sgst_percent: row.sgst_percent,
+          cgst_percent: row.cgst_percent,
+        })),
+        auto_correct_sku: true,
+      });
+
+      if (!validation.success) {
+        setExcelValidationErrors(validation.details?.sku_errors || []);
+        setExcelSkuWarnings(validation.details?.sku_warnings || []);
+        setExcelValidatedPayload(null);
+        throw new Error(validation.message || "Excel validation failed.");
+      }
+
+      setExcelValidationErrors([]);
+      setExcelSkuWarnings(validation.data?.sku_warnings || []);
+      setExcelValidatedPayload(validation.data?.request_payload || null);
+      setExcelRows(
+        (validation.data?.items || []).map((item) => ({
+          rowNo: item.row_no,
+          sku: item.sku,
+          product_name: item.product_name,
+          variant_display_name: item.variant_display_name,
+          sku_variant_suffix: item.sku_variant_suffix,
+          quantity: item.quantity,
+          rate: item.rate,
+          net_amount: item.net_amount,
+          hsn_code: item.hsn_code,
+        }))
+      );
+      setExcelParsedHeader({
+        ...header,
+        vendor: validation.data?.vendor,
+      });
+    } catch (error) {
+      if (error.details?.sku_errors?.length) {
+        setExcelValidationErrors(error.details.sku_errors);
+      }
+      if (error.details?.sku_warnings?.length) {
+        setExcelSkuWarnings(error.details.sku_warnings);
+      }
+      setExcelValidatedPayload(null);
+      throw error;
+    }
   };
 
   const handleExcelFileChange = async (event) => {
@@ -4071,64 +4471,43 @@ const PurchaseRequestTab = ({
     setExcelFile(file);
     setExcelRows([]);
     setExcelSkippedRows([]);
+    setExcelSkuWarnings([]);
+    setExcelValidationErrors([]);
+    setExcelValidatedPayload(null);
+    setExcelParsedHeader(null);
     setExcelIsParsing(true);
 
     try {
-      const { parsedRows, skippedRows } = await parseExcelFile(file);
-      setExcelRows(parsedRows);
+      const { header, parsedRows, skippedRows } = await parseExcelFile(file);
       setExcelSkippedRows(skippedRows);
+      await runExcelValidation(header, parsedRows);
     } catch (error) {
-      console.error("Failed to parse PR excel:", error);
-      alert(error.message || "Failed to parse Excel file.");
-      setExcelFile(null);
+      console.error("Failed to parse or validate PR excel:", error);
+      const message = error.message || "Failed to process Excel file.";
+      const isParseError = !error.details?.sku_errors?.length;
+      if (isParseError) {
+        alert(message);
+        setExcelFile(null);
+        if (excelFileInputRef.current) {
+          excelFileInputRef.current.value = "";
+        }
+      }
     } finally {
       setExcelIsParsing(false);
     }
   };
 
   const handleExcelSubmit = async () => {
-    if (!excelForm.selectedVendor) {
-      alert("Please select a company before uploading.");
-      return;
-    }
-    if (!excelRows.length) {
-      alert("No valid rows found in uploaded Excel.");
-      return;
-    }
-    const hasMissingHsnCode = excelRows.some(
-      (row) => !String(row.hsn_code || "").trim()
-    );
-    if (hasMissingHsnCode) {
-      alert("HSN Code is required in Excel for all rows.");
+    if (!excelValidatedPayload?.items?.length) {
+      alert("Upload and validate an Excel file before creating the purchase request.");
       return;
     }
 
     setExcelIsSubmitting(true);
     try {
-      const payload = {
-        vendor_id: excelForm.selectedVendor,
-        order_date: excelForm.orderDate,
-        delivery_date: excelForm.deliveryDate,
-        items: excelRows.map((row) => ({
-          product_id: null,
-          variant_id: null,
-          product_name: row.product_name,
-          product_category: row.product_category,
-          hsn_code: row.hsn_code,
-          variant_type: {},
-          variant_display_name: row.variant_display_name,
-          quantity: row.quantity,
-          rate: row.rate,
-          taxable_amt: row.taxable_amt,
-          igst_percent: row.igst_percent,
-          sgst_percent: row.sgst_percent,
-          cgst_percent: row.cgst_percent,
-          gst_amt: row.gst_amt,
-          net_amount: row.net_amount,
-        })),
-      };
-
-      const result = await purchaseRequestApi.createPurchaseRequest(payload);
+      const result = await purchaseRequestApi.createPurchaseRequest(
+        excelValidatedPayload
+      );
       if (!result.success) {
         throw new Error(result.message || "Failed to create purchase request.");
       }
@@ -4142,21 +4521,6 @@ const PurchaseRequestTab = ({
       setExcelIsSubmitting(false);
     }
   };
-
-  const selectedExcelVendor =
-    vendors.find((vendor) => vendor.vendor_id === excelForm.selectedVendor) ||
-    null;
-  const filteredExcelVendors =
-    excelVendorQuery.trim() === ""
-      ? vendors
-      : vendors.filter((vendor) => {
-          const label = vendor.company_name
-            ? `${vendor.company_name} (${vendor.vendor_name})`
-            : vendor.vendor_name;
-          return label
-            ?.toLowerCase()
-            .includes(excelVendorQuery.trim().toLowerCase());
-        });
 
   // Filter data based on search term
   const filteredData = requests.filter((request) => {
@@ -4777,105 +5141,12 @@ const PurchaseRequestTab = ({
                 </div>
 
                 <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      Company Name <span className="text-danger">*</span>
-                    </label>
-                    <Combobox
-                      value={selectedExcelVendor}
-                      onChange={(vendor) => {
-                        setExcelVendorQuery("");
-                        setExcelForm((prev) => ({
-                          ...prev,
-                          selectedVendor: vendor ? vendor.vendor_id : null,
-                        }));
-                      }}
-                    >
-                      <div className="position-relative">
-                        <Combobox.Input
-                          className="form-control"
-                          placeholder="Select company..."
-                          displayValue={(vendor) =>
-                            vendor
-                              ? vendor.company_name
-                                ? `${vendor.company_name} (${vendor.vendor_name})`
-                                : vendor.vendor_name
-                              : ""
-                          }
-                          onChange={(event) =>
-                            setExcelVendorQuery(event.target.value)
-                          }
-                        />
-                        <Combobox.Options
-                          className="list-group position-absolute w-100 shadow-sm mt-1"
-                          style={{
-                            maxHeight: "220px",
-                            overflowY: "auto",
-                            zIndex: 2000,
-                          }}
-                        >
-                          {filteredExcelVendors.length === 0 ? (
-                            <Combobox.Option
-                              value={null}
-                              disabled
-                              className="list-group-item disabled"
-                            >
-                              No companies found
-                            </Combobox.Option>
-                          ) : (
-                            filteredExcelVendors.map((vendor) => (
-                              <Combobox.Option
-                                key={vendor.vendor_id}
-                                value={vendor}
-                                className={({ active }) =>
-                                  `list-group-item list-group-item-action ${
-                                    active ? "active" : ""
-                                  }`
-                                }
-                              >
-                                {vendor.company_name
-                                  ? `${vendor.company_name} (${vendor.vendor_name})`
-                                  : vendor.vendor_name}
-                              </Combobox.Option>
-                            ))
-                          )}
-                        </Combobox.Options>
-                      </div>
-                    </Combobox>
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label">Order Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={excelForm.orderDate}
-                      onChange={(e) =>
-                        setExcelForm((prev) => ({
-                          ...prev,
-                          orderDate: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label">Delivery Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={excelForm.deliveryDate}
-                      onChange={(e) =>
-                        setExcelForm((prev) => ({
-                          ...prev,
-                          deliveryDate: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
                   <div className="col-12">
                     <label className="form-label">
                       Excel File <span className="text-danger">*</span>
                     </label>
                     <input
+                      ref={excelFileInputRef}
                       type="file"
                       className="form-control"
                       accept=".xlsx,.xls"
@@ -4886,8 +5157,61 @@ const PurchaseRequestTab = ({
                         Selected: {excelFile.name}
                       </small>
                     )}
+                    <small className="text-muted d-block">
+                      Row 1 = all headings in one row (see Download Template). You can
+                      repeat company and dates on each line, or fill them once on row 2
+                      and leave blank below (they carry forward).
+                    </small>
                   </div>
                 </div>
+
+                {excelParsedHeader && (
+                  <div className="border rounded p-3 mt-3 bg-light">
+                    <div className="fw-semibold mb-2">From Excel</div>
+                    <div className="row g-2 small">
+                      <div className="col-md-6">
+                        <span className="text-muted">Company:</span>{" "}
+                        {excelParsedHeader.company_name}
+                      </div>
+                      <div className="col-md-6">
+                        <span className="text-muted">Contact:</span>{" "}
+                        {excelParsedHeader.vendor?.vendor_name ||
+                          excelParsedHeader.contact_person ||
+                          "—"}
+                      </div>
+                      <div className="col-md-6">
+                        <span className="text-muted">Phone:</span>{" "}
+                        {excelParsedHeader.vendor?.vendor_phone_no ||
+                          excelParsedHeader.phone_no ||
+                          "—"}
+                      </div>
+                      <div className="col-md-6">
+                        <span className="text-muted">GST:</span>{" "}
+                        {excelParsedHeader.vendor?.vendor_gst_number ||
+                          excelParsedHeader.gst_number ||
+                          "—"}
+                      </div>
+                      <div className="col-md-4">
+                        <span className="text-muted">Order date:</span>{" "}
+                        {excelParsedHeader.order_date}
+                      </div>
+                      <div className="col-md-4">
+                        <span className="text-muted">Delivery:</span>{" "}
+                        {excelParsedHeader.delivery_date}
+                      </div>
+                      <div className="col-md-4">
+                        <span className="text-muted">Freight:</span>{" "}
+                        {excelParsedHeader.freight_cost != null
+                          ? `₹${Number(excelParsedHeader.freight_cost).toFixed(2)}`
+                          : "—"}
+                      </div>
+                      <div className="col-md-4">
+                        <span className="text-muted">Credit days:</span>{" "}
+                        {excelParsedHeader.credit_days ?? 0}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-3">
                   <div className="d-flex flex-wrap gap-2">
@@ -4897,8 +5221,52 @@ const PurchaseRequestTab = ({
                     <span className="badge bg-warning text-dark">
                       Skipped rows: {excelSkippedRows.length}
                     </span>
+                    {excelSkuWarnings.length > 0 && (
+                      <span className="badge bg-info text-dark">
+                        SKU corrections: {excelSkuWarnings.length}
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {excelSkuWarnings.length > 0 && (
+                  <div className="alert alert-info mt-3 py-2 mb-0">
+                    <div className="fw-semibold mb-1">SKU normalized for master</div>
+                    <ul className="mb-0 ps-3 small">
+                      {excelSkuWarnings.map((w) => (
+                        <li key={`warn-${w.row_no}`}>
+                          {w.message ||
+                            `Row ${w.row_no}: "${w.entered_sku}" → "${w.corrected_sku}"`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {excelValidationErrors.length > 0 && (
+                  <div className="alert alert-danger mt-3 py-2 mb-0">
+                    <div className="fw-semibold mb-1">
+                      Fix product / SKU / variant key in Excel and re-upload
+                    </div>
+                    <ul className="mb-0 ps-3 small">
+                      {excelValidationErrors.map((err, idx) => (
+                        <li key={`err-${err.row_no || idx}`}>
+                          {err.row_no ? `Row ${err.row_no}: ` : ""}
+                          {err.message}
+                          {err.corrected_sku
+                            ? ` Correct SKU: "${err.corrected_sku}".`
+                            : ""}
+                          {err.suggested_skus?.length
+                            ? ` Valid SKUs: ${err.suggested_skus.join(", ")}.`
+                            : ""}
+                          {err.suggested_variant_keys?.length
+                            ? ` Variant hints: ${err.suggested_variant_keys.join(", ")}.`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {excelSkippedRows.length > 0 && (
                   <div className="alert alert-warning mt-3 py-2 mb-0">
@@ -4919,25 +5287,21 @@ const PurchaseRequestTab = ({
                       <tr>
                         <th>Row</th>
                         <th>Product</th>
-                        <th>Category</th>
-                        <th>HSN</th>
                         <th>Variant</th>
+                        <th>SKU</th>
+                        <th>HSN</th>
                         <th className="text-end">Qty</th>
                         <th className="text-end">Rate</th>
-                        <th className="text-end">IGST %</th>
-                        <th className="text-end">SGST %</th>
-                        <th className="text-end">CGST %</th>
-                        <th className="text-end">GST</th>
                         <th className="text-end">Net</th>
                       </tr>
                     </thead>
                     <tbody>
                       {excelRows.length === 0 ? (
                         <tr>
-                          <td colSpan="12" className="text-center text-muted">
+                          <td colSpan="8" className="text-center text-muted">
                             {excelIsParsing
-                              ? "Parsing Excel..."
-                              : "No valid rows parsed yet."}
+                              ? "Parsing and validating Excel..."
+                              : "No valid rows yet."}
                           </td>
                         </tr>
                       ) : (
@@ -4945,22 +5309,20 @@ const PurchaseRequestTab = ({
                           <tr key={`row-${row.rowNo}`}>
                             <td>{row.rowNo}</td>
                             <td>{row.product_name}</td>
-                            <td>{row.product_category || "-"}</td>
+                            <td className="small">
+                              {row.variant_display_name ||
+                                row.sku_variant_suffix ||
+                                "—"}
+                            </td>
+                            <td>{row.sku}</td>
                             <td>{row.hsn_code || "-"}</td>
-                            <td>{row.variant_display_name}</td>
                             <td className="text-end">{row.quantity}</td>
-                            <td className="text-end">{row.rate.toFixed(2)}</td>
                             <td className="text-end">
-                              {row.igst_percent.toFixed(2)}
+                              {Number(row.rate || 0).toFixed(2)}
                             </td>
                             <td className="text-end">
-                              {row.sgst_percent.toFixed(2)}
+                              {Number(row.net_amount || 0).toFixed(2)}
                             </td>
-                            <td className="text-end">
-                              {row.cgst_percent.toFixed(2)}
-                            </td>
-                            <td className="text-end">{row.gst_amt.toFixed(2)}</td>
-                            <td className="text-end">{row.net_amount.toFixed(2)}</td>
                           </tr>
                         ))
                       )}
@@ -4981,7 +5343,11 @@ const PurchaseRequestTab = ({
                   type="button"
                   className="btn btn-primary"
                   onClick={handleExcelSubmit}
-                  disabled={excelIsSubmitting || excelIsParsing || !excelRows.length}
+                  disabled={
+                    excelIsSubmitting ||
+                    excelIsParsing ||
+                    !excelValidatedPayload?.items?.length
+                  }
                 >
                   {excelIsSubmitting ? (
                     <>
@@ -5308,6 +5674,20 @@ const PurchaseRequestModal = ({
                       value={formData.freightCost ?? ""}
                       onChange={(e) => handleFreightCostChange(e.target.value)}
                       placeholder="Total freight for this PR"
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Credit days</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="form-control"
+                      value={formData.creditDays ?? ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, creditDays: e.target.value })
+                      }
+                      placeholder="Shown on Purchase Order PDF"
                     />
                   </div>
                 </div>

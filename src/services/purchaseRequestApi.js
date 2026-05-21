@@ -104,7 +104,20 @@ class PurchaseRequestApiService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        try {
+          const parsed = JSON.parse(errorText);
+          const err = new Error(
+            parsed.message || `HTTP ${response.status}: ${errorText}`
+          );
+          err.details = parsed.details ?? null;
+          err.code = parsed.error ?? null;
+          throw err;
+        } catch (parseError) {
+          if (parseError.details !== undefined) {
+            throw parseError;
+          }
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
       }
 
       return response.json();
@@ -118,6 +131,13 @@ class PurchaseRequestApiService {
     return this.makeRequest("/receiving/purchase-request", {
       method: "POST",
       body: JSON.stringify(requestData),
+    });
+  }
+
+  async validateExcelPurchaseRequest(payload) {
+    return this.makeRequest("/receiving/purchase-request/validate-excel", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   }
 
