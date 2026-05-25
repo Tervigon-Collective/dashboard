@@ -323,6 +323,31 @@ const UnitCountOne = ({ dateRange }) => {
       // Remove any minutes if present and just use hours
       const startDateTime = startDate.split(":")[0];
       const endDateTime = endDate.split(":")[0];
+      const startDateOnly = startDate.split(" ")[0];
+      const endDateOnly = endDate.split(" ")[0];
+
+      const resolveHistoricalAdSpendTotals = async (hourlyResult) => {
+        let totals = { facebookSpend: 0, googleSpend: 0 };
+        if (hourlyResult.status === "fulfilled") {
+          totals = hourlyResult.value.data.totals ?? totals;
+        }
+        const hourlyTotal =
+          (totals.facebookSpend ?? 0) + (totals.googleSpend ?? 0);
+        if (hourlyTotal === 0) {
+          try {
+            const dailyRes = await apiClient.get(
+              `/api/ad_spend?startDate=${startDateOnly}&endDate=${endDateOnly}`
+            );
+            totals = {
+              facebookSpend: dailyRes.data.facebookSpend ?? 0,
+              googleSpend: dailyRes.data.googleSpend ?? 0,
+            };
+          } catch {
+            // keep zeros if daily fallback fails
+          }
+        }
+        return totals;
+      };
 
       Promise.allSettled([
         apiClient.get(
@@ -332,26 +357,23 @@ const UnitCountOne = ({ dateRange }) => {
           `/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
         ),
         apiClient.get(
-          `/api/inventory-events/summary?start_date=${
-            startDate.split(" ")[0]
-          }&end_date=${endDate.split(" ")[0]}`
+          `/api/inventory-events/summary?start_date=${startDateOnly}&end_date=${endDateOnly}`
         ),
         apiClient.get(
-          `/api/payment_method_count?startDate=${
-            startDate.split(" ")[0]
-          }&endDate=${endDate.split(" ")[0]}`
+          `/api/payment_method_count?startDate=${startDateOnly}&endDate=${endDateOnly}`
         ),
       ])
-        .then((results) => {
-          // Handle ad spend data
-          if (results[0].status === "fulfilled") {
-            const adSpendData = results[0].value.data;
-            setAdSpend(
-              adSpendData.totals.facebookSpend +
-                adSpendData.totals.googleSpend ?? null
-            );
-            setGoogleSpend(adSpendData.totals.googleSpend ?? null);
-            setFacebookSpend(adSpendData.totals.facebookSpend ?? null);
+        .then(async (results) => {
+          const adSpendTotals = await resolveHistoricalAdSpendTotals(
+            results[0]
+          );
+          const totalAdSpendFromTotals =
+            adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
+
+          if (results[0].status === "fulfilled" || totalAdSpendFromTotals > 0) {
+            setAdSpend(totalAdSpendFromTotals || null);
+            setGoogleSpend(adSpendTotals.googleSpend ?? null);
+            setFacebookSpend(adSpendTotals.facebookSpend ?? null);
           } else {
             setError((e) => ({ ...e, adSpend: "Failed to load data" }));
           }
@@ -376,13 +398,7 @@ const UnitCountOne = ({ dateRange }) => {
             setMetaQuantity(salesData.meta_order_count ?? null);
             setOrganicQuantity(salesData.organic_order_count ?? null);
 
-            // Calculate net profits using totals from ad spend
-            const adSpendTotals =
-              results[0].status === "fulfilled"
-                ? results[0].value.data.totals
-                : { facebookSpend: 0, googleSpend: 0 };
-            const totalAdSpend =
-              adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
+            const totalAdSpend = totalAdSpendFromTotals;
             const totalNetProfit =
               Number(salesData.total_sales_after_gst ?? 0) -
               (salesData.unit_cost ?? 0) -
