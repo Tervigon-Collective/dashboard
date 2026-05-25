@@ -326,6 +326,7 @@ const UnitCountOne = ({ dateRange }) => {
       const startDateOnly = startDate.split(" ")[0];
       const endDateOnly = endDate.split(" ")[0];
 
+      // Historical ad spend: Postgres only (not live Meta/Google APIs)
       const resolveHistoricalAdSpendTotals = async (hourlyResult) => {
         let totals = { facebookSpend: 0, googleSpend: 0 };
         if (hourlyResult.status === "fulfilled") {
@@ -336,14 +337,14 @@ const UnitCountOne = ({ dateRange }) => {
         if (hourlyTotal === 0) {
           try {
             const dailyRes = await apiClient.get(
-              `/api/ad_spend?startDate=${startDateOnly}&endDate=${endDateOnly}`
+              `/api/historical/ad_spend?startDate=${startDateOnly}&endDate=${endDateOnly}`
             );
             totals = {
               facebookSpend: dailyRes.data.facebookSpend ?? 0,
               googleSpend: dailyRes.data.googleSpend ?? 0,
             };
           } catch {
-            // keep zeros if daily fallback fails
+            // keep zeros if DB daily rollup fails
           }
         }
         return totals;
@@ -351,7 +352,7 @@ const UnitCountOne = ({ dateRange }) => {
 
       Promise.allSettled([
         apiClient.get(
-          `/api/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
+          `/api/historical/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
         ),
         apiClient.get(
           `/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
