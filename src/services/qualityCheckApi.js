@@ -1,5 +1,6 @@
 import config from "../config";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { prepareReceivingDocumentFile } from "../utils/prepareReceivingDocument";
 
 class QualityCheckApiService {
   constructor() {
@@ -103,10 +104,84 @@ class QualityCheckApiService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      if (response.status === 413) {
+        throw new Error(
+          "File is too large to upload. Try a smaller PDF or contact support."
+        );
+      }
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
     return response.json();
+  }
+
+  async makeFormDataRequest(endpoint, buildFormData, options = {}) {
+    const token = await this.getAuthToken();
+    if (!token) {
+      throw new Error(
+        "No authentication token available. Please sign in again."
+      );
+    }
+
+    const doFetch = (authToken) =>
+      fetch(`${this.baseURL}${endpoint}`, {
+        method: options.method || "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          ...options.headers,
+        },
+        body: buildFormData(),
+      });
+
+    let response = await doFetch(token);
+
+    if (response.status === 401 && !options._retry) {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (user) {
+          const newToken = await user.getIdToken(true);
+          localStorage.setItem("idToken", newToken);
+          response = await doFetch(newToken);
+        }
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        throw new Error("Authentication failed. Please sign in again.");
+      }
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (response.status === 413) {
+        throw new Error(
+          "File is too large to upload. Try a smaller PDF or contact support."
+        );
+      }
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  buildDocumentFormData(file, extraFields = {}) {
+    const mimeType =
+      file.type ||
+      (file.name?.toLowerCase().endsWith(".pdf")
+        ? "application/pdf"
+        : "application/octet-stream");
+
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    formData.append("file_name", file.name);
+    formData.append("mime_type", mimeType);
+
+    Object.entries(extraFields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+
+    return formData;
   }
 
   // Bulk create/update quality checks for multiple items
@@ -135,38 +210,28 @@ class QualityCheckApiService {
   }
 
   async extractInvoiceNumberFromFile(file) {
-    const content_base64 = await this.readFileAsBase64(file);
-    return this.makeRequest(
+    const prepared = await prepareReceivingDocumentFile(file);
+    return this.makeFormDataRequest(
       "/receiving/quality-check/documents/extract-invoice-number",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          file_name: file.name,
-          mime_type: file.type,
-          content_base64,
-        }),
-      }
+      () => this.buildDocumentFormData(prepared)
     );
   }
 
-  // Documents: upload (base64 JSON), list, delete
+  // Documents: upload (multipart), list, delete
   async uploadDocument(
     requestId,
     { docType, itemId = null, file, invoiceNumber = null }
   ) {
-    const content_base64 = await this.readFileAsBase64(file);
-    const body = {
-      doc_type: docType,
-      item_id: itemId,
-      invoice_number: invoiceNumber,
-      file_name: file.name,
-      mime_type: file.type,
-      content_base64,
-    };
-    return this.makeRequest(`/receiving/quality-check/${requestId}/documents`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const prepared = await prepareReceivingDocumentFile(file);
+    return this.makeFormDataRequest(
+      `/receiving/quality-check/${requestId}/documents`,
+      () =>
+        this.buildDocumentFormData(prepared, {
+          doc_type: docType,
+          item_id: itemId,
+          invoice_number: invoiceNumber,
+        })
+    );
   }
 
   async listDocuments(requestId) {
