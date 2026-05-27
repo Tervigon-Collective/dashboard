@@ -197,16 +197,28 @@ class QualityCheckApiService {
     return this.makeRequest(`/receiving/quality-check/request/${requestId}`);
   }
 
-  async saveVendorFreightCost(requestId, vendorFreightCost) {
+  async saveReceivingFreightCosts(
+    requestId,
+    { freightCost, vendorFreightCost } = {}
+  ) {
+    const body = {};
+    if (freightCost !== undefined && freightCost !== null) {
+      body.freight_cost = Number(freightCost) || 0;
+    }
+    if (vendorFreightCost !== undefined && vendorFreightCost !== null) {
+      body.vendor_freight_cost = Number(vendorFreightCost) || 0;
+    }
     return this.makeRequest(
       `/receiving/quality-check/${requestId}/vendor-freight`,
       {
         method: "PATCH",
-        body: JSON.stringify({
-          vendor_freight_cost: Number(vendorFreightCost) || 0,
-        }),
+        body: JSON.stringify(body),
       }
     );
+  }
+
+  async saveVendorFreightCost(requestId, vendorFreightCost) {
+    return this.saveReceivingFreightCosts(requestId, { vendorFreightCost });
   }
 
   async extractInvoiceNumberFromFile(file) {

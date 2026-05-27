@@ -11,7 +11,11 @@ import qualityCheckApi from "../../services/qualityCheckApi";
 import ReceivingPrProductFields from "../../components/receiving/ReceivingPrProductFields";
 import {
   applyFreightToProducts,
+  distributeFreightAmongItems,
   distributeVendorFreightAmongItems,
+  formatFreightInr,
+  getDisplayFreightAmount,
+  getDisplayVendorFreightAmount,
 } from "../../utils/freightDistribution";
 
 import { useUser } from "@/helper/UserContext";
@@ -2284,18 +2288,38 @@ const ReceivingManagementLayer = () => {
         const vendorRaw =
           vendorFreightByRequestId[requestId] ??
           vendorFreightByRequestId[String(requestId)];
-        if (vendorRaw !== undefined && vendorRaw !== "") {
-          try {
-            await qualityCheckApi.saveVendorFreightCost(
-              requestId,
-              Number(vendorRaw) || 0
-            );
-          } catch (freightErr) {
-            console.error("Failed to save vendor freight cost:", freightErr);
-            alert(
-              "Inspection saved, but vendor freight could not be saved. Please enter it again and save, or set it before generating GRN."
-            );
+        const vendorFreightValue =
+          vendorRaw !== undefined && vendorRaw !== ""
+            ? Number(vendorRaw) || 0
+            : vendorRaw === ""
+              ? 0
+              : Number(requestToInspect.vendor_freight_cost) || 0;
+
+        try {
+          const freightRes = await qualityCheckApi.saveReceivingFreightCosts(
+            requestId,
+            {
+              freightCost:
+                requestToInspect.freight_cost != null &&
+                requestToInspect.freight_cost !== ""
+                  ? Number(requestToInspect.freight_cost) || 0
+                  : 0,
+              vendorFreightCost: vendorFreightValue,
+            }
+          );
+          if (freightRes.success && freightRes.data) {
+            if (
+              viewModalOpen &&
+              selectedRequest?.request_id === requestId
+            ) {
+              setSelectedRequest(freightRes.data);
+            }
           }
+        } catch (freightErr) {
+          console.error("Failed to save freight costs:", freightErr);
+          alert(
+            "Inspection saved, but freight costs could not be saved. Please enter them again and save, or set them before generating GRN."
+          );
         }
 
         setInspectionModalOpen(false);
@@ -2605,15 +2629,14 @@ const ReceivingManagementLayer = () => {
                               : "0"}
                           </span>
                         </div>
-                        {selectedRequest.vendor_freight_cost != null &&
-                          Number(selectedRequest.vendor_freight_cost) > 0 && (
-                            <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
-                              <span className="text-muted">Vendor freight cost:</span>
-                              <span className="fw-medium">
-                                {`₹${parseFloat(selectedRequest.vendor_freight_cost).toFixed(2)}`}
-                              </span>
-                            </div>
-                          )}
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                          <span className="text-muted">Vendor freight cost:</span>
+                          <span className="fw-medium">
+                            {selectedRequest.vendor_freight_cost != null
+                              ? `₹${parseFloat(selectedRequest.vendor_freight_cost).toFixed(2)}`
+                              : "₹0.00"}
+                          </span>
+                        </div>
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
                           <span className="text-muted">Status:</span>
                           <span
@@ -2924,6 +2947,28 @@ const ReceivingManagementLayer = () => {
                     </div>
                   </div>
 
+                  {/* Freight summary (header totals — always visible above items) */}
+                  <div
+                    className="mb-3 p-3 border rounded"
+                    style={{ backgroundColor: "#f8f9fa" }}
+                  >
+                    <h6 className="text-muted mb-2">Freight Summary</h6>
+                    <div className="row g-2 small">
+                      <div className="col-6 col-md-3">
+                        <span className="text-muted d-block">PR freight</span>
+                        <span className="fw-semibold">
+                          {formatFreightInr(selectedRequest.freight_cost)}
+                        </span>
+                      </div>
+                      <div className="col-6 col-md-3">
+                        <span className="text-muted d-block">Vendor freight</span>
+                        <span className="fw-semibold">
+                          {formatFreightInr(selectedRequest.vendor_freight_cost)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Items Table */}
                   {selectedRequest.items &&
                     selectedRequest.items.length > 0 && (
@@ -3030,14 +3075,20 @@ const ReceivingManagementLayer = () => {
                                       : "-"}
                                   </td>
                                   <td className="small">
-                                    {item.freight_amount != null
-                                      ? `₹${parseFloat(item.freight_amount).toFixed(2)}`
-                                      : "-"}
+                                    {formatFreightInr(
+                                      getDisplayFreightAmount(
+                                        item,
+                                        selectedRequest
+                                      )
+                                    )}
                                   </td>
                                   <td className="small">
-                                    {item.vendor_freight_amount != null
-                                      ? `₹${parseFloat(item.vendor_freight_amount).toFixed(2)}`
-                                      : "-"}
+                                    {formatFreightInr(
+                                      getDisplayVendorFreightAmount(
+                                        item,
+                                        selectedRequest
+                                      )
+                                    )}
                                   </td>
                                 </tr>
                               ))}
@@ -3571,14 +3622,37 @@ const ReceivingManagementLayer = () => {
                                 PR freight cost
                               </label>
                               <input
-                                type="text"
-                                className="form-control form-control-sm bg-light"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="form-control form-control-sm"
                                 value={
-                                  requestToInspect.freight_cost != null
-                                    ? parseFloat(requestToInspect.freight_cost).toFixed(2)
-                                    : "0.00"
+                                  requestToInspect.freight_cost != null &&
+                                  requestToInspect.freight_cost !== ""
+                                    ? requestToInspect.freight_cost
+                                    : ""
                                 }
-                                readOnly
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setRequestToInspect((prev) => {
+                                    if (!prev) return prev;
+                                    const next = {
+                                      ...prev,
+                                      freight_cost:
+                                        value === ""
+                                          ? null
+                                          : Number(value) || 0,
+                                    };
+                                    if (prev.items?.length) {
+                                      next.items = distributeFreightAmongItems(
+                                        prev.items,
+                                        value
+                                      );
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                placeholder="PR freight"
                               />
                             </div>
                             <div>
@@ -3653,6 +3727,7 @@ const ReceivingManagementLayer = () => {
                                 <th className="small">Sorted Qty *</th>
                                 <th className="small">Damage Qty</th>
                                 <th className="small">Notes</th>
+                                <th className="small">PR Freight</th>
                                 <th className="small">Vendor Freight</th>
                               </tr>
                             </thead>
@@ -3740,6 +3815,13 @@ const ReceivingManagementLayer = () => {
                                         }
                                         placeholder="Add notes..."
                                       />
+                                    </td>
+                                    <td className="small text-center">
+                                      {requestItem?.freight_amount != null
+                                        ? `₹${parseFloat(
+                                            requestItem.freight_amount
+                                          ).toFixed(2)}`
+                                        : "-"}
                                     </td>
                                     <td className="small text-center">
                                       {requestItem?.vendor_freight_amount !=
@@ -6283,18 +6365,27 @@ const QualityCheckTab = ({
         vendorFreightByRequestId?.[requestId] ??
         vendorFreightByRequestId?.[String(requestId)];
 
-      if (vendorFreightRaw !== undefined && vendorFreightRaw !== "") {
-        await qualityCheckApi.saveVendorFreightCost(
-          requestId,
-          Number(vendorFreightRaw) || 0
-        );
-      }
+      const requestForFreight =
+        requests.find((r) => r.request_id === requestId) || request;
+
+      const vendorFreightValue =
+        vendorFreightRaw !== undefined && vendorFreightRaw !== ""
+          ? Number(vendorFreightRaw) || 0
+          : Number(requestForFreight?.vendor_freight_cost) || 0;
+
+      const freightCostValue =
+        requestForFreight?.freight_cost != null
+          ? Number(requestForFreight.freight_cost) || 0
+          : 0;
+
+      await qualityCheckApi.saveReceivingFreightCosts(requestId, {
+        freightCost: freightCostValue,
+        vendorFreightCost: vendorFreightValue,
+      });
 
       const generateResult = await qualityCheckApi.generateGrnPdf(requestId, {
-        vendor_freight_cost:
-          vendorFreightRaw !== undefined && vendorFreightRaw !== ""
-            ? Number(vendorFreightRaw) || 0
-            : undefined,
+        freight_cost: freightCostValue,
+        vendor_freight_cost: vendorFreightValue,
       });
 
       if (generateResult.success) {
