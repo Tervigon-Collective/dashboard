@@ -402,6 +402,22 @@ export default function PnlForecastPage() {
               <h6 className="mb-3">Metrics</h6>
               <div className="row g-3">
                 <div className="col-md-3">
+                  <strong>Gross Sales (ex-GST)</strong>
+                  <div>{formatCurrency(summary?.grossSalesExclTax)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Discount</strong>
+                  <div>{formatCurrency(summary?.discounts)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Net Sales (ex-GST)</strong>
+                  <div>{formatCurrency(summary?.netSalesExclTax)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Taxes (18% on net sales)</strong>
+                  <div>{formatCurrency(summary?.taxes)}</div>
+                </div>
+                <div className="col-md-3">
                   <strong>Total Sales</strong>
                   <div>{formatCurrency(summary?.totalSales)}</div>
                 </div>
@@ -428,6 +444,18 @@ export default function PnlForecastPage() {
                 <div className="col-md-3">
                   <strong>COGS</strong>
                   <div>{formatCurrency(summary?.cogs)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Shipping Cost (Courier)</strong>
+                  <div>{formatCurrency(summary?.shippingCost)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Payment Gateway Fees</strong>
+                  <div>{formatCurrency(summary?.paymentGatewayFees)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>RTO Logistics Cost</strong>
+                  <div>{formatCurrency(summary?.rtoLogisticsCost)}</div>
                 </div>
                 <div className="col-md-3">
                   <strong>Total Operating Cost</strong>
