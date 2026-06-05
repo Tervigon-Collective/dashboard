@@ -14,6 +14,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     customerData: { enabled: false, operations: [] },
     shipping: { enabled: false, operations: [] },
     productSpendSummary: { enabled: false, operations: [] },
+    pnlForecast: { enabled: false, operations: [] },
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
@@ -33,6 +34,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
     productSpendSummary: { enabled: false, operations: [] },
+    pnlForecast: { enabled: false, operations: [] },
     entityReport: { enabled: false, operations: [] },
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
@@ -52,6 +54,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
     productSpendSummary: { enabled: true, operations: ["read"] }, // Read-only
+    pnlForecast: { enabled: true, operations: ["read"] }, // Read-only
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: { enabled: false, operations: [] },
     systemSettings: { enabled: false, operations: [] },
@@ -86,6 +89,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     customerData: { enabled: true, operations: ["read"] }, // Read-only
     shipping: { enabled: true, operations: ["read", "create"] }, // Read + Create waybills
     productSpendSummary: { enabled: true, operations: ["read"] }, // Read-only
+    pnlForecast: { enabled: true, operations: ["read"] }, // Read-only
     entityReport: { enabled: true, operations: ["read"] }, // Read-only
     userManagement: {
       enabled: true,
@@ -123,6 +127,7 @@ const DEFAULT_SIDEBAR_PERMISSIONS = {
     customerData: { enabled: true, operations: ["read"] },
     shipping: { enabled: true, operations: ["read", "create"] },
     productSpendSummary: { enabled: true, operations: ["read"] },
+    pnlForecast: { enabled: true, operations: ["read"] },
     entityReport: { enabled: true, operations: ["read"] },
     userManagement: {
       enabled: true,
@@ -305,6 +310,15 @@ export const AVAILABLE_SIDEBAR_ITEMS = {
     icon: "mdi:chart-box-outline",
     requiredRoles: ["manager", "admin", "super_admin"],
     availableOperations: [OPERATION_TYPES.READ], // Analytics is read-only
+    supportsCRUD: false,
+  },
+  pnlForecast: {
+    key: "pnlForecast",
+    label: "P & L Forecast",
+    description: "View projected profit and loss forecasts",
+    icon: "mdi:finance",
+    requiredRoles: ["manager", "admin", "super_admin"],
+    availableOperations: [OPERATION_TYPES.READ], // Forecast is read-only
     supportsCRUD: false,
   },
   entityReport: {

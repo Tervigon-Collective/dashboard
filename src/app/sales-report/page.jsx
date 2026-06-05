@@ -31,6 +31,8 @@ const beautifyHeader = (key) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 
+const HIDDEN_TABLE_COLUMNS = new Set(["brand_id"]);
+
 const NUMERIC_COLUMN_HINTS = [
   "quantity",
   "taxable_value",
@@ -60,20 +62,36 @@ const coerceExportValue = (key, value) => {
   if (!isNumericColumn(key)) {
     return value;
   }
-
-  // Keep export numeric where possible so Excel formulas work immediately.
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-
   const normalized = String(value).replace(/,/g, "").trim();
   if (normalized === "") {
     return "";
   }
-
   const numericValue = Number(normalized);
   return Number.isFinite(numericValue) ? numericValue : value;
 };
+
+const formatCellDisplay = (col, value) => {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  const str = String(value);
+  if (col === "order_id" && str.includes("gid://shopify/Order/")) {
+    return str.split("/").pop() || str;
+  }
+  if ((col === "order_date" || col === "credit_note_date" || col === "original_order_date") && str.includes("T")) {
+    return str.slice(0, 10);
+  }
+  if (str.length > 48 && (col === "product_title" || col === "payment_method")) {
+    return `${str.slice(0, 45)}…`;
+  }
+  return str;
+};
+
+const getIsMobile = () =>
+  typeof window !== "undefined" ? window.innerWidth < 768 : false;
 
 const SalesReportLayer = () => {
   const [activeTab, setActiveTab] = useState("sales");
@@ -81,33 +99,24 @@ const SalesReportLayer = () => {
     const today = new Date();
     return [today, today];
   });
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandId, setSelectedBrandId] = useState("");
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [salesRows, setSalesRows] = useState([]);
   const [creditNoteRows, setCreditNoteRows] = useState([]);
+  const [isMobile, setIsMobile] = useState(getIsMobile);
 
   const tabs = [
-    {
-      id: "sales",
-      label: "SALES REPORT",
-      icon: "mdi:file-chart-outline",
-    },
-    {
-      id: "creditNote",
-      label: "DEBIT NOTE / CREDIT NOTE",
-      icon: "mdi:file-document-edit-outline",
-    },
+    { id: "sales", label: "Sales Report", icon: "mdi:file-chart-outline" },
+    { id: "creditNote", label: "Debit / Credit Note", icon: "mdi:file-document-edit-outline" },
   ];
-
-  const getActiveTabLabel = () => {
-    const activeTabData = tabs.find((tab) => tab.id === activeTab);
-    return activeTabData ? activeTabData.label : "";
-  };
 
   const activeRows = activeTab === "sales" ? salesRows : creditNoteRows;
   const tableColumns = useMemo(() => {
     if (!activeRows || activeRows.length === 0) return [];
-    return Object.keys(activeRows[0]);
+    return Object.keys(activeRows[0]).filter((col) => !HIDDEN_TABLE_COLUMNS.has(col));
   }, [activeRows]);
 
   const formatDate = (date) => {
@@ -127,16 +136,19 @@ const SalesReportLayer = () => {
       const today = getToday();
       return { startDate: today, endDate: today };
     }
-
     return {
       startDate: formatDate(rangeValue[0]),
       endDate: formatDate(rangeValue[1]),
     };
   };
 
-  const fetchReport = async (tabId, rangeValue = dateRange) => {
+  const fetchReport = async (tabId, rangeValue = dateRange, brandId = selectedBrandId) => {
     const { startDate, endDate } = getDateBoundsFromRange(rangeValue);
 
+    if (!brandId) {
+      setError("Please select a brand.");
+      return;
+    }
     if (!startDate || !endDate) {
       setError("Please select both start and end date.");
       return;
@@ -155,12 +167,9 @@ const SalesReportLayer = () => {
           ? "/api/shopify-sales-report"
           : "/api/shopify-credit-note-report";
 
-      const params = {
-        startDate,
-        endDate: endDateExclusive,
-      };
-
-      const response = await apiClient.get(endpoint, { params });
+      const response = await apiClient.get(endpoint, {
+        params: { startDate, endDate: endDateExclusive, brandId },
+      });
       const rows = response?.data?.data || [];
 
       if (tabId === "sales") {
@@ -169,11 +178,16 @@ const SalesReportLayer = () => {
         setCreditNoteRows(rows);
       }
     } catch (err) {
+      const brandErrors = err?.response?.data?.brandErrors;
       const msg =
         err?.response?.data?.message ||
         err?.message ||
         "Failed to fetch report data.";
-      setError(msg);
+      if (Array.isArray(brandErrors) && brandErrors.length > 0) {
+        setError(brandErrors.map((e) => `${e.brand_name}: ${e.message}`).join(" "));
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -181,25 +195,76 @@ const SalesReportLayer = () => {
 
   const handleDateRangeChange = (value) => {
     setDateRange(value);
-    if (value && value.length === 2 && value[0] && value[1]) {
-      fetchReport(activeTab, value);
+    if (value && value.length === 2 && value[0] && value[1] && selectedBrandId) {
+      fetchReport(activeTab, value, selectedBrandId);
     }
   };
 
   const handleDatePickerOk = (selectedDates) => {
     if (!selectedDates || selectedDates.length !== 2) return;
     setDateRange(selectedDates);
-    fetchReport(activeTab, selectedDates);
+    if (selectedBrandId) {
+      fetchReport(activeTab, selectedDates, selectedBrandId);
+    }
   };
 
-  // Default behavior: auto-fetch today's data on page load for both tabs
+  const handleBrandChange = (event) => {
+    const brandId = event.target.value;
+    setSelectedBrandId(brandId);
+    setSalesRows([]);
+    setCreditNoteRows([]);
+    if (brandId && dateRange?.length === 2 && dateRange[0] && dateRange[1]) {
+      fetchReport(activeTab, dateRange, brandId);
+    }
+  };
+
   useEffect(() => {
-    const today = new Date();
-    const defaultRange = [today, today];
-    setDateRange(defaultRange);
-    fetchReport("sales", defaultRange);
-    fetchReport("creditNote", defaultRange);
+    let cancelled = false;
+
+    (async () => {
+      setBrandsLoading(true);
+      try {
+        const response = await apiClient.get("/api/masters/brand", {
+          params: { activeOnly: true },
+        });
+        const list = response?.data?.data || [];
+        if (cancelled) return;
+
+        setBrands(list);
+        if (list.length > 0) {
+          const firstBrandId = String(list[0].brand_id);
+          setSelectedBrandId(firstBrandId);
+          const today = new Date();
+          const defaultRange = [today, today];
+          setDateRange(defaultRange);
+          fetchReport("sales", defaultRange, firstBrandId);
+          fetchReport("creditNote", defaultRange, firstBrandId);
+        } else {
+          setError("No active brands found. Add brands in brand_master.");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err?.response?.data?.message ||
+              err?.message ||
+              "Failed to load brands."
+          );
+        }
+      } finally {
+        if (!cancelled) setBrandsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(getIsMobile());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const handleExportExcel = () => {
@@ -222,154 +287,257 @@ const SalesReportLayer = () => {
     XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
 
     const { startDate, endDate } = getDateBoundsFromRange(dateRange);
-    const filePrefix = activeTab === "sales" ? "Shopify_Sales_Report" : "Shopify_Debit_Credit_Note";
+    const filePrefix =
+      activeTab === "sales" ? "Shopify_Sales_Report" : "Shopify_Debit_Credit_Note";
     XLSX.writeFile(workbook, `${filePrefix}_${startDate}_to_${endDate}.xlsx`);
   };
 
+  const selectedBrandName =
+    brands.find((b) => String(b.brand_id) === String(selectedBrandId))?.brand_name || "";
+
   return (
     <CustomProvider locale={enUS}>
-      <div className="card h-100 radius-8 border">
-        <div className="card-body p-24">
-        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-          <div className="d-flex align-items-center">
-            <h5 className="mb-0 fw-semibold">Sales Report - {getActiveTabLabel()}</h5>
-          </div>
-          <div className="d-flex align-items-center" style={{ gap: 12 }}>
-            <DateRangePicker
-              value={dateRange}
-              onChange={handleDateRangeChange}
-              format="yyyy-MM-dd"
-              showMeridian={false}
-              ranges={[]}
-              placeholder="Select date range"
-              style={{
-                width: 300,
-                borderRadius: 8,
-                border: "1px solid #ccc",
-                fontSize: 16,
-              }}
-              appearance="subtle"
-              cleanable
-              menuStyle={{
-                boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-                borderRadius: 8,
-                padding: 8,
-              }}
-              placement="bottomEnd"
-              oneTap={false}
-              showOneCalendar={false}
-              onOk={handleDatePickerOk}
-            />
-            <button
-              type="button"
-              className="btn btn-success btn-icon"
-              onClick={handleExportExcel}
-              disabled={loading || activeRows.length === 0}
-              title="Export to Excel"
-              style={{
-                width: 40,
-                height: 40,
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-              }}
-            >
-              <Icon
-                icon="vscode-icons:file-type-excel"
-                width="24"
-                height="24"
-              />
-            </button>
-          </div>
-        </div>
-
+      <div className="container-fluid px-3 px-md-4 py-3">
         <div
-          className="mb-4 border-bottom pb-0"
-          style={{ overflowX: "auto", overflowY: "hidden" }}
+          className="card basic-data-table border-0 rounded-4"
+          style={{ overflow: "visible" }}
         >
-          <div
-            className="d-flex gap-2 gap-md-4"
-            style={{ minWidth: "max-content", flexWrap: "nowrap" }}
-          >
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                className={`d-flex align-items-center gap-2 px-2 px-md-3 py-2 cursor-pointer position-relative ${
-                  activeTab === tab.id ? "text-primary" : "text-muted"
-                }`}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  const tabRows = tab.id === "sales" ? salesRows : creditNoteRows;
-                  if (!tabRows || tabRows.length === 0) {
-                    fetchReport(tab.id, dateRange);
-                  }
-                }}
-                style={{ cursor: "pointer", whiteSpace: "nowrap" }}
-              >
-                <Icon icon={tab.icon} className="icon" style={{ flexShrink: 0 }} />
-                <span
-                  className="fw-medium"
-                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
+          <div className="card-body p-3 p-md-4">
+            {/* Header */}
+            <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-3 mb-md-4">
+              <div>
+                <h6
+                  className="mb-1"
+                  style={{
+                    fontSize: isMobile ? "1rem" : "1.125rem",
+                    fontWeight: 600,
+                    color: "#111827",
+                  }}
                 >
-                  {tab.label}
-                </span>
-                {activeTab === tab.id && (
-                  <div
-                    className="position-absolute bottom-0 start-0 end-0"
-                    style={{
-                      height: "2px",
-                      backgroundColor: "#0d6efd",
+                  Sales Report
+                </h6>
+                <p className="mb-0 text-secondary-light" style={{ fontSize: "13px" }}>
+                  Shopify sales &amp; debit/credit notes by brand
+                  {selectedBrandName ? ` · ${selectedBrandName}` : ""}
+                </p>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center"
+                  onClick={handleExportExcel}
+                  disabled={loading || activeRows.length === 0}
+                  title="Export to Excel"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    padding: 0,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Icon icon="vscode-icons:file-type-excel" width="20" height="20" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filters — same grid pattern as Procurement */}
+            <div className="row g-2 g-md-3 mb-3 mb-md-4">
+              <div className="col-12 col-sm-6 col-lg-3">
+                <label className="form-label mb-1" style={{ fontSize: "13px" }}>
+                  Brand
+                </label>
+                <select
+                  className="form-select form-select-sm"
+                  value={selectedBrandId}
+                  onChange={handleBrandChange}
+                  disabled={brandsLoading || brands.length === 0}
+                >
+                  {brandsLoading ? (
+                    <option value="">Loading…</option>
+                  ) : brands.length === 0 ? (
+                    <option value="">No brands</option>
+                  ) : (
+                    brands.map((brand) => (
+                      <option key={brand.brand_id} value={String(brand.brand_id)}>
+                        {brand.brand_name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div className="col-12 col-sm-6 col-lg-4">
+                <label className="form-label mb-1" style={{ fontSize: "13px" }}>
+                  Date range
+                </label>
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  format="yyyy-MM-dd"
+                  showMeridian={false}
+                  ranges={[]}
+                  placeholder="Select date range"
+                  style={{
+                    width: "100%",
+                    maxWidth: isMobile ? "100%" : 280,
+                    borderRadius: 8,
+                    border: "1px solid #dee2e6",
+                    fontSize: "14px",
+                  }}
+                  appearance="subtle"
+                  cleanable
+                  menuStyle={{
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                    borderRadius: 8,
+                    padding: 8,
+                    zIndex: 2000,
+                  }}
+                  placement={isMobile ? "bottomStart" : "bottomEnd"}
+                  oneTap={false}
+                  showOneCalendar={isMobile}
+                  onOk={handleDatePickerOk}
+                  disabled={!selectedBrandId || brandsLoading}
+                  block
+                />
+              </div>
+            </div>
+
+            {/* Tabs — Product Spend style */}
+            <div
+              className="mb-3 border-bottom pb-0"
+              style={{ overflowX: "auto", overflowY: "hidden" }}
+            >
+              <div
+                className="d-flex gap-2 gap-md-3"
+                style={{ minWidth: "max-content", flexWrap: "nowrap" }}
+              >
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`btn btn-link text-decoration-none d-flex align-items-center gap-2 px-2 px-md-3 py-2 position-relative border-0 ${
+                      activeTab === tab.id ? "text-primary" : "text-muted"
+                    }`}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      const tabRows = tab.id === "sales" ? salesRows : creditNoteRows;
+                      if ((!tabRows || tabRows.length === 0) && selectedBrandId) {
+                        fetchReport(tab.id, dateRange, selectedBrandId);
+                      }
                     }}
-                  />
+                    style={{ whiteSpace: "nowrap", fontSize: "13px" }}
+                  >
+                    <Icon icon={tab.icon} width={18} height={18} />
+                    <span className="fw-medium">{tab.label}</span>
+                    {activeTab === tab.id && (
+                      <span
+                        className="position-absolute bottom-0 start-0 end-0"
+                        style={{ height: 2, backgroundColor: "#0d6efd" }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "13px" }}>
+                {error}
+              </div>
+            )}
+
+            {/* Table */}
+            {!loading && activeRows.length === 0 ? (
+              <div className="p-3 p-md-4 border rounded-3 bg-light text-center">
+                <Icon
+                  icon="mdi:table-off"
+                  width={32}
+                  height={32}
+                  className="text-muted mb-2"
+                />
+                <p className="mb-0 text-secondary-light" style={{ fontSize: "14px" }}>
+                  Select brand and date range to load report data.
+                </p>
+              </div>
+            ) : (
+              <div
+                className="table-scroll-container border rounded-3"
+                style={{
+                  maxHeight: isMobile ? "55vh" : "600px",
+                  overflowY: "auto",
+                  overflowX: "auto",
+                }}
+              >
+                {loading && (
+                  <div
+                    className="d-flex align-items-center justify-content-center gap-2 py-5"
+                    style={{ minHeight: 120 }}
+                  >
+                    <span
+                      className="spinner-border spinner-border-sm text-primary"
+                      role="status"
+                    />
+                    <span style={{ fontSize: "14px" }}>Loading report…</span>
+                  </div>
+                )}
+                {!loading && (
+                  <div className="table-responsive">
+                    <table
+                      className="table table-hover table-sm align-middle mb-0"
+                      style={{ fontSize: "13px" }}
+                    >
+                      <thead
+                        style={{
+                          backgroundColor: "#f9fafb",
+                          borderBottom: "2px solid #e5e7eb",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                        }}
+                      >
+                        <tr>
+                          {tableColumns.map((col) => (
+                            <th
+                              key={col}
+                              className="text-nowrap"
+                              style={{
+                                fontWeight: 600,
+                                color: "#374151",
+                                padding: "10px 12px",
+                                fontSize: "12px",
+                              }}
+                            >
+                              {beautifyHeader(col)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeRows.map((row, idx) => (
+                          <tr key={`${activeTab}-row-${idx}`}>
+                            {tableColumns.map((col) => (
+                              <td
+                                key={`${idx}-${col}`}
+                                className="text-nowrap"
+                                style={{
+                                  padding: "8px 12px",
+                                  maxWidth: col === "product_title" ? 220 : 160,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                                title={row[col] != null ? String(row[col]) : ""}
+                              >
+                                {formatCellDisplay(col, row[col])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
-        </div>
-
-        <div className="tab-content">
-          {error && (
-            <div className="alert alert-danger py-2 mb-3" role="alert">
-              {error}
-            </div>
-          )}
-
-          {!loading && activeRows.length === 0 ? (
-            <div className="p-16 border rounded-3 bg-light">
-              <h6 className="mb-2">
-                {activeTab === "sales" ? "Sales Report" : "Debit Note / Credit Note"}
-              </h6>
-              <p className="mb-0 text-secondary-light">Select a date range to load data.</p>
-            </div>
-          ) : (
-            <div className="table-responsive border rounded-3">
-              <table className="table table-sm align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    {tableColumns.map((col) => (
-                      <th key={col} className="text-nowrap">
-                        {beautifyHeader(col)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeRows.map((row, idx) => (
-                    <tr key={`${activeTab}-row-${idx}`}>
-                      {tableColumns.map((col) => (
-                        <td key={`${idx}-${col}`} className="text-nowrap">
-                          {row[col] == null ? "-" : String(row[col])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
         </div>
       </div>
     </CustomProvider>

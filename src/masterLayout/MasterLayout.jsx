@@ -322,6 +322,7 @@ const MasterLayout = ({ children }) => {
               // Check if user has permission to at least one item in this group
               const hasAnyApplicationPermission =
                 hasSidebarPermission("productSpendSummary") ||
+                hasSidebarPermission("pnlForecast") ||
                 hasSidebarPermission("procurement") ||
                 hasSidebarPermission("entityReport") ||
                 hasSidebarPermission("userManagement");
@@ -345,6 +346,19 @@ const MasterLayout = ({ children }) => {
                             className="menu-icon"
                           />
                           <span>Product Spend Summary</span>
+                        </Link>
+                      </li>
+                    )}
+                    {hasSidebarPermission("pnlForecast") && (
+                      <li>
+                        <Link
+                          href="/pnl-forecast"
+                          className={
+                            pathname === "/pnl-forecast" ? "active-page" : ""
+                          }
+                        >
+                          <Icon icon="mdi:finance" className="menu-icon" />
+                          <span>P &amp; L </span>
                         </Link>
                       </li>
                     )}
