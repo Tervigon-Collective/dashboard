@@ -410,6 +410,14 @@ export default function PnlForecastPage() {
                   <div>{formatCurrency(summary?.discounts)}</div>
                 </div>
                 <div className="col-md-3">
+                  <strong>Returns</strong>
+                  <div>{formatCurrency(summary?.returnLeakageRefund)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Cancelled</strong>
+                  <div>{formatCurrency(summary?.cancelled)}</div>
+                </div>
+                <div className="col-md-3">
                   <strong>Net Sales (ex-GST)</strong>
                   <div>{formatCurrency(summary?.netSalesExclTax)}</div>
                 </div>
@@ -418,32 +426,16 @@ export default function PnlForecastPage() {
                   <div>{formatCurrency(summary?.taxes)}</div>
                 </div>
                 <div className="col-md-3">
-                  <strong>Total Sales</strong>
-                  <div>{formatCurrency(summary?.totalSales)}</div>
-                </div>
-                <div className="col-md-3">
-                  <strong>Net Sales</strong>
-                  <div>{formatCurrency(summary?.netSales)}</div>
-                </div>
-                <div className="col-md-3">
-                  <strong>Return Leakage / Refund</strong>
-                  <div>{formatCurrency(summary?.returnLeakageRefund)}</div>
-                </div>
-                <div className="col-md-3">
-                  <strong>Cancelled</strong>
-                  <div>{formatCurrency(summary?.cancelled)}</div>
-                </div>
-                <div className="col-md-3">
                   <strong>Impact Net Sales</strong>
                   <div>{formatCurrency(derived.impactNetSales)}</div>
                 </div>
                 <div className="col-md-3">
-                  <strong>Packaging Cost</strong>
-                  <div>{formatCurrency(summary?.packagingCost)}</div>
-                </div>
-                <div className="col-md-3">
                   <strong>COGS</strong>
                   <div>{formatCurrency(summary?.cogs)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Packaging Cost</strong>
+                  <div>{formatCurrency(summary?.packagingCost)}</div>
                 </div>
                 <div className="col-md-3">
                   <strong>Shipping Cost (Courier)</strong>
@@ -468,6 +460,14 @@ export default function PnlForecastPage() {
                 <div className="col-md-3">
                   <strong>Gross Margin %</strong>
                   <div>{formatPercent(derived.grossMarginPct)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Total Sales (incl. GST)</strong>
+                  <div>{formatCurrency(summary?.totalSales)}</div>
+                </div>
+                <div className="col-md-3">
+                  <strong>Net Sales (cash)</strong>
+                  <div>{formatCurrency(summary?.netSales)}</div>
                 </div>
               </div>
             </div>
