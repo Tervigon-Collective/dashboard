@@ -233,14 +233,11 @@ export default function PnlForecastPage() {
       };
     }
 
-    const impactNetSales =
-      Number(summary.netSales || 0) -
-      Number(summary.returnLeakageRefund || 0) -
-      Number(summary.cancelled || 0);
-    const totalOperatingCost = Number(summary.totalOperatingCost || 0);
-    const grossProfit = impactNetSales - totalOperatingCost;
-    const grossMarginPct = impactNetSales
-      ? (grossProfit / impactNetSales) * 100
+    const impactNetSales = Number(summary.impactNetSales || 0);
+    const netSalesExclTax = Number(summary.netSalesExclTax || 0);
+    const grossProfit = Number(summary.grossProfit || 0);
+    const grossMarginPct = netSalesExclTax
+      ? (grossProfit / netSalesExclTax) * 100
       : 0;
     const totalPerformanceMarketing =
       Number(summary.metaAdsCost || 0) + Number(summary.googleAdsCost || 0);
@@ -251,8 +248,8 @@ export default function PnlForecastPage() {
     );
     const contributionBeforeFixedCost =
       grossProfit - totalPerformanceMarketing - totalVariableOpsCost;
-    const contributionBeforeFixedCostPct = impactNetSales
-      ? (contributionBeforeFixedCost / impactNetSales) * 100
+    const contributionBeforeFixedCostPct = netSalesExclTax
+      ? (contributionBeforeFixedCost / netSalesExclTax) * 100
       : 0;
 
     return {
@@ -411,7 +408,7 @@ export default function PnlForecastPage() {
                 </div>
                 <div className="col-md-3">
                   <strong>Returns</strong>
-                  <div>{formatCurrency(summary?.returnLeakageRefund)}</div>
+                  <div>{formatCurrency(summary?.returns)}</div>
                 </div>
                 <div className="col-md-3">
                   <strong>Cancelled</strong>
