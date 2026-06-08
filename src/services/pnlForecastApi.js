@@ -1,8 +1,25 @@
 import { apiClient } from "@/api/api";
 
-export async function getPnlSummary(startDate, endDate) {
+function formatDateOnly(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** P&L API uses exclusive endDate (matches ClickHouse: report_date < endDate). */
+export function toExclusiveEndDate(inclusiveEndDate) {
+  if (!inclusiveEndDate) return null;
+  const [year, month, day] = inclusiveEndDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + 1);
+  return formatDateOnly(date);
+}
+
+export async function getPnlSummary(startDateInclusive, endDateInclusive) {
+  const endDate = toExclusiveEndDate(endDateInclusive);
   const response = await apiClient.get("/api/pnl/summary", {
-    params: { startDate, endDate },
+    params: { startDate: startDateInclusive, endDate },
   });
   return response?.data?.data || null;
 }

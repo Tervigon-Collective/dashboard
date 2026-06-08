@@ -11,6 +11,7 @@ import {
   getFixedCostByMonth,
   getLatestVariableOpsCost,
   getPnlSummary,
+  toExclusiveEndDate,
   upsertFixedCostByMonth,
   updateVariableOpsCost,
 } from "@/services/pnlForecastApi";
@@ -277,7 +278,7 @@ export default function PnlForecastPage() {
     try {
       const payload = {
         startDate,
-        endDate,
+        endDate: toExclusiveEndDate(endDate),
         shipping_partner_cost: toInputNumber(formValues.shippingPartnerCost),
         gateway_charges: toInputNumber(formValues.gatewayCharges),
         marketplace_commission: toInputNumber(formValues.marketplaceCommission),
