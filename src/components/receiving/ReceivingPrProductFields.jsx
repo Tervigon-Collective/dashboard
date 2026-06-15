@@ -13,6 +13,13 @@ const formatHsnForInput = (hsn) => {
   return "";
 };
 
+const parseDecimalInput = (raw) => {
+  if (raw === "") return 0;
+  if (/^\d+\.$/.test(raw)) return raw;
+  const parsed = parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export default function ReceivingPrProductFields({
   productEntry,
   productIndex,
@@ -205,6 +212,7 @@ export default function ReceivingPrProductFields({
                 <label className="form-label small mb-1">Quantity</label>
                 <input
                   type="number"
+                  step="any"
                   className="form-control form-control-sm"
                   min="0"
                   value={
@@ -217,7 +225,7 @@ export default function ReceivingPrProductFields({
                       productIndex,
                       variantIndex,
                       "quantity",
-                      parseInt(e.target.value, 10) || 0
+                      parseDecimalInput(e.target.value)
                     )
                   }
                   required

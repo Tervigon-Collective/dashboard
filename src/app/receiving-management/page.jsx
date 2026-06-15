@@ -1654,7 +1654,7 @@ const ReceivingManagementLayer = () => {
               sku_product_suffix: variant.sku_product_suffix || null,
               sku_variant_suffix: variant.sku_variant_suffix || null,
               linked_skus: variant.linked_skus || [],
-              quantity: variant.quantity || 1,
+              quantity: parseFloat(variant.quantity) || 1,
               rate: variant.rate || 0,
               taxable_amt: variant.taxable_amt || 0,
               igst_percent: variant.igst_percent || 0,
