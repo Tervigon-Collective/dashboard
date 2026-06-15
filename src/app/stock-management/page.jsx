@@ -20,6 +20,21 @@ const formatNumber = (value) => {
   return Number(value).toLocaleString();
 };
 
+const getProductSkuLabel = (variants = []) => {
+  const skus = [
+    ...new Set(
+      variants
+        .map((variant) => variant.sku)
+        .filter((sku) => typeof sku === "string" && sku.trim())
+    ),
+  ];
+
+  if (skus.length === 0) return "-";
+  if (skus.length === 1) return skus[0];
+  if (skus.length === 2) return skus.join(", ");
+  return `${skus.slice(0, 2).join(", ")} +${skus.length - 2}`;
+};
+
 const InventoryDetailModal = ({ item, ledger, isOpen, onClose, loading }) => {
   if (!item) return null;
 
@@ -2042,8 +2057,8 @@ const StockManagementPage = () => {
                                         </span>
                                       </td>
                                       <td>
-                                        <span className="text-muted small">
-                                          -
+                                        <span className="text-secondary-light small">
+                                          {getProductSkuLabel(item.variants)}
                                         </span>
                                       </td>
                                       <td className="text-center">
