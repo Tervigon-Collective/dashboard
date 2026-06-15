@@ -147,6 +147,13 @@ class PurchaseRequestApiService {
     return this.makeRequest(`/receiving/purchase-request?${params}`);
   }
 
+  async getVendorSpendSummary(from, to) {
+    const params = new URLSearchParams({ from, to });
+    return this.makeRequest(
+      `/receiving/purchase-request/vendor-spend-summary?${params}`
+    );
+  }
+
   async getPurchaseRequestById(requestId, includeQualityCheck = false) {
     const url = includeQualityCheck
       ? `/receiving/purchase-request/${requestId}?include_quality_check=true`

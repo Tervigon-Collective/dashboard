@@ -9,6 +9,7 @@ import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 import ReceivingPrProductFields from "../../components/receiving/ReceivingPrProductFields";
+import VendorSpendSummaryTab from "../../components/receiving/VendorSpendSummaryTab";
 import {
   applyFreightToProducts,
   distributeFreightAmongItems,
@@ -2358,6 +2359,11 @@ const ReceivingManagementLayer = () => {
       label: "RECEIPT DETAILS",
       icon: "mdi:file-cabinet",
     },
+    {
+      id: "vendor-spend",
+      label: "VENDOR SPEND SUMMARY",
+      icon: "mdi:currency-inr",
+    },
   ];
 
   return (
@@ -2525,6 +2531,9 @@ const ReceivingManagementLayer = () => {
               hasMoreData={hasMoreReceiptData}
               loadMoreData={loadMoreReceipt}
             />
+          )}
+          {activeTab === "vendor-spend" && (
+            <VendorSpendSummaryTab onViewRequest={handleViewRequest} />
           )}
         </div>
 
