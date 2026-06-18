@@ -3,10 +3,40 @@
 import React from "react";
 import { apiClient } from "../../api/api";
 import IndiaHeatMap from "./IndiaHeatMap";
+import { totalSalesAfterGst } from "../../utils/totalSalesAfterGst";
 
 // Cache for API responses
 const dataCache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getTodayIST() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+  return `${year}-${month}-${day}`;
+}
+
+function getIstDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  return {
+    year: Number(parts.find((p) => p.type === "year")?.value),
+    month: Number(parts.find((p) => p.type === "month")?.value),
+    day: Number(parts.find((p) => p.type === "day")?.value),
+  };
+}
 
 const IndiaSalesHeatMap = () => {
   const [salesData, setSalesData] = React.useState([]);
@@ -16,36 +46,27 @@ const IndiaSalesHeatMap = () => {
   const [totalSales, setTotalSales] = React.useState(0);
 
   const getDateRange = React.useCallback((selectedPeriod) => {
-    const now = new Date();
-    let startDate, endDate;
+    let startDate;
+    let endDate;
 
     if (selectedPeriod === "today") {
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      startDate = endDate = `${yyyy}-${mm}-${dd}`;
+      startDate = endDate = getTodayIST();
     } else if (selectedPeriod === "week") {
-      const end = new Date(now);
-      const start = new Date(now);
-      start.setDate(end.getDate() - 6);
-      const yyyy1 = start.getFullYear();
-      const mm1 = String(start.getMonth() + 1).padStart(2, "0");
-      const dd1 = String(start.getDate()).padStart(2, "0");
-      const yyyy2 = end.getFullYear();
-      const mm2 = String(end.getMonth() + 1).padStart(2, "0");
-      const dd2 = String(end.getDate()).padStart(2, "0");
-      startDate = `${yyyy1}-${mm1}-${dd1}`;
-      endDate = `${yyyy2}-${mm2}-${dd2}`;
+      const istNow = getIstDateParts();
+      const end = new Date(Date.UTC(istNow.year, istNow.month - 1, istNow.day));
+      const start = new Date(end);
+      start.setUTCDate(end.getUTCDate() - 6);
+      startDate = start.toISOString().slice(0, 10);
+      endDate = end.toISOString().slice(0, 10);
     } else if (selectedPeriod === "month") {
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      startDate = `${yyyy}-${mm}-01`;
-      const lastDay = new Date(yyyy, now.getMonth() + 1, 0).getDate();
-      endDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, "0")}`;
+      const istNow = getIstDateParts();
+      startDate = `${istNow.year}-${String(istNow.month).padStart(2, "0")}-01`;
+      const lastDay = new Date(Date.UTC(istNow.year, istNow.month, 0)).getUTCDate();
+      endDate = `${istNow.year}-${String(istNow.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     } else if (selectedPeriod === "year") {
-      const yyyy = now.getFullYear();
-      startDate = `${yyyy}-01-01`;
-      endDate = `${yyyy}-12-31`;
+      const istNow = getIstDateParts();
+      startDate = `${istNow.year}-01-01`;
+      endDate = `${istNow.year}-12-31`;
     }
 
     return { startDate, endDate };
@@ -74,10 +95,13 @@ const IndiaSalesHeatMap = () => {
         )
         .then((res) => {
           const rows = Array.isArray(res.data) ? res.data : [];
-          const total = rows.reduce(
-            (sum, item) => sum + (item.total_sales || 0),
-            0
-          );
+          const total = rows.reduce((sum, item) => {
+            const exGst =
+              item.total_sales_after_gst ??
+              totalSalesAfterGst(item.total_sales) ??
+              0;
+            return sum + exGst;
+          }, 0);
 
           // Cache the result
           dataCache.set(cacheKey, {
@@ -148,7 +172,7 @@ const IndiaSalesHeatMap = () => {
                 >
                   Total Sales:{" "}
                   <span style={{ color: "#487fff", fontWeight: "600" }}>
-                    ₹{totalSales.toLocaleString()}
+                    ₹{Number(totalSales).toFixed(2)}
                   </span>
                 </p>
               )}
