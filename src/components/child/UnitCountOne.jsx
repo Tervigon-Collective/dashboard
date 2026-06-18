@@ -1,16 +1,23 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import { Icon } from "@iconify/react";
-import config from "../../config";
 import { apiClient } from "../../api/api";
+import { fetchDashboardMetricsProgressive } from "../../api/dashboardMetricsApi";
+import { useUser } from "../../helper/UserContext";
 
-// Utility to get today's date in YYYY-MM-DD format
+// Utility to get today's date in YYYY-MM-DD (IST, matches backend)
 const getToday = () => {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+  return `${year}-${month}-${day}`;
 };
 
 // Helper to check if a date range is today
@@ -35,10 +42,64 @@ const emptyInventoryEvents = {
   totalQuantity: null,
 };
 
+function pickOrderMetric(orderCountPayload, channel = "total") {
+  if (!orderCountPayload) return null;
+  const total =
+    orderCountPayload.orderCount ?? orderCountPayload.totalQuantity ?? null;
+  if (channel === "total") return total;
+  if (channel === "meta") {
+    return orderCountPayload.metaOrderCount ?? orderCountPayload.metaQuantity ?? null;
+  }
+  if (channel === "google") {
+    return orderCountPayload.googleOrderCount ?? orderCountPayload.googleQuantity ?? null;
+  }
+  if (channel === "organic") {
+    return orderCountPayload.organicOrderCount ?? orderCountPayload.organicQuantity ?? null;
+  }
+  return null;
+}
+
+const INITIAL_SECTION_LOADING = {
+  netProfit: true,
+  sales: true,
+  adSpend: true,
+  cogs: true,
+  orderCount: true,
+  roas: true,
+  inventoryEvents: true,
+  paymentMethodCount: true,
+};
+
+const skeletonBase = {
+  backgroundColor: "#e5e7eb",
+  borderRadius: "6px",
+  animation: "skeletonPulse 1.5s ease-in-out infinite",
+  display: "inline-block",
+};
+
+const MetricValueSkeleton = ({ width = 140, height = 32 }) => (
+  <span style={{ ...skeletonBase, width, height }} />
+);
+
+const BreakdownSkeleton = ({ rows = 3 }) => (
+  <div
+    className="d-flex flex-column align-items-center w-100"
+    style={{ gap: 8, marginTop: 4 }}
+  >
+    {Array.from({ length: rows }).map((_, i) => (
+      <span
+        key={i}
+        style={{ ...skeletonBase, width: "88%", height: 18, display: "block" }}
+      />
+    ))}
+  </div>
+);
+
 const UnitCountOne = ({ dateRange }) => {
-  const [adSpend, setAdSpend] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useUser();
+  const [sectionLoading, setSectionLoading] = useState(INITIAL_SECTION_LOADING);
   const [error, setError] = useState({}); // error per card
+  const [adSpend, setAdSpend] = useState(null);
   const [googleSpend, setGoogleSpend] = useState(null);
   const [facebookSpend, setFacebookSpend] = useState(null);
   const [totalCogs, setTotalCogs] = useState(null);
@@ -54,10 +115,10 @@ const UnitCountOne = ({ dateRange }) => {
   const [googleNetProfit, setGoogleNetProfit] = useState(null);
   const [metaNetProfit, setMetaNetProfit] = useState(null);
   const [organicNetProfit, setOrganicNetProfit] = useState(null);
-  const [totalQuantity, setTotalQuantity] = useState(null);
-  const [googleQuantity, setGoogleQuantity] = useState(null);
-  const [metaQuantity, setMetaQuantity] = useState(null);
-  const [organicQuantity, setOrganicQuantity] = useState(null);
+  const [totalOrders, setTotalOrders] = useState(null);
+  const [googleOrders, setGoogleOrders] = useState(null);
+  const [metaOrders, setMetaOrders] = useState(null);
+  const [organicOrders, setOrganicOrders] = useState(null);
   const [grossRoas, setGrossRoas] = useState({
     total: null,
     google: null,
@@ -81,14 +142,11 @@ const UnitCountOne = ({ dateRange }) => {
     arr.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
   // Helper for consistent card content
-  const getCardContent = (value, loading, error, formatter = (v) => v) => {
-    if (loading)
-      return (
-        <span className="text-muted">
-          <span className="spinner-border spinner-border-sm me-1" /> Loading...
-        </span>
-      );
-    if (error)
+  const getCardContent = (value, isLoading, cardError, formatter = (v) => v) => {
+    if (isLoading) {
+      return <MetricValueSkeleton width={value == null ? 140 : 100} height={28} />;
+    }
+    if (cardError)
       return (
         <span
           className="text-danger d-flex align-items-center gap-1 small fw-semibold"
@@ -113,12 +171,14 @@ const UnitCountOne = ({ dateRange }) => {
     return formatter(value);
   };
 
-  // Memoize the effective date range
+  // Memoize the effective date range (no date selected => today live)
   const effectiveDateRange = useMemo(() => {
     const today = getToday();
+    const hasSelection = dateRange?.startDate && dateRange?.endDate;
     return {
-      startDate: dateRange?.startDate || `${today} 00`,
-      endDate: dateRange?.endDate || `${today} 23`,
+      startDate: hasSelection ? dateRange.startDate : `${today} 00`,
+      endDate: hasSelection ? dateRange.endDate : `${today} 23`,
+      hasSelection: Boolean(hasSelection),
     };
   }, [dateRange?.startDate, dateRange?.endDate]);
 
@@ -142,9 +202,7 @@ const UnitCountOne = ({ dateRange }) => {
     return combined;
   }, [paymentMethodCounts]);
 
-  useEffect(() => {
-    setLoading(true);
-    setError({});
+  const resetMetricsState = () => {
     setAdSpend(null);
     setGoogleSpend(null);
     setFacebookSpend(null);
@@ -161,352 +219,202 @@ const UnitCountOne = ({ dateRange }) => {
     setGoogleNetProfit(null);
     setMetaNetProfit(null);
     setOrganicNetProfit(null);
-    setTotalQuantity(null);
-    setGoogleQuantity(null);
-    setMetaQuantity(null);
-    setOrganicQuantity(null);
+    setTotalOrders(null);
+    setGoogleOrders(null);
+    setMetaOrders(null);
+    setOrganicOrders(null);
     setGrossRoas({ total: null, google: null, meta: null });
     setNetRoas({ total: null, google: null, meta: null });
     setBeRoas({ total: null, google: null, meta: null });
     setInventoryEvents(emptyInventoryEvents);
     setPaymentMethodCounts({});
+  };
+
+  const mergeSectionErrors = (sectionErrors = {}) => {
+    setError((prev) => {
+      const next = { ...prev };
+      const cardError = "Failed to load data";
+      if (sectionErrors.adSpend) next.adSpend = cardError;
+      if (sectionErrors.cogs) next.cogs = cardError;
+      if (sectionErrors.sales) next.sales = cardError;
+      if (sectionErrors.netProfit) next.netProfit = cardError;
+      if (sectionErrors.orderCount) next.orderCount = cardError;
+      if (sectionErrors.roas) next.roas = cardError;
+      if (sectionErrors.inventoryEvents) next.inventoryEvents = cardError;
+      if (sectionErrors.paymentMethodCount) next.paymentMethodCount = cardError;
+      return next;
+    });
+  };
+
+  const applyMetricsSection = (section, data) => {
+    switch (section) {
+      case "adSpend": {
+        setAdSpend(data.adSpend?.totalSpend ?? null);
+        setGoogleSpend(data.adSpend?.googleSpend ?? null);
+        setFacebookSpend(data.adSpend?.facebookSpend ?? null);
+        if (data.adSpend?.errors?.google) {
+          setError((prev) => ({
+            ...prev,
+            googleAdSpend: "Google API unavailable",
+          }));
+        }
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "cogs": {
+        setTotalCogs(data.cogs?.totalCogs ?? null);
+        setGoogleCogs(data.cogs?.googleCogs ?? null);
+        setMetaCogs(data.cogs?.metaCogs ?? null);
+        setOrganicCogs(data.cogs?.organicCogs ?? null);
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "sales": {
+        setTotalSales(data.sales?.totalSales ?? null);
+        setTotalSalesAfterGst(data.sales?.total_sales_after_gst ?? null);
+        setGoogleSales(data.sales?.googleSales ?? null);
+        setMetaSales(data.sales?.metaSales ?? null);
+        setOrganicSales(data.sales?.organicSales ?? null);
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "netProfit": {
+        setGoogleNetProfit(data.netProfit?.googleNetProfit ?? null);
+        setMetaNetProfit(data.netProfit?.metaNetProfit ?? null);
+        setOrganicNetProfit(data.netProfit?.organicNetProfit ?? null);
+        setTotalNetProfit(
+          data.netProfit?.net_profit_after_gst ??
+            data.netProfit?.totalNetProfit ??
+            null
+        );
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "orderCount": {
+        const orders = data.orderCount;
+        setTotalOrders(pickOrderMetric(orders, "total"));
+        setGoogleOrders(pickOrderMetric(orders, "google"));
+        setMetaOrders(pickOrderMetric(orders, "meta"));
+        setOrganicOrders(pickOrderMetric(orders, "organic"));
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "roas": {
+        setGrossRoas({
+          total: data.roas?.total?.grossRoas ?? null,
+          google: data.roas?.google?.grossRoas ?? null,
+          meta: data.roas?.meta?.grossRoas ?? null,
+        });
+        setNetRoas({
+          total: data.roas?.total?.netRoas ?? null,
+          google: data.roas?.google?.netRoas ?? null,
+          meta: data.roas?.meta?.netRoas ?? null,
+        });
+        setBeRoas({
+          total: data.roas?.total?.beRoas ?? null,
+          google: data.roas?.google?.beRoas ?? null,
+          meta: data.roas?.meta?.beRoas ?? null,
+        });
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "inventoryEvents": {
+        const inv = data.inventoryEvents;
+        const cancelCount = inv?.cancel?.count ?? null;
+        const returnCount = inv?.return?.count ?? null;
+        const totalEvents = inv?.total_events ?? null;
+        setInventoryEvents({
+          cancelCount,
+          cancelQuantity: cancelCount,
+          returnCount,
+          returnQuantity: returnCount,
+          totalEvents,
+          totalQuantity: totalEvents,
+        });
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      case "paymentMethodCount": {
+        setPaymentMethodCounts(data.paymentMethodCounts || {});
+        mergeSectionErrors(data.errors);
+        break;
+      }
+      default:
+        break;
+    }
+
+    setSectionLoading((prev) => ({ ...prev, [section]: false }));
+  };
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    if (!user) {
+      setSectionLoading(
+        Object.fromEntries(
+          Object.keys(INITIAL_SECTION_LOADING).map((k) => [k, false])
+        )
+      );
+      return;
+    }
 
     const { startDate, endDate } = effectiveDateRange;
-    const isToday = isTodayRange(startDate, endDate);
+    const startDateOnly = startDate.split(" ")[0];
+    const endDateOnly = endDate.split(" ")[0];
+    const isToday = isTodayRange(startDateOnly, endDateOnly);
+    let pollInterval = null;
+    let cancelled = false;
 
-    if (isToday) {
-      // Use existing endpoints for today's data
-      let query = `?startDate=${startDate.split(" ")[0]}&endDate=${
-        endDate.split(" ")[0]
-      }`;
+    const fetchMetrics = (showSkeleton = true) => {
+      if (cancelled) return;
 
-      Promise.allSettled([
-        apiClient.get(`/api/ad_spend${query}`),
-        apiClient.get(`/api/cogs${query}`),
-        apiClient.get(`/api/sales${query}`),
-        apiClient.get(`/api/net_profit${query}`),
-        apiClient.get(`/api/order_count${query}`),
-        apiClient.get(`/api/roas${query}`),
-        apiClient.get(
-          `/api/inventory-events/summary?start_date=${
-            startDate.split(" ")[0]
-          }&end_date=${endDate.split(" ")[0]}`
-        ),
-        apiClient.get(`/api/payment_method_count${query}`),
-      ]).then((results) => {
-        // ad_spend
-        if (results[0].status === "fulfilled") {
-          setAdSpend(results[0].value.data.totalSpend ?? null);
-          setGoogleSpend(results[0].value.data.googleSpend ?? null);
-          setFacebookSpend(results[0].value.data.facebookSpend ?? null);
-        } else {
-          setError((e) => ({ ...e, adSpend: "Failed to load data" }));
-        }
-        // cogs
-        if (results[1].status === "fulfilled") {
-          setTotalCogs(results[1].value.data.totalCogs ?? null);
-          setGoogleCogs(results[1].value.data.googleCogs ?? null);
-          setMetaCogs(results[1].value.data.metaCogs ?? null);
-          setOrganicCogs(results[1].value.data.organicCogs ?? null);
-        } else {
-          setError((e) => ({ ...e, cogs: "Failed to load data" }));
-        }
-        // sales
-        if (results[2].status === "fulfilled") {
-          const salesPayload = results[2].value.data;
-          setTotalSales(salesPayload.totalSales ?? null);
-          setTotalSalesAfterGst(
-            salesPayload.total_sales_after_gst ?? null
-          );
-          setGoogleSales(salesPayload.googleSales ?? null);
-          setMetaSales(salesPayload.metaSales ?? null);
-          setOrganicSales(salesPayload.organicSales ?? null);
-        } else {
-          setError((e) => ({ ...e, sales: "Failed to load data" }));
-        }
-        // net_profit (channel breakdowns; headline total uses net_profit_after_gst below)
-        if (results[3].status === "fulfilled") {
-          setGoogleNetProfit(results[3].value.data.googleNetProfit ?? null);
-          setMetaNetProfit(results[3].value.data.metaNetProfit ?? null);
-          setOrganicNetProfit(results[3].value.data.organicNetProfit ?? null);
-        } else {
-          setError((e) => ({ ...e, netProfit: "Failed to load data" }));
-        }
-        // order_count
-        if (results[4].status === "fulfilled") {
-          setTotalQuantity(results[4].value.data.totalQuantity ?? null);
-          setGoogleQuantity(results[4].value.data.googleQuantity ?? null);
-          setMetaQuantity(results[4].value.data.metaQuantity ?? null);
-          setOrganicQuantity(results[4].value.data.organicQuantity ?? null);
-        } else {
-          setError((e) => ({ ...e, orderCount: "Failed to load data" }));
-        }
-        // roas
-        if (results[5].status === "fulfilled") {
-          setGrossRoas({
-            total: results[5].value.data.total?.grossRoas ?? null,
-            google: results[5].value.data.google?.grossRoas ?? null,
-            meta: results[5].value.data.meta?.grossRoas ?? null,
-          });
-          setNetRoas({
-            total: results[5].value.data.total?.netRoas ?? null,
-            google: results[5].value.data.google?.netRoas ?? null,
-            meta: results[5].value.data.meta?.netRoas ?? null,
-          });
-          setBeRoas({
-            total: results[5].value.data.total?.beRoas ?? null,
-            google: results[5].value.data.google?.beRoas ?? null,
-            meta: results[5].value.data.meta?.beRoas ?? null,
-          });
-        } else {
-          setError((e) => ({ ...e, roas: "Failed to load data" }));
-        }
-        // inventory events (returns / cancels)
-        if (results[6].status === "fulfilled") {
-          const payload = results[6].value.data?.data;
-          setInventoryEvents({
-            cancelCount: payload?.cancel?.count ?? null,
-            cancelQuantity: payload?.cancel?.quantity ?? null,
-            returnCount: payload?.return?.count ?? null,
-            returnQuantity: payload?.return?.quantity ?? null,
-            totalEvents: payload?.total_events ?? null,
-            totalQuantity: payload?.total_quantity ?? null,
-          });
-        } else {
-          setError((e) => ({
-            ...e,
-            inventoryEvents: "Failed to load data",
-          }));
-        }
-        // payment_method_count
-        if (results[7].status === "fulfilled") {
-          // Backend returns data directly, not wrapped in data property
-          setPaymentMethodCounts(
-            results[7].value.data || results[7].value || {}
-          );
-        } else {
-          setError((e) => ({
-            ...e,
-            paymentMethodCount: "Failed to load data",
-          }));
-        }
+      if (showSkeleton) {
+        setSectionLoading({ ...INITIAL_SECTION_LOADING });
+        setError({});
+        resetMetricsState();
+      }
 
-        // Total net profit (after GST on sales): total_sales_after_gst − COGS − ad spend
-        const totalCogs = Number(
-          results[1].status === "fulfilled"
-            ? results[1].value.data.totalCogs ?? 0
-            : 0
-        );
-        const totalAdSpend = Number(
-          results[0].status === "fulfilled"
-            ? results[0].value.data.totalSpend ?? 0
-            : 0
-        );
-        const totalSalesAfterGstNum = Number(
-          results[2].status === "fulfilled"
-            ? results[2].value.data.total_sales_after_gst ?? 0
-            : 0
-        );
-        const fromNetProfitApi =
-          results[3].status === "fulfilled"
-            ? results[3].value.data?.net_profit_after_gst
-            : undefined;
-        setTotalNetProfit(
-          fromNetProfitApi != null && fromNetProfitApi !== ""
-            ? Number(fromNetProfitApi)
-            : totalSalesAfterGstNum - totalCogs - totalAdSpend
-        );
-        setLoading(false);
-      });
-    } else {
-      // Use new hourly endpoints for historical data
-      // Remove any minutes if present and just use hours
       const startDateTime = startDate.split(":")[0];
       const endDateTime = endDate.split(":")[0];
-      const startDateOnly = startDate.split(" ")[0];
-      const endDateOnly = endDate.split(" ")[0];
 
-      // Historical ad spend: Postgres only (not live Meta/Google APIs)
-      const resolveHistoricalAdSpendTotals = async (hourlyResult) => {
-        let totals = { facebookSpend: 0, googleSpend: 0 };
-        if (hourlyResult.status === "fulfilled") {
-          totals = hourlyResult.value.data.totals ?? totals;
-        }
-        const hourlyTotal =
-          (totals.facebookSpend ?? 0) + (totals.googleSpend ?? 0);
-        if (hourlyTotal === 0) {
-          try {
-            const dailyRes = await apiClient.get(
-              `/api/historical/ad_spend?startDate=${startDateOnly}&endDate=${endDateOnly}`
-            );
-            totals = {
-              facebookSpend: dailyRes.data.facebookSpend ?? 0,
-              googleSpend: dailyRes.data.googleSpend ?? 0,
-            };
-          } catch {
-            // keep zeros if DB daily rollup fails
-          }
-        }
-        return totals;
-      };
-
-      Promise.allSettled([
-        apiClient.get(
-          `/api/historical/ad_spend_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
-        ),
-        apiClient.get(
-          `/api/sales_unitCost_by_hour?startDateTime=${startDateTime}&endDateTime=${endDateTime}`
-        ),
-        apiClient.get(
-          `/api/inventory-events/summary?start_date=${startDateOnly}&end_date=${endDateOnly}`
-        ),
-        apiClient.get(
-          `/api/payment_method_count?startDate=${startDateOnly}&endDate=${endDateOnly}`
-        ),
-      ])
-        .then(async (results) => {
-          const adSpendTotals = await resolveHistoricalAdSpendTotals(
-            results[0]
-          );
-          const totalAdSpendFromTotals =
-            adSpendTotals.facebookSpend + adSpendTotals.googleSpend;
-
-          if (results[0].status === "fulfilled" || totalAdSpendFromTotals > 0) {
-            setAdSpend(totalAdSpendFromTotals || null);
-            setGoogleSpend(adSpendTotals.googleSpend ?? null);
-            setFacebookSpend(adSpendTotals.facebookSpend ?? null);
-          } else {
-            setError((e) => ({ ...e, adSpend: "Failed to load data" }));
-          }
-
-          // Handle sales and COGS data
-          if (results[1].status === "fulfilled") {
-            const salesData = results[1].value.data.sum;
-            setTotalSales(salesData.total_sales ?? null);
-            setTotalSalesAfterGst(salesData.total_sales_after_gst ?? null);
-            setGoogleSales(salesData.google_sales ?? null);
-            setMetaSales(salesData.meta_sales ?? null);
-            setOrganicSales(salesData.organic_sales ?? null);
-
-            setTotalCogs(salesData.unit_cost ?? null);
-            setGoogleCogs(salesData.unit_cost_google ?? null);
-            setMetaCogs(salesData.unit_cost_meta ?? null);
-            setOrganicCogs(salesData.unit_cost_organic ?? null);
-
-            // Set order counts
-            setTotalQuantity(salesData.order_count ?? null);
-            setGoogleQuantity(salesData.google_order_count ?? null);
-            setMetaQuantity(salesData.meta_order_count ?? null);
-            setOrganicQuantity(salesData.organic_order_count ?? null);
-
-            const totalAdSpend = totalAdSpendFromTotals;
-            const totalNetProfit =
-              Number(salesData.total_sales_after_gst ?? 0) -
-              (salesData.unit_cost ?? 0) -
-              totalAdSpend;
-            const googleNetProfit =
-              (salesData.google_sales ?? 0) -
-              (salesData.unit_cost_google ?? 0) -
-              adSpendTotals.googleSpend;
-            const metaNetProfit =
-              (salesData.meta_sales ?? 0) -
-              (salesData.unit_cost_meta ?? 0) -
-              adSpendTotals.facebookSpend;
-
-            setTotalNetProfit(totalNetProfit);
-            setGoogleNetProfit(googleNetProfit);
-            setMetaNetProfit(metaNetProfit);
-            // Organic net profit = organic sales - organic COGS (no ad spend)
-            const organicNetProfit =
-              (salesData.organic_sales ?? 0) -
-              (salesData.unit_cost_organic ?? 0);
-            setOrganicNetProfit(organicNetProfit);
-
-            // Calculate ROAS using totals
-            if (totalAdSpend > 0) {
-              setGrossRoas({
-                total: salesData.total_sales / totalAdSpend,
-                google:
-                  adSpendTotals.googleSpend > 0
-                    ? salesData.google_sales / adSpendTotals.googleSpend
-                    : 0,
-                meta:
-                  adSpendTotals.facebookSpend > 0
-                    ? salesData.meta_sales / adSpendTotals.facebookSpend
-                    : 0,
-              });
-              // Net ROAS = (Total Sales - COGS) / Total Ad Spend
-              setNetRoas({
-                total:
-                  (salesData.total_sales - salesData.unit_cost) / totalAdSpend,
-                google:
-                  adSpendTotals.googleSpend > 0
-                    ? (salesData.google_sales - salesData.unit_cost_google) /
-                      adSpendTotals.googleSpend
-                    : 0,
-                meta:
-                  adSpendTotals.facebookSpend > 0
-                    ? (salesData.meta_sales - salesData.unit_cost_meta) /
-                      adSpendTotals.facebookSpend
-                    : 0,
-              });
-              // Calculate BE ROAS = (COGS + Ad Spend) / Ad Spend
-              setBeRoas({
-                total: (salesData.unit_cost + totalAdSpend) / totalAdSpend,
-                google:
-                  adSpendTotals.googleSpend > 0
-                    ? (salesData.unit_cost_google + adSpendTotals.googleSpend) /
-                      adSpendTotals.googleSpend
-                    : 0,
-                meta:
-                  adSpendTotals.facebookSpend > 0
-                    ? (salesData.unit_cost_meta + adSpendTotals.facebookSpend) /
-                      adSpendTotals.facebookSpend
-                    : 0,
-              });
+      fetchDashboardMetricsProgressive(
+        apiClient,
+        {
+          isToday,
+          startDateOnly,
+          endDateOnly,
+          startDateTime,
+          endDateTime,
+        },
+        {
+          onSection: (section, payload) => {
+            if (!cancelled) {
+              applyMetricsSection(section, payload);
             }
-          } else {
-            setError((e) => ({ ...e, sales: "Failed to load data" }));
-          }
+          },
+        }
+      );
+    };
 
-          // Handle inventory events summary
-          if (results[2].status === "fulfilled") {
-            const payload = results[2].value.data?.data;
-            setInventoryEvents({
-              cancelCount: payload?.cancel?.count ?? null,
-              cancelQuantity: payload?.cancel?.quantity ?? null,
-              returnCount: payload?.return?.count ?? null,
-              returnQuantity: payload?.return?.quantity ?? null,
-              totalEvents: payload?.total_events ?? null,
-              totalQuantity: payload?.total_quantity ?? null,
-            });
-          } else {
-            setError((e) => ({
-              ...e,
-              inventoryEvents: "Failed to load data",
-            }));
-          }
+    fetchMetrics(true);
 
-          // Handle payment method count
-          if (results[3].status === "fulfilled") {
-            setPaymentMethodCounts(
-              results[3].value.data || results[3].value || {}
-            );
-          } else {
-            setError((e) => ({
-              ...e,
-              paymentMethodCount: "Failed to load data",
-            }));
-          }
-
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError((e) => ({ ...e, general: "Failed to load data" }));
-          setLoading(false);
-        });
+    if (isToday) {
+      pollInterval = setInterval(() => fetchMetrics(false), 3 * 60 * 1000);
     }
-  }, [effectiveDateRange.startDate, effectiveDateRange.endDate]);
+
+    return () => {
+      cancelled = true;
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [
+    authLoading,
+    user,
+    effectiveDateRange.startDate,
+    effectiveDateRange.endDate,
+  ]);
 
   return (
     <div className="row row-cols-xxxl-5 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-4">
@@ -529,7 +437,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     totalNetProfit,
-                    loading,
+                    sectionLoading.netProfit,
                     error.netProfit,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -622,7 +530,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      loading,
+                      sectionLoading.netProfit,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -650,7 +558,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     totalSalesAfterGst ?? totalSales,
-                    loading,
+                    sectionLoading.sales,
                     error.sales,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -740,7 +648,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      loading,
+                      sectionLoading.sales,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -768,7 +676,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     adSpend,
-                    loading,
+                    sectionLoading.adSpend,
                     error.adSpend,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -809,7 +717,7 @@ const UnitCountOne = ({ dateRange }) => {
                     />
                   ),
                   value: googleSpend,
-                  error: error.adSpend,
+                  error: error.googleAdSpend || error.adSpend,
                 },
                 {
                   label: "Meta",
@@ -850,7 +758,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      loading,
+                      sectionLoading.adSpend,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -878,7 +786,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     totalCogs,
-                    loading,
+                    sectionLoading.cogs,
                     error.cogs,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -972,7 +880,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      loading,
+                      sectionLoading.cogs,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -998,7 +906,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(totalQuantity, loading, error.orderCount)}
+                  {getCardContent(totalOrders, sectionLoading.orderCount, error.orderCount)}
                 </h6>
               </div>
               <div
@@ -1035,7 +943,7 @@ const UnitCountOne = ({ dateRange }) => {
                       style={{ fontSize: 20, minWidth: 40 }}
                     />
                   ),
-                  value: googleQuantity,
+                  value: googleOrders,
                   error: error.orderCount,
                 },
                 {
@@ -1046,7 +954,7 @@ const UnitCountOne = ({ dateRange }) => {
                       style={{ fontSize: 20, minWidth: 40 }}
                     />
                   ),
-                  value: metaQuantity,
+                  value: metaOrders,
                   error: error.orderCount,
                 },
                 {
@@ -1057,7 +965,7 @@ const UnitCountOne = ({ dateRange }) => {
                       style={{ fontSize: 20, minWidth: 40, color: "#388e3c" }}
                     />
                   ),
-                  value: organicQuantity,
+                  value: organicOrders,
                   error: error.orderCount,
                 },
               ]).map((item, idx) => (
@@ -1086,7 +994,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, loading, item.error)}
+                    {getCardContent(item.value, sectionLoading.orderCount, item.error)}
                   </span>
                 </div>
               ))}
@@ -1111,7 +1019,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     inventoryEvents.totalEvents,
-                    loading,
+                    sectionLoading.inventoryEvents,
                     error.inventoryEvents,
                     (v) => Number(v).toLocaleString()
                   )}
@@ -1152,7 +1060,6 @@ const UnitCountOne = ({ dateRange }) => {
                     />
                   ),
                   count: inventoryEvents.cancelCount,
-                  quantity: inventoryEvents.cancelQuantity,
                 },
                 {
                   label: "Returned Orders",
@@ -1163,7 +1070,6 @@ const UnitCountOne = ({ dateRange }) => {
                     />
                   ),
                   count: inventoryEvents.returnCount,
-                  quantity: inventoryEvents.returnQuantity,
                 },
               ].map((item) => (
                 <div
@@ -1197,7 +1103,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.count,
-                      loading,
+                      sectionLoading.inventoryEvents,
                       error.inventoryEvents,
                       (v) => Number(v).toLocaleString()
                     )}
@@ -1223,7 +1129,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(grossRoas.total, loading, error.roas, (v) =>
+                  {getCardContent(grossRoas.total, sectionLoading.roas, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1302,7 +1208,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, loading, item.error, (v) =>
+                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1327,7 +1233,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(netRoas.total, loading, error.roas, (v) =>
+                  {getCardContent(netRoas.total, sectionLoading.roas, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1406,7 +1312,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, loading, item.error, (v) =>
+                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1431,7 +1337,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(beRoas.total, loading, error.roas, (v) =>
+                  {getCardContent(beRoas.total, sectionLoading.roas, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1510,7 +1416,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, loading, item.error, (v) =>
+                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1542,7 +1448,7 @@ const UnitCountOne = ({ dateRange }) => {
                           0
                         )
                       : null,
-                    loading,
+                    sectionLoading.paymentMethodCount,
                     error.paymentMethodCount
                   )}
                 </h6>
@@ -1572,8 +1478,8 @@ const UnitCountOne = ({ dateRange }) => {
               className="d-flex flex-column align-items-center mt-2"
               style={{ gap: 8, marginTop: 8 }}
             >
-              {loading ? (
-                <span className="text-muted">Loading...</span>
+              {sectionLoading.paymentMethodCount ? (
+                <BreakdownSkeleton rows={4} />
               ) : error.paymentMethodCount ? (
                 <span className="text-danger small">Failed to load</span>
               ) : Object.keys(combinedPaymentMethodCounts).length === 0 ? (

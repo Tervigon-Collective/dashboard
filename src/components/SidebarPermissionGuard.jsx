@@ -57,7 +57,8 @@ export default function SidebarPermissionGuard({
   }, [user, loading, sidebarKey, hasSidebarPermission, redirect, router]);
 
   if (loading) {
-    return <Loader />;
+    // Render page shell so metric cards can show skeleton placeholders while auth resolves.
+    return children;
   }
 
   if (!user) {

@@ -28,11 +28,17 @@ const getDefaultDateRange = () => {
 const MAX_SECTIONS = 10;
 
 const Section = ({ dateRange, setDateRange }) => {
-  const [value, setValue] = useState(dateRange);
+  const [value, setValue] = useState(dateRange || getDefaultDateRange());
 
   useEffect(() => {
-    setValue(dateRange);
-  }, [dateRange]);
+    if (dateRange) {
+      setValue(dateRange);
+      return;
+    }
+    const defaultRange = getDefaultDateRange();
+    setValue(defaultRange);
+    setDateRange(defaultRange);
+  }, [dateRange, setDateRange]);
 
   const handleChange = (range) => {
     setValue(range);
@@ -88,7 +94,7 @@ const Section = ({ dateRange, setDateRange }) => {
 
 const HistoricalDashBoardLayerOne = () => {
   const [sections, setSections] = useState([
-    { dateRange: null }
+    { dateRange: getDefaultDateRange() },
   ]);
 
   const setSectionDateRange = (idx, value) => {
@@ -103,7 +109,7 @@ const HistoricalDashBoardLayerOne = () => {
     if (sections.length < MAX_SECTIONS) {
       setSections((prev) => [
         ...prev,
-        { dateRange: null }
+        { dateRange: getDefaultDateRange() },
       ]);
     }
   };

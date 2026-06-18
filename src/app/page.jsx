@@ -18,20 +18,12 @@ export default function Home() {
     const localStorageRole =
       typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
 
-    // Show loading while checking authentication
+    // Show dashboard skeleton while auth resolves (UnitCountOne handles per-card loading).
     if (loading) {
       return (
-        <div
-          className="d-flex justify-content-center align-items-center"
-          style={{ height: "100vh" }}
-        >
-          <div className="text-center">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="mt-3 text-muted">Loading dashboard...</p>
-          </div>
-        </div>
+        <MasterLayout>
+          <DashBoardLayerOne />
+        </MasterLayout>
       );
     }
 
