@@ -1,6 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { totalSalesAfterGst } from "../../utils/totalSalesAfterGst";
+
+function getDisplaySales(item) {
+  if (!item) return 0;
+  return (
+    item.total_sales_after_gst ??
+    totalSalesAfterGst(item.total_sales) ??
+    item.total_sales ??
+    0
+  );
+}
 
 const IndiaHeatMap = ({ salesData = [] }) => {
   const svgRef = useRef(null);
@@ -52,7 +63,7 @@ const IndiaHeatMap = ({ salesData = [] }) => {
     salesData.forEach((item) => {
       const stateCode = provinceToStateCode[item.province];
       if (stateCode) {
-        map[stateCode] = item.total_sales;
+        map[stateCode] = getDisplaySales(item);
       }
     });
     return map;
@@ -63,7 +74,7 @@ const IndiaHeatMap = ({ salesData = [] }) => {
     if (!salesData || salesData.length === 0) {
       return { minSales: 0, maxSales: 1 };
     }
-    const salesValues = salesData.map((item) => item.total_sales || 0);
+    const salesValues = salesData.map((item) => getDisplaySales(item));
     if (salesValues.length === 0) {
       return { minSales: 0, maxSales: 1 };
     }
@@ -196,7 +207,7 @@ const IndiaHeatMap = ({ salesData = [] }) => {
 
             // Show tooltip with formatted text
             const formattedSales =
-              sales > 0 ? `₹${sales.toLocaleString("en-IN")}` : "No data";
+              sales > 0 ? `₹${Number(sales).toFixed(2)}` : "No data";
 
             setTooltip({
               show: true,
