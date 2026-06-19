@@ -1,63 +1,17 @@
 "use client";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
-import { apiClient } from "../../api/api";
+import React, { useState } from "react";
 import config from "../../config";
+import { useTopSkusQuery } from "@/hooks/dashboard/useTopSkusQuery";
+import { useUser } from "@/helper/UserContext";
 
 const TopPerformerOne = () => {
-  const [skus, setSkus] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user, loading: authLoading } = useUser();
   const [period, setPeriod] = useState("today");
-
-  useEffect(() => {
-    setLoading(true);
-    const now = new Date();
-    let startDate, endDate;
-    if (period === "today") {
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      startDate = endDate = `${yyyy}-${mm}-${dd}`;
-    } else if (period === "week") {
-      const end = new Date(now);
-      const start = new Date(now);
-      start.setDate(end.getDate() - 6);
-      const yyyy1 = start.getFullYear();
-      const mm1 = String(start.getMonth() + 1).padStart(2, "0");
-      const dd1 = String(start.getDate()).padStart(2, "0");
-      const yyyy2 = end.getFullYear();
-      const mm2 = String(end.getMonth() + 1).padStart(2, "0");
-      const dd2 = String(end.getDate()).padStart(2, "0");
-      startDate = `${yyyy1}-${mm1}-${dd1}`;
-      endDate = `${yyyy2}-${mm2}-${dd2}`;
-    } else if (period === "month") {
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      startDate = `${yyyy}-${mm}-01`;
-      // Get last day of month
-      const lastDay = new Date(yyyy, now.getMonth() + 1, 0).getDate();
-      endDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, "0")}`;
-    } else if (period === "year") {
-      const yyyy = now.getFullYear();
-      startDate = `${yyyy}-01-01`;
-      endDate = `${yyyy}-12-31`;
-    }
-    apiClient
-      .get(
-        `/api/top_skus_by_sales?n=6&start_date=${startDate}&end_date=${endDate}`
-      )
-      .then((res) => {
-        const rows = Array.isArray(res.data) ? res.data : [];
-        setSkus(rows);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load data");
-        setLoading(false);
-      });
-  }, [period]);
+  const { data: skus = [], isLoading, isError } = useTopSkusQuery(period, 6, {
+    enabled: !authLoading && !!user,
+  });
 
   return (
     <div className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-sm-12">
@@ -78,61 +32,52 @@ const TopPerformerOne = () => {
               </select>
             </div>
           </div>
-          <div className="mt-32">
-            {loading ? (
-              <div className="text-center my-4">Loading...</div>
-            ) : error ? (
-              <div className="text-danger my-4">{error}</div>
+          <div className="mt-16">
+            {isLoading ? (
+              <div className="text-center py-4">
+                <div className="spinner-border spinner-border-sm text-primary" />
+              </div>
+            ) : isError ? (
+              <p className="text-danger text-center py-4 mb-0">Failed to load data</p>
             ) : skus.length === 0 ? (
-              <div className="text-center my-4">No data</div>
+              <p className="text-muted text-center py-4 mb-0">No data</p>
             ) : (
-              skus.map((item, idx) => (
-                <div
-                  className="d-flex align-items-center justify-content-between gap-3 mb-24"
-                  key={item.sku}
-                  style={{ minWidth: 0 }}
-                >
+              <div>
+                {skus.map((item, index) => (
                   <div
-                    className="d-flex align-items-center"
-                    style={{ minWidth: 0, flex: 1 }}
+                    className="d-flex align-items-center justify-content-between gap-3 mb-12"
+                    key={`${item.sku}-${index}`}
                   >
-                    <div
-                      className="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden bg-primary-100 d-flex align-items-center justify-content-center"
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 16,
-                        color: "#1976d2",
-                      }}
-                    >
-                      {idx + 1}
-                    </div>
-                    <div
-                      className="flex-grow-1"
-                      style={{ minWidth: 0, overflow: "hidden" }}
-                    >
-                      <h6
-                        className="text-md mb-0 fw-medium"
-                        style={{
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                        title={item.sku}
+                    <div className="d-flex align-items-center">
+                      <div
+                        className="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
+                        style={{ backgroundColor: "#E3F2FD" }}
                       >
-                        {item.sku}
-                      </h6>
+                        <div className="w-100 h-100 d-flex align-items-center justify-content-center fw-bold text-primary">
+                          {index + 1}
+                        </div>
+                      </div>
+                      <div className="flex-grow-1">
+                        <h6 className="text-md mb-0 fw-medium text-truncate" style={{ maxWidth: 160 }}>
+                          {item.sku}
+                        </h6>
+                      </div>
                     </div>
+                    <span className="text-primary-light text-md fw-semibold">
+                      ₹{Number(item.total_sales).toLocaleString()}
+                    </span>
                   </div>
-                  <span
-                    className="text-primary-light text-md fw-medium flex-shrink-0"
-                    style={{ whiteSpace: "nowrap" }}
-                  >
-                    ₹{Number(item.total_sales).toLocaleString()}
-                  </span>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
+          <Link
+            href={`${config.api.baseURL}/`}
+            className="btn btn-outline-primary-600 radius-8 px-16 py-9 w-100 mt-16"
+            style={{ display: "none" }}
+          >
+            View All
+          </Link>
         </div>
       </div>
     </div>

@@ -1,100 +1,139 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { DateRangePicker, CustomProvider } from 'rsuite';
-import enUS from 'rsuite/locales/en_US';
-import 'rsuite/dist/rsuite.min.css';
-import UnitCountOne from "./child/UnitCountOne";
 
-// Helper to format date as yyyy-mm-dd HH
+import React, { useMemo, useState } from "react";
+import { DateRangePicker, CustomProvider } from "rsuite";
+import enUS from "rsuite/locales/en_US";
+import "rsuite/dist/rsuite.min.css";
+import UnitCountOne from "./child/UnitCountOne";
+import DashboardRefreshButton from "./dashboard/DashboardRefreshButton";
+import { useDashboardRefresh } from "@/hooks/dashboard/useDashboardRefresh";
+import {
+  buildDashboardMetricsParams,
+  getDefaultHistoricalDateRange,
+  getHistoricalPickerPresets,
+  getIstHourNow,
+  getIstTodayDate,
+  isAfterIstToday,
+  isSameIstDay,
+} from "@/hooks/dashboard/dateRangeUtils";
+
 function formatLocalISO(date) {
   if (!date) return null;
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hour = String(date.getHours()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
   return `${year}-${month}-${day} ${hour}`;
 }
 
-// Get today's date for default calendar value
-const getDefaultDateRange = () => {
-  const today = new Date();
-  const startOfDay = new Date(today);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(today);
-  endOfDay.setHours(23, 0, 0, 0);
-  return [startOfDay, endOfDay];
-};
-
 const MAX_SECTIONS = 10;
+const PICKER_PRESETS = getHistoricalPickerPresets();
 
 const Section = ({ dateRange, setDateRange }) => {
-  const [value, setValue] = useState(dateRange || getDefaultDateRange());
+  const { refreshAll, refreshMetrics } = useDashboardRefresh();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (dateRange) {
-      setValue(dateRange);
+  const pickerValue = useMemo(() => {
+    if (Array.isArray(dateRange) && dateRange[0] && dateRange[1]) {
+      return dateRange;
+    }
+    return getDefaultHistoricalDateRange();
+  }, [dateRange]);
+
+  const isoRange = useMemo(
+    () => ({
+      startDate: pickerValue[0] ? formatLocalISO(pickerValue[0]) : null,
+      endDate: pickerValue[1] ? formatLocalISO(pickerValue[1]) : null,
+    }),
+    [pickerValue]
+  );
+
+  const metricsParams = useMemo(
+    () => buildDashboardMetricsParams(isoRange, { historicalMode: true }),
+    [isoRange?.startDate, isoRange?.endDate]
+  );
+
+  const handlePickerChange = (range) => {
+    if (!range || !range[0] || !range[1]) {
+      setDateRange(getDefaultHistoricalDateRange());
       return;
     }
-    const defaultRange = getDefaultDateRange();
-    setValue(defaultRange);
-    setDateRange(defaultRange);
-  }, [dateRange, setDateRange]);
-
-  const handleChange = (range) => {
-    setValue(range);
     setDateRange(range);
   };
 
-  const isoRange = {
-    startDate: value && value[0] ? formatLocalISO(value[0]) : null,
-    endDate: value && value[1] ? formatLocalISO(value[1]) : null,
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshMetrics(metricsParams);
+      await refreshAll();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const shouldDisableHour = (hour, date) => {
+    if (!date || isAfterIstToday(date)) return true;
+    if (!isSameIstDay(date, getIstTodayDate())) return false;
+    return hour > getIstHourNow();
   };
 
   return (
     <>
-      <div className="d-flex justify-content-end mb-3 align-items-center" style={{ gap: 8 }}>
-        <DateRangePicker
-          value={value}
-          onChange={handleChange}
-          format="yyyy-MM-dd HH:00"
-          showMeridian={false}
-          ranges={[]}
-          defaultCalendarValue={getDefaultDateRange()}
-          disabledDate={date => {
-            const now = new Date();
-            // Remove minutes and seconds for comparison
-            now.setMinutes(0, 0, 0);
-            const d = new Date(date);
-            d.setMinutes(0, 0, 0);
-            // Disable future dates
-            return d > now;
-          }}
-          placeholder="Select date and hour range"
-          style={{
-            width: 300,
-            borderRadius: 8,
-            border: "1px solid #ccc",
-            fontSize: 16,
-          }}
-          appearance="subtle"
-          cleanable
-          menuStyle={{
-            boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-            borderRadius: 8,
-            padding: 8,
-          }}
-          placement="bottomEnd"
-          oneTap={false}
+      <div className="d-flex justify-content-end align-items-center flex-wrap gap-2 mb-3 w-100 position-relative">
+        <div style={{ position: "relative", zIndex: 20 }}>
+          <DateRangePicker
+            value={pickerValue}
+            onChange={handlePickerChange}
+            onOk={handlePickerChange}
+            format="yyyy-MM-dd HH:00"
+            showMeridian={false}
+            ranges={PICKER_PRESETS}
+            defaultCalendarValue={getDefaultHistoricalDateRange()}
+            editable={false}
+            disabledDate={isAfterIstToday}
+            shouldDisableHour={shouldDisableHour}
+            placeholder="Select date and hour range"
+            style={{
+              width: "min(100%, 360px)",
+              borderRadius: 8,
+              border: "1px solid #ccc",
+              fontSize: 16,
+            }}
+            appearance="subtle"
+            cleanable={false}
+            container={() =>
+              typeof document !== "undefined" ? document.body : null
+            }
+            menuStyle={{
+              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+              borderRadius: 8,
+              padding: 8,
+              zIndex: 9999,
+            }}
+            placement="bottomEnd"
+            oneTap={false}
+            block
+          />
+        </div>
+        <DashboardRefreshButton
+          onRefresh={handleRefresh}
+          isFetching={isRefreshing}
+          label="Refresh section"
+          className="mb-0"
         />
       </div>
-      <UnitCountOne dateRange={isoRange} />
+      <UnitCountOne
+        dateRange={isoRange}
+        showRefresh={false}
+        historicalMode
+      />
     </>
   );
 };
 
 const HistoricalDashBoardLayerOne = () => {
   const [sections, setSections] = useState([
-    { dateRange: getDefaultDateRange() },
+    { dateRange: getDefaultHistoricalDateRange() },
   ]);
 
   const setSectionDateRange = (idx, value) => {
@@ -109,7 +148,7 @@ const HistoricalDashBoardLayerOne = () => {
     if (sections.length < MAX_SECTIONS) {
       setSections((prev) => [
         ...prev,
-        { dateRange: getDefaultDateRange() },
+        { dateRange: getDefaultHistoricalDateRange() },
       ]);
     }
   };
@@ -126,7 +165,8 @@ const HistoricalDashBoardLayerOne = () => {
               borderRadius: 8,
               padding: 16,
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              background: "#fff"
+              background: "#fff",
+              overflow: "visible",
             }}
           >
             <Section

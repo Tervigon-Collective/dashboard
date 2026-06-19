@@ -851,11 +851,21 @@ export async function fetchDashboardMetrics(apiClient, options) {
     endDateOnly,
     startDateTime,
     endDateTime,
+    forceRefresh = false,
+    historicalMode = false,
   } = options;
 
-  const params = isToday
-    ? { startDate: startDateOnly, endDate: endDateOnly }
-    : { startDateTime, endDateTime };
+  const params =
+    isToday && !historicalMode
+      ? { startDate: startDateOnly, endDate: endDateOnly }
+      : { startDateTime, endDateTime };
+
+  if (forceRefresh) {
+    params.refresh = "1";
+  }
+  if (historicalMode) {
+    params.source = "historical";
+  }
 
   try {
     const response = await apiClient.get("/api/dashboard/metrics", { params });
