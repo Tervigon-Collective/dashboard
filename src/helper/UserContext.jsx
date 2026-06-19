@@ -242,6 +242,17 @@ export const UserProvider = ({ children }) => {
 
   // Check localStorage on mount for cached authentication with security validation
   useEffect(() => {
+    const authLoadingTimeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn(
+            "[Auth] Timed out waiting for Firebase — unblocking dashboard UI"
+          );
+        }
+        return false;
+      });
+    }, 10000);
+
     const checkLocalStorage = () => {
       // Perform security check first
       if (!securityCheck()) {
@@ -317,6 +328,7 @@ export const UserProvider = ({ children }) => {
 
       return () => {
         mounted = false;
+        clearTimeout(authLoadingTimeout);
       };
     }
 
@@ -366,13 +378,19 @@ export const UserProvider = ({ children }) => {
 
       return () => {
         mounted = false;
+        clearTimeout(authLoadingTimeout);
         unsubscribe();
       };
     } catch (error) {
       if (mounted) {
         setLoading(false);
       }
+      clearTimeout(authLoadingTimeout);
     }
+
+    return () => {
+      clearTimeout(authLoadingTimeout);
+    };
   }, []);
 
   // New sidebar permission functions

@@ -183,7 +183,7 @@ const UnitCountOne = ({ dateRange, showRefresh = true, historicalMode = false })
   const dashboardLoading =
     authLoading ||
     metricsLoading ||
-    (metricsFetching && isPlaceholderData);
+    (metricsFetching && (isPlaceholderData || !metricsData));
 
   // Combine "manual" payment method with "Razorpay" for display
   const combinedPaymentMethodCounts = useMemo(() => {
@@ -375,7 +375,7 @@ const UnitCountOne = ({ dateRange, showRefresh = true, historicalMode = false })
           />
         </div>
       ) : null}
-      <div className="row row-cols-xxxl-5 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-4 w-100">
+      <div className="row row-cols-xxl-5 row-cols-xl-4 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-3 gx-3 w-100">
       {/* Card 1: Net Profit (with Google, Meta & Organic breakdown) */}
       <div className="col">
         <div

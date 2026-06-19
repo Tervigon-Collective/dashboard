@@ -76,7 +76,6 @@ const TotalSubscriberOne = () => {
   );
 
   const isMonthView = period === "month";
-  const chartHeight = isMonthView ? 300 : 264;
 
   const chartOptions = useMemo(
     () => ({
@@ -90,7 +89,7 @@ const TotalSubscriberOne = () => {
       plotOptions: {
         bar: {
           borderRadius: isMonthView ? 2 : 4,
-          columnWidth: isMonthView ? "78%" : "42%",
+          columnWidth: isMonthView ? "72%" : "48%",
           distributed: true,
         },
       },
@@ -166,15 +165,18 @@ const TotalSubscriberOne = () => {
   );
 
   return (
-    <div className="col-xxl-3 col-xl-12 col-lg-12 col-md-12 col-sm-12">
-      <div className="card h-100">
+    <div className="col-xl-5 col-lg-12 col-12">
+      <div className="card h-100 dashboard-chart-card">
         <div className="card-body d-flex flex-column">
-          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h6 className="text-lg mb-0">
-              Net Profit (Last {period === "month" ? "30 Days" : "7 Days"})
-            </h6>
+          <div className="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div className="min-w-0">
+              <h6 className="dashboard-card-title mb-0">Net Profit</h6>
+              <span className="dashboard-card-subtitle">
+                Last {period === "month" ? "30 Days" : "7 Days"}
+              </span>
+            </div>
             <select
-              className="form-select bg-base form-select-sm w-auto"
+              className="form-select bg-base form-select-sm w-auto dashboard-period-select flex-shrink-0"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
             >
@@ -183,7 +185,7 @@ const TotalSubscriberOne = () => {
             </select>
           </div>
 
-          <div className="d-flex flex-wrap align-items-center gap-2 mt-8">
+          <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
             {isLoading ? (
               <h6 className="mb-0 text-muted">Loading...</h6>
             ) : isError ? (
@@ -196,7 +198,7 @@ const TotalSubscriberOne = () => {
               </button>
             ) : (
               <h6
-                className="mb-0 fw-semibold"
+                className="mb-0 fw-semibold dashboard-metric-value"
                 style={{ color: totalNetProfit < 0 ? LOSS_RED : PROFIT_GREEN }}
               >
                 {formatCompactInr(totalNetProfit)}
@@ -216,12 +218,12 @@ const TotalSubscriberOne = () => {
             ) : chartData.length === 0 ? (
               <p className="text-muted text-center w-100 mb-0 small">No data</p>
             ) : (
-              <div className="w-100" style={{ minHeight: 0, overflow: "visible" }}>
+              <div className="chart-wrap w-100 mt-auto pt-2">
                 <ReactApexChart
                   options={chartOptions}
                   series={chartSeries}
                   type="bar"
-                  height={chartHeight}
+                  height={isMonthView ? 280 : 250}
                   width="100%"
                 />
               </div>

@@ -14,11 +14,11 @@ const TopPerformerOne = () => {
   });
 
   return (
-    <div className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-sm-12">
-      <div className="card h-100">
-        <div className="card-body" style={{ overflow: "hidden" }}>
+    <div className="col-xl-5 col-lg-12 col-12">
+      <div className="card h-100 dashboard-side-card">
+        <div className="card-body">
           <div className="d-flex align-items-center flex-wrap gap-2 justify-content-between">
-            <h6 className="mb-2 fw-bold text-lg mb-0">Top Performing SKU</h6>
+            <h6 className="mb-0 fw-bold dashboard-card-title">Top Performing SKU</h6>
             <div>
               <select
                 className="form-select form-select-sm w-auto bg-base border text-secondary-light"
@@ -58,7 +58,7 @@ const TopPerformerOne = () => {
                         </div>
                       </div>
                       <div className="flex-grow-1">
-                        <h6 className="text-md mb-0 fw-medium text-truncate" style={{ maxWidth: 160 }}>
+                        <h6 className="text-md mb-0 fw-medium text-truncate sku-name">
                           {item.sku}
                         </h6>
                       </div>

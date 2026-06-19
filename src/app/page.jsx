@@ -18,13 +18,9 @@ export default function Home() {
     const localStorageRole =
       typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
 
-    // Show dashboard skeleton while auth resolves (UnitCountOne handles per-card loading).
+    // AuthGuard shows DashboardLoadingPage while auth resolves.
     if (loading) {
-      return (
-        <MasterLayout>
-          <DashBoardLayerOne />
-        </MasterLayout>
-      );
+      return null;
     }
 
     // Show sign-in prompt if not authenticated

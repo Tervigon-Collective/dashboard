@@ -12,6 +12,7 @@ import DashboardRefreshButton from "./dashboard/DashboardRefreshButton";
 import { useDashboardRefresh } from "@/hooks/dashboard/useDashboardRefresh";
 import { useTimeframeData } from "@/helper/TimeframeDataContext";
 import { useState } from "react";
+import "@/styles/dashboard-layout.css";
 
 const DashBoardLayerOne = () => {
   const { refresh: refreshCharts, dataUpdatedAt, isFetching } = useTimeframeData();
@@ -42,12 +43,12 @@ const DashBoardLayerOne = () => {
 
       <UnitCountOne showRefresh={false} />
 
-      <section className="row gy-4 mt-1">
+      <section className="dashboard-section row g-3 g-xl-4 mt-2">
         <SalesStatisticOne />
         <TotalSubscriberOne />
       </section>
 
-      <section className="row gy-4">
+      <section className="dashboard-section row g-3 g-xl-4 mt-1">
         <LatestRegisteredOne />
         <TopPerformerOne />
         <GeneratedContent />
