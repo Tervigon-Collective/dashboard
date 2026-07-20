@@ -262,6 +262,7 @@ const ReceivingManagementLayer = () => {
   const [requests, setRequests] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [products] = useState([]);
+  const [vendorLoading, setVendorLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1089,11 +1090,14 @@ const ReceivingManagementLayer = () => {
   };
 
   // Load vendors for dropdown
-  const loadVendors = async () => {
+  const loadVendors = useCallback(async (search = "") => {
     try {
-      const result = await vendorMasterApi.getAllVendors(1, 100);
+      setVendorLoading(true);
+      const result = await vendorMasterApi.getAllVendors(1, 20, {
+        search: search.trim() || undefined,
+      });
       if (result.success) {
-        setVendors(result.data);
+        setVendors(result.data || []);
       }
     } catch (error) {
       console.error("Error loading vendors:", error);
@@ -1108,8 +1112,10 @@ const ReceivingManagementLayer = () => {
       }
       // Set empty array to prevent errors
       setVendors([]);
+    } finally {
+      setVendorLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadPurchaseRequests();
@@ -1284,7 +1290,7 @@ const ReceivingManagementLayer = () => {
   ]);
 
   // Handle vendor selection
-  const handleVendorSelect = (vendorId) => {
+  const handleVendorSelect = (vendorId, selectedVendor = null) => {
     if (!vendorId) {
       setFormData({ ...formData, selectedVendor: null });
       setVendorData({
@@ -1296,7 +1302,8 @@ const ReceivingManagementLayer = () => {
       });
       return;
     }
-    const vendor = vendors.find((v) => v.vendor_id === vendorId);
+    const vendor =
+      selectedVendor || vendors.find((v) => v.vendor_id === vendorId);
     if (vendor) {
       setFormData({ ...formData, selectedVendor: vendorId });
       setVendorData({
@@ -2432,6 +2439,8 @@ const ReceivingManagementLayer = () => {
               totalRecords={totalRecords}
               loadPurchaseRequests={loadPurchaseRequests}
               vendors={vendors}
+              vendorLoading={vendorLoading}
+              loadVendors={loadVendors}
               products={products}
               formData={formData}
               setFormData={setFormData}
@@ -3902,6 +3911,8 @@ const PurchaseRequestTab = ({
   totalRecords,
   loadPurchaseRequests,
   vendors,
+  vendorLoading,
+  loadVendors,
   products,
   formData,
   setFormData,
@@ -5174,6 +5185,8 @@ const PurchaseRequestTab = ({
           setFormData={setFormData}
           vendorData={vendorData}
           vendors={vendors}
+          vendorLoading={vendorLoading}
+          loadVendors={loadVendors}
           products={products}
           handleVendorSelect={handleVendorSelect}
           handleProductSelect={handleProductSelect}
@@ -5463,6 +5476,8 @@ const PurchaseRequestModal = ({
   setFormData,
   vendorData,
   vendors,
+  vendorLoading,
+  loadVendors,
   products,
   handleVendorSelect,
   handleProductSelect,
@@ -5485,25 +5500,30 @@ const PurchaseRequestModal = ({
   isEditMode,
 }) => {
   const [vendorQuery, setVendorQuery] = useState("");
+  const trimmedVendorQuery = vendorQuery.trim();
+
   useEffect(() => {
     setVendorQuery("");
   }, [formData.selectedVendor]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadVendors(trimmedVendorQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [loadVendors, trimmedVendorQuery]);
+
   const selectedVendor =
     vendors.find((vendor) => vendor.vendor_id === formData.selectedVendor) ||
+    (formData.selectedVendor
+      ? {
+          vendor_id: formData.selectedVendor,
+          company_name: vendorData.companyName || "",
+          vendor_name: vendorData.vendorName || "",
+        }
+      : null) ||
     null;
-
-  const filteredVendors =
-    vendorQuery.trim() === ""
-      ? vendors
-      : vendors.filter((vendor) => {
-          const label = vendor.company_name
-            ? `${vendor.company_name} (${vendor.vendor_name})`
-            : vendor.vendor_name;
-          return label
-            ?.toLowerCase()
-            .includes(vendorQuery.trim().toLowerCase());
-        });
 
   const handleFreightCostChange = (value) => {
     setFormData((prev) => ({
@@ -5561,7 +5581,10 @@ const PurchaseRequestModal = ({
                       value={selectedVendor}
                       onChange={(vendor) => {
                         setVendorQuery("");
-                        handleVendorSelect(vendor ? vendor.vendor_id : null);
+                        handleVendorSelect(
+                          vendor ? vendor.vendor_id : null,
+                          vendor || null
+                        );
                       }}
                     >
                       <div className="position-relative">
@@ -5587,7 +5610,15 @@ const PurchaseRequestModal = ({
                             zIndex: 1050,
                           }}
                         >
-                          {filteredVendors.length === 0 ? (
+                          {vendorLoading ? (
+                            <Combobox.Option
+                              value={null}
+                              disabled
+                              className="list-group-item disabled"
+                            >
+                              Loading companies...
+                            </Combobox.Option>
+                          ) : vendors.length === 0 ? (
                             <Combobox.Option
                               value={null}
                               disabled
@@ -5596,7 +5627,7 @@ const PurchaseRequestModal = ({
                               No companies found
                             </Combobox.Option>
                           ) : (
-                            filteredVendors.map((vendor) => (
+                            vendors.map((vendor) => (
                               <Combobox.Option
                                 key={vendor.vendor_id}
                                 value={vendor}
