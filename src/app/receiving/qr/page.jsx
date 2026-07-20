@@ -1,13 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const FALLBACK_URL =
   process.env.NEXT_PUBLIC_QR_FALLBACK_URL || "https://www.tiltingheads.com/";
 
-const QrRedirectPage = () => {
+const QrRedirectLoading = () => (
+  <div className="d-flex justify-content-center align-items-center vh-100">
+    <div className="text-center">
+      <div className="spinner-border mb-3" role="status">
+        <span className="visually-hidden">Redirecting...</span>
+      </div>
+      <p className="text-muted mb-0">Redirecting…</p>
+    </div>
+  </div>
+);
+
+const QrRedirectContent = () => {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState("checking");
 
@@ -55,16 +66,13 @@ const QrRedirectPage = () => {
     );
   }
 
-  return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <div className="text-center">
-        <div className="spinner-border mb-3" role="status">
-          <span className="visually-hidden">Redirecting...</span>
-        </div>
-        <p className="text-muted mb-0">Redirecting…</p>
-      </div>
-    </div>
-  );
+  return <QrRedirectLoading />;
 };
+
+const QrRedirectPage = () => (
+  <Suspense fallback={<QrRedirectLoading />}>
+    <QrRedirectContent />
+  </Suspense>
+);
 
 export default QrRedirectPage;

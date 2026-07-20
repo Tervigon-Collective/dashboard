@@ -4,9 +4,9 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ProductForm from "@/components/ProductForm";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
-export default function EditProductPage() {
+const EditProductContent = () => {
   const searchParams = useSearchParams();
   const [productId, setProductId] = useState(null);
 
@@ -43,5 +43,24 @@ export default function EditProductPage() {
       <Breadcrumb title="Procurement / Edit Product" />
       <ProductForm mode="edit" productId={productId} />
     </>
+  );
+};
+
+export default function EditProductPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: "400px" }}
+        >
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      }
+    >
+      <EditProductContent />
+    </Suspense>
   );
 }
