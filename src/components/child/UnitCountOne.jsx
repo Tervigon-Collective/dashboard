@@ -1,33 +1,13 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import { Icon } from "@iconify/react";
-import { apiClient } from "../../api/api";
-import { fetchDashboardMetricsProgressive } from "../../api/dashboardMetricsApi";
 import { useUser } from "../../helper/UserContext";
-
-// Utility to get today's date in YYYY-MM-DD (IST, matches backend)
-const getToday = () => {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const year = parts.find((p) => p.type === "year")?.value;
-  const month = parts.find((p) => p.type === "month")?.value;
-  const day = parts.find((p) => p.type === "day")?.value;
-  return `${year}-${month}-${day}`;
-};
-
-// Helper to check if a date range is today
-const isTodayRange = (start, end) => {
-  if (!start || !end) return true; // Default to today's API if no dates selected
-  const today = getToday();
-  const startDate = start.split(" ")[0]; // Extract just the date part
-  const endDate = end.split(" ")[0];
-  return startDate === today && endDate === today;
-};
+import { useDashboardMetricsQuery } from "@/hooks/dashboard/useDashboardMetricsQuery";
+import { useDashboardRefresh } from "@/hooks/dashboard/useDashboardRefresh";
+import DashboardRefreshButton from "@/components/dashboard/DashboardRefreshButton";
+import {
+  getTodayIST,
+} from "@/hooks/dashboard/dateRangeUtils";
 
 // Helper to sort breakdowns by value descending
 const sortBreakdown = (arr) =>
@@ -59,17 +39,6 @@ function pickOrderMetric(orderCountPayload, channel = "total") {
   return null;
 }
 
-const INITIAL_SECTION_LOADING = {
-  netProfit: true,
-  sales: true,
-  adSpend: true,
-  cogs: true,
-  orderCount: true,
-  roas: true,
-  inventoryEvents: true,
-  paymentMethodCount: true,
-};
-
 const skeletonBase = {
   backgroundColor: "#e5e7eb",
   borderRadius: "6px",
@@ -77,8 +46,12 @@ const skeletonBase = {
   display: "inline-block",
 };
 
-const MetricValueSkeleton = ({ width = 140, height = 32 }) => (
-  <span style={{ ...skeletonBase, width, height }} />
+const MetricValueSkeleton = ({ width = 150, height = 36 }) => (
+  <span
+    role="status"
+    aria-label="Loading"
+    style={{ ...skeletonBase, width, height, minWidth: width }}
+  />
 );
 
 const BreakdownSkeleton = ({ rows = 3 }) => (
@@ -95,9 +68,21 @@ const BreakdownSkeleton = ({ rows = 3 }) => (
   </div>
 );
 
-const UnitCountOne = ({ dateRange }) => {
+const MetricBreakdown = ({ loading, error, rows = 3, children }) => {
+  if (loading) return <BreakdownSkeleton rows={rows} />;
+  if (error) {
+    return (
+      <span className="text-danger small fw-semibold d-flex align-items-center gap-1">
+        <Icon icon="mdi:alert-circle" style={{ fontSize: 16 }} />
+        Failed to load data
+      </span>
+    );
+  }
+  return children;
+};
+
+const UnitCountOne = ({ dateRange, showRefresh = true, historicalMode = false }) => {
   const { user, loading: authLoading } = useUser();
-  const [sectionLoading, setSectionLoading] = useState(INITIAL_SECTION_LOADING);
   const [error, setError] = useState({}); // error per card
   const [adSpend, setAdSpend] = useState(null);
   const [googleSpend, setGoogleSpend] = useState(null);
@@ -144,7 +129,7 @@ const UnitCountOne = ({ dateRange }) => {
   // Helper for consistent card content
   const getCardContent = (value, isLoading, cardError, formatter = (v) => v) => {
     if (isLoading) {
-      return <MetricValueSkeleton width={value == null ? 140 : 100} height={28} />;
+      return <MetricValueSkeleton />;
     }
     if (cardError)
       return (
@@ -173,7 +158,7 @@ const UnitCountOne = ({ dateRange }) => {
 
   // Memoize the effective date range (no date selected => today live)
   const effectiveDateRange = useMemo(() => {
-    const today = getToday();
+    const today = getTodayIST();
     const hasSelection = dateRange?.startDate && dateRange?.endDate;
     return {
       startDate: hasSelection ? dateRange.startDate : `${today} 00`,
@@ -181,6 +166,24 @@ const UnitCountOne = ({ dateRange }) => {
       hasSelection: Boolean(hasSelection),
     };
   }, [dateRange?.startDate, dateRange?.endDate]);
+
+  const metricsEnabled = !authLoading && !!user;
+  const {
+    data: metricsData,
+    isLoading: metricsLoading,
+    isFetching: metricsFetching,
+    isPlaceholderData,
+    dataUpdatedAt,
+  } = useDashboardMetricsQuery(effectiveDateRange, {
+    enabled: metricsEnabled,
+    historicalMode,
+  });
+  const { refreshAll } = useDashboardRefresh();
+
+  const dashboardLoading =
+    authLoading ||
+    metricsLoading ||
+    (metricsFetching && (isPlaceholderData || !metricsData));
 
   // Combine "manual" payment method with "Razorpay" for display
   const combinedPaymentMethodCounts = useMemo(() => {
@@ -201,34 +204,6 @@ const UnitCountOne = ({ dateRange }) => {
 
     return combined;
   }, [paymentMethodCounts]);
-
-  const resetMetricsState = () => {
-    setAdSpend(null);
-    setGoogleSpend(null);
-    setFacebookSpend(null);
-    setTotalCogs(null);
-    setGoogleCogs(null);
-    setMetaCogs(null);
-    setOrganicCogs(null);
-    setTotalSales(null);
-    setTotalSalesAfterGst(null);
-    setGoogleSales(null);
-    setMetaSales(null);
-    setOrganicSales(null);
-    setTotalNetProfit(null);
-    setGoogleNetProfit(null);
-    setMetaNetProfit(null);
-    setOrganicNetProfit(null);
-    setTotalOrders(null);
-    setGoogleOrders(null);
-    setMetaOrders(null);
-    setOrganicOrders(null);
-    setGrossRoas({ total: null, google: null, meta: null });
-    setNetRoas({ total: null, google: null, meta: null });
-    setBeRoas({ total: null, google: null, meta: null });
-    setInventoryEvents(emptyInventoryEvents);
-    setPaymentMethodCounts({});
-  };
 
   const mergeSectionErrors = (sectionErrors = {}) => {
     setError((prev) => {
@@ -342,82 +317,65 @@ const UnitCountOne = ({ dateRange }) => {
       default:
         break;
     }
-
-    setSectionLoading((prev) => ({ ...prev, [section]: false }));
   };
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-    if (!user) {
-      setSectionLoading(
-        Object.fromEntries(
-          Object.keys(INITIAL_SECTION_LOADING).map((k) => [k, false])
-        )
-      );
-      return;
-    }
+    if (authLoading || !user) return;
+    if (dashboardLoading) return;
+    if (!metricsData) return;
 
-    const { startDate, endDate } = effectiveDateRange;
-    const startDateOnly = startDate.split(" ")[0];
-    const endDateOnly = endDate.split(" ")[0];
-    const isToday = isTodayRange(startDateOnly, endDateOnly);
-    let pollInterval = null;
-    let cancelled = false;
+    const errors = metricsData.errors || {};
+    applyMetricsSection("adSpend", {
+      adSpend: metricsData.adSpend,
+      errors,
+    });
+    applyMetricsSection("cogs", {
+      cogs: metricsData.cogs,
+      errors,
+    });
+    applyMetricsSection("sales", {
+      sales: metricsData.sales,
+      errors,
+    });
+    applyMetricsSection("netProfit", {
+      netProfit: metricsData.netProfit,
+      errors,
+    });
+    applyMetricsSection("orderCount", {
+      orderCount: metricsData.orderCount,
+      errors,
+    });
+    applyMetricsSection("roas", {
+      roas: metricsData.roas,
+      errors,
+    });
+    applyMetricsSection("inventoryEvents", {
+      inventoryEvents: metricsData.inventoryEvents,
+      errors,
+    });
+    applyMetricsSection("paymentMethodCount", {
+      paymentMethodCounts: metricsData.paymentMethodCounts,
+      errors,
+    });
+  }, [authLoading, user, metricsData, dashboardLoading, dataUpdatedAt]);
 
-    const fetchMetrics = (showSkeleton = true) => {
-      if (cancelled) return;
-
-      if (showSkeleton) {
-        setSectionLoading({ ...INITIAL_SECTION_LOADING });
-        setError({});
-        resetMetricsState();
-      }
-
-      const startDateTime = startDate.split(":")[0];
-      const endDateTime = endDate.split(":")[0];
-
-      fetchDashboardMetricsProgressive(
-        apiClient,
-        {
-          isToday,
-          startDateOnly,
-          endDateOnly,
-          startDateTime,
-          endDateTime,
-        },
-        {
-          onSection: (section, payload) => {
-            if (!cancelled) {
-              applyMetricsSection(section, payload);
-            }
-          },
-        }
-      );
-    };
-
-    fetchMetrics(true);
-
-    if (isToday) {
-      pollInterval = setInterval(() => fetchMetrics(false), 3 * 60 * 1000);
-    }
-
-    return () => {
-      cancelled = true;
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
-  }, [
-    authLoading,
-    user,
-    effectiveDateRange.startDate,
-    effectiveDateRange.endDate,
-  ]);
+  const handleRefresh = async () => {
+    await refreshAll();
+  };
 
   return (
-    <div className="row row-cols-xxxl-5 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-4">
+    <>
+      {showRefresh ? (
+        <div className="w-100 d-flex justify-content-end align-items-center mb-3">
+          <DashboardRefreshButton
+            onRefresh={handleRefresh}
+            isFetching={metricsFetching}
+            dataUpdatedAt={dataUpdatedAt}
+            className="mb-0"
+          />
+        </div>
+      ) : null}
+      <div className="row row-cols-xxl-5 row-cols-xl-4 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-3 gx-3 w-100">
       {/* Card 1: Net Profit (with Google, Meta & Organic breakdown) */}
       <div className="col">
         <div
@@ -432,12 +390,17 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{
                     letterSpacing: "1px",
-                    color: totalNetProfit < 0 ? "#d32f2f" : "#388e3c",
+                    color:
+                      dashboardLoading || totalNetProfit == null
+                        ? "inherit"
+                        : totalNetProfit < 0
+                          ? "#d32f2f"
+                          : "#388e3c",
                   }}
                 >
                   {getCardContent(
                     totalNetProfit,
-                    sectionLoading.netProfit,
+                    dashboardLoading,
                     error.netProfit,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -530,7 +493,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      sectionLoading.netProfit,
+                      dashboardLoading,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -558,7 +521,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     totalSalesAfterGst ?? totalSales,
-                    sectionLoading.sales,
+                    dashboardLoading,
                     error.sales,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -648,7 +611,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      sectionLoading.sales,
+                      dashboardLoading,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -676,7 +639,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     adSpend,
-                    sectionLoading.adSpend,
+                    dashboardLoading,
                     error.adSpend,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -758,7 +721,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      sectionLoading.adSpend,
+                      dashboardLoading,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -786,7 +749,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     totalCogs,
-                    sectionLoading.cogs,
+                    dashboardLoading,
                     error.cogs,
                     (v) => `Rs.${Number(v).toFixed(2)}`
                   )}
@@ -880,7 +843,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.value,
-                      sectionLoading.cogs,
+                      dashboardLoading,
                       item.error,
                       (v) => `Rs.${Number(v).toFixed(2)}`
                     )}
@@ -906,7 +869,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(totalOrders, sectionLoading.orderCount, error.orderCount)}
+                  {getCardContent(totalOrders, dashboardLoading, error.orderCount)}
                 </h6>
               </div>
               <div
@@ -994,7 +957,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, sectionLoading.orderCount, item.error)}
+                    {getCardContent(item.value, dashboardLoading, item.error)}
                   </span>
                 </div>
               ))}
@@ -1019,7 +982,7 @@ const UnitCountOne = ({ dateRange }) => {
                 >
                   {getCardContent(
                     inventoryEvents.totalEvents,
-                    sectionLoading.inventoryEvents,
+                    dashboardLoading,
                     error.inventoryEvents,
                     (v) => Number(v).toLocaleString()
                   )}
@@ -1103,7 +1066,7 @@ const UnitCountOne = ({ dateRange }) => {
                   >
                     {getCardContent(
                       item.count,
-                      sectionLoading.inventoryEvents,
+                      dashboardLoading,
                       error.inventoryEvents,
                       (v) => Number(v).toLocaleString()
                     )}
@@ -1129,7 +1092,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(grossRoas.total, sectionLoading.roas, error.roas, (v) =>
+                  {getCardContent(grossRoas.total, dashboardLoading, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1208,7 +1171,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
+                    {getCardContent(item.value, dashboardLoading, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1233,7 +1196,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(netRoas.total, sectionLoading.roas, error.roas, (v) =>
+                  {getCardContent(netRoas.total, dashboardLoading, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1312,7 +1275,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
+                    {getCardContent(item.value, dashboardLoading, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1337,7 +1300,7 @@ const UnitCountOne = ({ dateRange }) => {
                   className="mb-0 display-6 fw-bold"
                   style={{ letterSpacing: "1px" }}
                 >
-                  {getCardContent(beRoas.total, sectionLoading.roas, error.roas, (v) =>
+                  {getCardContent(beRoas.total, dashboardLoading, error.roas, (v) =>
                     Number(v).toFixed(2)
                   )}
                 </h6>
@@ -1416,7 +1379,7 @@ const UnitCountOne = ({ dateRange }) => {
                       minWidth: 90,
                     }}
                   >
-                    {getCardContent(item.value, sectionLoading.roas, item.error, (v) =>
+                    {getCardContent(item.value, dashboardLoading, item.error, (v) =>
                       Number(v).toFixed(2)
                     )}
                   </span>
@@ -1448,7 +1411,7 @@ const UnitCountOne = ({ dateRange }) => {
                           0
                         )
                       : null,
-                    sectionLoading.paymentMethodCount,
+                    dashboardLoading,
                     error.paymentMethodCount
                   )}
                 </h6>
@@ -1478,7 +1441,7 @@ const UnitCountOne = ({ dateRange }) => {
               className="d-flex flex-column align-items-center mt-2"
               style={{ gap: 8, marginTop: 8 }}
             >
-              {sectionLoading.paymentMethodCount ? (
+              {dashboardLoading ? (
                 <BreakdownSkeleton rows={4} />
               ) : error.paymentMethodCount ? (
                 <span className="text-danger small">Failed to load</span>
@@ -1526,6 +1489,7 @@ const UnitCountOne = ({ dateRange }) => {
         {/* card end */}
       </div>
     </div>
+    </>
   );
 };
 

@@ -3,7 +3,6 @@ import "./font.css";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
 import AuthGuard from "@/components/AuthGuard";
-import { UserProvider } from "@/helper/UserContext";
 import { GenerationProvider } from "@/contexts/GenerationContext";
 import { BriefProvider } from "@/contexts/BriefContext";
 
@@ -22,13 +21,11 @@ export default function RootLayout({ children }) {
       <PluginInit />
       <body suppressHydrationWarning={true}>
         <ClientProvider>
-          <UserProvider>
             <AuthGuard>
               <GenerationProvider>
                 <BriefProvider>{children}</BriefProvider>
               </GenerationProvider>
             </AuthGuard>
-          </UserProvider>
         </ClientProvider>
       </body>
     </html>

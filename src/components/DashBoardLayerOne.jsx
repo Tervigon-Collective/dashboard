@@ -1,3 +1,5 @@
+"use client";
+
 import GeneratedContent from "./child/GeneratedContent";
 import IndiaSalesHeatMap from "./child/IndiaSalesHeatMap";
 import LatestRegisteredOne from "./child/LatestRegisteredOne";
@@ -6,40 +8,52 @@ import SourceVisitors from "./child/SourceVisitors";
 import TopPerformerOne from "./child/TopPerformerOne";
 import TotalSubscriberOne from "./child/TotalSubscriberOne";
 import UnitCountOne from "./child/UnitCountOne";
-import UsersOverviewOne from "./child/UsersOverviewOne";
+import DashboardRefreshButton from "./dashboard/DashboardRefreshButton";
+import { useDashboardRefresh } from "@/hooks/dashboard/useDashboardRefresh";
+import { useTimeframeData } from "@/helper/TimeframeDataContext";
+import { useState } from "react";
+import "@/styles/dashboard-layout.css";
 
 const DashBoardLayerOne = () => {
+  const { refresh: refreshCharts, dataUpdatedAt, isFetching } = useTimeframeData();
+  const { refreshAll } = useDashboardRefresh();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshCharts();
+      await refreshAll();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <>
-      {/* UnitCountOne */}
-      <UnitCountOne />
+      <div className="w-100 d-flex justify-content-end align-items-center mb-3">
+        <DashboardRefreshButton
+          onRefresh={handleRefreshAll}
+          isFetching={isRefreshing || isFetching}
+          dataUpdatedAt={dataUpdatedAt}
+          label="Refresh entire dashboard"
+          className="mb-0"
+        />
+      </div>
 
-      <section className="row gy-4 mt-1">
-        {/* SalesStatisticOne */}
+      <UnitCountOne showRefresh={false} />
+
+      <section className="dashboard-section row g-3 g-xl-4 mt-2">
         <SalesStatisticOne />
-
-        {/* TotalSubscriberOne */}
         <TotalSubscriberOne />
+      </section>
 
-        {/* UsersOverviewOne */}
-        {/* <UsersOverviewOne /> */}
-
-        {/* LatestRegisteredOne */}
+      <section className="dashboard-section row g-3 g-xl-4 mt-1">
         <LatestRegisteredOne />
-
-        {/* TopPerformerOne */}
         <TopPerformerOne />
-
-        {/* GeneratedContent */}
         <GeneratedContent />
-
         <SourceVisitors />
-
-        {/* IndiaSalesHeatMap */}
         <IndiaSalesHeatMap />
-
-        {/* TopCountries */}
-        {/* <TopCountries /> */}
       </section>
     </>
   );

@@ -274,45 +274,49 @@ const IndiaHeatMap = ({ salesData = [] }) => {
 
   return (
     <div
-      className="position-relative"
-      style={{ width: "100%", height: "100%", minHeight: "400px" }}
+      className="position-relative w-100 h-100 india-heatmap-root"
+      style={{ minHeight: "clamp(300px, 48vw, 460px)" }}
     >
       <div
         ref={svgRef}
         className="india-map-container"
         style={{
           width: "100%",
-          height: "auto",
+          height: "100%",
+          minHeight: "clamp(280px, 45vw, 420px)",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "8px 0",
-          overflow: "hidden",
+          padding: "8px 72px 8px 8px",
         }}
       >
         <style>{`
+          .india-heatmap-root {
+            overflow: hidden;
+          }
           .india-map-container svg {
             width: 100%;
             height: auto;
             max-width: 100%;
+            max-height: clamp(280px, 45vw, 420px);
             display: block;
           }
-          @media (max-width: 768px) {
-            .india-map-container svg {
-              transform: scale(0.75);
-              transform-origin: center;
+          @media (max-width: 767.98px) {
+            .india-map-container {
+              padding: 8px 8px 72px 8px !important;
             }
-          }
-          @media (max-width: 576px) {
-            .india-map-container svg {
-              transform: scale(0.7);
-              transform-origin: center;
+            .india-map-legend {
+              top: auto !important;
+              right: 8px !important;
+              bottom: 8px !important;
+              flex-direction: row !important;
+              min-width: auto !important;
+              width: calc(100% - 16px);
+              justify-content: center;
             }
-          }
-          @media (max-width: 400px) {
-            .india-map-container svg {
-              transform: scale(0.65);
-              transform-origin: center;
+            .india-map-legend-bar {
+              width: clamp(120px, 40vw, 200px) !important;
+              height: 10px !important;
             }
           }
         `}</style>
@@ -365,9 +369,8 @@ const IndiaHeatMap = ({ salesData = [] }) => {
         </div>
       )}
 
-      {/* Enhanced Legend - Vertical & Space Efficient */}
       <div
-        className="position-absolute"
+        className="position-absolute india-map-legend d-flex flex-column align-items-center gap-2"
         style={{
           top: "8px",
           right: "8px",
@@ -381,66 +384,62 @@ const IndiaHeatMap = ({ salesData = [] }) => {
           minWidth: "60px",
         }}
       >
-        <div className="d-flex flex-column align-items-center gap-2">
-          {/* High - Top */}
-          <div className="d-flex flex-column align-items-center gap-1">
-            <div
-              className="fw-semibold"
-              style={{
-                fontSize: "clamp(9px, 1vw, 10px)",
-                color: "#111827",
-                lineHeight: "1.2",
-              }}
-            >
-              High
-            </div>
-            <div
-              style={{
-                color: "#6B7280",
-                fontSize: "clamp(8px, 0.9vw, 9px)",
-                lineHeight: "1.2",
-                fontWeight: "500",
-              }}
-            >
-              ₹{maxSales.toLocaleString()}
-            </div>
+        <div className="d-flex flex-column align-items-center gap-1">
+          <div
+            className="fw-semibold"
+            style={{
+              fontSize: "clamp(9px, 1vw, 10px)",
+              color: "#111827",
+              lineHeight: "1.2",
+            }}
+          >
+            High
           </div>
-
-          {/* Vertical Color gradient bar */}
           <div
             style={{
-              width: "10px",
-              height: "clamp(100px, 15vh, 140px)",
-              background:
-                "linear-gradient(to bottom, #4536b6, #4759d6, #486cea, #487fff, #458eff, #519fff, #6bb1ff, #95c7ff, #bfdcff, #e4f1ff)",
-              borderRadius: "5px",
-              flexShrink: 0,
-              border: "1px solid #E5E7EB",
+              color: "#6B7280",
+              fontSize: "clamp(8px, 0.9vw, 9px)",
+              lineHeight: "1.2",
+              fontWeight: "500",
             }}
-          />
+          >
+            ₹{maxSales.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+          </div>
+        </div>
 
-          {/* Low - Bottom */}
-          <div className="d-flex flex-column align-items-center gap-1">
-            <div
-              className="fw-semibold"
-              style={{
-                fontSize: "clamp(9px, 1vw, 10px)",
-                color: "#111827",
-                lineHeight: "1.2",
-              }}
-            >
-              Low
-            </div>
-            <div
-              style={{
-                color: "#6B7280",
-                fontSize: "clamp(8px, 0.9vw, 9px)",
-                lineHeight: "1.2",
-                fontWeight: "500",
-              }}
-            >
-              ₹{minSales.toLocaleString()}
-            </div>
+        <div
+          className="india-map-legend-bar"
+          style={{
+            width: "10px",
+            height: "clamp(100px, 15vh, 140px)",
+            background:
+              "linear-gradient(to bottom, #4536b6, #4759d6, #486cea, #487fff, #458eff, #519fff, #6bb1ff, #95c7ff, #bfdcff, #e4f1ff)",
+            borderRadius: "5px",
+            flexShrink: 0,
+            border: "1px solid #E5E7EB",
+          }}
+        />
+
+        <div className="d-flex flex-column align-items-center gap-1">
+          <div
+            className="fw-semibold"
+            style={{
+              fontSize: "clamp(9px, 1vw, 10px)",
+              color: "#111827",
+              lineHeight: "1.2",
+            }}
+          >
+            Low
+          </div>
+          <div
+            style={{
+              color: "#6B7280",
+              fontSize: "clamp(8px, 0.9vw, 9px)",
+              lineHeight: "1.2",
+              fontWeight: "500",
+            }}
+          >
+            ₹{minSales.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>

@@ -1,0 +1,112 @@
+.dashboard-section {
+  --dashboard-gap: 1rem;
+  margin-bottom: 0;
+}
+
+@media (min-width: 1200px) {
+  .dashboard-section {
+    --dashboard-gap: 1.25rem;
+  }
+}
+
+.dashboard-section.row {
+  --bs-gutter-x: var(--dashboard-gap);
+  --bs-gutter-y: var(--dashboard-gap);
+}
+
+.dashboard-chart-card .card-body {
+  padding: 1rem 1.125rem 1.125rem;
+}
+
+@media (min-width: 1200px) {
+  .dashboard-chart-card .card-body {
+    padding: 1.25rem 1.375rem 1.375rem;
+  }
+}
+
+.dashboard-chart-card .dashboard-card-title {
+  font-size: clamp(0.9375rem, 1.2vw, 1.125rem);
+  line-height: 1.35;
+}
+
+.dashboard-chart-card .dashboard-card-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-secondary-light, #6b7280);
+}
+
+.dashboard-chart-card .dashboard-metric-value {
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  line-height: 1.2;
+}
+
+.dashboard-chart-card .dashboard-period-select {
+  min-width: 5.5rem;
+  max-width: 7.5rem;
+}
+
+.dashboard-chart-card .chart-wrap {
+  width: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+
+.dashboard-table-card .card-body {
+  padding: 1rem 1.125rem;
+}
+
+@media (min-width: 1200px) {
+  .dashboard-table-card .card-body {
+    padding: 1.25rem 1.375rem;
+  }
+}
+
+.dashboard-table-card .table-responsive {
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+}
+
+.dashboard-table-card .sm-table th,
+.dashboard-table-card .sm-table td {
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  padding: 0.625rem 0.5rem;
+  vertical-align: middle;
+}
+
+@media (min-width: 1400px) {
+  .dashboard-table-card .sm-table th,
+  .dashboard-table-card .sm-table td {
+    font-size: 0.875rem;
+    padding: 0.75rem 0.625rem;
+  }
+}
+
+.dashboard-table-card .sm-table th:first-child,
+.dashboard-table-card .sm-table td:first-child {
+  padding-inline-start: 0.75rem;
+}
+
+.dashboard-table-card .sm-table th:last-child,
+.dashboard-table-card .sm-table td:last-child {
+  padding-inline-end: 0.75rem;
+}
+
+.dashboard-side-card .card-body {
+  padding: 1rem 1.125rem;
+}
+
+@media (min-width: 1200px) {
+  .dashboard-side-card .card-body {
+    padding: 1.25rem 1.375rem;
+  }
+}
+
+.dashboard-side-card .sku-name {
+  max-width: min(12rem, 100%);
+}
+
+@media (max-width: 1199.98px) {
+  .dashboard-chart-card + .dashboard-chart-card {
+    margin-top: 0.25rem;
+  }
+}

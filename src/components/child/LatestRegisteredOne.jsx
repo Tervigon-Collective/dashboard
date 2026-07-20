@@ -46,10 +46,10 @@ const LatestRegisteredOne = () => {
   }, [numOrders]);
 
   return (
-    <div className="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
-      <div className="card h-100">
-        <div className="card-body p-24">
-          <div className="d-flex flex-wrap align-items-center gap-1 justify-content-between mb-16">
+    <div className="col-xl-7 col-lg-12 col-12">
+      <div className="card h-100 dashboard-table-card">
+        <div className="card-body">
+          <div className="d-flex flex-wrap align-items-center gap-2 justify-content-between mb-3">
             <ul
               className="nav border-gradient-tab nav-pills mb-0"
               id="pills-tab"
@@ -110,7 +110,7 @@ const LatestRegisteredOne = () => {
                         Total Amount
                       </th>
                       <th scope="col" className="text-center">
-                        Payment Method
+                        Payment
                       </th>
                     </tr>
                   </thead>
