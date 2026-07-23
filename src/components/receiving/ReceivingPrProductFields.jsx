@@ -81,7 +81,15 @@ export default function ReceivingPrProductFields({
               }
               placeholder="Search product from master catalog..."
             />
-            <Combobox.Options className="list-group position-absolute w-100 shadow-sm z-3 max-h-240 overflow-auto">
+            <Combobox.Options
+              className="list-group position-absolute w-100 shadow-sm overflow-auto"
+              style={{
+                zIndex: 1055,
+                maxHeight: "240px",
+                top: "100%",
+                left: 0,
+              }}
+            >
               {masterProductLoading && (
                 <div className="list-group-item small text-muted">
                   Searching...
@@ -104,6 +112,9 @@ export default function ReceivingPrProductFields({
                   <div className="small text-muted">
                     {option.brand_name ? `${option.brand_name} · ` : ""}
                     ID {option.product_id}
+                    {option.variants?.[0]?.sku
+                      ? ` · ${option.variants[0].sku}`
+                      : ""}
                     {formatHsnForInput(option.hsn_code)
                       ? ` · HSN ${formatHsnForInput(option.hsn_code)}`
                       : ""}

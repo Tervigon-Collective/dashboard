@@ -1,0 +1,835 @@
+Month,PR Number,Order Date,Vendor,Product Name,Variant,SKU Suffix,SKU,Qty
+"May 2026","PR-0029","2026-05-22","Entout Co.","AeroPod | Luxury Pet Carrier Bag | Airline-Friendly Design","Beige","AEROPOD-BEIGE","TH-072-AEROPOD-BEIGE",1
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","AeroShell Backpack – Protective Pet Travel Carrier with Comfort Fit","Default Title","AEROSHELLBAG","TH-203-AEROSHELLBAG",1
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","S","AIRTREKBOO-S","TH-200-AIRTREKBOO-S",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","M","AIRTREKBOO-M","TH-200-AIRTREKBOO-M",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","L","AIRTREKBOO-L","TH-200-AIRTREKBOO-L",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","XL","AIRTREKBOO-XL","TH-200-AIRTREKBOO-XL",3
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","XXL","AIRTREKBOO-XXL","TH-200-AIRTREKBOO-XXL",6
+"May 2026","PR-0027","2026-05-22","Kara Creations","All Rounder Grooming Kit","Default Title","ALLGRO","TH-039-ALLGRO",9
+"May 2026","PR-0028","2026-05-22","Drontika India","Aloe Fresh Deodorant | Alcohol-Free | Gentle, Long-Lasting Freshness for Dogs & Cats","Default Title","ALOEDEO","TH-080-ALOEDEO",47
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","AlphaView Pet Shades – Cool, Comfy Eyewear for Stylish Outdoor Dogs","Black","ALPHAVIEW-1","TH-100-ALPHAVIEW-1",22
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","XS","APPLESHIRT-XS","TH-354-APPLESHIRT-XS",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","S","APPLESHIRT-S","TH-354-APPLESHIRT-S",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","M","APPLESHIRT-M","TH-354-APPLESHIRT-M",17
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","L","APPLESHIRT-L","TH-354-APPLESHIRT-L",17
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","XL","APPLESHIRT-XL","TH-354-APPLESHIRT-XL",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Apple Grove Shirt – Stylish Cotton Outfit for Summer","XXL","APPLESHIRT-XXL","TH-354-APPLESHIRT-XXL",15
+"May 2026","PR-0066","2026-05-19","Shree Radhe International","Aqua Care Shower | Pet Shower Head | Bathing & Grooming Tool","Default Title","AQCASHO","TH-005-AQCASHO",5
+"May 2026","PR-0030","2026-05-22","Foodie Puppies Group","Aqua Care Shower | Pet Shower Head | Bathing & Grooming Tool","Default Title","AQCASHO","TH-005-AQCASHO",6
+"May 2026","PR-0035","2026-05-22","District99","ARCO","Default Title","ARCO","URTH-001-ARCO",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 14","ARCTICFUNKJACKET-14","TH-250-ARCTICFUNKJACKET-14",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 16","ARCTICFUNKJACKET-16","TH-250-ARCTICFUNKJACKET-16",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 18","ARCTICFUNKJACKET-18","TH-250-ARCTICFUNKJACKET-18",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 20","ARCTICFUNKJACKET-20","TH-250-ARCTICFUNKJACKET-20",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 22","ARCTICFUNKJACKET-22","TH-250-ARCTICFUNKJACKET-22",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 24","ARCTICFUNKJACKET-24","TH-250-ARCTICFUNKJACKET-24",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 26","ARCTICFUNKJACKET-26","TH-250-ARCTICFUNKJACKET-26",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 28","ARCTICFUNKJACKET-28","TH-250-ARCTICFUNKJACKET-28",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 30","ARCTICFUNKJACKET-30","TH-250-ARCTICFUNKJACKET-30",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 14","ARCTICFUNKJACKET-14","TH-250-ARCTICFUNKJACKET-14",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 16","ARCTICFUNKJACKET-16","TH-250-ARCTICFUNKJACKET-16",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 18","ARCTICFUNKJACKET-18","TH-250-ARCTICFUNKJACKET-18",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 20","ARCTICFUNKJACKET-20","TH-250-ARCTICFUNKJACKET-20",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 22","ARCTICFUNKJACKET-22","TH-250-ARCTICFUNKJACKET-22",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 24","ARCTICFUNKJACKET-24","TH-250-ARCTICFUNKJACKET-24",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 26","ARCTICFUNKJACKET-26","TH-250-ARCTICFUNKJACKET-26",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 28","ARCTICFUNKJACKET-28","TH-250-ARCTICFUNKJACKET-28",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 30","ARCTICFUNKJACKET-30","TH-250-ARCTICFUNKJACKET-30",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 26","ARCTICFUNKJACKET-26","TH-250-ARCTICFUNKJACKET-26",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 22","ARCTICFUNKJACKET-22","TH-250-ARCTICFUNKJACKET-22",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 20","ARCTICFUNKJACKET-20","TH-250-ARCTICFUNKJACKET-20",9
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 24","ARCTICFUNKJACKET-24","TH-250-ARCTICFUNKJACKET-24",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 22","ARCTICFUNKJACKET-22","TH-250-ARCTICFUNKJACKET-22",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 20","ARCTICFUNKJACKET-20","TH-250-ARCTICFUNKJACKET-20",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 18","ARCTICFUNKJACKET-18","TH-250-ARCTICFUNKJACKET-18",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 16","ARCTICFUNKJACKET-16","TH-250-ARCTICFUNKJACKET-16",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 14","ARCTICFUNKJACKET-14","TH-250-ARCTICFUNKJACKET-14",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 18","ARCTICFUNKJACKET-18","TH-250-ARCTICFUNKJACKET-18",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 24","ARCTICFUNKJACKET-24","TH-250-ARCTICFUNKJACKET-24",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 30","ARCTICFUNKJACKET-30","TH-250-ARCTICFUNKJACKET-30",3
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 14","ARCTICFUNKJACKET-14","TH-250-ARCTICFUNKJACKET-14",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 16","ARCTICFUNKJACKET-16","TH-250-ARCTICFUNKJACKET-16",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 28","ARCTICFUNKJACKET-28","TH-250-ARCTICFUNKJACKET-28",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 30","ARCTICFUNKJACKET-30","TH-250-ARCTICFUNKJACKET-30",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","ArcticFunk Jacket – Windproof, Cosy & Everyday Winter Wear for Pets","Red × 28","ARCTICFUNKJACKET-28","TH-250-ARCTICFUNKJACKET-28",5
+"May 2026","PR-0035","2026-05-22","District99","ATLAS","Default Title","ATLAS","URTH-008-ATLAS",1
+"May 2026","PR-0029","2026-05-22","Entout Co.","AuraSwipe Lint Brush | Effortless Fur Removal | Travel-Friendly | Self-Cleaning","Default Title","AURASWIPE","TH-077-AURASWIPE",57
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Aurora Litter Den – Clean, Comfy & Private Litter Space for Cats","Default Title","LITTERDEN","TH-087-LITTERDEN",1
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × L","AVEHARNESSSET-L-AVOCADO","TH-290-AVEHARNESSSET-L-AVOCADO",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × L","AVEHARNESSSET-L-COFFEEBEANS","TH-290-AVEHARNESSSET-L-COFFEEBEANS",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × XL","AVEHARNESSSET-XL-COFFEEBEANS","TH-290-AVEHARNESSSET-XL-COFFEEBEANS",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × M","AVEHARNESSSET-M-COFFEEBEANS","TH-290-AVEHARNESSSET-M-COFFEEBEANS",1
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × S","AVEHARNESSSET-S-COFFEEBEANS","TH-290-AVEHARNESSSET-S-COFFEEBEANS",1
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × S","AVEHARNESSSET-S-AVOCADO","TH-290-AVEHARNESSSET-S-AVOCADO",4
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × M","AVEHARNESSSET-M-AVOCADO","TH-290-AVEHARNESSSET-M-AVOCADO",3
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × L","AVEHARNESSSET-L-AVOCADO","TH-290-AVEHARNESSSET-L-AVOCADO",4
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × XL","AVEHARNESSSET-XL-AVOCADO","TH-290-AVEHARNESSSET-XL-AVOCADO",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × S","AVEHARNESSSET-S-COFFEEBEANS","TH-290-AVEHARNESSSET-S-COFFEEBEANS",1
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × L","AVEHARNESSSET-L-COFFEEBEANS","TH-290-AVEHARNESSSET-L-COFFEEBEANS",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Coffee Beans × XL","AVEHARNESSSET-XL-COFFEEBEANS","TH-290-AVEHARNESSSET-XL-COFFEEBEANS",4
+"May 2026","PR-0038","2026-05-22","Sup Marketing","AvoCool Mat – Self-Cooling Gel Mat for Dogs & Cats","L","AVOCOOLMAT-L","TH-368-AVOCOOLMAT - L",9
+"May 2026","PR-0038","2026-05-22","Sup Marketing","AvoCool Mat – Self-Cooling Gel Mat for Dogs & Cats","XL","AVOCOOLMAT-XL","TH-368-AVOCOOLMAT - XL",65
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","BathEase Brush – 2-in-1 Bath Brush & Shampoo Dispenser | Includes Tick & Flea Shampoo(500ml)","Default Title","BATHEASEBRUSH","TH-279-BATHEASEBRUSH",30
+"May 2026","PR-0040","2026-05-22","Abalone Organics","Beard Oil - Smooth Operator","Default Title","BEAOIL","MNM-003-BEAOIL",143
+"May 2026","PR-0040","2026-05-22","Abalone Organics","Beard Serum - Smooth Operator","Default Title","BEASER","MNM-005-BEASER",336
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","BellBop Toy – A Rolling Bell Toy That Keeps Cats Active & Happy","Default Title","BELLBOPTOY","TH-242-BELLBOPTOY",14
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","BlazeStep Harness – No-Pull Mesh Harness for Comfortable Dog Walks","S","BLAZEHARNESS-S","TH-355-BLAZEHARNESS-S",5
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","BlazeStep Harness – No-Pull Mesh Harness for Comfortable Dog Walks","XL","BLAZEHARNESS-XL","TH-355-BLAZEHARNESS-XL",1
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","BlueJay Sneaks | Denim Pet Boots | Non-Slip Comfort, Snug Everyday Fit","S","BLUEJAY SNEAKS-S","TH-229-BLUEJAY SNEAKS - S",32
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","BlueJay Sneaks | Denim Pet Boots | Non-Slip Comfort, Snug Everyday Fit","M","BLUEJAY SNEAKS-M","TH-229-BLUEJAY SNEAKS - M",14
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","BlueJay Sneaks | Denim Pet Boots | Non-Slip Comfort, Snug Everyday Fit","L","BLUEJAY SNEAKS-L","TH-229-BLUEJAY SNEAKS - L",11
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","BlueJay Sneaks | Denim Pet Boots | Non-Slip Comfort, Snug Everyday Fit","XL","BLUEJAY SNEAKS-XL","TH-229-BLUEJAY SNEAKS - XL",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","BlueJay Sneaks | Denim Pet Boots | Non-Slip Comfort, Snug Everyday Fit","XXL","BLUEJAY SNEAKS-XXL","TH-229-BLUEJAY SNEAKS - XXL",7
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","BlueWave Pool – Foldable Pet Swimming Pool for Dogs & Cats | Large Size","Default Title","BLUEPOOL","TH-367-BLUEPOOL",7
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","Blush Carrier Bag | Breathable Comfort | Travel with Ease","Default Title","BLUSHBAG","TH-186-BLUSHBAG",1
+"May 2026","PR-0027","2026-05-22","Kara Creations","BowBelle Harness – Stylish Comfortable Walking Harness for Cats","Default Title","BOWBELLEHARNESS","TH-249-BOWBELLEHARNESS",19
+"May 2026","PR-0025","2026-05-22","Meta Products","Brassbound Butterfly Razor – Precision Shave| Effortless Blade Change| Premium Comfort","Silver","BBR-SILVER","MNM-022-BBR-SILVER",79
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","BreatheEase Muzzle – Breathable No-Bark Muzzle for Small Pets","Default Title","BREATHEMUZZLE","TH-207-BREATHEMUZZLE",3
+"May 2026","PR-0010","2026-05-22","Companion Neesds","BunnyGlide Boots | Premium Small Pet Shoes for Paw Safety & Style","XXS","BUNNYBOO-XXS","TH-147-BUNNYBOO-XXS",1
+"May 2026","PR-0010","2026-05-22","Companion Neesds","BunnyGlide Boots | Premium Small Pet Shoes for Paw Safety & Style","XS","BUNNYBOO-XS","TH-147-BUNNYBOO-XS",3
+"May 2026","PR-0010","2026-05-22","Companion Neesds","BunnyGlide Boots | Premium Small Pet Shoes for Paw Safety & Style","S","BUNNYBOO-S","TH-147-BUNNYBOO-S",1
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × XXL","PUFFERJACKET-XXL-BOTTLEGREEN","TH-211-PUFFERJACKET-XXL-BOTTLEGREEN",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × XS","PUFFERJACKET-XS-RED","TH-211-PUFFERJACKET-XS-RED",35
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × S","PUFFERJACKET-S-RED","TH-211-PUFFERJACKET-S-RED",35
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × M","PUFFERJACKET-M-RED","TH-211-PUFFERJACKET-M-RED",20
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × L","PUFFERJACKET-L-RED","TH-211-PUFFERJACKET-L-RED",35
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × XL","PUFFERJACKET-XL-RED","TH-211-PUFFERJACKET-XL-RED",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Red × XXL","PUFFERJACKET-XXL-RED","TH-211-PUFFERJACKET-XXL-RED",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × XS","PUFFERJACKET-XS-MAROON","TH-211-PUFFERJACKET-XS-MAROON",44
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × XS","PUFFERJACKET-XS-BOTTLEGREEN","TH-211-PUFFERJACKET-XS-BOTTLEGREEN",23
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × XS","PUFFERJACKET-XS-BEIGE","TH-211-PUFFERJACKET-XS-BEIGE",23
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × XS","PUFFERJACKET-XS-NAVY","TH-211-PUFFERJACKET-XS-NAVY",36
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × S","PUFFERJACKET-S-MAROON","TH-211-PUFFERJACKET-S-MAROON",37
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × S","PUFFERJACKET-S-BOTTLEGREEN","TH-211-PUFFERJACKET-S-BOTTLEGREEN",22
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × S","PUFFERJACKET-S-BEIGE","TH-211-PUFFERJACKET-S-BEIGE",10
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × S","PUFFERJACKET-S-NAVY","TH-211-PUFFERJACKET-S-NAVY",52
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × M","PUFFERJACKET-M-MAROON","TH-211-PUFFERJACKET-M-MAROON",28
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × M","PUFFERJACKET-M-BOTTLEGREEN","TH-211-PUFFERJACKET-M-BOTTLEGREEN",22
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × M","PUFFERJACKET-M-BEIGE","TH-211-PUFFERJACKET-M-BEIGE",10
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × M","PUFFERJACKET-M-NAVY","TH-211-PUFFERJACKET-M-NAVY",26
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × L","PUFFERJACKET-L-MAROON","TH-211-PUFFERJACKET-L-MAROON",25
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × L","PUFFERJACKET-L-BOTTLEGREEN","TH-211-PUFFERJACKET-L-BOTTLEGREEN",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × L","PUFFERJACKET-L-BEIGE","TH-211-PUFFERJACKET-L-BEIGE",5
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × L","PUFFERJACKET-L-NAVY","TH-211-PUFFERJACKET-L-NAVY",28
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × XL","PUFFERJACKET-XL-MAROON","TH-211-PUFFERJACKET-XL-MAROON",11
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Bottle Green × XL","PUFFERJACKET-XL-BOTTLEGREEN","TH-211-PUFFERJACKET-XL-BOTTLEGREEN",7
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × XL","PUFFERJACKET-XL-BEIGE","TH-211-PUFFERJACKET-XL-BEIGE",2
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × XL","PUFFERJACKET-XL-NAVY","TH-211-PUFFERJACKET-XL-NAVY",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Maroon × XXL","PUFFERJACKET-XXL-MAROON","TH-211-PUFFERJACKET-XXL-MAROON",23
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Beige × XXL","PUFFERJACKET-XXL-BEIGE","TH-211-PUFFERJACKET-XXL-BEIGE",9
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CalmFrost Puffer Jacket | Waterproof, Lightweight & Warm Dog Jacket | Winter Comfort & Style","Navy × XXL","PUFFERJACKET-XXL-NAVY","TH-211-PUFFERJACKET-XXL-NAVY",18
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","CalmQuench Feeder | 2-in-1 Water Fountain + Feeder","Default Title","CALMQUENCH","TH-098-CALMQUENCH",12
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Can I Pet Your Dog Hoodie | Elevated Comfort | Unisex Pet-Parent Hoodie","White × XL","ICEBREAKERHOODIE-XL","TH-258-ICEBREAKERHOODIE-XL",10
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Can I Pet Your Dog Hoodie | Elevated Comfort | Unisex Pet-Parent Hoodie","White × L","ICEBREAKERHOODIE-L","TH-258-ICEBREAKERHOODIE-L",7
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Can I Pet Your Dog Hoodie | Elevated Comfort | Unisex Pet-Parent Hoodie","White × M","ICEBREAKERHOODIE-M","TH-258-ICEBREAKERHOODIE-M",10
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Can I Pet Your Dog Hoodie | Elevated Comfort | Unisex Pet-Parent Hoodie","White × S","ICEBREAKERHOODIE-S","TH-258-ICEBREAKERHOODIE-S",12
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Can I Pet Your Dog Hoodie | Elevated Comfort | Unisex Pet-Parent Hoodie","White × XS","ICEBREAKERHOODIE-XS","TH-258-ICEBREAKERHOODIE-XS",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","CanopyHouse | All-Weather Pet Shelter for Year-Round Comfort","Default Title","CANOPYHOUSE","TH-217-CANOPYHOUSE",4
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","CasaFrolic Playpen | Foldable Pet Enclosure | Safe, Portable & Breathable","Default Title","PLAYPEN","TH-052-PLAYPEN",7
+"May 2026","PR-0027","2026-05-22","Kara Creations","CatServe 2 - in - 1 Feeder","Default Title","CATFEED","TH-069-CATFEED",4
+"May 2026","PR-0047","2026-05-22","Paw Fortune","CatServe 2 - in - 1 Feeder","Default Title","CATFEED","TH-069-CATFEED",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Catstronaut Backpack – Breathable Bubble Travel Backpack for Cats up to 6.5 kg","Default Title","CATBAG","TH-065-CATBAG",7
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","ChewBuzz Toy | Interactive Sound Chew Toy for Dogs | Textured Rubber Boredom Buster","Default Title","BUZZTOY","TH-312-BUZZTOY",9
+"May 2026","PR-0003","2026-05-19","Scoobe Pets Products","ChewBuzz Toy | Interactive Sound Chew Toy for Dogs | Textured Rubber Boredom Buster","Default Title","BUZZTOY","TH-312-BUZZTOY",25
+"May 2026","PR-0052","2026-05-22","Kara Creations","Chewzilla Ball – Smart Treat-Dispensing Toy for Dogs | Easy to Load & Clean","Default Title","CHEWBALL","TH-055-CHEWBALL",5
+"May 2026","PR-0027","2026-05-22","Kara Creations","Chewzilla Ball – Smart Treat-Dispensing Toy for Dogs | Easy to Load & Clean","Default Title","CHEWBALL","TH-055-CHEWBALL",14
+"May 2026","PR-0049","2026-05-22","Big Time Enterprises","Chewzilla Maxx – The Ultimate Tug & Chew Toy for High-Energy Dogs","Default Title","CHEWZILLAMAXX","ST-O21-CHEWZILLAMAXX",5
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","Chewzilla Maxx – The Ultimate Tug & Chew Toy for High-Energy Dogs","Default Title","CHEWZILLAMAXX","TH-244-CHEWZILLAMAXX",12
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Chillow Bed – Cool Comfort| Zero Hassle| Summer-Ready","S","CHILLOW-S","TH-107-CHILLOW-S",14
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","ChillSip Bowl – Cooling Pet Water Bowl for Fresh, Hydrated Days","Default Title","CHILLBOWL","TH-209-CHILLBOWL",102
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Cloud Quilted Mat– Quilted Crate & Floor Comfort Bed for Small & Medium Pets","Default Title","CLOUDMAT","TH-334-CLOUDMAT",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","CloudStep Shoes | Cozy Warm Paws | Winter Walking Essentials","XXS","CLOUDBOO-XXS","TH-142-CLOUDBOO-XXS",4
+"May 2026","PR-0010","2026-05-22","Companion Neesds","CloudStep Shoes | Cozy Warm Paws | Winter Walking Essentials","XS","CLOUDBOO-XS","TH-142-CLOUDBOO-XS",3
+"May 2026","PR-0010","2026-05-22","Companion Neesds","CloudStep Shoes | Cozy Warm Paws | Winter Walking Essentials","S","CLOUDBOO-S","TH-142-CLOUDBOO-S",1
+"May 2026","PR-0010","2026-05-22","Companion Neesds","CloudStep Shoes | Cozy Warm Paws | Winter Walking Essentials","M","CLOUDBOO-M","TH-142-CLOUDBOO-M",2
+"May 2026","PR-0062","2026-05-27","Pet Craft Pvt Ltd","Clover Spin Scratcher – Interactive Scratch & Chase Lounge for Indoor Cats","Default Title","CLOVESCRATCHER","TH-315-CLOVESCRATCHER",5
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","ComfortCrib | Cat Cave | Premium & Comfortable","Black × S","COMFORTCRIB-S-B","TH-085-COMFORTCRIB-S-B",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","ComfortCrib | Cat Cave | Premium & Comfortable","Black × L","COMFORTCRIB-L-B","TH-085-COMFORTCRIB-L-B",4
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","ComfortGrip Bungee Leash | Shock-Absorbing Leash for Active Dogs","Blue × S","BUNGEELEASH-S-BLUE","TH-213-BUNGEELEASH-S-BLUE",3
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","ComfortGrip Bungee Leash | Shock-Absorbing Leash for Active Dogs","Brown × S","BUNGEELEASH-S-BROWN","TH-213-BUNGEELEASH-S-BROWN",4
+"May 2026","PR-0056","2026-05-26","3M india","CoolBreeze Mat","L","COOLMAT-L","TH-375-COOLMAT-L",70
+"May 2026","PR-0056","2026-05-26","3M india","CoolBreeze Mat","XL","COOLMAT-XL","TH-375-COOLMAT-XL",70
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Cozee Knitwear – Soft, Warm & Stylish Winter Wear for Small Pets","S","COZEEKNITWEAR-S","TH-234-COZEEKNITWEAR - S",21
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Cozee Knitwear – Soft, Warm & Stylish Winter Wear for Small Pets","M","COZEEKNITWEAR-M","TH-234-COZEEKNITWEAR - M",13
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Cozee Knitwear – Soft, Warm & Stylish Winter Wear for Small Pets","L","COZEEKNITWEAR-L","TH-234-COZEEKNITWEAR - L",21
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CozyClaus Boots | Waterproof Christmas Comfort | Snug Fit, Festive Warmth","S","COZYCLAUSBOO-S","TH-230-COZYCLAUSBOO - S",10
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CozyClaus Boots | Waterproof Christmas Comfort | Snug Fit, Festive Warmth","M","COZYCLAUSBOO-M","TH-230-COZYCLAUSBOO -M",6
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CozyClaus Boots | Waterproof Christmas Comfort | Snug Fit, Festive Warmth","L","COZYCLAUSBOO-L","TH-230-COZYCLAUSBOO-L",17
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CozyClaus Boots | Waterproof Christmas Comfort | Snug Fit, Festive Warmth","XL","COZYCLAUSBOO-XL","TH-230-COZYCLAUSBOO-XL",11
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","CozyClaus Boots | Waterproof Christmas Comfort | Snug Fit, Festive Warmth","XXL","COZYCLAUSBOO-XXL","TH-230-COZYCLAUSBOO-XXL",16
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","CrabDash Toy | Motion-Driven Play for Energetic Indoor Pets","Default Title","CRABDASH TOY","TH-284-CRABDASH TOY",9
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","XS","CRIMSONBOOTS-XS","TH-369-CRIMSONBOOTS-XS",7
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","S","CRIMSONBOOTS-S","TH-369-CRIMSONBOOTS-S",10
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","M","CRIMSONBOOTS-M","TH-369-CRIMSONBOOTS-M",9
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","L","CRIMSONBOOTS-L","TH-369-CRIMSONBOOTS-L",10
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","XL","CRIMSONBOOTS-XL","TH-369-CRIMSONBOOTS-XL",10
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","CrimsonTrail Boots – Anti-Slip Waterproof Faux Leather Paw Protector Shoes with Velcro Strap & Zip Closure","XXL","CRIMSONBOOTS-XXL","TH-369-CRIMSONBOOTS-XXL",8
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","CrystalSip Fountain – The Smart Hydration Solution for Healthy Pets","Default Title","CRYSTALSIPFOUNTAIN","TH-243-CRYSTALSIPFOUNTAIN",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","CurlCove Tunnel Bed | Warm, Cozy & Playful Hideout for Cats","Default Title","CURLTUNNELBED","TH-214-CURLTUNNELBED",1
+"May 2026","PR-0002","2026-05-18","Big Time Enterprises","CurlCove Tunnel Bed | Warm, Cozy & Playful Hideout for Cats","Default Title","CURLTUNNELBED","TH-214-CURLTUNNELBED",23
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Daily Pet Wipes | 100 Pulls| Hypoallergenic, Eco-Friendly Cleaning Wipes for Dogs, Cats, Puppies & Kittens.","Default Title","PETWIP","TH-010-PETWIP",1998
+"May 2026","PR-0051","2026-05-02","HI-Tech Enterprises","Daily Pet Wipes Sticker","Default Title","Pas","Pas",2025
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","DenimDrip Boots – Warm, Stylish & Secure Paw Protection for Winter","S","DENIMDRIPBOO-S","TH-231-DENIMDRIPBOO - S",36
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","DenimDrip Boots – Warm, Stylish & Secure Paw Protection for Winter","M","DENIMDRIPBOO-M","TH-231-DENIMDRIPBOO - M",38
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","DenimDrip Boots – Warm, Stylish & Secure Paw Protection for Winter","L","DENIMDRIPBOO-L","TH-231-DENIMDRIPBOO - L",42
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","DenimDrip Boots – Warm, Stylish & Secure Paw Protection for Winter","XL","DENIMDRIPBOO-XL","TH-231-DENIMDRIPBOO - XL",31
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","DenimDrip Boots – Warm, Stylish & Secure Paw Protection for Winter","XXL","DENIMDRIPBOO-XXL","TH-231-DENIMDRIPBOO - XXL",48
+"May 2026","PR-0043","2026-05-22","Kaash Enterprises","Derma Roller - Beard Growth Stimulator","Default Title","BEAGROSTI","MNM-004-BEAGROSTI",76
+"May 2026","PR-0053","2026-05-23","Sonu Sharma","Dog Conditioner Lable","Default Title","LABLE 1","LABLE 1",55
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",14
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",14
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",14
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",14
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",14
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Dad Club T-Shirt – Everyday Statement Wear for Dog Lovers","S","DADCLUBTSHIRT-S","TH-359-DADCLUBTSHIRT-S",13
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × XL","DOGMOMERAHOODIE-XL-BEIGE","TH-260-DOGMOMERAHOODIE-XL-BEIGE",1
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × XXL","DOGMOMERAHOODIE-XXL-BEIGE","TH-260-DOGMOMERAHOODIE-XXL-BEIGE",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","White × XS","DOGMOMERAHOODIE-XS-WHITE","TH-260-DOGMOMERAHOODIE-XS-WHITE",1
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","White × M","DOGMOMERAHOODIE-M-WHITE","TH-260-DOGMOMERAHOODIE-M-WHITE",1
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","White × L","DOGMOMERAHOODIE-L-WHITE","TH-260-DOGMOMERAHOODIE-L-WHITE",2
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × XS","DOGMOMERAHOODIE-XS-BEIGE","TH-260-DOGMOMERAHOODIE-XS-BEIGE",6
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × S","DOGMOMERAHOODIE-S-BEIGE","TH-260-DOGMOMERAHOODIE-S-BEIGE",6
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × M","DOGMOMERAHOODIE-M-BEIGE","TH-260-DOGMOMERAHOODIE-M-BEIGE",1
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Dog Mom Era Hoodie – Soft, Stylish & Made for Modern Pet Parents","Beige × L","DOGMOMERAHOODIE-L-BEIGE","TH-260-DOGMOMERAHOODIE-L-BEIGE",6
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",5
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",5
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",6
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Mom Era T-Shirt – Oversized Cotton Wear for Dog Moms","S","DOGMOMTSHIRT-S","TH-358-DOGMOMTSHIRT-S",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",10
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",5
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",5
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",6
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Dog Walking Is My Cardio T-Shirt – Oversized Cotton Fit for Pet Parents","S","DADCARDIOTSHIRT-S","TH-360-DADCARDIOTSHIRT-S",9
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Dreamscape Cat Cave | 2-in-1 Cozy Sofa Cum Bed | Just for Your Pet","S","CATCAVE-S","TH-089-CATCAVE-S",8
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Dreamscape Cat Cave | 2-in-1 Cozy Sofa Cum Bed | Just for Your Pet","L","CATCAVE-L","TH-089-CATCAVE-L",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × XS","DRIFTTRAILBOO-XS-Pink","TH-206-DRIFTTRAILBOO-XS-Pink",4
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × S","DRIFTTRAILBOO-S-Pink","TH-206-DRIFTTRAILBOO-S-Pink",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × M","DRIFTTRAILBOO-M-Pink","TH-206-DRIFTTRAILBOO-M-Pink",6
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × L","DRIFTTRAILBOO-L-Pink","TH-206-DRIFTTRAILBOO-L-Pink",7
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × XL","DRIFTTRAILBOO-XL-Pink","TH-206-DRIFTTRAILBOO-XL-Pink",6
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Pink × XXL","DRIFTTRAILBOO-XXL-Pink","TH-206-DRIFTTRAILBOO-XXL-Pink",6
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Purple × XS","DRIFTTRAILBOO-XS-Purple","TH-206-DRIFTTRAILBOO-XS-Purple",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Purple × M","DRIFTTRAILBOO-M-Purple","TH-206-DRIFTTRAILBOO-M-Purple",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Purple × L","DRIFTTRAILBOO-L-Purple","TH-206-DRIFTTRAILBOO-L-Purple",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Purple × XL","DRIFTTRAILBOO-XL-Purple","TH-206-DRIFTTRAILBOO-XL-Purple",3
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","DriftTrail Boots | Waterproof, Non-Slip Dog Boots | Set of 4 | All-Season Paw Protection","Purple × XXL","DRIFTTRAILBOO-XXL-Purple","TH-206-DRIFTTRAILBOO-XXL-Purple",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XS","CAPE-XS","TH-058-CAPE-XS",4
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","S","CAPE-S","TH-058-CAPE-S",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","M","CAPE-M","TH-058-CAPE-M",5
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","L","CAPE-L","TH-058-CAPE-L",4
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XL","CAPE-XL","TH-058-CAPE-XL",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XXL","CAPE-XXL","TH-058-CAPE-XXL",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XXXL","CAPE-XXXL","TH-058-CAPE-XXXL",6
+"May 2026","PR-0065","2026-05-27","Shree Radhe International","DualGroom Click Brush – Multipurpose Grooming Tool to Brush | Detangle & Grind","Default Title","DUALGROOM","TH-094-DUALGROOM",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","DualGroom Click Brush – Multipurpose Grooming Tool to Brush | Detangle & Grind","Default Title","DUALGROOM","TH-094-DUALGROOM",2
+"May 2026","PR-0028","2026-05-22","Drontika India","Ear Care Solution – Safe & Gentle Ear Cleaning Solution for Dogs & Cats, Removes Wax, Dirt & Odor, Easy Application - 200ml","Default Title","EARSOLUTION","TH-109-EARSOLUTION",23
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","EarEase Pet Swabs – Gentle Cleaning for Pets’ Ears, Eyes & More","Default Title","EAREASE","TH-092-EAREASE",12
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",10
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",6
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",9
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",5
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","Easily Distracted by Dogs T-Shirt – Oversized Cotton Wear for Dog Lovers","XS","DISTRACTEDTSHIRT-1","TH-362-DISTRACTEDTSHIRT-1",7
+"May 2026","PR-0035","2026-05-22","District99","ELRIC","Default Title","ELRIC","URTH-006-ELRIC",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","ExpandEase Carrier Bag – Spacious, Airy & Stress-Free Travel for Pets","Default Title","EXPANDEASEBAG","TH-232-EXPANDEASEBAG",1
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","XS","FAIRYFROCK-XS","TH-166-FAIRYFROCK-XS",6
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","S","FAIRYFROCK-S","TH-166-FAIRYFROCK-S",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","M","FAIRYFROCK-M","TH-166-FAIRYFROCK-M",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","L","FAIRYFROCK-L","TH-166-FAIRYFROCK-L",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","XL","FAIRYFROCK-XL","TH-166-FAIRYFROCK-XL",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","XXL","FAIRYFROCK-XXL","TH-166-FAIRYFROCK-XXL",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","FairyGlow Frock – Comfy Festive Wear for Pets","XXXL","FAIRYFROCK-XXXL","TH-166-FAIRYFROCK-XXXL",5
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","FeedSync | Pre-Portioned Auto Feeder | Keeps Mealtimes On Track","Default Title","FEEDSYNC","TH-237-FEEDSYNC",10
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","FeedSync Pro | Smart Automatic Pet Feeder | Precise, Reliable & Stress-Free Mealtime Control","Default Title","FEEDSYNC","TH-082-FEEDSYNC",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","FelineBeam – Smart Touch-Activated Laser Toy for Active Indoor Cats","Default Title","FELINEBEAM","TH-245-FELINEBEAM",11
+"May 2026","PR-0017","2026-05-22","Yancal International","Felis Cocoon – Cozy Tent Bed for Pets | Soft & Stylish Design","Default Title","FELISCOCOON","TH-187-FELISCOCOON",10
+"May 2026","PR-0058","2026-05-25","Mohan Lal & Amir Chand","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",96
+"May 2026","PR-0045","2026-05-22","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",53
+"May 2026","PR-0045","2026-05-22","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",22
+"May 2026","PR-0045","2026-05-22","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",3
+"May 2026","PR-0045","2026-05-22","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",2
+"May 2026","PR-0003","2026-05-19","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",24
+"May 2026","PR-0003","2026-05-19","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Pink","UFOBALL-2","TH-198-UFOBALL-2",24
+"May 2026","PR-0003","2026-05-19","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Blue","UFOBALL-3","TH-198-UFOBALL-3",24
+"May 2026","PR-0003","2026-05-19","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Red","UFOBALL-4","TH-198-UFOBALL-4",24
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FlarePlaid Harness for Cats & Dogs | No-Pull, Breathable & Secure Comfort with a Stylish Plaid Design","Default Title","FLAREPLAIDHARNESS","TH-254-FLAREPLAIDHARNESS",2
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","Flexibristle – Tangle-Free Pet Brush with Soft Bristles & Easy Grip","Default Title","FLEBRU","TH-006-FLEBRU",12
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FlippyFish Toy | Smart Motion Play for Cats That Triggers Natural Hunting Instincts","Default Title","FLIPPYFISHTOY","TH-285-FLIPPYFISHTOY",44
+"May 2026","PR-0049","2026-05-22","Big Time Enterprises","FloorGuard Mat | Mess-Free Meals | Secure & Easy to Clean","Default Title","FLOORGUARD","TH-128-FLOORGUARD",10
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","FloorGuard Mat | Mess-Free Meals | Secure & Easy to Clean","Default Title","FLOORGUARD","TH-128-FLOORGUARD",6
+"May 2026","PR-0024","2026-05-22","Maple Pets International Private Limited","FlowMate Fountain – Fresh Water, Happy Pets","Default Title","FLOWFOUNTAIN","TH-189-FLOWFOUNTAIN",7
+"May 2026","PR-0019","2026-05-22","99 Enterprises","FluffMist Pet Brush – Mist Grooming & Detangling Tool","Default Title","MISTBRU","TH-037-MISTBRU",345
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","FoamFlow Bath Brush - 2 in 1 Pet Massage Brush with Shampoo Dispenser","Default Title","FOAMFLOWBRUSH","TH-268-FOAMFLOWBRUSH",10
+"May 2026","PR-0001","2026-05-16","Scoobe Pets Products","FoamFlow Bath Brush - 2 in 1 Pet Massage Brush with Shampoo Dispenser","Default Title","FOAMFLOWBRUSH","TH-268-FOAMFLOWBRUSH",12
+"May 2026","PR-0035","2026-05-22","District99","FOLIO","Default Title","FOLIO","URTH-002-FOLIO",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 24","FROSTFITJACKET-24-GRAY","TH-233-FROSTFITJACKET-24-GRAY",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 20","FROSTFITJACKET-20-GRAY","TH-233-FROSTFITJACKET-20-GRAY",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 18","FROSTFITJACKET-18-GRAY","TH-233-FROSTFITJACKET-18-GRAY",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 16","FROSTFITJACKET-16-GRAY","TH-233-FROSTFITJACKET-16-GRAY",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 14","FROSTFITJACKET-14-GRAY","TH-233-FROSTFITJACKET-14-GRAY",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 12","FROSTFITJACKET-12-GRAY","TH-233-FROSTFITJACKET-12-GRAY",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 10","FROSTFITJACKET-10-GRAY","TH-233-FROSTFITJACKET-10-GRAY",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 26","FROSTFITJACKET-26-BLACK","TH-233-FROSTFITJACKET-26-BLACK",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 24","FROSTFITJACKET-24-BLACK","TH-233-FROSTFITJACKET-24-BLACK",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 22","FROSTFITJACKET-22-BLACK","TH-233-FROSTFITJACKET-22-BLACK",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 20","FROSTFITJACKET-20-BLACK","TH-233-FROSTFITJACKET-20-BLACK",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 18","FROSTFITJACKET-18-BLACK","TH-233-FROSTFITJACKET-18-BLACK",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 16","FROSTFITJACKET-16-BLACK","TH-233-FROSTFITJACKET-16-BLACK",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 12","FROSTFITJACKET-12-BLACK","TH-233-FROSTFITJACKET-12-BLACK",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 10","FROSTFITJACKET-10-BLUE","TH-233-FROSTFITJACKET-10-BLUE",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 12","FROSTFITJACKET-12-BLUE","TH-233-FROSTFITJACKET-12-BLUE",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 14","FROSTFITJACKET-14-BLUE","TH-233-FROSTFITJACKET-14-BLUE",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 16","FROSTFITJACKET-16-BLUE","TH-233-FROSTFITJACKET-16-BLUE",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 18","FROSTFITJACKET-18-BLUE","TH-233-FROSTFITJACKET-18-BLUE",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 22","FROSTFITJACKET-22-BLUE","TH-233-FROSTFITJACKET-22-BLUE",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 24","FROSTFITJACKET-24-BLUE","TH-233-FROSTFITJACKET-24-BLUE",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Blue × 26","FROSTFITJACKET-26-BLUE","TH-233-FROSTFITJACKET-26-BLUE",9
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Black × 10","FROSTFITJACKET-10-BLACK","TH-233-FROSTFITJACKET-10-BLACK",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 26","FROSTFITJACKET-26-GRAY","TH-233-FROSTFITJACKET-26-GRAY",7
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FrostFit Jacket – Warm, Stylish & Winter-Ready Denim Wear for Pets","Gray × 22","FROSTFITJACKET-22-GRAY","TH-233-FROSTFITJACKET-22-GRAY",4
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","FurAway Luxe Roller","Default Title","FURLUXE","TH-035-FURLUXE",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FurAway Roller – Pet Hair & Lint Remover","Default Title","FROLL","TH-007-FROLL",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FurEase Click Brush | Pet Grooming Brush | One Glide, Total Shine","Default Title","CLIBRU","TH-008-CLIBRU",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","FurEase Click Brush | Pet Grooming Brush | One Glide, Total Shine","Default Title","CLIBRU","TH-008-CLIBRU",3
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","FurFree Roller – Instant Pet Hair Remover with 2 Refill Rolls","Default Title","FURROLLER","TH-317-FURROLLER",8
+"May 2026","PR-0027","2026-05-22","Kara Creations","FurSplash Glove – 2-in-1 Bathing Glove & Shower Scrubber | Includes Tick & Flea Shampoo","Default Title","SPLASH","TH-059-SPLASH",5
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FurSwipe Glove | Quick Fur Removal & Fabric-Safe Cleaning for Pets","Default Title","FURSWIPEGLOVE","TH-215-FURSWIPEGLOVE",36
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FusionGrip Harness – 2-in-1 Dog Harness with Retractable Leash","XS","FUSIONHARNESS-1","TH-348-FUSIONHARNESS-1",43
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FusionGrip Harness – 2-in-1 Dog Harness with Retractable Leash","XS","FUSIONHARNESS-1","TH-348-FUSIONHARNESS-1",41
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FusionGrip Harness – 2-in-1 Dog Harness with Retractable Leash","XS","FUSIONHARNESS-1","TH-348-FUSIONHARNESS-1",31
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FusionGrip Harness – 2-in-1 Dog Harness with Retractable Leash","XS","FUSIONHARNESS-1","TH-348-FUSIONHARNESS-1",26
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","FusionGrip Harness – 2-in-1 Dog Harness with Retractable Leash","XS","FUSIONHARNESS-1","TH-348-FUSIONHARNESS-1",29
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","XS","GARBAKURTA-XS","TH-154-GARBAKURTA-XS",4
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","S","GARBAKURTA-S","TH-154-GARBAKURTA-S",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","M","GARBAKURTA-M","TH-154-GARBAKURTA-M",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","L","GARBAKURTA-L","TH-154-GARBAKURTA-L",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","XL","GARBAKURTA-XL","TH-154-GARBAKURTA-XL",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","XXL","GARBAKURTA-XXL","TH-154-GARBAKURTA-XXL",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","GarbaGlow Kurta – Festive Flair & Comfortable Fit | Easy Velcro Closure","XXXL","GARBAKURTA-XXXL","TH-154-GARBAKURTA-XXXL",4
+"May 2026","PR-0036","2026-05-22","ABK IMPORTS","GnawBloom | Teething Toy with Textured Top & Built-In Squeak","Default Title","GNAWBLOOM","ST-026-GNAWBLOOM",5
+"May 2026","PR-0030","2026-05-22","Foodie Puppies Group","GnawMonkey Rope Toy | Chew, Tug & Play | Fun for Healthy Teeth","Default Title","ROPETOY","TH-136-ROPETOY",20
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","GripEase Freedom Leash | Adjustable Dog Leash | Retractable Pet Leash","Default Title","GRIPEASE","TH-076-GRIPEASE",21
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Gripster Shoes | Anti-Slip Paw Protection | Comfort & Safety in Every Step","XS","GRIPSTERSHOES-XS","TH-196-GRIPSTERSHOES-XS",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Gripster Shoes | Anti-Slip Paw Protection | Comfort & Safety in Every Step","S","GRIPSTERSHOES-S","TH-196-GRIPSTERSHOES-S",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Gripster Shoes | Anti-Slip Paw Protection | Comfort & Safety in Every Step","L","GRIPSTERSHOES-L","TH-196-GRIPSTERSHOES-L",1
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Gripster Shoes | Anti-Slip Paw Protection | Comfort & Safety in Every Step","XL","GRIPSTERSHOES-XL","TH-196-GRIPSTERSHOES-XL",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Gripster Shoes | Anti-Slip Paw Protection | Comfort & Safety in Every Step","XXL","GRIPSTERSHOES-XXL","TH-196-GRIPSTERSHOES-XXL",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","GroomEase Glove - Tilting Heads","Default Title","GREAGLO","TH-044-GREAGLO",6
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","GroomEase Glove - Tilting Heads","Default Title","GREAGLO","TH-044-GREAGLO",5
+"May 2026","PR-0027","2026-05-22","Kara Creations","GroveElephant Plush Toy – Double Squeaks, Endless Fun & Stress-Free Play!","Default Title","ELEPHANTTOY","TH-139-ELEPHANTTOY",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Guardian Grip Boots – Paw Protection & Comfort Wear for Small Pets","XXS","GUARDIANBOO-XXS","TH-148-GUARDIANBOO-XXS",3
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Guardian Grip Boots – Paw Protection & Comfort Wear for Small Pets","XS","GUARDIANBOO-XS","TH-148-GUARDIANBOO-XS",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Guardian Grip Boots – Paw Protection & Comfort Wear for Small Pets","L","GUARDIANBOO-L","TH-148-GUARDIANBOO-L",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Halo Pet Carrier Bag - Breathable Ventilation, Lightweight Travel Carrier for Small Dogs & Cats| Comfortable & Secure Transport| Upto 7 kgs","Default Title","HALOCARRIER","TH-102-HALOCARRIER",5
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Heart Pop Tie – Pack of 8 Stylish Ties for Dogs & Cats","Default Title","HEARTPOPTIE","TH-307-HEARTPOPTIE",4
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Heart Stealer T-Shirt – Printed Cotton T-Shirt for Small Pets","Default Title","HEARTSTEALER","TH-305-HEARTSTEALER",9
+"May 2026","PR-0064","2026-05-30","Drontika India","Herbal Blend Pet Coat Conditioner | For Shiny, Silky-Smooth Fur for Dogs & Cats","Default Title","CONDITIONER","TH-090-CONDITIONER",52
+"May 2026","PR-0028","2026-05-22","Drontika India","Herbal Blend Pet Coat Conditioner | For Shiny, Silky-Smooth Fur for Dogs & Cats","Default Title","CONDITIONER","TH-090-CONDITIONER",9
+"May 2026","PR-0028","2026-05-22","Drontika India","Herbal Coat Therapy Oil | Stress Relief & Relaxation | Natural, Safe Formulation for Dogs & Cats","Default Title","THERAPYOIL","TH-091-THERAPYOIL",48
+"May 2026","PR-0026","2026-05-22","Kanu Brush Care Private Limited","Heritage Shaving Brush","Brown","HSHB","MNM-006-HSHB",10
+"May 2026","PR-0026","2026-05-22","Kanu Brush Care Private Limited","Heritage Shaving Brush","Brown","HSHB","MNM-006-HSHB",21
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","HideNZoom 3-Way Cat Tunnel – Foldable Fun for Playful Cats","Default Title","HIDENZOOMTUNNEL","TH-225-HIDENZOOMTUNNEL",10
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","Hover Chase | Interactive LED Toy with Auto & Remote Mode | Boosts Play & Bonding","Default Title","HOVERCHASE","TH-236-HOVERCHASE",18
+"May 2026","PR-0002","2026-05-18","Big Time Enterprises","Hover Chase | Interactive LED Toy with Auto & Remote Mode | Boosts Play & Bonding","Default Title","HOVERCHASE","TH-236-HOVERCHASE",10
+"May 2026","PR-0046","2026-05-22","Willtech Shaver","Imperium Edge Safety Razor","Gold Classic Grip","IESR","MNM-007-IESR",23
+"May 2026","PR-0046","2026-05-22","Willtech Shaver","Imperium Edge Safety Razor","Gold Classic Grip","IESR","MNM-007-IESR",2
+"May 2026","PR-0063","2026-05-28","Shree Radhe International","JerHigh Carrot Stick Dog Treat with Real Chicken Meat 70gm","Default Title","CARROT","TH-298-CARROT",2
+"May 2026","PR-0063","2026-05-28","Shree Radhe International","JerHigh Strawberry Stick Dog Treats with Real Chicken Meat 70gm","Pack of 1 (1x70gm)","BERRY-P1","TH-299-BERRY-P1",5
+"May 2026","PR-0063","2026-05-28","Shree Radhe International","JerHigh Strawberry Stick Dog Treats with Real Chicken Meat 70gm","Pack of 3 (3x70gm)","BERRY-P3","TH-299-BERRY-P3",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","JoyBall – The Ultimate Giggle Toy for Happy, Healthy Dogs!","S","JOYBALL-S","TH-124-JOYBALL-S",22
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Black × M","K9HARNESS-BL-M","TH-103-K9HARNESS-BL-M",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Black × L","K9HARNESS-BL-L","TH-103-K9HARNESS-BL-L",5
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Black × XL","K9HARNESS-BL-XL","TH-103-K9HARNESS-BL-XL",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × M","K9HARNESS-BR-M","TH-103-K9HARNESS-BR-M",8
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × L","K9HARNESS-BR-L","TH-103-K9HARNESS-BR-L",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × XL","K9HARNESS-BR-XL","TH-103-K9HARNESS-BR-XL",8
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","KittyTrim Nail Cutter | Safe, Gentle & Easy Grooming for Cats","Default Title","KITTYNAILCUTTER","TH-216-KITTYNAILCUTTER",9
+"May 2026","PR-0027","2026-05-22","Kara Creations","LaserPlay Collar | Active Chase Stimulation | Interactive Toy For Cats","Default Title","LASERCOLLAR","TH-365-LASERCOLLAR",17
+"May 2026","PR-0060","2026-05-27","Smarty Pet","Lather Loop Brush","Blue","LOOPBRUSH-BLUE","TH-378-LOOPBRUSH-BLUE",5
+"May 2026","PR-0060","2026-05-27","Smarty Pet","Lather Loop Brush","Pink","LOOPBRUSH-PINK","TH-378-LOOPBRUSH-PINK",8
+"May 2026","PR-0060","2026-05-27","Smarty Pet","Lather Loop Brush","Yellow","LOOPBRUSH-YELLOW","TH-378-LOOPBRUSH-YELLOW",7
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","XS","LEMONSHIRT-XS","TH-353-LEMONSHIRT-XS",13
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","S","LEMONSHIRT-S","TH-353-LEMONSHIRT-S",10
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","M","LEMONSHIRT-M","TH-353-LEMONSHIRT-M",11
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","L","LEMONSHIRT-L","TH-353-LEMONSHIRT-L",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","XL","LEMONSHIRT-XL","TH-353-LEMONSHIRT-XL",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Lemon Pop Shirt – Stylish Cotton Summer Shirt for Pets","XXL","LEMONSHIRT-XXL","TH-353-LEMONSHIRT-XXL",14
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","L","COMPANIONHOODIE-L","TH-259-COMPANIONHOODIE-L",4
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","XS","COMPANIONHOODIE-XS","TH-259-COMPANIONHOODIE-XS",6
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","S","COMPANIONHOODIE-S","TH-259-COMPANIONHOODIE-S",10
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","M","COMPANIONHOODIE-M","TH-259-COMPANIONHOODIE-M",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","XL","COMPANIONHOODIE-XL","TH-259-COMPANIONHOODIE-XL",6
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","Less People More Dogs Hoodie | Unisex Pet-Parent Essential | Made for Everyday Wear","XXL","COMPANIONHOODIE-XXL","TH-259-COMPANIONHOODIE-XXL",1
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Love Bug Romper – Denim Outfit for Small Pets","XL","ROMPER-XL","TH-304-ROMPER-XL",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Love Bug Romper – Denim Outfit for Small Pets","M","ROMPER-M","TH-304-ROMPER-M",1
+"May 2026","PR-0010","2026-05-22","Companion Neesds","Love Bug Romper – Denim Outfit for Small Pets","XL","ROMPER-XL","TH-304-ROMPER-XL",2
+"May 2026","PR-0020","2026-05-22","Unique Pet Hub","LumenPool Bed – Cooling Water Bed for Dogs & Cats with Floating Toys | Foldable | Stress-Relieving","Default Title","LUMENPOOL","TH-101-LUMENPOOL",160
+"May 2026","PR-0015","2026-05-22","Reelay Ecommerce","LumiRinse Spa Shower | 2-in-1 Sprayer + Grooming Brush","Default Title","LUMIRINSE","TH-111-LUMIRINSE",1
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Luxe Car Seat Cover – Safe Rides | Mess-Free Travel","Default Title","LUXESEAT","TH-121-LUXESEAT",69
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","Luxe Litter Station | Sleek Design | No Smell | Easy Clean","Default Title","LITTER","TH-064-LITTER",1
+"May 2026","PR-0050","2026-05-22","Smarty Pet","MajestiBed – Velvet Comfort for Peaceful Pet Sleep","Default Title","MAJESTIBED","TH-226-MAJESTIBED",1
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",16
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",15
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",16
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",13
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Mariner Shirt – Stylish Summer Wear for Dogs","XS","MARINER-1","TH-363-MARINER-1",12
+"May 2026","PR-0006","2026-05-22","Arjan Commerce Private Limited","Mealbone Mat | Bone-Shaped, Non-Slip Comfort | Clean Paws, Cozy Floors","Default Title","MEALBONEMAT","TH-199-MEALBONEMAT",15
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Meow Cave – Covered Cat Lounge with Built-in Scratch Board | Safe, Cozy & Enclosed","Default Title","MEOWCAVED","TH-095-MEOWCAVED",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Meow Scratch Lounge – Cat Scratcher & Relax Bed","Default Title","SCRATCHLOUNGE","TH-149-SCRATCHLOUNGE",3
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","Meowverick Hat – Cute Dress-Up Hat for Stylish Cats","Default Title","MEOWHAT","TH-277-MEOWHAT",1
+"May 2026","PR-0027","2026-05-22","Kara Creations","MessGuard Mat – All-Purpose Dirt & Dust Catcher","Gray","MESSGUARDMAT-GRAY","TH-141-MESSGUARDMAT-GRAY",3
+"May 2026","PR-0027","2026-05-22","Kara Creations","MessGuard Mat – All-Purpose Dirt & Dust Catcher","Gray","MESSGUARDMAT-GRAY","TH-141-MESSGUARDMAT-GRAY",4
+"May 2026","PR-0027","2026-05-22","Kara Creations","MessGuard Mat – All-Purpose Dirt & Dust Catcher","Gray","MESSGUARDMAT-GRAY","TH-141-MESSGUARDMAT-GRAY",14
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Mewsling Carrier Bag – Comfortable Travel for Pets","Default Title","MEWSLINGBAG","TH-227-MEWSLINGBAG",2
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","MindfulMunch Bowl – Interactive Pet Bowl for Healthy Eating","Default Title","MBOW","TH-015-MBOW",16
+"May 2026","PR-0027","2026-05-22","Kara Creations","MiniKick Sneakers – Stylish & Comfortable Sneakers for Small Dogs & Cats","1","MINIKICKS-1","TH-350-MINIKICKS-1",2
+"May 2026","PR-0027","2026-05-22","Kara Creations","MiniKick Sneakers – Stylish & Comfortable Sneakers for Small Dogs & Cats","1","MINIKICKS-1","TH-350-MINIKICKS-1",3
+"May 2026","PR-0027","2026-05-22","Kara Creations","MiniKick Sneakers – Stylish & Comfortable Sneakers for Small Dogs & Cats","1","MINIKICKS-1","TH-350-MINIKICKS-1",3
+"May 2026","PR-0027","2026-05-22","Kara Creations","MiniKick Sneakers – Stylish & Comfortable Sneakers for Small Dogs & Cats","1","MINIKICKS-1","TH-350-MINIKICKS-1",4
+"May 2026","PR-0027","2026-05-22","Kara Creations","MiniKick Sneakers – Stylish & Comfortable Sneakers for Small Dogs & Cats","1","MINIKICKS-1","TH-350-MINIKICKS-1",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","MistCalm Brush | Tangle-Free Mist Grooming for Dogs & Cats","Default Title","MISTCALMBRUSH","TH-287-MISTCALMBRUSH",80
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Moonbeam Nap Pod | Cozy Capsule Bed | Playful Comfort for Cats","Default Title","MOONBEAMNAPPOD","TH-182-MOONBEAMNAPPOD",93
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Mr. Pet Carrier Bag – Stylish, Secure Travel Gear for Pet Moms","Default Title","MRPET","TH-106-MRPET",5
+"May 2026","PR-0017","2026-05-22","Yancal International","Muffin Cave | Cozy Pet Hideout Bed for Cats & Small Dogs","Default Title","MUFFINCAVE","TH-177-MUFFINCAVE",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",9
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",4
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",7
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",8
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",6
+"May 2026","PR-0039","2026-05-22","Vaishnavi Enterprises","My Cat Runs the Schedule T-Shirt – Oversized Cotton Wear for Cat Parents","S","CATSCHEDULETSHIRT-S","TH-361-CATSCHEDULETSHIRT-S",8
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","White × XS","MYTHERAPISTHOODIE-XS-WHITE","TH-263-MYTHERAPISTHOODIE-XS-WHITE",4
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","White × S","MYTHERAPISTHOODIE-S-WHITE","TH-263-MYTHERAPISTHOODIE-S-WHITE",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","White × M","MYTHERAPISTHOODIE-M-WHITE","TH-263-MYTHERAPISTHOODIE-M-WHITE",7
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","White × L","MYTHERAPISTHOODIE-L-WHITE","TH-263-MYTHERAPISTHOODIE-L-WHITE",4
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","White × XL","MYTHERAPISTHOODIE-XL-WHITE","TH-263-MYTHERAPISTHOODIE-XL-WHITE",5
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","Beige × XS","MYTHERAPISTHOODIE-XS-BEIGE","TH-263-MYTHERAPISTHOODIE-XS-BEIGE",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","Beige × L","MYTHERAPISTHOODIE-L-BEIGE","TH-263-MYTHERAPISTHOODIE-L-BEIGE",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","Beige × M","MYTHERAPISTHOODIE-M-BEIGE","TH-263-MYTHERAPISTHOODIE-M-BEIGE",6
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","Beige × S","MYTHERAPISTHOODIE-S-BEIGE","TH-263-MYTHERAPISTHOODIE-S-BEIGE",4
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","My Therapist Hoodie | Unisex Statement Comfortwear for Pet Parents","Beige × XL","MYTHERAPISTHOODIE-XL-BEIGE","TH-263-MYTHERAPISTHOODIE-XL-BEIGE",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Mysa Tilt Bowl – Tilted Ceramic Feeding Bowl for Cats","Default Title","MYSABOWL","TH-335-MYSABOWL",15
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","NapDen Donut Bed | Stress-Relief Pet Bed | Safe for All Skin Types","S","NAPDEN-S","TH-075-NAPDEN-S",22
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","NapDen Donut Bed | Stress-Relief Pet Bed | Safe for All Skin Types","M","NAPDEN-M","TH-075-NAPDEN-M",20
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","NapDen Donut Bed | Stress-Relief Pet Bed | Safe for All Skin Types","L","NAPDEN-L","TH-075-NAPDEN-L",16
+"May 2026","PR-0053","2026-05-23","Sonu Sharma","Neem & Tea Tree oil (Lable)","Default Title","LABLE 3","LABLE 3",55
+"May 2026","PR-0064","2026-05-30","Drontika India","Neem & Tea Tree Oil Shampoo | Dog Shampoo with Nature's Antibacterial Formula","Default Title","NTTOSH","TH-003-NTTOSH",51
+"May 2026","PR-0064","2026-05-30","Drontika India","Neem & Tea Tree Oil Shampoo | Dog Shampoo with Nature's Antibacterial Formula","Default Title","NTTOSH","TH-003-NTTOSH",53
+"May 2026","PR-0028","2026-05-22","Drontika India","Neem & Tea Tree Oil Shampoo | Dog Shampoo with Nature's Antibacterial Formula","Default Title","NTTOSH","TH-003-NTTOSH",17
+"May 2026","PR-0042","2026-05-22","Greeniecan India","Neem Wood Beard Comb - Handcrafted","Default Title","COMB","MNM-015-COMB",84
+"May 2026","PR-0042","2026-05-22","Greeniecan India","Neem Wood Beard Comb - Handcrafted","Default Title","COMB","MNM-015-COMB",86
+"May 2026","PR-0035","2026-05-22","District99","NERO","Default Title","NERO","URTH-O05-NERO",5
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","NibblePlay Feeder Cat Toy | Play, Engage & Feed in One Fun Product","Default Title","PLAYFEEDER","TH-048-PLAYFEEDER",2
+"May 2026","PR-0028","2026-05-22","Drontika India","No-Rinse Pet Hygiene Spray – Waterless Daily Cleaning Solution for Dogs & Cats with Germ Protection (200 ml)","Default Title","HYGIENESPRAY","TH-088-HYGIENESPRAY",60
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Oathkeeper Spike Harness – Soft Premium Leather | Silver Rivet Design | Adjustable & Secure Fit","Default Title","OATHKEEPER","TH-099-OATHKEEPER",17
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","OdourShield Litter Box | Hygienic, Odour-Free & Easy to Clean","Default Title","ODOURSHIELD","TH-079-ODOURSHIELD",2
+"May 2026","PR-0035","2026-05-22","District99","ODYSSEY","Default Title","ODYSSEY","URTH-007-ODYSSEY",1
+"May 2026","PR-0035","2026-05-22","District99","ONYX","Default Title","ONYX","URTH-004-ONYX",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","Opal Detangler | Clean Surfaces Instantly | Three Cleaning Modes","Default Title","DETANGLER","TH-134-DETANGLER",2
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","OralEase Chew Toy | Cleans Teeth, Massages Gums for Dogs & Cats","Default Title","ORALEASECHEWTOY","TH-291-ORALEASECHEWTOY",1
+"May 2026","PR-0004","2026-05-19","Adil Handicrafts","Orbit Dining Table by Pawpourri | Ergonomic Design | Dual Bowls | Minimalist Wooden Diner","Default Title","DININGTABLE","TH-138-DININGTABLE",12
+"May 2026","PR-0035","2026-05-22","District99","ORIS","Default Title","ORIS","URTH-003-ORIS",5
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","PalmPerfect Gloves - Tilting Heads","Default Title","PPGLO","TH-011-PPGLO",6
+"May 2026","PR-0021","2026-05-22","Vedimatic Gram Udyog","Paw Balm - Triple Butter Formula for Dogs & Cats | Lick Safe Paw Balm for Cracked & Dry Paws and Nose | Heals, Repairs & Moisturizes Paws, Elbows & Dry Itchy Nose (50 gms)","Default Title","PAWBALM","TH-110-PAWBALM",59
+"May 2026","PR-0054","2026-05-23","Khadi Pure Gramodyog","paw cleanser","Default Title","PAWCLESH","TH-013-PAWCLESH",300
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","Paw Cleanser – Daily Paw Cleaning Cup | 500ml |  Pet Paw Cleaning Solution for Dogs & Cats, Removes Dirt & Debris, Gentle & Safe Formula | Made for Daily Use After Every Walk","S","PAWCLESH-S","TH-013-PAWCLESH-S",12
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","Paw Cleanser – Daily Paw Cleaning Cup | 500ml |  Pet Paw Cleaning Solution for Dogs & Cats, Removes Dirt & Debris, Gentle & Safe Formula | Made for Daily Use After Every Walk","L","PAWCLESH-L","TH-013-PAWCLESH-L",19
+"May 2026","PR-0028","2026-05-22","Drontika India","Paw Cleanser – Daily Paw Cleaning Cup | 500ml |  Pet Paw Cleaning Solution for Dogs & Cats, Removes Dirt & Debris, Gentle & Safe Formula | Made for Daily Use After Every Walk","S","PAWCLESH-S","TH-013-PAWCLESH-S",98
+"May 2026","PR-0053","2026-05-23","Sonu Sharma","Paw Cleanser Lable","Default Title","LABLE 2","LABLE 2",320
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Gray","PAWTECH-GRAY","TH-336-PAWTECH-GRAY",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Blue","PAWTECH-BLUE","TH-336-PAWTECH-BLUE",4
+"May 2026","PR-0005","2026-05-21","Chinmayo Sahoo","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Blue","PAWTECH-BLUE","TH-336-PAWTECH-BLUE",100
+"May 2026","PR-0005","2026-05-21","Chinmayo Sahoo","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Gray","PAWTECH-GRAY","TH-336-PAWTECH-GRAY",200
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × XS","WINTERDRIPJACKET-1-XS","TH-210-WINTERDRIPJACKET-1-XS",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × S","WINTERDRIPJACKET-1-S","TH-210-WINTERDRIPJACKET-1-S",14
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × M","WINTERDRIPJACKET-1-M","TH-210-WINTERDRIPJACKET-1-M",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × L","WINTERDRIPJACKET-1-L","TH-210-WINTERDRIPJACKET-1-L",14
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × XL","WINTERDRIPJACKET-1-XL","TH-210-WINTERDRIPJACKET-1-XL",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","Persona Jacket | Winter Comfort Tailored to Your Pet’s Unique Personality | Denim Look | Soft Puffer Lining","Socially Selective × XXL","WINTERDRIPJACKET-1-XXL","TH-210-WINTERDRIPJACKET-1-XXL",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Pet Leg Supporter | Gentle Lift & Mobility Support for Dogs","S","PETLEGSUPPORTER-S","TH-292-PETLEGSUPPORTER-S",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Pet Leg Supporter | Gentle Lift & Mobility Support for Dogs","M","PETLEGSUPPORTER-M","TH-292-PETLEGSUPPORTER-M",5
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Pet Leg Supporter | Gentle Lift & Mobility Support for Dogs","L","PETLEGSUPPORTER-L","TH-292-PETLEGSUPPORTER-L",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Pet Leg Supporter | Gentle Lift & Mobility Support for Dogs","XL","PETLEGSUPPORTER-XL","TH-292-PETLEGSUPPORTER-XL",2
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Blue × S","PETCORESATCHEL-S-SKYBLUE","TH-262-PETCORESATCHEL-S-SKYBLUE",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Blue × M","PETCORESATCHEL-M-SKYBLUE","TH-262-PETCORESATCHEL-M-SKYBLUE",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Yellow × S","PETCORESATCHEL-S-YELLOW","TH-262-PETCORESATCHEL-S-YELLOW",4
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Yellow × M","PETCORESATCHEL-M-YELLOW","TH-262-PETCORESATCHEL-M-YELLOW",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Green × S","PETCORESATCHEL-S-GREEN","TH-262-PETCORESATCHEL-S-GREEN",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Green × M","PETCORESATCHEL-M-GREEN","TH-262-PETCORESATCHEL-M-GREEN",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Orange × S","PETCORESATCHEL-S-ORANGE","TH-262-PETCORESATCHEL-S-ORANGE",4
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PetCore Satchel | With Matching Leash | Their Own Backpack | Easy Walk Control","Orange × M","PETCORESATCHEL-M-ORANGE","TH-262-PETCORESATCHEL-M-ORANGE",3
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Plume Bed – Ultra-Soft Calming Bed for Cats & Small Pets","Default Title","PLUMEBED","TH-275-PLUMEBED",8
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PocketPup Tote Bag - Travel Ready Breathable Tote for Small Pets up to 6.5 kg","Yellow","TOTE-Y","TH-054-TOTE-Y",23
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","PocketPup Tote Bag - Travel Ready Breathable Tote for Small Pets up to 6.5 kg","Yellow","TOTE-Y","TH-054-TOTE-Y",12
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","PocketPup Tote Bag - Travel Ready Breathable Tote for Small Pets up to 6.5 kg","Yellow","TOTE-Y","TH-054-TOTE-Y",95
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","PoopScoop Buddy – Smarter Cleanups for Everyday Walks","Default Title","SCOOP","TH-066-SCOOP",1
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","PoopScoop Buddy – Smarter Cleanups for Everyday Walks","Default Title","SCOOP","TH-066-SCOOP",3
+"May 2026","PR-0041","2026-05-22","Anand Surgical Industries","Precision Hair Plucker – Stainless Steel Grooming Tool for Perfect Hair Removal","Default Title","PHP","MNM-014-PHP",26
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","PupIQ Playboard | Smart Puzzle Toy | Boredom-Free Play","Default Title","PUPIQPLAYBOARD","TH-171-PUPIQPLAYBOARD",6
+"May 2026","PR-0027","2026-05-22","Kara Creations","PupLennon Shades for Pets – Stylish UV Protection Sunglasses","Default Title","LENNONSHADES","TH-140-LENNONSHADES",6
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","PupTidy Poop Bags – Water Resistant Dog Waste Bags for Daily Walks","Default Title","PTBAG","TH-046-PTBAG",8
+"May 2026","PR-0027","2026-05-22","Kara Creations","PureSip Fountain | LED Flow | Filtered Hydration for Small Pets","Default Title","PURESIP","TH-366-PURESIP",18
+"May 2026","PR-0062","2026-05-27","Pet Craft Pvt Ltd","Purr Den Cat Scratcher – Scratch, Play & Lounge in One Cozy Hideout","Default Title","PURRSCRATCHER","TH-352-PURRSCRATCHER",5
+"May 2026","PR-0036","2026-05-22","ABK IMPORTS","PushPop Treat Tumbler – Interactive Treat Dispensing Toy for Dogs","Default Title","TREATTUMBLER","TH-320-TREATTUMBLER",4
+"May 2026","PR-0062","2026-05-27","Pet Craft Pvt Ltd","Quad Spin Scratcher – Interactive Scratching & Rolling Play Toy for Cats","Default Title","QUADSCRATCHER","TH-316-QUADSCRATCHER",5
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 10","RANGREADYTEE-10-WHITE","TH-341-RANGREADYTEE-10-WHITE",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 12","RANGREADYTEE-12-WHITE","TH-341-RANGREADYTEE-12-WHITE",4
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 14","RANGREADYTEE-14-WHITE","TH-341-RANGREADYTEE-14-WHITE",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 16","RANGREADYTEE-16-WHITE","TH-341-RANGREADYTEE-16-WHITE",1
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 18","RANGREADYTEE-18-WHITE","TH-341-RANGREADYTEE-18-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 20","RANGREADYTEE-20-WHITE","TH-341-RANGREADYTEE-20-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 22","RANGREADYTEE-22-WHITE","TH-341-RANGREADYTEE-22-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 24","RANGREADYTEE-24-WHITE","TH-341-RANGREADYTEE-24-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 26","RANGREADYTEE-26-WHITE","TH-341-RANGREADYTEE-26-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 28","RANGREADYTEE-28-WHITE","TH-341-RANGREADYTEE-28-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","White × 30","RANGREADYTEE-30-WHITE","TH-341-RANGREADYTEE-30-WHITE",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 10","RANGREADYTEE-10-RED","TH-341-RANGREADYTEE-10-RED",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 12","RANGREADYTEE-12-RED","TH-341-RANGREADYTEE-12-RED",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 14","RANGREADYTEE-14-RED","TH-341-RANGREADYTEE-14-RED",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 16","RANGREADYTEE-16-RED","TH-341-RANGREADYTEE-16-RED",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 18","RANGREADYTEE-18-RED","TH-341-RANGREADYTEE-18-RED",4
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 20","RANGREADYTEE-20-RED","TH-341-RANGREADYTEE-20-RED",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 22","RANGREADYTEE-22-RED","TH-341-RANGREADYTEE-22-RED",4
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 24","RANGREADYTEE-24-RED","TH-341-RANGREADYTEE-24-RED",3
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 26","RANGREADYTEE-26-RED","TH-341-RANGREADYTEE-26-RED",5
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 28","RANGREADYTEE-28-RED","TH-341-RANGREADYTEE-28-RED",2
+"May 2026","PR-0023","2026-05-22","M/S Zorba International","RangReady Tee – Holi Cotton Hosiery Blend T-Shirt for Pets","Red × 30","RANGREADYTEE-30-RED","TH-341-RANGREADYTEE-30-RED",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","RippleDisc | Floatable Squeaky Toy | Keeps Dogs Entertained","S","RIPPLEDISC-S","TH-133-RIPPLEDISC-S",10
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","RippleDisc | Floatable Squeaky Toy | Keeps Dogs Entertained","L","RIPPLEDISC-L","TH-133-RIPPLEDISC-L",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","XS","ROYALLEHENGA-XS","TH-162-ROYALLEHENGA-XS",4
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","S","ROYALLEHENGA-S","TH-162-ROYALLEHENGA-S",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","M","ROYALLEHENGA-M","TH-162-ROYALLEHENGA-M",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","L","ROYALLEHENGA-L","TH-162-ROYALLEHENGA-L",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","XL","ROYALLEHENGA-XL","TH-162-ROYALLEHENGA-XL",4
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","XXL","ROYALLEHENGA-XXL","TH-162-ROYALLEHENGA-XXL",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","RoyalGlow Lehenga | Festive Outfit for Pets","XXL","ROYALLEHENGA-XXL","TH-162-ROYALLEHENGA-XXL",5
+"May 2026","PR-0015","2026-05-22","Reelay Ecommerce","SanctiCare Heat Wrap — Reusable Protection for Dogs in Heat | Includes 3 Absorbent Pads","L","SANCTICAREWRAP-L","TH-351-SANCTICAREWRAP-L",3
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","Scarlet Bell Collar – Handcrafted Woven Collar for Pets","M","SCARLETCOLLAR-M","TH-308-SCARLETCOLLAR-M",5
+"May 2026","PR-0066","2026-05-19","Shree Radhe International","Scratchet Mat – Fun, Anti-Slip & Safe Cat Scratching Spot","Default Title","SCRATCHMAT","TH-178-SCRATCHMAT",20
+"May 2026","PR-0062","2026-05-27","Pet Craft Pvt Ltd","ScratchSpire – Smart Scratch Board for Active Cats & Furniture Protection","Default Title","SCRATCHSPIRE","TH-235-SCRATCHSPIRE",5
+"May 2026","PR-0011","2026-05-22","Kiyo International","SereniTouch Pet Massager | Stress Relief | Comfort Anywhere","Default Title","MASSAGER","TH-135-MASSAGER",7
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Shedaway Comb | Dual - Width Stainless Steel Grooming Comb","M","SHEDCO-1","TH-034-SHEDCO-1",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Shedaway Comb | Dual - Width Stainless Steel Grooming Comb","M","SHEDCO-1","TH-034-SHEDCO-1",4
+"May 2026","PR-0027","2026-05-22","Kara Creations","SipEase Pot – Travel Friendly Pet Water Bottle with Drinking Bowl","Default Title","SIPEASE","TH-067-SIPEASE",3
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","SipMate Pro | 3-in-1 Walk Bottle for Hydration & Cleanup","Default Title","SIPMATEPRO","TH-270-SIPMATEPRO",121
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","SipMate Water Bottle – Leak Proof Portable Travel Bottle with Built-In Bowl","500ml","SIPBOT-M","TH-016-SIPBOT-M",46
+"May 2026","PR-0064","2026-05-30","Drontika India","Skin Microbiome Shampoo | Dog & Cat Shampoo for Balanced Skin","Default Title","SKMISH","TH-002-SKMISH",53
+"May 2026","PR-0028","2026-05-22","Drontika India","Skin Microbiome Shampoo | Dog & Cat Shampoo for Balanced Skin","Default Title","SKMISH","TH-002-SKMISH",244
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SleekSpritz Brush – The 2-in-1 Mist Grooming Tool for Softer, Shed-Free Coats","Default Title","SLEEKBRUSH","TH-248-SLEEKBRUSH",9
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","SlowSwirl Feeder | Healthy Eating | Slows Mealtime | Easy to Use","Default Title","SWIRLFEEDER","TH-130-SWIRLFEEDER",1
+"May 2026","PR-0029","2026-05-22","Entout Co.","SmartSip Fountain for Cats | Continuous Water Flow | Electric Powered","Default Title","SMARTSIP","TH-073-SMARTSIP",21
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","SnapCase | Foldable Pet Carrier – Safe, Airy & Travel-Ready Comfort","Default Title","SNAPCASECARRIER","TH-224-SNAPCASECARRIER",1
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","SnapClean Poop Scooper | No-Touch, Hygienic & Effortless Cleanup for Dogs","Default Title","POOPSCOOPER","TH-255-POOPSCOOPER",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Gaurd | Safe & Breathable Muzzle for Dogs","S","SNOG-S","TH-033-SNOG-S",4
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Gaurd | Safe & Breathable Muzzle for Dogs","M","SNOG-M","TH-033-SNOG-M",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Guard Pro | Comfortable | Adjustable | Durable Muzzle","S","SNOUTPRO-S","TH-105-SNOUTPRO-S",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Guard Pro | Comfortable | Adjustable | Durable Muzzle","M","SNOUTPRO-M","TH-105-SNOUTPRO-M",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Guard Pro | Comfortable | Adjustable | Durable Muzzle","L","SNOUTPRO-L","TH-105-SNOUTPRO-L",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Guard Pro | Comfortable | Adjustable | Durable Muzzle","XL","SNOUTPRO-XL","TH-105-SNOUTPRO-XL",6
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Snout Guard Pro | Comfortable | Adjustable | Durable Muzzle","XXL","SNOUTPRO-XXL","TH-105-SNOUTPRO-XXL",6
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","SnugBug Hut – Comfy, Calming & Portable | Safe Den for Small Dogs","Red","SNUGBUG-R","TH-104-SNUGBUG-R",91
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","XXL","SNUGBOO-XXL","TH-012-SNUGBOO-XXL",27
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","XS","SNUGBOO-XS","TH-012-SNUGBOO-XS",16
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","XS","SNUGBOO-XS","TH-012-SNUGBOO-XS",23
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","M","SNUGBOO-M","TH-012-SNUGBOO-M",35
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","L","SNUGBOO-L","TH-012-SNUGBOO-L",27
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","SnugSole Boots | Dog Boots for Hot Pavement & Rain | Anti-Slip Waterproof Paw Protection","XL","SNUGBOO-XL","TH-012-SNUGBOO-XL",23
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Solace Cave | Soft, Enclosed Comfort for Calm Sleep for Puppies & Cats","Default Title","SOLACECAVE","TH-280-SOLACECAVE",10
+"May 2026","PR-0061","2026-05-27","Big Time Enterprises","SpillGuard Bowl | Splash-Free Drinking | Floating Disk","Default Title","SPILLGUARD","TH-083-SPILLGUARD",5
+"May 2026","PR-0007","2026-05-22","Big Time Enterprises","SpillGuard Bowl | Splash-Free Drinking | Floating Disk","Default Title","SPILLGUARD","TH-083-SPILLGUARD",3
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","Splash Spring Fountain – Paw-Activated Outdoor Dog Water Fountain | Step-On Dog Water Dispenser with Hose Connection for Yard & Garden","Default Title","SPLASHFOUNTAIN","TH-371-SPLASHFOUNTAIN",17
+"May 2026","PR-0010","2026-05-22","Companion Neesds","StarryBelle Dress – Sparkling Charm with Easy Wear | Perfect for Parties & Weddings","XS","STARRYBELLE-XS","TH-153-STARRYBELLE-XS",4
+"May 2026","PR-0010","2026-05-22","Companion Neesds","StarryBelle Dress – Sparkling Charm with Easy Wear | Perfect for Parties & Weddings","XS","STARRYBELLE-XS","TH-153-STARRYBELLE-XS",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","StarryBelle Dress – Sparkling Charm with Easy Wear | Perfect for Parties & Weddings","S","STARRYBELLE-S","TH-153-STARRYBELLE-S",1
+"May 2026","PR-0010","2026-05-22","Companion Neesds","StarryBelle Dress – Sparkling Charm with Easy Wear | Perfect for Parties & Weddings","M","STARRYBELLE-M","TH-153-STARRYBELLE-M",3
+"May 2026","PR-0010","2026-05-22","Companion Neesds","StarryBelle Dress – Sparkling Charm with Easy Wear | Perfect for Parties & Weddings","L","STARRYBELLE-L","TH-153-STARRYBELLE-L",2
+"May 2026","PR-0055","2026-05-26","Arjan Commerce Private Limited","SteadyDiner | Magnetic Bowls | Mess-Free Mealtime for Pets","Default Title","STEADYDINER","ST-014-STEADYDINER",5
+"May 2026","PR-0006","2026-05-22","Arjan Commerce Private Limited","SteadyDiner | Magnetic Bowls | Mess-Free Mealtime for Pets","Default Title","STEADYDINER","TH-137-STEADYDINER",2
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","XS","STEPGUARDBOO-XS","TH-219-STEPGUARDBOO-XS",4
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","S","STEPGUARDBOO-S","TH-219-STEPGUARDBOO-S",4
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","M","STEPGUARDBOO-M","TH-219-STEPGUARDBOO-M",1
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","L","STEPGUARDBOO-L","TH-219-STEPGUARDBOO-L",3
+"May 2026","PR-0012","2026-05-22","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","XL","STEPGUARDBOO-XL","TH-219-STEPGUARDBOO-XL",2
+"May 2026","PR-0048","2026-05-22","Western India Export","Stormborn Harness – Premium Leather Harness for Strong Dogs","Default Title","STORMBORNHARNESS","TH-264-STORMBORNHARNESS",25
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",16
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",18
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",5
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",23
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",15
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",44
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","XS","COOLINGVEST-XS","TH-150-COOLINGVEST-XS",1
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","S","COOLINGVEST-S","TH-150-COOLINGVEST-S",2
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","M","COOLINGVEST-M","TH-150-COOLINGVEST-M",2
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","L","COOLINGVEST-L","TH-150-COOLINGVEST-L",2
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","XXL","COOLINGVEST-XL","TH-150-COOLINGVEST-XL",2
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","XXL","COOLINGVEST-XL","TH-150-COOLINGVEST-XL",2
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","SummerGuard Cooling Vest: Cool Comfort for Hot Days","XXL","COOLINGVEST-XL","TH-150-COOLINGVEST-XL",2
+"May 2026","PR-0029","2026-05-22","Entout Co.","SummerSoothe Cooling Mat for Dogs | Self-Cooling, Travel-Friendly & Non-Toxic","Default Title","SUMMERMAT","TH-071-SUMMERMAT",6
+"May 2026","PR-0010","2026-05-22","Companion Neesds","TangleGuard Leash – Dual Leash | LED Light | Anti-Slip","Red","TANGLELEASH-RED","TH-152-TANGLELEASH-RED",5
+"May 2026","PR-0005","2026-05-21","Chinmayo Sahoo","TangleGuard Leash – Dual Leash | LED Light | Anti-Slip","Black","TANGLELEASH-BLACK","TH-152-TANGLELEASH-BLACK",200
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","XS","SILBOO-XS","TH-063-SILBOO-XS",32
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","S","SILBOO-S","TH-063-SILBOO-S",36
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","M","SILBOO-M","TH-063-SILBOO-M",35
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","L","SILBOO-L","TH-063-SILBOO-L",35
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","XL","SILBOO-XL","TH-063-SILBOO-XL",19
+"May 2026","PR-0016","2026-05-22","Shree Radhe International","TenderTrek Silicone Boots | Waterproof, Anti-Slip, Comfy Fit","XXL","SILBOO-XXL","TH-063-SILBOO-XXL",12
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","XS","TERRABOO-XS","TH-160-TERRABOO-XS",3
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","M","TERRABOO-M","TH-160-TERRABOO-M",1
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","L","TERRABOO-L","TH-160-TERRABOO-L",4
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","XL","TERRABOO-XL","TH-160-TERRABOO-XL",1
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","XXXL","TERRABOO-XXXL","TH-160-TERRABOO-XXXL",1
+"May 2026","PR-0014","2026-05-22","Pupscribe Enterprises Pvt Ltd","TerraGuard Boots | All-Weather Paw Protection | Secure Fit for Active Dogs","XXXXL","TERRABOO-XXXXL","TH-160-TERRABOO-XXXXL",2
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","XXL","CATHOODIE-XXL","TH-256-CATHOODIE-XXL",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","M","CATHOODIE-M","TH-256-CATHOODIE-M",5
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","XS","CATHOODIE-XS","TH-256-CATHOODIE-XS",3
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","S","CATHOODIE-S","TH-256-CATHOODIE-S",10
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","L","CATHOODIE-L","TH-256-CATHOODIE-L",5
+"May 2026","PR-0044","2026-05-22","Lavante Fashion","The CatMother Hoodie | Where Comfort Meets Cat-Parent Energy","XL","CATHOODIE-XL","TH-256-CATHOODIE-XL",8
+"May 2026","PR-0064","2026-05-30","Drontika India","Therapeutic Aromatherapy Dog & Cat Shampoo - Tilting Heads","Default Title","THARSH","TH-001-THARSH",50
+"May 2026","PR-0028","2026-05-22","Drontika India","Therapeutic Aromatherapy Dog & Cat Shampoo - Tilting Heads","Default Title","THARSH","TH-001-THARSH",65
+"May 2026","PR-0064","2026-05-30","Drontika India","Tick & Flea Dog & Cat Shampoo - Tilting Heads","Default Title","TNFSH","TH-004-TNFSH",51
+"May 2026","PR-0028","2026-05-22","Drontika India","Tick & Flea Dog & Cat Shampoo - Tilting Heads","Default Title","TNFSH","TH-004-TNFSH",94
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Tilting Heads Codos CP-9600 Pet Clipper | Quiet & Safe Grooming","Default Title","CODOS9600","TH-125-CODOS9600",2
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Tilting Heads CP-9700 Trimmer | Safe, Reliable & Professional Grooming","Default Title","CODOS9700","TH-126-CODOS9700",1
+"May 2026","PR-0029","2026-05-22","Entout Co.","TitanGrip Leash | Buffer Spring Control | No-Jerk Walking","Default Title","TITANGRIPLEASH","TH-271-TITANGRIPLEASH",7
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","TitanK9 Tactical Collar | Secure Hold | Tactical Gear for Active Dogs","M","K9COLLAR-M","TH-112-K9COLLAR-M",9
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","TitanK9 Tactical Collar | Secure Hold | Tactical Gear for Active Dogs","L","K9COLLAR-L","TH-112-K9COLLAR-L",13
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","TitanK9 Tactical Collar | Secure Hold | Tactical Gear for Active Dogs","XL","K9COLLAR-XL","TH-112-K9COLLAR-XL",9
+"May 2026","PR-0009","2026-05-22","Cature Shield Pvt Ltd","Treat Chamber – Interactive Slow Feeder Dog Puzzle Toy | Rotating Treat Dispenser with 8 Compartments for IQ Training & Mental Stimulation","Default Title","TREATCHAMBER","TH-370-TREATCHAMBER",5
+"May 2026","PR-0027","2026-05-22","Kara Creations","TreatMaze Feeder | Puzzle-based treat toy for engagement, Slow Eating, and Busting Boredom","Default Title","MAZE","TH-040-MAZE",4
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","TrekPack Pet Carrier Bag – All-Season Comfort & Secure Carry","Default Title","TREKPACKBAG","TH-223-TREKPACKBAG",6
+"May 2026","PR-0041","2026-05-22","Anand Surgical Industries","Trim & Style Scissors","Default Title","SCI","MNM-013-SCI",31
+"May 2026","PR-0031","2026-05-22","Chinmayo Sahoo","TrimEase Paw Trimmer | Precise & Gentle Grooming For Pets","Default Title","PAWTR","TH-038-PAWTR",922
+"May 2026","PR-0032","2026-05-22","Scoobe Pets Products","Trimzy Nail Cutter & Filer for Pets","Default Title","NAICUTFIL","TH-018-NAICUTFIL",5
+"May 2026","PR-0010","2026-05-22","Companion Neesds","UltraGrip Pet Socks – The Perfect Fit for Small Cats & Dogs","S","ULTRAGRIPSOCKS-S","TH-174-ULTRAGRIPSOCKS-S",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","UltraGrip Pet Socks – The Perfect Fit for Small Cats & Dogs","M","ULTRAGRIPSOCKS-M","TH-174-ULTRAGRIPSOCKS-M",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","UltraGrip Pet Socks – The Perfect Fit for Small Cats & Dogs","L","ULTRAGRIPSOCKS-L","TH-174-ULTRAGRIPSOCKS-L",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","XS","UTSAVKURTA-XS","TH-155-UTSAVKURTA-XS",4
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","S","UTSAVKURTA-S","TH-155-UTSAVKURTA-S",1
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","M","UTSAVKURTA-M","TH-155-UTSAVKURTA-M",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","L","UTSAVKURTA-L","TH-155-UTSAVKURTA-L",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","XL","UTSAVKURTA-XL","TH-155-UTSAVKURTA-XL",5
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","XXL","UTSAVKURTA-XXL","TH-155-UTSAVKURTA-XXL",3
+"May 2026","PR-0008","2026-05-22","Bow Bow The Animal Hub","UtsavSitara Kurta – Brocade Fabric | Festive & Regal Style | Easy Velcro Fit","XXXL","UTSAVKURTA-XXXL","TH-155-UTSAVKURTA-XXXL",5
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",14
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",18
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",16
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",16
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",16
+"May 2026","PR-0037","2026-05-22","Snowdrop Creations","Vacay Shirt – Stylish Cotton Blend Summer Shirt for Dogs","S","VACAYSHIRT-S","TH-357-VACAYSHIRT-S",16
+"May 2026","PR-0033","2026-05-22","Rose International","Vanguard Collar | Bold Finish, Premium Comfort in Pure Leather for Dogs","S","VANGUARDCOLLAR-S","TH-281-VANGUARDCOLLAR-S",4
+"May 2026","PR-0033","2026-05-22","Rose International","Vanguard Collar | Bold Finish, Premium Comfort in Pure Leather for Dogs","S","VANGUARDCOLLAR-S","TH-281-VANGUARDCOLLAR-S",4
+"May 2026","PR-0033","2026-05-22","Rose International","Vanguard Collar | Bold Finish, Premium Comfort in Pure Leather for Dogs","S","VANGUARDCOLLAR-S","TH-281-VANGUARDCOLLAR-S",4
+"May 2026","PR-0033","2026-05-22","Rose International","Vanguard Collar | Bold Finish, Premium Comfort in Pure Leather for Dogs","S","VANGUARDCOLLAR-S","TH-281-VANGUARDCOLLAR-S",4
+"May 2026","PR-0024","2026-05-22","Maple Pets International Private Limited","Vitalwhisk fountain-Catit Pixi Water Drinking Fountains | Triple-Filtered Hydration | Silent & Safe that Prevents Your Cats From KIdney And Bladder Issues","Default Title","VITALWHISKFOUNTAIN","TH-172-VITALWHISKFOUNTAIN",5
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","VoiceBond Toy – Interactive Recordable Voice Toy for Pets","Default Title","VOICEBONDTOY","TH-349-VOICEBONDTOY",26
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Wander Whiskers | Suitcase-Style Pet Carrier | Air-Comfy Travel","Default Title","WANDERWHISKER","TH-093-WANDERWHISKER",7
+"May 2026","PR-0034","2026-05-22","Pet Craft Pvt Ltd","Wave Lounge Scratcher – Furniture-Saving Scratch & Lounge Board","Default Title","WAVESCRATCHER","TH-314-WAVESCRATCHER",1
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","WiggleWag Pet Toy | Endless Fun for Your Pup","Default Title","WIGGLEWAGTOY","TH-169-WIGGLEWAGTOY",11
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","S","WILD-S","TH-068-WILD-S",45
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","M","WILD-M","TH-068-WILD-M",35
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","L","WILD-L","TH-068-WILD-L",43
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","XL","WILD-XL","TH-068-WILD-XL",39
+"May 2026","PR-0013","2026-05-22","Ocean Wave Enterprises","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","XXL","WILD-XXL","TH-068-WILD-XXL",50
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Wobble Bowl – Slow Feeding Made Fun for Healthy, Happy Pets","Default Title","WOBBLEBOWL","TH-127-WOBBLEBOWL",5
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","XS","WOVENBOOTS-XS","TH-269-WOVENBOOTS-XS",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","S","WOVENBOOTS-S","TH-269-WOVENBOOTS-S",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","M","WOVENBOOTS-M","TH-269-WOVENBOOTS-M",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","L","WOVENBOOTS-L","TH-269-WOVENBOOTS-L",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","XL","WOVENBOOTS-XL","TH-269-WOVENBOOTS-XL",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","XXL","WOVENBOOTS-XXL","TH-269-WOVENBOOTS-XXL",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Woven Boots – Wedding & Festive Wear for Stylish Dogs","XXXL","WOVENBOOTS-XXXL","TH-269-WOVENBOOTS-XXXL",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",1
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",3
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",3
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",2
+"May 2026","PR-0018","2026-05-22","Zoof Pets","Zari Boots – Festive Style | Cushioned Comfort | Double Velcro Fit","S","ZARIBOO-S","TH-165-ZARIBOO-S",1
+"May 2026","PR-0062","2026-05-27","Pet Craft Pvt Ltd","Zen Curve Scratcher – Multifunction Wooden Cat Scratch & Lounge","Default Title","ZENSCRATCHER","TH-313-ZENSCRATCHER",8
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","ZenLick Dog Food Mat – Slow Feeder & Anxiety Relief Tool","Default Title","LICKMAT","TH-051-LICKMAT",4
+"May 2026","PR-0027","2026-05-22","Kara Creations","ZeviKix – Breathable Dog Shoes with Anti-Slip Sole & Adjustable Velcro Strap | Lightweight Paw Protection for Small Dogs & Daily Walks","2","ZEVIKIX-2","TH-218-ZEVIKIX-2",3
+"May 2026","PR-0027","2026-05-22","Kara Creations","ZeviKix – Breathable Dog Shoes with Anti-Slip Sole & Adjustable Velcro Strap | Lightweight Paw Protection for Small Dogs & Daily Walks","2","ZEVIKIX-2","TH-218-ZEVIKIX-2",5
+"May 2026","PR-0027","2026-05-22","Kara Creations","ZeviKix – Breathable Dog Shoes with Anti-Slip Sole & Adjustable Velcro Strap | Lightweight Paw Protection for Small Dogs & Daily Walks","2","ZEVIKIX-2","TH-218-ZEVIKIX-2",10
+"May 2026","PR-0027","2026-05-22","Kara Creations","ZeviKix – Breathable Dog Shoes with Anti-Slip Sole & Adjustable Velcro Strap | Lightweight Paw Protection for Small Dogs & Daily Walks","2","ZEVIKIX-2","TH-218-ZEVIKIX-2",2
+"May 2026","PR-0010","2026-05-22","Companion Neesds","ZipTrek Boots | Secure Fit | Waterproof Paw Protection","XXS","ZIPTREKBOO-XXS","TH-170-ZIPTREKBOO-XXS",12
+"May 2026","PR-0010","2026-05-22","Companion Neesds","ZipTrek Boots | Secure Fit | Waterproof Paw Protection","XS","ZIPTREKBOO-XS","TH-170-ZIPTREKBOO-XS",7
+"May 2026","PR-0010","2026-05-22","Companion Neesds","ZipTrek Boots | Secure Fit | Waterproof Paw Protection","S","ZIPTREKBOO-S","TH-170-ZIPTREKBOO-S",10
+"May 2026","PR-0010","2026-05-22","Companion Neesds","ZipTrek Boots | Secure Fit | Waterproof Paw Protection","M","ZIPTREKBOO-M","TH-170-ZIPTREKBOO-M",6
+"May 2026","PR-0010","2026-05-22","Companion Neesds","ZipTrek Boots | Secure Fit | Waterproof Paw Protection","L","ZIPTREKBOO-L","TH-170-ZIPTREKBOO-L",7
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","S","ZOOMBOO-S","TH-078-ZOOMBOO-S",20
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","S","ZOOMBOO-S","TH-078-ZOOMBOO-S",34
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","S","ZOOMBOO-S","TH-078-ZOOMBOO-S",36
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","S","ZOOMBOO-S","TH-078-ZOOMBOO-S",20
+"May 2026","PR-0022","2026-05-22","PawsSamrat Pet Products","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","S","ZOOMBOO-S","TH-078-ZOOMBOO-S",26
+"June 2026","PR-0105","2026-06-24","Hardik Enterprises","AlphaView Pet Shades – Cool, Comfy Eyewear for Stylish Outdoor Dogs","Black","ALPHAVIEW-1","TH-100-ALPHAVIEW-1",15
+"June 2026","PR-0105","2026-06-24","Hardik Enterprises","AlphaView Pet Shades – Cool, Comfy Eyewear for Stylish Outdoor Dogs","Blue","ALPHAVIEW-2","TH-100-ALPHAVIEW-2",15
+"June 2026","PR-0105","2026-06-24","Hardik Enterprises","Aqua Care Shower | Pet Shower Head | Bathing & Grooming Tool","Default Title","AQCASHO","TH-005-AQCASHO",30
+"June 2026","PR-0095","2026-06-20","Big Time Enterprises","Aqua glow filters","Default Title","Aquaglowfilters","Th-20062026-Aquaglowfilters",12
+"June 2026","PR-0111","2026-06-27","Smarty Pet","Aurora Litter Den – Clean, Comfy & Private Litter Space for Cats","Default Title","LITTERDEN","TH-087-LITTERDEN",1
+"June 2026","PR-0074","2026-06-03","Smarty Pet","Aurora Litter Den – Clean, Comfy & Private Litter Space for Cats","Default Title","LITTERDEN","TH-087-LITTERDEN",3
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × L","AVEHARNESSSET-L-AVOCADO","ST-016-AVEHARNESSSET-L-AVOCADO",3
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × M","AVEHARNESSSET-M-AVOCADO","ST-016-AVEHARNESSSET-M-AVOCADO",3
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × S","AVEHARNESSSET-S-AVOCADO","ST-016-AVEHARNESSSET-S-AVOCADO",3
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","Ave Walk Harness Set | All-Day Comfort Walk Set with Leash & Collar","Avocado × XL","AVEHARNESSSET-XL-AVOCADO","ST-016-AVEHARNESSSET-XL-AVOCADO",3
+"June 2026","PR-0123","2026-06-25","Scoobe Pets Products","BLOOMI Harness – Cotton Floral Vest Harness for Small Pets","Yellow × S","BLOOMIHARNESS-S-YELLOW","TH-356-BLOOMIHARNESS-S-YELLOW",4
+"June 2026","PR-0104","2026-06-22","Scoobe Pets Products","BLOOMI Harness – Cotton Floral Vest Harness for Small Pets","Yellow × S","BLOOMIHARNESS-S-YELLOW","TH-356-BLOOMIHARNESS-S-YELLOW",2
+"June 2026","PR-0084","2026-06-12","Kanha Enterprises","Bopp Tapp","Default Title","TempBopptape 123","TempBopptape 123",2
+"June 2026","PR-0084","2026-06-12","Kanha Enterprises","Bubble Roll","Default Title","Tempbubbleroll 123","Tempbubbleroll 123",10
+"June 2026","PR-0070","2026-06-03","Big Time Enterprises","CasaFrolic Playpen | Foldable Pet Enclosure | Safe, Portable & Breathable","Default Title","PLAYPEN","TH-052-PLAYPEN",5
+"June 2026","PR-0111","2026-06-27","Smarty Pet","Cat house wooden","Default Title","CATHOUSEWOODDEN","TH-300620262-CATHOUSEWOODDEN",1
+"June 2026","PR-0099","2026-06-22","Smarty Pet","Cloud Quilted Mat– Quilted Crate & Floor Comfort Bed for Small & Medium Pets","Default Title","CLOUDMAT","TH-334-CLOUDMAT",10
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","CrabDash Toy | Motion-Driven Play for Energetic Indoor Pets","Default Title","CRABDASH TOY","TH-284-CRABDASH TOY",10
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","L","CAPE-L","TH-058-CAPE-L",10
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","M","CAPE-M","TH-058-CAPE-M",10
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","S","CAPE-S","TH-058-CAPE-S",10
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XL","CAPE-XL","TH-058-CAPE-XL",15
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XS","CAPE-XS","TH-058-CAPE-XS",10
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XXL","CAPE-XXL","TH-058-CAPE-XXL",15
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XXXL","CAPE-XXXL","TH-058-CAPE-XXXL",15
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","L","CAPE-L","TH-058-CAPE-L",5
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","M","CAPE-M","TH-058-CAPE-M",3
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","S","CAPE-S","TH-058-CAPE-S",5
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XL","CAPE-XL","TH-058-CAPE-XL",5
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XS","CAPE-XS","TH-058-CAPE-XS",5
+"June 2026","PR-0079","2026-06-10","M/S Zorba International","DrizzleCape – Waterproof Dog Raincoat | Fits All Breeds | Comfortable & Weather-Ready","XXL","CAPE-XXL","TH-058-CAPE-XXL",5
+"June 2026","PR-0100","2026-06-20","Kaur Fashion Universe","DuckDash Treat Toy – Puzzle Treat Dispenser for Dogs & Cats with Press-To-Release Handle, Treat Window & Interchangeable Lids","Default Title","DUCKTOY","TH-385-DUCKTOY",100
+"June 2026","PR-0096","2026-06-19","Kaur Fashion Universe","DuckDash Treat Toy – Puzzle Treat Dispenser for Dogs & Cats with Press-To-Release Handle, Treat Window & Interchangeable Lids","Default Title","DUCKTOY","TH-385-DUCKTOY",100
+"June 2026","PR-0088","2026-06-16","Tech Electrical & E-Commerce Ventures","DuckDash Treat Toy – Puzzle Treat Dispenser for Dogs & Cats with Press-To-Release Handle, Treat Window & Interchangeable Lids","Default Title","DUCKTOY","TH-385-DUCKTOY",30
+"June 2026","PR-0103","2026-06-26","Big Time Enterprises","FeedSync | Pre-Portioned Auto Feeder | Keeps Mealtimes On Track","Default Title","FEEDSYNC","TH-082-FEEDSYNC",2
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","FeedSync Pro | Smart Automatic Pet Feeder | Precise, Reliable & Stress-Free Mealtime Control","Default Title","FEEDSYNC","TH-082-FEEDSYNC",6
+"June 2026","PR-0112","2026-06-29","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Green","UFOBALL-1","TH-198-UFOBALL-1",30
+"June 2026","PR-0112","2026-06-29","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Pink","UFOBALL-2","TH-198-UFOBALL-2",30
+"June 2026","PR-0112","2026-06-29","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Blue","UFOBALL-3","TH-198-UFOBALL-3",30
+"June 2026","PR-0112","2026-06-29","Rozzby","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Red","UFOBALL-4","TH-198-UFOBALL-4",30
+"June 2026","PR-0075","2026-06-09","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Blue","UFOBALL-3","TH-198-UFOBALL-3",50
+"June 2026","PR-0075","2026-06-09","Scoobe Pets Products","FetchNova UFO Ball | Bounce-Spin Toy | Smart Play for Active Dogs","Red","UFOBALL-4","TH-198-UFOBALL-4",50
+"June 2026","PR-0074","2026-06-03","Smarty Pet","Furease Glove - Tilting Heads","Default Title","FURGLO","TH-009-FURGLO",5
+"June 2026","PR-0067","2026-06-03","Kara Creations","FurSplash Glove – 2-in-1 Bathing Glove & Shower Scrubber | Includes Tick & Flea Shampoo","Default Title","SPLASH","TH-059-SPLASH",10
+"June 2026","PR-0074","2026-06-03","Smarty Pet","GroomEase Glove - Tilting Heads","Default Title","GREAGLO","TH-044-GREAGLO",5
+"June 2026","PR-0098","2026-06-20","Smarty Pet","Halo Pet Carrier Bag - Breathable Ventilation, Lightweight Travel Carrier for Small Dogs & Cats| Comfortable & Secure Transport| Upto 7 kgs","Default Title","HALOCARRIER","TH-102-HALOCARRIER",5
+"June 2026","PR-0115","2026-06-26","Frendever textiles","Indigo Tent House","L","INDIGOTENTHOUSE-L","TH-407-INDIGOTENTHOUSE-L",6
+"June 2026","PR-0115","2026-06-26","Frendever textiles","Indigo Tent House","S","INDIGOTENTHOUSE-S","TH-407-INDIGOTENTHOUSE-S",6
+"June 2026","PR-0078","2026-06-12","Pupscribe Enterprises Pvt Ltd","Ironclad Harness | Escape-Proof Comfort | Night-Visible Safety","L","IRONCLADHARNESS-L","TH-181-IRONCLADHARNESS-L",2
+"June 2026","PR-0078","2026-06-12","Pupscribe Enterprises Pvt Ltd","Ironclad Harness | Escape-Proof Comfort | Night-Visible Safety","M","IRONCLADHARNESS-M","TH-181-IRONCLADHARNESS-M",2
+"June 2026","PR-0078","2026-06-12","Pupscribe Enterprises Pvt Ltd","Ironclad Harness | Escape-Proof Comfort | Night-Visible Safety","XL","IRONCLADHARNESS-XL","TH-181-IRONCLADHARNESS -XL",2
+"June 2026","PR-0076","2026-06-11","Smarty Pet","JerHigh Carrot Stick Dog Treat with Real Chicken Meat 70gm","Default Title","CARROT","TH-298-CARROT",15
+"June 2026","PR-0090","2026-06-09","PawsSamrat Pet Products","JerHigh Strawberry Stick Dog Treats with Real Chicken Meat 70gm","Pack of 1 (1x70gm)","BERRY-P1","TH-299-BERRY-P1",12
+"June 2026","PR-0111","2026-06-27","Smarty Pet","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Black × M","K9HARNESS-BL-M","TH-103-K9HARNESS-BL-M",3
+"June 2026","PR-0111","2026-06-27","Smarty Pet","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Black × XL","K9HARNESS-BL-XL","TH-103-K9HARNESS-BL-XL",3
+"June 2026","PR-0111","2026-06-27","Smarty Pet","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × L","K9HARNESS-BR-L","TH-103-K9HARNESS-BR-L",5
+"June 2026","PR-0111","2026-06-27","Smarty Pet","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × M","K9HARNESS-BR-M","TH-103-K9HARNESS-BR-M",3
+"June 2026","PR-0111","2026-06-27","Smarty Pet","K9 Harness | Controlled Grip | Tactical Gear For Dogs","Brown × XL","K9HARNESS-BR-XL","TH-103-K9HARNESS-BR-XL",1
+"June 2026","PR-0111","2026-06-27","Smarty Pet","Lint remover reusable","Default Title","LINTREMOVERREUSABLE","TH-30062026-LINTREMOVERREUSABLE",1
+"June 2026","PR-0072","2026-06-05","Scoobe Pets Products","LoopBrush","Default Title","TEMP123Green","TEMP123Green",5
+"June 2026","PR-0107","2026-06-27","Nimsay Exports Private Limited","Meow Den","Default Title","MEOWDEN","TH-401-MEOWDEN",25
+"June 2026","PR-0076","2026-06-11","Smarty Pet","Mysa Tilt Bowl – Tilted Ceramic Feeding Bowl for Cats","Default Title","MYSABOWL","TBC-011-MYSABOWL",2
+"June 2026","PR-0085","2026-06-15","Vedimatic Gram Udyog","Paw Balm - Triple Butter Formula for Dogs & Cats | Lick Safe Paw Balm for Cracked & Dry Paws and Nose | Heals, Repairs & Moisturizes Paws, Elbows & Dry Itchy Nose (50 gms)","Default Title","PAWBALM","TH-110-PAWBALM",200
+"June 2026","PR-0092","2026-06-11","Luxepack India Private Limited","Paw balm jars","Default Title","PAWBALMJARS","TH-18062026-PAWBALMJARS",200
+"June 2026","PR-0093","2026-06-18","HI-Tech Enterprises","Paw Balm Sticker","Default Title","tempbalm1234","tempbalm1234",280
+"June 2026","PR-0111","2026-06-27","Smarty Pet","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Blue","PAWTECH-BLUE","TH-336-PAWTECH-BLUE",105
+"June 2026","PR-0111","2026-06-27","Smarty Pet","PawTech Cleaner– Electric Pet Paw Cleaning Device with Tilting Heads Paw Cleanser 500ml","Gray","PAWTECH-GRAY","TH-336-PAWTECH-GRAY",105
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × 2XL","SUSPENDER-2XL-BLUE","TH-383-SUSPENDER-2XL-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × 2XL","SUSPENDER-2XL-MAROON","TH-383-SUSPENDER-2XL-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × 3XL","SUSPENDER-3XL-BLUE","TH-383-SUSPENDER-3XL-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × 3XL","SUSPENDER-3XL-MAROON","TH-383-SUSPENDER-3XL-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × 4XL","SUSPENDER-4XL-BLUE","TH-383-SUSPENDER-4XL-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × 4XL","SUSPENDER-4XL-MAROON","TH-383-SUSPENDER-4XL-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × 5XL","SUSPENDER-5XL-BLUE","TH-383-SUSPENDER-5XL-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × 5XL","SUSPENDER-5XL-MAROON","TH-383-SUSPENDER-5XL-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × L","SUSPENDER-L-BLUE","TH-383-SUSPENDER-L-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × L","SUSPENDER-L-MAROON","TH-383-SUSPENDER-L-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × M","SUSPENDER-M-BLUE","TH-383-SUSPENDER-M-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × M","SUSPENDER-M-MAROON","TH-383-SUSPENDER-M-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × S","SUSPENDER-S-BLUE","TH-383-SUSPENDER-S-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × S","SUSPENDER-S-MAROON","TH-383-SUSPENDER-S-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × XL","SUSPENDER-XL-BLUE","TH-383-SUSPENDER-XL-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × XL","SUSPENDER-XL-MAROON","TH-383-SUSPENDER-XL-MAROON",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Blue × XS","SUSPENDER-XS-BLUE","TH-383-SUSPENDER-XS-BLUE",20
+"June 2026","PR-0087","2026-06-16","Ocean Wave Enterprises","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × XS","SUSPENDER-XS-MAROON","TH-383-SUSPENDER-XS-MAROON",20
+"June 2026","PR-0074","2026-06-03","Smarty Pet","Pet Leg Supporter | Gentle Lift & Mobility Support for Dogs","XL","PETLEGSUPPORTER-XL","TH-292-PETLEGSUPPORTER-XL",3
+"June 2026","PR-0084","2026-06-12","Kanha Enterprises","Plain Polybag (B)","Default Title","Temppolybag 1234","Temppolybag 1234",42
+"June 2026","PR-0084","2026-06-12","Kanha Enterprises","Plain Polybag (S)","Default Title","Temppolybag 123","Temppolybag 123",40
+"June 2026","PR-0115","2026-06-26","Frendever textiles","PocketPup Tote Bag - Travel Ready Breathable Tote for Small Pets up to 6.5 kg","Green","TOTE-G","TH-054-TOTE-G",30
+"June 2026","PR-0123","2026-06-25","Scoobe Pets Products","PoopScoop Buddy – Smarter Cleanups for Everyday Walks","Default Title","SCOOP","ST-022-SCOOP",10
+"June 2026","PR-0104","2026-06-22","Scoobe Pets Products","PoopScoop Buddy – Smarter Cleanups for Everyday Walks","Default Title","SCOOP","ST-022-SCOOP",10
+"June 2026","PR-0067","2026-06-03","Kara Creations","PupLennon Shades for Pets – Stylish UV Protection Sunglasses","Default Title","LENNONSHADES","TH-140-LENNONSHADES",10
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × 2XL","ROVERAINCOAT-OR-2XL","ST-036-ROVERAINCOAT-OR-2XL",20
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × 3XL","ROVERAINCOAT-OR-3XL","ST-036-ROVERAINCOAT-OR-3XL",20
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × 5XL","ROVERAINCOAT-OR-5XL","ST-036-ROVERAINCOAT-OR-5XL",20
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × L","ROVERAINCOAT-OR-L","ST-036-ROVERAINCOAT-OR-L",20
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × M","ROVERAINCOAT-OR-M","ST-036-ROVERAINCOAT-OR-M",20
+"June 2026","PR-0071","2026-06-04","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Orange × XL","ROVERAINCOAT-OR-XL","ST-036-ROVERAINCOAT-OR-XL",20
+"June 2026","PR-0068","2026-06-03","Agam India","SafePlast Pet Bandage - M (7.5cm)","Default Title","BANDAGE-M","TH-382-BANDAGE-M",24
+"June 2026","PR-0068","2026-06-03","Agam India","SafePlast Pet Bandage - M (7.5cm)","Default Title","BANDAGE-S","TH-382-BANDAGE-S",24
+"June 2026","PR-0118","2026-06-23","Veritrade Private Limited","SanctiCare Heat Wrap — Reusable Protection for Dogs in Heat | Includes 3 Absorbent Pads","XL","SANCTICAREWRAP-XL","TH-351-SANCTICAREWRAP-XL",5
+"June 2026","PR-0117","2026-06-23","Veritrade Private Limited","SanctiCare Heat Wrap — Reusable Protection for Dogs in Heat | Includes 3 Absorbent Pads","L","SANCTICAREWRAP-L","TH-351-SANCTICAREWRAP-L",5
+"June 2026","PR-0069","2026-06-03","VERITRADE PRIVATE LIMITED","SanctiCare Heat Wrap — Reusable Protection for Dogs in Heat | Includes 3 Absorbent Pads","L","SANCTICAREWRAP-L","TH-351-SANCTICAREWRAP-L",3
+"June 2026","PR-0069","2026-06-03","VERITRADE PRIVATE LIMITED","SanctiCare Heat Wrap — Reusable Protection for Dogs in Heat | Includes 3 Absorbent Pads","XL","SANCTICAREWRAP-XL","TH-351-SANCTICAREWRAP-XL",3
+"June 2026","PR-0073","2026-06-08","PATPAT TRADING PRIVATE LIMITED","SlowSwirl Feeder | Healthy Eating | Slows Mealtime | Easy to Use","Default Title","SWIRLFEEDER","TH-130-SWIRLFEEDER",5
+"June 2026","PR-0095","2026-06-20","Big Time Enterprises","SpillGuard Bowl | Splash-Free Drinking | Floating Disk","Default Title","SPILLGUARD","TH-083-SPILLGUARD",8
+"June 2026","PR-0097","2026-06-20","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","L","STEPGUARDBOO-L","TH-219-STEPGUARDBOO-L",2
+"June 2026","PR-0097","2026-06-20","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","M","STEPGUARDBOO-M","TH-219-STEPGUARDBOO-M",2
+"June 2026","PR-0097","2026-06-20","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","S","STEPGUARDBOO-S","TH-219-STEPGUARDBOO-S",2
+"June 2026","PR-0097","2026-06-20","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","XL","STEPGUARDBOO-XL","TH-219-STEPGUARDBOO-XL",2
+"June 2026","PR-0097","2026-06-20","Kut Kut Pet Care and Accessories Pvt Ltd","StepGuard Pet Boots – Soft Fit, Steady Grip & Daily Paw Protection","XS","STEPGUARDBOO-XS","TH-219-STEPGUARDBOO-XS",2
+"June 2026","PR-0106","2026-06-25","WAGWISE PET SUPPLIES","StillSpring Fountain | Pet Water Fountain for Cats & Small Dogs | Quiet Flow Hydration System","Default Title","STILLSPRING","TH-373-STILLSPRING",5
+"June 2026","PR-0111","2026-06-27","Smarty Pet","Tie out cable 20ft","Default Title","TIEOUTCABLE20","TH-300620263-TIEOUTCABLE20",1
+"June 2026","PR-0077","2026-06-10","Kut Kut Pet Care and Accessories Pvt Ltd","TreadCore Pet Socks – Anti-Slip Comfort for Safe Paws","L","TREADCORESOCKS-L","TH-228-TREADCORESOCKS-L",5
+"June 2026","PR-0111","2026-06-27","Smarty Pet","WiggleWag Pet Toy | Endless Fun for Your Pup","Default Title","WIGGLEWAGTOY","TH-169-WIGGLEWAGTOY",10
+"June 2026","PR-0074","2026-06-03","Smarty Pet","WiggleWag Pet Toy | Endless Fun for Your Pup","Default Title","WIGGLEWAGTOY","TH-169-WIGGLEWAGTOY",5
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","L","WILD-L","TH-068-WILD-L",20
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","M","WILD-M","TH-068-WILD-M",20
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","S","WILD-S","TH-068-WILD-S",20
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","XL","WILD-XL","TH-068-WILD-XL",20
+"June 2026","PR-0109","2026-06-29","M/S Zorba International","WildTrail Boots | Winter-Ready, Waterproof & Non-Slip | Built for All Terrains","XXL","WILD-XXL","TH-068-WILD-XXL",30
+"June 2026","PR-0098","2026-06-20","Smarty Pet","ZenLick Dog Food Mat – Slow Feeder & Anxiety Relief Tool","Default Title","LICKMAT","TH-051-LICKMAT",5
+"June 2026","PR-0074","2026-06-03","Smarty Pet","ZenLick Dog Food Mat – Slow Feeder & Anxiety Relief Tool","Default Title","LICKMAT","TH-051-LICKMAT",5
+"June 2026","PR-0076","2026-06-11","Smarty Pet","Zoomie Boots – Secure Fit with Zipper & Strap | All-Terrain Paw Safety","2XL","ZOOMBOO-2XL","TH-078-ZOOMBOO-2XL",3
+"July 2026","PR-0127","2026-07-15","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","S","AIRTREKBOO-S","ST-010-AIRTREKBOO-S",4
+"July 2026","PR-0127","2026-07-15","Kut Kut Pet Care and Accessories Pvt Ltd","AirTrek Boots | Protective, Non-Slip Pawwear | All-Weather Comfort","XL","AIRTREKBOO-XL","ST-010-AIRTREKBOO-XL",4
+"July 2026","PR-0122","2026-07-04","Kanha Enterprises","Bopp Tapp","Default Title","TempBopptape 123","TempBopptape 123",1054
+"July 2026","PR-0110","2026-07-01","Big Time Enterprises","Dog chew ball","Default Title","DOGCHEWBALL","TH-010720263-DOGCHEWBALL",1
+"July 2026","PR-0130","2026-07-14","Kanha Enterprises","DT Roll","Default Title","Temproll 123","Temproll 123",80
+"July 2026","PR-0131","2026-07-15","Rajat Aggarwal Collection","FurSwipe Glove | Quick Fur Removal & Fabric-Safe Cleaning for Pets","Default Title","FURSWIPEGLOVE","TH-215-FURSWIPEGLOVE",50
+"July 2026","PR-0134","2026-07-18","Smarty Pet","JoyBall – The Ultimate Giggle Toy for Happy, Healthy Dogs!","L","JOYBALL-L","TH-124-JOYBALL-L",20
+"July 2026","PR-0134","2026-07-18","Smarty Pet","JoyBall – The Ultimate Giggle Toy for Happy, Healthy Dogs!","S","JOYBALL-S","TH-124-JOYBALL-S",10
+"July 2026","PR-0126","2026-07-08","Kut Kut Pet Care and Accessories Pvt Ltd","Love Bug Romper – Denim Outfit for Small Pets","L","ROMPER-L","TH-304-ROMPER-L",3
+"July 2026","PR-0126","2026-07-08","Kut Kut Pet Care and Accessories Pvt Ltd","Love Bug Romper – Denim Outfit for Small Pets","M","ROMPER-M","TH-304-ROMPER-M",3
+"July 2026","PR-0129","2026-07-11","Smarty Pet","PalmPerfect Gloves - Tilting Heads","Default Title","PPGLO","TH-011-PPGLO",10
+"July 2026","PR-0125","2026-07-09","Khadi Pure Gramodyog","Paw Cleanser","Default Title","PAWCLESH","TH-013-PAWCLESH",98
+"July 2026","PR-0124","2026-07-11","Mekanshi India Pvt Ltd","Pawveralls Suspender Boots For Dogs | Secure, Flexible & Weather-Ready | For Daily Walks & Outdoor Adventures| All-Terrain","Maroon × 3XL","SUSPENDER-3XL-MAROON","TH-383-SUSPENDER-3XL-MAROON",1
+"July 2026","PR-0130","2026-07-14","Kanha Enterprises","Plain Polybag (B)","Default Title","Temppolybag 1234","Temppolybag 1234",1000
+"July 2026","PR-0130","2026-07-14","Kanha Enterprises","Plain Polybag (S)","Default Title","Temppolybag 123","Temppolybag 123",10019
+"July 2026","PR-0129","2026-07-11","Smarty Pet","PupTidy Poop Bags – Water Resistant Dog Waste Bags for Daily Walks","Default Title","PTBAG","TH-046-PTBAG",10
+"July 2026","PR-0132","2026-07-17","Bow Bow The Animal Hub","Rakhi Paw Shape","Default Title","Temprakhi 123","Temprakhi 123",6
+"July 2026","PR-0113","2026-07-01","Local Manufacturer","Roselyn Bed – 2-in-1 Convertible Lounge & Bed for Small Dogs & Cats","Default Title","ROSEBED","TH-306-ROSEBED",5
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × L","ROVERAINCOAT-YELLOW-L","TH-372-ROVERAINCOAT-YELLOW-L",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × M","ROVERAINCOAT-YELLOW-M","TH-372-ROVERAINCOAT-YELLOW-M",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × S","ROVERAINCOAT-YELLOW-S","TH-372-ROVERAINCOAT-YELLOW-S",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × XL","ROVERAINCOAT-YELLOW-XL","TH-372-ROVERAINCOAT-YELLOW-XL",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × 2XL","ROVERAINCOAT-YELLOW-XXL","TH-372-ROVERAINCOAT-YELLOW-XXL",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × 3XL","ROVERAINCOAT-YELLOW-XXXL","TH-372-ROVERAINCOAT-YELLOW-XXXL",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × 4XL","ROVERAINCOAT-YELLOW-XXXXL","TH-372-ROVERAINCOAT-YELLOW-XXXXL",20
+"July 2026","PR-0135","2026-07-18","Ocean Wave Enterprises","Rover Raincoat – Waterproof Dog Raincoat with Hood, Reflective Strip, Leash Opening & 3-Point Velcro for Monsoon Walks","Amber × 5XL","ROVERAINCOAT-YELLOW-XXXXXL","TH-372-ROVERAINCOAT-YELLOW-XXXXXL",20
+"July 2026","PR-0108","2026-07-01","HI-Tech Enterprises","Snakula Sticker","Default Title","SNA12345","SNA12345",12
+"July 2026","PR-0110","2026-07-01","Big Time Enterprises","Snuffle mat large","Default Title","SNUFFLEMATLARGE","TH-010720262-SNUFFLEMATLARGE",1
+"July 2026","PR-0110","2026-07-01","Big Time Enterprises","Snuffle mat paw design","Default Title","SNUFFLEMAT","TH-01072026-SNUFFLEMAT",1
+"July 2026","PR-0134","2026-07-18","Smarty Pet","SnugSole Boots | Dog Boots for Hot Pavement | Anti-Slip Paw Protection","XL","SNUGBOO-XL","TH-012-SNUGBOO-XL",20
+"July 2026","PR-0134","2026-07-18","Smarty Pet","SnugSole Boots | Dog Boots for Hot Pavement | Anti-Slip Paw Protection","XXL","SNUGBOO-XXL","TH-012-SNUGBOO-XXL",20
+"July 2026","PR-0129","2026-07-11","Smarty Pet","SnugSole Boots | Dog Boots for Hot Pavement | Anti-Slip Paw Protection","L","SNUGBOO-L","TH-012-SNUGBOO-L",20
+"July 2026","PR-0129","2026-07-11","Smarty Pet","SnugSole Boots | Dog Boots for Hot Pavement | Anti-Slip Paw Protection","S","SNUGBOO-S","TH-012-SNUGBOO-S",20
+"July 2026","PR-0133","2026-07-17","M/S Zorba International","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","M","COAT-M","TH-053-COAT-M",15
+"July 2026","PR-0133","2026-07-17","M/S Zorba International","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XL","COAT-XL","TH-053-COAT-XL",5
+"July 2026","PR-0133","2026-07-17","M/S Zorba International","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XS","COAT-XS","TH-053-COAT-XS",15
+"July 2026","PR-0133","2026-07-17","M/S Zorba International","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XXL","COAT-XXL","TH-053-COAT-XXL",20
+"July 2026","PR-0133","2026-07-17","M/S Zorba International","StormGuard Jacket | Dog Raincoat | For Breezy Walks in Rainy Weather","XXXL","COAT-XXXL","TH-053-COAT-XXXL",20
+"July 2026","PR-0128","2026-07-18","Scoobe Pets Products","TenderTrek Silicone Boots | Waterproof Sole | Anti-Slip Comfort Fit","XXL","SILBOO-XXL","TH-063-SILBOO-XXL",20
+"July 2026","PR-0129","2026-07-11","Smarty Pet","Trimzy Nail Cutter & Filer for Pets","Default Title","NAICUTFIL","TH-018-NAICUTFIL",5
+"July 2026","PR-0129","2026-07-11","Smarty Pet","WiggleWag Pet Toy | Endless Fun for Your Pup","Default Title","WIGGLEWAGTOY","TH-169-WIGGLEWAGTOY",10
+"July 2026","PR-0134","2026-07-18","Smarty Pet","ZenLick Dog Food Mat – Slow Feeder & Anxiety Relief Tool","Default Title","LICKMAT","TH-051-LICKMAT",10
