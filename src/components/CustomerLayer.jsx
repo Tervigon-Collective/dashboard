@@ -123,24 +123,37 @@ const CustomerLayer = () => {
     );
   };
 
-  // Format phone number by removing country code prefix
+  // Resolve phone from available order fields (customer → shipping → billing)
+  const getOrderPhone = (order) => {
+    if (!order) return "";
+    const candidates = [order.phone, order.shipping_phone, order.billing_phone];
+    for (const candidate of candidates) {
+      if (candidate != null && String(candidate).trim() !== "") {
+        return String(candidate).trim();
+      }
+    }
+    return "";
+  };
+
+  // Format phone number by removing country code / non-digit noise
   const formatPhoneNumber = (phone) => {
     if (!phone) return "N/A";
 
-    // Remove "91" prefix if it exists at the beginning
-    let formattedPhone = phone.toString().trim();
+    // Keep digits only (handles +91, spaces, excel-leading apostrophes)
+    let digits = phone.toString().replace(/\D/g, "");
+    if (!digits) return "N/A";
 
-    // Check if phone starts with "91" and has more than 10 digits
-    if (formattedPhone.startsWith("91") && formattedPhone.length > 10) {
-      formattedPhone = formattedPhone.substring(2);
+    // Strip India country code when present
+    if (digits.startsWith("91") && digits.length > 10) {
+      digits = digits.substring(2);
     }
 
-    // If still more than 10 digits, truncate to last 10 digits
-    if (formattedPhone.length > 10) {
-      formattedPhone = formattedPhone.substring(formattedPhone.length - 10);
+    // Prefer last 10 digits for longer numbers
+    if (digits.length > 10) {
+      digits = digits.slice(-10);
     }
 
-    return formattedPhone;
+    return digits;
   };
 
   // Get status badge for order
@@ -400,6 +413,18 @@ const CustomerLayer = () => {
       return "";
     };
 
+    // Like findColumn, but skips blank values so fallbacks work for Shopify CSVs
+    const findFirstNonEmpty = (row, possibleNames) => {
+      for (const name of possibleNames) {
+        if (!row.hasOwnProperty(name)) continue;
+        const value = row[name];
+        if (value != null && String(value).trim() !== "") {
+          return String(value).trim();
+        }
+      }
+      return "";
+    };
+
     data.forEach((row, index) => {
       // Check if row is valid
       if (!row || typeof row !== "object") {
@@ -508,7 +533,15 @@ const CustomerLayer = () => {
             "Province",
             "State",
           ]),
-          phone: findColumn(row, ["Billing Phone", "Phone", "Phone Number"]),
+          billing_phone: findFirstNonEmpty(row, ["Billing Phone"]),
+          // Keep Billing Phone first when present (preserves existing behavior),
+          // then fall back so empty Billing Phone no longer becomes N/A
+          phone: findFirstNonEmpty(row, [
+            "Billing Phone",
+            "Phone",
+            "Shipping Phone",
+            "Phone Number",
+          ]),
 
           // Shipping
           shipping_name: findColumn(row, [
@@ -539,6 +572,11 @@ const CustomerLayer = () => {
             "Shipping Province Name",
             "Province",
             "State",
+          ]),
+          shipping_phone: findFirstNonEmpty(row, [
+            "Shipping Phone",
+            "Phone",
+            "Billing Phone",
           ]),
 
           // Fallback shipping from billing if shipping block missing
@@ -578,6 +616,10 @@ const CustomerLayer = () => {
                   "Billing Province Name",
                   "Province",
                   "State",
+                ]),
+                shipping_phone: findFirstNonEmpty(row, [
+                  "Billing Phone",
+                  "Phone",
                 ]),
               }),
 
@@ -692,7 +734,7 @@ const CustomerLayer = () => {
           billing_zip: order.billing_zip || "",
           billing_province_name: order.billing_province_name || "",
           billing_country: order.billing_country || "IN",
-          billing_phone: order.billing_phone || "",
+          billing_phone: order.billing_phone || order.phone || "",
           shipping_name: order.shipping_name || order.billing_name || "",
           shipping_address1:
             order.shipping_address1 || order.billing_address1 || "",
@@ -704,7 +746,8 @@ const CustomerLayer = () => {
             order.shipping_province_name || order.billing_province_name || "",
           shipping_country:
             order.shipping_country || order.billing_country || "IN",
-          shipping_phone: order.shipping_phone || order.billing_phone || "",
+          shipping_phone:
+            order.shipping_phone || order.phone || order.billing_phone || "",
           payment_method: order.payment_method || "",
           payment_status: order.payment_status || "pending",
           payment_id: order.payment_id || "",
@@ -723,7 +766,8 @@ const CustomerLayer = () => {
           tax_2_value: parseFloat(order.tax_2_value) || 0,
           notes: order.notes || "",
           note_attributes: order.note_attributes || "",
-          phone: order.phone || order.billing_phone || "",
+          phone:
+            order.phone || order.shipping_phone || order.billing_phone || "",
           fulfillment_status: order.fulfillment_status || "unfulfilled",
           line_items: Array.isArray(order.line_items) ? order.line_items : [],
         };
@@ -1037,7 +1081,7 @@ const CustomerLayer = () => {
             address,
             order.shipping_zip || "N/A",
             order.shipping_province_name || "N/A",
-            formatPhoneNumber(order.phone),
+            formatPhoneNumber(getOrderPhone(order)),
             order.email || "NA",
             order.awb_number || "N/A",
             ...productNames,
@@ -1364,9 +1408,9 @@ const CustomerLayer = () => {
                 }
               </div>
               <div class="info-item">
-                <span class="info-label">Phone:</span> ${
-                  selectedOrder.order.phone || "N/A"
-                }
+                <span class="info-label">Phone:</span> ${formatPhoneNumber(
+                  getOrderPhone(selectedOrder.order)
+                )}
               </div>
             </div>
             <div class="info-card">
@@ -1858,7 +1902,7 @@ Press Enter to search or type to search as you type`}
                         </td>
                         <td className="border-end px-4 py-3 d-none d-md-table-cell align-middle">
                           <span className="text-break">
-                            {formatPhoneNumber(order.phone)}
+                            {formatPhoneNumber(getOrderPhone(order))}
                           </span>
                         </td>
                         <td className="border-end px-4 py-3 text-center align-middle">
@@ -2291,7 +2335,9 @@ Press Enter to search or type to search as you type`}
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Phone:</span>
                         <span className="fw-medium">
-                          {formatPhoneNumber(selectedOrder.order.phone)}
+                          {formatPhoneNumber(
+                            getOrderPhone(selectedOrder.order)
+                          )}
                         </span>
                       </div>
                       <div className="d-flex justify-content-between">
