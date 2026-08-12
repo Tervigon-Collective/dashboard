@@ -36,6 +36,15 @@ function getLast30DaysRange() {
   return [start, end];
 }
 
+function getLastNMonthsRange(months) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  end.setHours(23, 59, 59, 999);
+  return [start, end];
+}
+
 function parseRequestDate(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -58,7 +67,81 @@ const DATE_RANGES = [
   { label: "This month", value: getCurrentMonthRange },
   { label: "Last month", value: getLastMonthRange },
   { label: "Last 30 days", value: getLast30DaysRange },
+  { label: "Last 3 months", value: () => getLastNMonthsRange(3) },
+  { label: "Last 6 months", value: () => getLastNMonthsRange(6) },
 ];
+
+/** Theme CSS breaks rsuite float clearfix; force month nav arrows visible. */
+/** Theme CSS + sticky table headers fight the rsuite popup (default z-index: 7). */
+const DATE_PICKER_FIX_CSS = `
+.receipt-details-daterange-menu.rs-picker-popup,
+.rs-picker-popup.receipt-details-daterange-menu {
+  z-index: 2000 !important;
+  background: #fff !important;
+}
+.receipt-details-daterange-menu .rs-calendar {
+  overflow: visible !important;
+  background: #fff !important;
+}
+.receipt-details-daterange-menu .rs-calendar-header {
+  display: block !important;
+  position: relative !important;
+  z-index: 2 !important;
+  min-height: 40px !important;
+  margin-bottom: 4px;
+  padding: 4px 0 8px !important;
+  overflow: visible !important;
+  background: #fff !important;
+}
+.receipt-details-daterange-menu .rs-calendar-header-month-toolbar {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  width: 100% !important;
+  float: none !important;
+  min-height: 36px;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background: #fff !important;
+}
+.receipt-details-daterange-menu .rs-calendar-header-backward,
+.receipt-details-daterange-menu .rs-calendar-header-forward {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  visibility: visible !important;
+  opacity: 1 !important;
+  float: none !important;
+  position: relative !important;
+  z-index: 3 !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #111827 !important;
+  cursor: pointer !important;
+}
+.receipt-details-daterange-menu .rs-calendar-header-backward svg,
+.receipt-details-daterange-menu .rs-calendar-header-forward svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  fill: currentColor !important;
+}
+.receipt-details-daterange-menu .rs-calendar-header-title,
+.receipt-details-daterange-menu .rs-calendar-header-title-date {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+  float: none !important;
+  background: #fff !important;
+}
+`;
 
 /**
  * Receipt Details tab — kept outside the page component so search input
@@ -149,6 +232,7 @@ export default function ReceiptDetailsTab({
 
   return (
     <div className="card basic-data-table">
+      <style>{DATE_PICKER_FIX_CSS}</style>
       <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
         <div>
           <h5 className="card-title mb-0">Receipt Details</h5>
@@ -202,11 +286,17 @@ export default function ReceiptDetailsTab({
                 format="yyyy-MM-dd"
                 placeholder="All creation dates"
                 cleanable
+                editable
                 ranges={DATE_RANGES.map(({ label, value }) => ({
                   label,
                   value: value(),
                 }))}
                 placement="bottomEnd"
+                menuClassName="receipt-details-daterange-menu"
+                menuStyle={{ zIndex: 2000 }}
+                container={() =>
+                  typeof document !== "undefined" ? document.body : undefined
+                }
                 style={{ width: "100%" }}
               />
             </CustomProvider>
@@ -276,15 +366,15 @@ export default function ReceiptDetailsTab({
               className="table table-hover"
               style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
             >
-              <thead
-                style={{
-                  backgroundColor: "#f9fafb",
-                  borderBottom: "2px solid #e5e7eb",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 10,
-                }}
-              >
+                  <thead
+                    style={{
+                      backgroundColor: "#f9fafb",
+                      borderBottom: "2px solid #e5e7eb",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
                 <tr>
                   <th
                     style={{
