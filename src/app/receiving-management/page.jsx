@@ -9,6 +9,7 @@ import vendorMasterApi from "../../services/vendorMasterApi";
 import productMasterApi from "../../services/productMasterApi";
 import qualityCheckApi from "../../services/qualityCheckApi";
 import ReceivingPrProductFields from "../../components/receiving/ReceivingPrProductFields";
+import ReceiptDetailsTab from "../../components/receiving/ReceiptDetailsTab";
 import VendorSpendSummaryTab from "../../components/receiving/VendorSpendSummaryTab";
 import {
   applyFreightToProducts,
@@ -349,365 +350,6 @@ const ReceivingManagementLayer = () => {
     creditDays: "",
   });
 
-  // Receipt Details Tab Component (one row per request, aggregated totals)
-  const ReceiptDetailsTab = ({
-    requests,
-    isLoading,
-    handleViewRequest,
-    viewModalOpen,
-    setViewModalOpen,
-    selectedRequest,
-    searchTerm,
-    setSearchTerm,
-    displayedItems,
-    isLoadingMore,
-    containerRef,
-    getDisplayedData,
-    hasMoreData,
-    loadMoreData,
-  }) => {
-    // Filter data based on search term
-    const filteredData = requests.filter((request) => {
-      if (!searchTerm) return true;
-      const search = searchTerm.toLowerCase();
-      // Search by company or vendor name
-      const supplierName = `${request.company_name || ""} ${
-        request.vendor_name || ""
-      }`
-        .trim()
-        .toLowerCase();
-      if (supplierName && supplierName.includes(search)) {
-        return true;
-      }
-      // Search by aggregated product names (if present)
-      const names =
-        request.aggregated?.productNames ||
-        (request.items && request.items.length > 0
-          ? [
-              ...new Set(
-                request.items.map((it) => it.product_name).filter(Boolean)
-              ),
-            ].join(", ")
-          : "");
-      return names.toLowerCase().includes(search);
-    });
-
-    const displayedData = filteredData.slice(0, displayedItems.length);
-    return (
-      <>
-        {/* Card */}
-        <div className="card basic-data-table">
-          <div className="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
-            <h5 className="card-title mb-0">Receipt Details</h5>
-          </div>
-
-          <div className="card-body">
-            {/* Search */}
-            <div className="row g-3 mb-4">
-              <div className="col-12 col-md-4">
-                <div className="input-group">
-                  <span className="input-group-text bg-white">
-                    <Icon icon="lucide:search" width="16" height="16" />
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search by company or product..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-            {/* Table */}
-            <div
-              ref={containerRef}
-              className="table-scroll-container"
-              style={{
-                maxHeight: "600px",
-                overflowY: "auto",
-                overflowX: "auto",
-                scrollBehavior: "smooth",
-                overscrollBehavior: "auto",
-              }}
-              onScroll={(e) => {
-                const target = e.currentTarget;
-                const scrollTop = target.scrollTop;
-                const scrollHeight = target.scrollHeight;
-                const clientHeight = target.clientHeight;
-
-                if (
-                  scrollTop + clientHeight >= scrollHeight - 10 &&
-                  displayedData.length < filteredData.length &&
-                  !isLoadingMore &&
-                  !isLoading
-                ) {
-                  loadMoreData();
-                }
-              }}
-              onWheel={(e) => {
-                const target = e.currentTarget;
-                const scrollTop = target.scrollTop;
-                const scrollHeight = target.scrollHeight;
-                const clientHeight = target.clientHeight;
-                const isAtTop = scrollTop <= 1;
-                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-
-                if (e.deltaY > 0 && isAtBottom) {
-                  window.scrollBy({
-                    top: e.deltaY,
-                    behavior: "auto",
-                  });
-                } else if (e.deltaY < 0 && isAtTop) {
-                  window.scrollBy({
-                    top: e.deltaY,
-                    behavior: "auto",
-                  });
-                }
-              }}
-            >
-              <div className="table-responsive">
-                <table
-                  className="table table-hover"
-                  style={{ fontSize: "clamp(12px, 2.5vw, 14px)" }}
-                >
-                  <thead
-                    style={{
-                      backgroundColor: "#f9fafb",
-                      borderBottom: "2px solid #e5e7eb",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 10,
-                    }}
-                  >
-                    <tr>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        PR No
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Company Name
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Order Date
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Delivery Date
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Product Name
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Invoice Qty
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Sorted Qty
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Damage Qty
-                      </th>
-                      <th
-                        style={{
-                          fontWeight: "600",
-                          color: "#374151",
-                          padding: "12px",
-                        }}
-                      >
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <>
-                        {Array.from({ length: 5 }).map((_, rowIndex) => (
-                          <tr key={`skeleton-${rowIndex}`}>
-                            {Array.from({ length: 9 }).map((_, colIndex) => (
-                              <td key={`skeleton-${rowIndex}-${colIndex}`}>
-                                <div
-                                  className="skeleton"
-                                  style={{
-                                    height: "20px",
-                                    backgroundColor: "#e5e7eb",
-                                    borderRadius: "4px",
-                                    animation:
-                                      "skeletonPulse 1.5s ease-in-out infinite",
-                                  }}
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </>
-                    ) : displayedData.length === 0 ? (
-                      <tr>
-                        <td colSpan="9" className="text-center py-4">
-                          <div className="d-flex flex-column align-items-center">
-                            <Icon
-                              icon="mdi:file-cabinet"
-                              width="48"
-                              height="48"
-                              className="text-muted mb-2"
-                            />
-                            <p className="text-muted mb-0">
-                              No receipt details found
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      <>
-                        {displayedData.map((request, index) => (
-                          <tr key={request.request_id}>
-                            <td className="small">
-                              {request.pr_number ||
-                                `PR-${String(request.request_id).padStart(
-                                  3,
-                                  "0"
-                                )}`}
-                            </td>
-                            <td className="small">
-                              {request.company_name ||
-                                request.vendor_name ||
-                                "-"}
-                            </td>
-                            <td className="small">
-                              {request.order_date
-                                ? new Date(
-                                    request.order_date
-                                  ).toLocaleDateString()
-                                : "-"}
-                            </td>
-                            <td className="small">
-                              {request.delivery_date
-                                ? new Date(
-                                    request.delivery_date
-                                  ).toLocaleDateString()
-                                : "-"}
-                            </td>
-                            <td className="small">
-                              {request.aggregated?.productNames || "-"}
-                            </td>
-                            <td className="small">
-                              {request.aggregated?.totalInvoiceQty ?? 0}
-                            </td>
-                            <td className="small">
-                              {request.aggregated?.totalSortedQty ?? 0}
-                            </td>
-                            <td className="small">
-                              {request.aggregated?.totalDamageQty ?? 0}
-                            </td>
-                            <td className="small">
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  width: "32px",
-                                  height: "32px",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  border: "1px solid #e5e7eb",
-                                  borderRadius: "6px",
-                                  backgroundColor: "white",
-                                }}
-                                title="View"
-                                onClick={() => handleViewRequest(request)}
-                              >
-                                <Icon
-                                  icon="lucide:eye"
-                                  width="16"
-                                  height="16"
-                                  style={{ color: "#3b82f6" }}
-                                />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Infinite Scroll Footer */}
-              {filteredData.length > 0 && (
-                <div
-                  className="d-flex justify-content-between align-items-center px-3 py-2"
-                  style={{
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "0 0 8px 8px",
-                    marginTop: "0",
-                    position: "sticky",
-                    bottom: 0,
-                    zIndex: 5,
-                  }}
-                >
-                  <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                    Showing <strong>{displayedData.length}</strong> of{" "}
-                    <strong>{filteredData.length}</strong> entries
-                  </div>
-                  {displayedData.length < filteredData.length && (
-                    <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                      Scroll down to load more
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  };
-
   const [editingRequest, setEditingRequest] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -776,11 +418,6 @@ const ReceivingManagementLayer = () => {
   const [receiptCurrentPage, setReceiptCurrentPage] = useState(1);
   const [receiptTotalPages, setReceiptTotalPages] = useState(1);
   const [receiptTotalRecords, setReceiptTotalRecords] = useState(0);
-
-  // Infinite scroll state for Receipt Details tab
-  const [receiptDisplayedItems, setReceiptDisplayedItems] = useState([]);
-  const [receiptLoadingMore, setReceiptLoadingMore] = useState(false);
-  const receiptContainerRef = useRef(null);
 
   // Track if data has been loaded for each tab (to prevent unnecessary refetching)
   const [purchaseRequestsLoaded, setPurchaseRequestsLoaded] = useState(false);
@@ -1069,8 +706,6 @@ const ReceivingManagementLayer = () => {
           setReceiptRequests((prev) => [...prev, ...enriched]);
         } else {
           setReceiptRequests(enriched);
-          // Show initial batch, infinite scroll will handle progressive loading
-          setReceiptDisplayedItems(enriched.slice(0, INITIAL_ITEMS_TO_SHOW));
         }
         setReceiptCurrentPage(result.pagination.page);
         setReceiptTotalPages(result.pagination.totalPages);
@@ -1157,9 +792,6 @@ const ReceivingManagementLayer = () => {
       setQualityCheckDisplayedItems(
         qualityCheckRequests.slice(0, INITIAL_ITEMS_TO_SHOW)
       );
-    } else if (activeTab === "receipt-details") {
-      // Show initial batch, infinite scroll will handle progressive loading
-      setReceiptDisplayedItems(receiptRequests.slice(0, INITIAL_ITEMS_TO_SHOW));
     }
   }, [
     searchTerm,
@@ -1167,7 +799,6 @@ const ReceivingManagementLayer = () => {
     requests,
     toBeDeliveredRequests,
     qualityCheckRequests,
-    receiptRequests,
   ]);
 
   // Infinite scroll helper functions for Purchase Request tab
@@ -1258,35 +889,6 @@ const ReceivingManagementLayer = () => {
     qualityCheckLoading,
     qualityCheckRequests,
     qualityCheckDisplayedItems.length,
-  ]);
-
-  // Infinite scroll helper functions for Receipt Details tab
-  const getReceiptDisplayedData = useCallback(() => {
-    return receiptDisplayedItems;
-  }, [receiptDisplayedItems]);
-
-  const hasMoreReceiptData = useCallback(() => {
-    return receiptDisplayedItems.length < receiptRequests.length;
-  }, [receiptDisplayedItems.length, receiptRequests.length]);
-
-  const loadMoreReceipt = useCallback(async () => {
-    if (receiptLoadingMore || receiptLoading) return;
-
-    setReceiptLoadingMore(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Load more items progressively
-    const nextItems = receiptRequests.slice(
-      receiptDisplayedItems.length,
-      receiptDisplayedItems.length + ITEMS_PER_LOAD
-    );
-    setReceiptDisplayedItems((prev) => [...prev, ...nextItems]);
-    setReceiptLoadingMore(false);
-  }, [
-    receiptLoadingMore,
-    receiptLoading,
-    receiptRequests,
-    receiptDisplayedItems.length,
   ]);
 
   // Handle vendor selection
@@ -2528,17 +2130,6 @@ const ReceivingManagementLayer = () => {
               requests={receiptRequests}
               isLoading={receiptLoading}
               handleViewRequest={handleViewRequest}
-              viewModalOpen={viewModalOpen}
-              setViewModalOpen={setViewModalOpen}
-              selectedRequest={selectedRequest}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              displayedItems={receiptDisplayedItems}
-              isLoadingMore={receiptLoadingMore}
-              containerRef={receiptContainerRef}
-              getDisplayedData={getReceiptDisplayedData}
-              hasMoreData={hasMoreReceiptData}
-              loadMoreData={loadMoreReceipt}
             />
           )}
           {activeTab === "vendor-spend" && (
